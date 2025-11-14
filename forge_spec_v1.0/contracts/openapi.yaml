@@ -1,0 +1,3524 @@
+openapi: 3.1.0
+info:
+  title: Forge Host Gateway API
+  version: 1.0.0
+  description: 实施契约，不是已部署服务。LocalTransport 使用同一 CommandService。Remote 默认仅开放白名单方法。身份由认证注入，禁止客户端
+    actor/scopes。
+servers:
+- url: https://forge-host.example.invalid
+  description: 示例地址，部署时由本地主机配置
+security:
+- sessionCookie: []
+paths:
+  /v1/commands:
+    post:
+      operationId: executeCommand
+      summary: 提交带幂等与版本的受控命令
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Command'
+      responses:
+        '200':
+          description: 已执行或幂等原结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResponse'
+        '202':
+          description: 已持久化接收，异步执行；不代表任务完成
+        '400': &id001
+          description: 明确错误；不自动重放审批或未知副作用
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401': *id001
+        '403': *id001
+        '409': *id001
+        '422': *id001
+        '429': *id001
+        '500': *id001
+      description: 本Schema是本地/远端共用命令合集。Gateway在认证后、payload日志和调度前按planning/commands.json的remoteAllowed白名单拒绝本地专属方法。credentials.set永不进入HTTP网关；secretValue仅本地IPC，禁止写入receipt、events、诊断或错误details。审批kind再做逐项scope检查。
+  /v1/health:
+    get:
+      operationId: health
+      summary: 网关健康（不暴露敏感配置）
+      parameters: []
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HostHealth'
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/capabilities:
+    get:
+      operationId: capabilities
+      summary: 当前设备与Host能力
+      parameters: []
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapabilitiesResponse'
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/projects:
+    get:
+      operationId: listProjects
+      summary: 有权限的项目
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectPage'
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/projects/{projectId}/board:
+    get:
+      operationId: getBoard
+      summary: 看板权威快照
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardSnapshot'
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/tasks/{taskId}:
+    get:
+      operationId: getTask
+      summary: 任务、revision、AC与权限
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/runs/{runId}:
+    get:
+      operationId: getRun
+      summary: Run配置与Attempt概要
+      parameters:
+      - name: runId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunDetail'
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/runs/{runId}/events:
+    get:
+      operationId: listRunEvents
+      summary: 分页事件
+      parameters:
+      - name: runId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventPage'
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/approvals:
+    get:
+      operationId: listApprovals
+      summary: 当前设备可决定的待审事项
+      parameters: []
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/artifacts/{artifactId}:
+    get:
+      operationId: getArtifact
+      summary: 经授权与MIME处理的产物
+      parameters:
+      - name: artifactId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/workflows:
+    get:
+      operationId: listWorkflows
+      summary: 已发布和可见草稿
+      parameters: []
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/profiles:
+    get:
+      operationId: listProfiles
+      summary: 可选角色及能力
+      parameters: []
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/plugins:
+    get:
+      operationId: listPlugins
+      summary: 内置插件状态（手机只读子集）
+      parameters: []
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/knowledge/search:
+    get:
+      operationId: searchKnowledge
+      summary: 过滤后的检索结果
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+      - name: projectId
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/devices:
+    get:
+      operationId: listDevices
+      summary: 已配对设备（默认仅本地管理员）
+      parameters: []
+      responses:
+        '200':
+          description: 有权限的权威数据，包含revision/cursor及适用状态
+        '401': *id001
+        '403': *id001
+        '404': *id001
+  /v1/events:
+    get:
+      operationId: subscribeEvents
+      summary: 认证SSE增量事件，游标过期先重新取快照
+      parameters:
+      - name: Last-Event-ID
+        in: header
+        schema:
+          type: string
+      - name: projectId
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: text/event-stream；心跳、domain event、resync_required
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401': *id001
+        '403': *id001
+  /v1/pair/claim:
+    post:
+      operationId: claimPairing
+      security: []
+      summary: 消费一次性nonce，只进入待本机批准状态
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - nonce
+              - deviceLabel
+              properties:
+                nonce:
+                  type: string
+                  minLength: 22
+                deviceLabel:
+                  type: string
+                  maxLength: 80
+      responses:
+        '202':
+          description: pending，本机确认后才建立授权会话
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  pairingId: &id002
+                    type: string
+                    pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+                  claimSecret:
+                    type: string
+                    minLength: 22
+                  status:
+                    const: pending
+                  expiresAt:
+                    type: string
+                    format: date-time
+                required:
+                - pairingId
+                - claimSecret
+                - status
+                - expiresAt
+        '400': *id001
+        '403': *id001
+        '429': *id001
+  /v1/pair/status:
+    post:
+      operationId: pollPairing
+      security: []
+      summary: 用高熵短期claimSecret查询本机批准；成功设置HttpOnly会话cookie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - claimSecret
+              properties:
+                claimSecret:
+                  type: string
+                  minLength: 22
+      responses:
+        '200':
+          description: pending/approved/rejected；approved只交换一次
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  status:
+                    enum:
+                    - pending
+                    - approved
+                    - rejected
+                    - expired
+                  deviceId:
+                    type:
+                    - string
+                    - 'null'
+                  csrfToken:
+                    type:
+                    - string
+                    - 'null'
+                  expiresAt:
+                    type:
+                    - string
+                    - 'null'
+                required:
+                - status
+                - deviceId
+                - csrfToken
+                - expiresAt
+        '403': *id001
+        '429': *id001
+  /v1/session/refresh:
+    post:
+      operationId: refreshSession
+      summary: 旋转受限会话；检查Origin、CSRF与device状态
+      responses:
+        '200':
+          description: 新cookie，旧凭据失效或极短有界重叠
+        '401': *id001
+        '403': *id001
+      parameters:
+      - in: header
+        name: X-CSRF-Token
+        required: true
+        schema: &id003
+          type: string
+          minLength: 1
+  /v1/commands/{commandId}:
+    get:
+      operationId: getCommandId
+      summary: 授权查询已提交操作/上下文；不以ID作为授权依据
+      parameters:
+      - in: path
+        name: commandId
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 当前权限过滤后的记录
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandReceipt'
+        '403':
+          description: 不属于该主体/项目
+        '404':
+          description: 不存在
+  /v1/operations/{operationId}:
+    get:
+      operationId: getOperationId
+      summary: 授权查询已提交操作/上下文；不以ID作为授权依据
+      parameters:
+      - in: path
+        name: operationId
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 当前权限过滤后的记录
+        '403':
+          description: 不属于该主体/项目
+        '404':
+          description: 不存在
+  /v1/context-bundles/{contextId}:
+    get:
+      operationId: getContextId
+      summary: 授权查询已提交操作/上下文；不以ID作为授权依据
+      parameters:
+      - in: path
+        name: contextId
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 当前权限过滤后的记录
+        '403':
+          description: 不属于该主体/项目
+        '404':
+          description: 不存在
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: forge_session
+  schemas:
+    TaskContract:
+      type: object
+      additionalProperties: false
+      properties:
+        schemaVersion:
+          const: '1.0'
+        taskId:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        projectId:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        revision:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        type:
+          type: string
+          enum:
+          - feature
+          - bug
+          - refactor
+          - chore
+        goal:
+          type: string
+          minLength: 1
+        acceptance:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+              statement:
+                type: string
+                minLength: 1
+              method:
+                type: string
+                enum:
+                - automated
+                - manual
+                - inspection
+              required:
+                type: boolean
+              sourceRefs:
+                type: array
+                items:
+                  type: string
+                  minLength: 1
+                minItems: 0
+            required:
+            - id
+            - statement
+            - method
+            - required
+            - sourceRefs
+          minItems: 1
+        constraints:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 0
+        scope:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 0
+        outOfScope:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 0
+        dependencies:
+          type: array
+          items:
+            type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+          minItems: 0
+        openQuestions:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 0
+        assumptions:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 0
+        sourceRefs:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 0
+        workflowRef:
+          type: string
+          minLength: 1
+        priority:
+          type: string
+          enum:
+          - low
+          - normal
+          - high
+          - urgent
+      required:
+      - schemaVersion
+      - taskId
+      - projectId
+      - revision
+      - title
+      - type
+      - goal
+      - acceptance
+      - constraints
+      - scope
+      - outOfScope
+      - dependencies
+      - openQuestions
+      - assumptions
+      - sourceRefs
+      - workflowRef
+      - priority
+    Workflow:
+      type: object
+      additionalProperties: false
+      properties:
+        schemaVersion:
+          const: '1.0'
+        id:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        revision:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+          minLength: 1
+        start:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        nodes:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+              kind:
+                type: string
+                enum:
+                - agent
+                - command
+                - verifier
+                - approval
+                - condition
+              label:
+                type: string
+                minLength: 1
+              boardColumn:
+                type: string
+                enum:
+                - todo
+                - development
+                - review
+                - verify
+                - done
+              binding:
+                type: string
+                minLength: 1
+              requiredCapabilities:
+                type: array
+                items:
+                  type: string
+                  minLength: 1
+                minItems: 0
+              inputs:
+                type: array
+                items:
+                  type: string
+                  minLength: 1
+                minItems: 0
+              outputSchema:
+                type: string
+                minLength: 1
+              timeoutSeconds:
+                type: integer
+                minimum: 1
+              retryLimit:
+                type: integer
+                minimum: 0
+              readOnly:
+                type: boolean
+            required:
+            - id
+            - kind
+            - label
+            - boardColumn
+            - binding
+            - requiredCapabilities
+            - inputs
+            - outputSchema
+            - timeoutSeconds
+            - retryLimit
+            - readOnly
+          minItems: 1
+        edges:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              from:
+                type: string
+                pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+              'on':
+                type: string
+                minLength: 1
+              to:
+                type: string
+                pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+            required:
+            - from
+            - 'on'
+            - to
+          minItems: 0
+        rework:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              from:
+                type: string
+                pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+              'on':
+                type: string
+                minLength: 1
+              to:
+                type: string
+                pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+              maxCycles:
+                type: integer
+                minimum: 1
+              invalidateDescendants:
+                const: true
+            required:
+            - from
+            - 'on'
+            - to
+            - maxCycles
+            - invalidateDescendants
+          minItems: 0
+        maxTotalAttempts:
+          type: integer
+          minimum: 1
+        onUnmatched:
+          const: escalate
+        finalAcceptance:
+          const: human
+      required:
+      - schemaVersion
+      - id
+      - revision
+      - name
+      - start
+      - nodes
+      - edges
+      - rework
+      - maxTotalAttempts
+      - onUnmatched
+      - finalAcceptance
+    ProjectCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        canonicalPath:
+          type: string
+        defaultBranch:
+          type: string
+      required:
+      - name
+      - canonicalPath
+      - defaultBranch
+    ProjectArchive:
+      type: object
+      additionalProperties: false
+      properties: {}
+      required: []
+    EnvironmentSave:
+      type: object
+      additionalProperties: false
+      properties:
+        environmentId:
+          type: string
+        name:
+          type: string
+        config:
+          type: object
+          additionalProperties: false
+          properties:
+            commandPresetIds:
+              type: array
+              items: *id002
+            envRefs:
+              type: array
+              items: *id002
+            networkMode:
+              enum:
+              - trusted-local
+              - native-sandbox
+          required:
+          - commandPresetIds
+          - envRefs
+          - networkMode
+      required:
+      - environmentId
+      - name
+      - config
+    ConversationSend:
+      type: object
+      additionalProperties: false
+      properties:
+        conversationId:
+          type: string
+        text:
+          type: string
+          minLength: 1
+        attachmentIds:
+          type: array
+          items:
+            type: string
+      required:
+      - conversationId
+      - text
+      - attachmentIds
+    TaskCreateDraft:
+      type: object
+      additionalProperties: false
+      properties:
+        contract:
+          $ref: '#/components/schemas/TaskContract'
+      required:
+      - contract
+    TaskRevise:
+      type: object
+      additionalProperties: false
+      properties:
+        contract:
+          $ref: '#/components/schemas/TaskContract'
+        reason:
+          type: string
+      required:
+      - contract
+      - reason
+    TaskApprove:
+      type: object
+      additionalProperties: false
+      properties:
+        approvalId:
+          type: string
+        scopeHash:
+          type: string
+      required:
+      - approvalId
+      - scopeHash
+    TaskReorder:
+      type: object
+      additionalProperties: false
+      properties:
+        beforeTaskId:
+          type:
+          - string
+          - 'null'
+        afterTaskId:
+          type:
+          - string
+          - 'null'
+      required:
+      - beforeTaskId
+      - afterTaskId
+    TaskArchive:
+      type: object
+      additionalProperties: false
+      properties: {}
+      required: []
+    RunStart:
+      type: object
+      additionalProperties: false
+      properties:
+        workflowId:
+          type: string
+        workflowRevision:
+          type: integer
+        environmentId:
+          type: string
+      required:
+      - workflowId
+      - workflowRevision
+      - environmentId
+    RunPause:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+      required:
+      - reason
+    RunResume:
+      type: object
+      additionalProperties: false
+      properties:
+        mode:
+          enum:
+          - native-resume
+          - new-attempt
+        reason:
+          type: string
+      required:
+      - mode
+      - reason
+    RunCancel:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+      required:
+      - reason
+    ApprovalDecide:
+      type: object
+      additionalProperties: false
+      properties:
+        approvalId:
+          type: string
+        scopeHash:
+          type: string
+        decision:
+          enum:
+          - approve
+          - reject
+        reason:
+          type: string
+      required:
+      - approvalId
+      - scopeHash
+      - decision
+      - reason
+    AcceptanceDecide:
+      type: object
+      additionalProperties: false
+      properties:
+        approvalId:
+          type: string
+        scopeHash:
+          type: string
+        snapshotId:
+          type: string
+        decision:
+          enum:
+          - accept
+          - reject
+        reason:
+          type: string
+      required:
+      - approvalId
+      - scopeHash
+      - snapshotId
+      - decision
+      - reason
+    DeliveryMerge:
+      type: object
+      additionalProperties: false
+      properties:
+        sourceSnapshotId:
+          type: string
+        expectedTargetHead:
+          type: string
+        approvalId:
+          type: string
+        scopeHash:
+          type: string
+      required:
+      - sourceSnapshotId
+      - expectedTargetHead
+      - approvalId
+      - scopeHash
+    WorkflowSave:
+      type: object
+      additionalProperties: false
+      properties:
+        workflow:
+          $ref: '#/components/schemas/Workflow'
+      required:
+      - workflow
+    WorkflowPublish:
+      type: object
+      additionalProperties: false
+      properties:
+        workflowId:
+          type: string
+        revision:
+          type: integer
+        contentHash:
+          type: string
+      required:
+      - workflowId
+      - revision
+      - contentHash
+    ProfileSave:
+      type: object
+      additionalProperties: false
+      properties:
+        profile:
+          $ref: '#/components/schemas/AgentProfile'
+      required:
+      - profile
+    PluginConfigure:
+      type: object
+      additionalProperties: false
+      properties:
+        pluginId:
+          type: string
+        version:
+          type: string
+        config:
+          type: object
+      required:
+      - pluginId
+      - version
+      - config
+    PluginDisable:
+      type: object
+      additionalProperties: false
+      properties:
+        pluginId:
+          type: string
+        version:
+          type: string
+      required:
+      - pluginId
+      - version
+    KnowledgeImport:
+      type: object
+      additionalProperties: false
+      properties:
+        sourceUri:
+          type: string
+        contentHash:
+          type: string
+      required:
+      - sourceUri
+      - contentHash
+    KnowledgeRevoke:
+      type: object
+      additionalProperties: false
+      properties:
+        sourceId:
+          type: string
+      required:
+      - sourceId
+    MemoryDecide:
+      type: object
+      additionalProperties: false
+      properties:
+        memoryId:
+          type: string
+        decision:
+          enum:
+          - validate
+          - revoke
+        reason:
+          type: string
+      required:
+      - memoryId
+      - decision
+      - reason
+    DeviceRevoke:
+      type: object
+      additionalProperties: false
+      properties:
+        deviceId:
+          type: string
+      required:
+      - deviceId
+    Command:
+      oneOf:
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: projects.create
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/ProjectCreate'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 创建项目；需 project:create
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: projects.archive
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/ProjectArchive'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 归档项目；需 project:write
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: environments.save
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/EnvironmentSave'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 保存运行环境；需 project:write
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: conversations.send
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/ConversationSend'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 发送自然语言消息；需 task:draft
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: tasks.createDraft
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/TaskCreateDraft'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 创建任务草稿；需 task:draft
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: tasks.revise
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/TaskRevise'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 创建任务修订；需 task:draft
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: tasks.approve
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/TaskApprove'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 批准当前任务；需 task:approve
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: tasks.reorder
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/TaskReorder'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 任务同列排序；需 task:write
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: tasks.archive
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/TaskArchive'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 归档任务；需 task:write
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: runs.start
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/RunStart'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 启动已批准任务；需 run:start
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: runs.pause
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/RunPause'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 请求安全暂停；需 run:pause
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: runs.resume
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/RunResume'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 恢复或发起新Attempt；需 run:start
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: runs.cancel
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/RunCancel'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 取消Run；需 run:cancel
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: approvals.decide
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/ApprovalDecide'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 人类决策审批；需 approval:decide
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: acceptance.decide
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/AcceptanceDecide'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 接受当前交付；需 acceptance:decide
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: deliveries.merge
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/DeliveryMerge'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 显式合并（本地默认）；需 merge:execute
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: workflows.saveDraft
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/WorkflowSave'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 保存流程草稿；需 workflow:write
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: workflows.publish
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/WorkflowPublish'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 发布流程版本；需 workflow:publish
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: profiles.save
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/ProfileSave'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 保存角色版本；需 profile:write
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: plugins.configure
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/PluginConfigure'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 配置内置插件；需 plugin:configure
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: plugins.disable
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/PluginDisable'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 安全停用插件；需 plugin:configure
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: knowledge.import
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/KnowledgeImport'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 导入已授权文档；需 knowledge:write
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: knowledge.revoke
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/KnowledgeRevoke'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 撤销文档；需 knowledge:write
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: memories.decide
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/MemoryDecide'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 确认/撤销候选记忆；需 memory:write
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: devices.revoke
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/DeviceRevoke'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 撤销设备（本地）；需 device:admin
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: projects.update
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/ProjectUpdate'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 更新项目设置；需 project:write；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: environments.probe
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/EnvironmentProbe'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 检测已批准环境；需 project:read；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: commandPresets.save
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/CommandPresetSave'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 创建命令预设草稿；需 command:configure；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: commandPresets.approve
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/CommandPresetApprove'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 授权精确命令配置；需 command:approve；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: review.acceptRisk
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/ReviewAcceptRisk'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 人类接受具体审查风险；需 review:waive；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: verify.run
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/VerifyRun'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 重跑当前快照验证；需 verify:run；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: workflows.validate
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/WorkflowValidate'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 校验工作流草稿；需 workflow:write；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: workflows.setDefault
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/WorkflowSetDefault'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 设置项目默认流程；需 project:write；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: executors.probe
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/ExecutorProbe'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 探测执行器真实能力；需 profile:write；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: plugins.enable
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/PluginEnable'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 启用内置插件；需 plugin:configure；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: devices.pair.issue
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/PairIssue'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 生成配对请求；需 device:admin；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: devices.pair.decide
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/PairDecide'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 本机决定新设备授权；需 device:admin；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: gateway.configure
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/GatewayConfigure'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 设置远程网关；需 host:admin；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: settings.update
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/SettingsUpdate'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 保存应用偏好；需 settings:write；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: credentials.set
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/CredentialSet'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 本地凭据保存或替换；需 credentials:write；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: credentials.clear
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/CredentialClear'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 本地凭据撤销；需 credentials:write；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: diagnostics.prepare
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/DiagnosticsPrepare'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 生成待预览的脱敏诊断包；需 diagnostics:export；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: updates.check
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/UpdateCheck'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 查询可用签名更新；需 app:update；仅本地Owner入口
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            const: '1.0'
+          commandId:
+            type: string
+          method:
+            const: updates.install
+          projectId:
+            type:
+            - string
+            - 'null'
+          resourceId:
+            type:
+            - string
+            - 'null'
+          expectedRevision:
+            type: integer
+            minimum: 0
+          idempotencyKey:
+            type: string
+            minLength: 16
+          payload:
+            $ref: '#/components/schemas/UpdateInstall'
+        required:
+        - schemaVersion
+        - commandId
+        - method
+        - projectId
+        - resourceId
+        - expectedRevision
+        - idempotencyKey
+        - payload
+        description: 安装已验证的更新；需 app:update；仅本地Owner入口
+    Error:
+      type: object
+      required:
+      - code
+      - message
+      - retryable
+      - correlationId
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        retryable:
+          type: boolean
+        correlationId:
+          type: string
+        currentRevision:
+          type: integer
+        details:
+          type: object
+    CommandResponse:
+      $ref: '#/components/schemas/CommandReceipt'
+    AgentProfile:
+      type: object
+      additionalProperties: false
+      properties:
+        schemaVersion:
+          const: '1.0'
+        id:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        revision:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          enum:
+          - refiner
+          - planner
+          - developer
+          - reviewer
+        executorId:
+          type: string
+          minLength: 1
+        modelId:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+        promptTemplate:
+          type: string
+          minLength: 1
+        contextProviders:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 0
+        policyProfile:
+          type: string
+          minLength: 1
+        limits:
+          type: object
+          additionalProperties: false
+          properties:
+            maxTurns:
+              type: integer
+              minimum: 1
+            maxSeconds:
+              type: integer
+              minimum: 1
+            maxOutputTokens:
+              type: integer
+              minimum: 1
+          required:
+          - maxTurns
+          - maxSeconds
+          - maxOutputTokens
+      required:
+      - schemaVersion
+      - id
+      - revision
+      - name
+      - role
+      - executorId
+      - modelId
+      - promptTemplate
+      - contextProviders
+      - policyProfile
+      - limits
+    ApprovalDecision:
+      type: object
+      additionalProperties: false
+      properties:
+        schemaVersion:
+          const: '1.0'
+        approvalId:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        decision:
+          enum:
+          - approve
+          - reject
+        expectedRevision:
+          type: integer
+          minimum: 1
+        scopeHash:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        reason:
+          type: string
+      required:
+      - schemaVersion
+      - approvalId
+      - decision
+      - expectedRevision
+      - scopeHash
+      - reason
+    Event:
+      type: object
+      additionalProperties: false
+      properties:
+        schemaVersion:
+          const: '1.0'
+        eventId:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        seq:
+          type: integer
+          minimum: 1
+        hostId:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        projectId:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+          - type: 'null'
+        aggregateId:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        aggregateRevision:
+          type: integer
+          minimum: 1
+        runId:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+          - type: 'null'
+        attemptId:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+          - type: 'null'
+        type:
+          type: string
+          minLength: 1
+        occurredAt:
+          type: string
+          format: date-time
+        actor:
+          type: object
+          additionalProperties: false
+          properties:
+            kind:
+              type: string
+              enum:
+              - human
+              - system
+              - plugin
+            id:
+              type: string
+              pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+          required:
+          - kind
+          - id
+        payload:
+          type: object
+      required:
+      - schemaVersion
+      - eventId
+      - seq
+      - hostId
+      - projectId
+      - aggregateId
+      - aggregateRevision
+      - runId
+      - attemptId
+      - type
+      - occurredAt
+      - actor
+      - payload
+    StepResult:
+      type: object
+      additionalProperties: false
+      properties:
+        schemaVersion:
+          const: '1.0'
+        runId:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        attemptId:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        nodeId:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        contractRevision:
+          type: integer
+          minimum: 1
+        snapshotId:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+          - type: 'null'
+        outcome:
+          type: string
+          enum:
+          - ready
+          - approved
+          - needs_changes
+          - passed
+          - failed
+          - inconclusive
+          - blocked
+        artifactIds:
+          type: array
+          items:
+            type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+          minItems: 0
+        unresolved:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 0
+        acceptanceResults:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              criterionId:
+                type: string
+                pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+              status:
+                type: string
+                enum:
+                - pass
+                - fail
+                - unverified
+                - not_applicable
+              evidenceIds:
+                type: array
+                items:
+                  type: string
+                  pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+                minItems: 0
+              reason:
+                type: string
+                minLength: 1
+            required:
+            - criterionId
+            - status
+            - evidenceIds
+            - reason
+          minItems: 0
+        summary:
+          type: string
+          minLength: 1
+      required:
+      - schemaVersion
+      - runId
+      - attemptId
+      - nodeId
+      - contractRevision
+      - snapshotId
+      - outcome
+      - artifactIds
+      - unresolved
+      - acceptanceResults
+      - summary
+    ProjectUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        name: *id003
+        defaultBranch: *id003
+        environmentId: *id002
+      required:
+      - name
+      - defaultBranch
+      - environmentId
+    EnvironmentProbe:
+      type: object
+      additionalProperties: false
+      properties:
+        environmentId: *id002
+      required:
+      - environmentId
+    CommandPresetSave:
+      type: object
+      additionalProperties: false
+      properties:
+        name: *id003
+        environmentId: *id002
+        executable: *id003
+        argv:
+          type: array
+          items:
+            type: string
+        cwdRelative: *id003
+        envRefs:
+          type: array
+          items: *id002
+        timeoutSeconds:
+          type: integer
+          minimum: 1
+          maximum: 7200
+        scriptsHash: &id004
+          type: string
+          pattern: ^[a-f0-9]{64}$
+      required:
+      - name
+      - environmentId
+      - executable
+      - argv
+      - cwdRelative
+      - envRefs
+      - timeoutSeconds
+      - scriptsHash
+    CommandPresetApprove:
+      type: object
+      additionalProperties: false
+      properties:
+        presetId: *id002
+        revision:
+          type: integer
+          minimum: 1
+        contentHash: *id004
+      required:
+      - presetId
+      - revision
+      - contentHash
+    ReviewAcceptRisk:
+      type: object
+      additionalProperties: false
+      properties:
+        issueId: *id002
+        snapshotId: *id002
+        reason: *id003
+      required:
+      - issueId
+      - snapshotId
+      - reason
+    VerifyRun:
+      type: object
+      additionalProperties: false
+      properties:
+        snapshotId: *id002
+        criterionIds:
+          type: array
+          items: *id002
+        commandPresetIds:
+          type: array
+          items: *id002
+      required:
+      - snapshotId
+      - criterionIds
+      - commandPresetIds
+    WorkflowValidate:
+      type: object
+      additionalProperties: false
+      properties:
+        workflow:
+          $ref: '#/components/schemas/Workflow'
+      required:
+      - workflow
+    WorkflowSetDefault:
+      type: object
+      additionalProperties: false
+      properties:
+        workflowId: *id002
+        revision:
+          type: integer
+          minimum: 1
+      required:
+      - workflowId
+      - revision
+    ExecutorProbe:
+      type: object
+      additionalProperties: false
+      properties:
+        executorId: *id002
+        profileId:
+          type:
+          - string
+          - 'null'
+      required:
+      - executorId
+      - profileId
+    PluginEnable:
+      type: object
+      additionalProperties: false
+      properties:
+        pluginId: *id002
+        version: *id003
+        manifestDigest: *id004
+      required:
+      - pluginId
+      - version
+      - manifestDigest
+    PairIssue:
+      type: object
+      additionalProperties: false
+      properties:
+        projectIds:
+          type: array
+          items: *id002
+          minItems: 1
+        scopes:
+          type: array
+          items: *id003
+        expiresInSeconds:
+          type: integer
+          minimum: 60
+          maximum: 600
+      required:
+      - projectIds
+      - scopes
+      - expiresInSeconds
+    PairDecide:
+      type: object
+      additionalProperties: false
+      properties:
+        pairingId: *id002
+        decision:
+          enum:
+          - approve
+          - reject
+        projectIds:
+          type: array
+          items: *id002
+        scopes:
+          type: array
+          items: *id003
+      required:
+      - pairingId
+      - decision
+      - projectIds
+      - scopes
+    GatewayConfigure:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+        trustedOrigin:
+          type:
+          - string
+          - 'null'
+        privateNetworkOnly:
+          const: true
+      required:
+      - enabled
+      - trustedOrigin
+      - privateNetworkOnly
+    SettingsUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        theme:
+          enum:
+          - system
+          - light
+          - dark
+        density:
+          enum:
+          - comfortable
+          - compact
+        closeBehavior:
+          enum:
+          - ask
+          - tray
+        retentionDays:
+          type: integer
+          minimum: 1
+          maximum: 3650
+      required:
+      - theme
+      - density
+      - closeBehavior
+      - retentionDays
+    CredentialSet:
+      type: object
+      additionalProperties: false
+      properties:
+        credentialRef: *id002
+        providerId: *id002
+        secretValue: *id003
+      required:
+      - credentialRef
+      - providerId
+      - secretValue
+    CredentialClear:
+      type: object
+      additionalProperties: false
+      properties:
+        credentialRef: *id002
+      required:
+      - credentialRef
+    DiagnosticsPrepare:
+      type: object
+      additionalProperties: false
+      properties:
+        runIds:
+          type: array
+          items: *id002
+        includeCode:
+          const: false
+      required:
+      - runIds
+      - includeCode
+    UpdateCheck:
+      type: object
+      additionalProperties: false
+      properties:
+        channel:
+          enum:
+          - stable
+          - beta
+      required:
+      - channel
+    UpdateInstall:
+      type: object
+      additionalProperties: false
+      properties:
+        updateId: *id002
+        artifactDigest: *id004
+      required:
+      - updateId
+      - artifactDigest
+    CommandReceipt:
+      type: object
+      additionalProperties: false
+      properties:
+        commandId: *id002
+        status:
+          enum:
+          - accepted
+          - completed
+          - failed
+          - unknown
+        operationId:
+          type:
+          - string
+          - 'null'
+        resourceRevision:
+          type:
+          - integer
+          - 'null'
+        result:
+          type:
+          - object
+          - 'null'
+        error:
+          anyOf:
+          - $ref: '#/components/schemas/Error'
+          - type: 'null'
+      required:
+      - commandId
+      - status
+      - operationId
+      - resourceRevision
+      - result
+      - error
+    PageInfo:
+      type: object
+      additionalProperties: false
+      properties:
+        cursor:
+          type:
+          - string
+          - 'null'
+        hasMore:
+          type: boolean
+      required:
+      - cursor
+      - hasMore
+    TaskSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id002
+        projectId: *id002
+        title: *id003
+        state:
+          enum:
+          - draft
+          - todo
+          - active
+          - awaiting_acceptance
+          - done
+          - cancelled
+          - archived
+        boardColumn:
+          enum:
+          - todo
+          - development
+          - review
+          - verify
+          - done
+        revision:
+          type: integer
+          minimum: 1
+        contractRevision:
+          type: integer
+          minimum: 1
+        approvedRevision:
+          type:
+          - integer
+          - 'null'
+        activeRunId:
+          type:
+          - string
+          - 'null'
+        blockReason:
+          type:
+          - string
+          - 'null'
+        allowedCommands:
+          type: array
+          items: *id003
+      required:
+      - id
+      - projectId
+      - title
+      - state
+      - boardColumn
+      - revision
+      - contractRevision
+      - approvedRevision
+      - activeRunId
+      - blockReason
+      - allowedCommands
+    BoardSnapshot:
+      type: object
+      additionalProperties: false
+      properties:
+        projectId: *id002
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskSummary'
+        eventCursor: *id003
+        serverTime:
+          type: string
+          format: date-time
+      required:
+      - projectId
+      - tasks
+      - eventCursor
+      - serverTime
+    TaskDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        task:
+          $ref: '#/components/schemas/TaskSummary'
+        contract:
+          $ref: '#/components/schemas/TaskContract'
+        runIds:
+          type: array
+          items: *id002
+        artifactIds:
+          type: array
+          items: *id002
+        pendingApprovalIds:
+          type: array
+          items: *id002
+      required:
+      - task
+      - contract
+      - runIds
+      - artifactIds
+      - pendingApprovalIds
+    AttemptSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id002
+        nodeId: *id002
+        attemptNo:
+          type: integer
+          minimum: 1
+        leaseEpoch:
+          type: integer
+          minimum: 1
+        state:
+          enum:
+          - pending
+          - running
+          - waiting_approval
+          - succeeded
+          - failed
+          - cancelled
+          - interrupted
+        executorId:
+          type:
+          - string
+          - 'null'
+        resultArtifactId:
+          type:
+          - string
+          - 'null'
+      required:
+      - id
+      - nodeId
+      - attemptNo
+      - leaseEpoch
+      - state
+      - executorId
+      - resultArtifactId
+    RunDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id002
+        taskId: *id002
+        state:
+          enum:
+          - queued
+          - running
+          - waiting_input
+          - pausing
+          - paused
+          - canceling
+          - succeeded
+          - failed
+          - cancelled
+          - interrupted
+        revision:
+          type: integer
+          minimum: 1
+        contractRevision:
+          type: integer
+          minimum: 1
+        workflowRef:
+          type: object
+          additionalProperties: false
+          properties:
+            id: *id002
+            revision:
+              type: integer
+              minimum: 1
+          required:
+          - id
+          - revision
+        snapshotId:
+          type:
+          - string
+          - 'null'
+        attempts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttemptSummary'
+        lastEventCursor: *id003
+        blockedReason:
+          type:
+          - string
+          - 'null'
+        allowedCommands:
+          type: array
+          items: *id003
+      required:
+      - id
+      - taskId
+      - state
+      - revision
+      - contractRevision
+      - workflowRef
+      - snapshotId
+      - attempts
+      - lastEventCursor
+      - blockedReason
+      - allowedCommands
+    EventPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        nextCursor: *id003
+        hasMore:
+          type: boolean
+        resyncRequired:
+          type: boolean
+      required:
+      - items
+      - nextCursor
+      - hasMore
+      - resyncRequired
+    HostHealth:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          enum:
+          - ok
+          - degraded
+        apiVersion: *id003
+        serverTime:
+          type: string
+          format: date-time
+      required:
+      - status
+      - apiVersion
+      - serverTime
+    CapabilitiesResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        hostId: *id002
+        platform: *id003
+        gatewayVersion: *id003
+        scope:
+          type: array
+          items: *id003
+        projectIds:
+          type: array
+          items: *id002
+        allowedCommands:
+          type: array
+          items: *id003
+        sessionExpiresAt:
+          type:
+          - string
+          - 'null'
+      required:
+      - hostId
+      - platform
+      - gatewayVersion
+      - scope
+      - projectIds
+      - allowedCommands
+      - sessionExpiresAt
+    ProjectSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id002
+        name: *id003
+        revision:
+          type: integer
+        defaultBranch: *id003
+        online:
+          type: boolean
+      required:
+      - id
+      - name
+      - revision
+      - defaultBranch
+      - online
+    ProjectPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectSummary'
+        page:
+          $ref: '#/components/schemas/PageInfo'
+      required:
+      - items
+      - page

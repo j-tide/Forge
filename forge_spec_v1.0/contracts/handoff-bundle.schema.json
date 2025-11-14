@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.local/schemas/handoff-bundle.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "taskId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "contractRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "workflowRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "snapshotId": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "runConfigHash": {
+      "type": "string",
+      "minLength": 1
+    },
+    "contractRef": {
+      "type": "string",
+      "minLength": 1
+    },
+    "contextBundleId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "artifactIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+      },
+      "minItems": 0
+    },
+    "humanDecisionIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+      },
+      "minItems": 0
+    },
+    "openIssueIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+      },
+      "minItems": 0
+    },
+    "nativeSessionRef": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "redactionVersion": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "taskId",
+    "contractRevision",
+    "workflowRevision",
+    "snapshotId",
+    "runConfigHash",
+    "contractRef",
+    "contextBundleId",
+    "artifactIds",
+    "humanDecisionIds",
+    "openIssueIds",
+    "nativeSessionRef",
+    "redactionVersion"
+  ]
+}

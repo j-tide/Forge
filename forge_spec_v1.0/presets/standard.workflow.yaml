@@ -1,0 +1,104 @@
+schemaVersion: '1.0'
+id: standard
+revision: 1
+name: 标准研发流程
+start: plan
+nodes:
+- id: plan
+  kind: agent
+  label: 实施计划
+  boardColumn: development
+  binding: profile.planner
+  requiredCapabilities:
+  - structuredOutput
+  inputs:
+  - task
+  - repo
+  outputSchema: plan-result
+  timeoutSeconds: 600
+  retryLimit: 1
+  readOnly: true
+- id: develop
+  kind: agent
+  label: 开发
+  boardColumn: development
+  binding: profile.developer
+  requiredCapabilities:
+  - structuredOutput
+  inputs:
+  - task
+  - plan
+  - issues
+  outputSchema: step-result
+  timeoutSeconds: 1800
+  retryLimit: 1
+  readOnly: false
+- id: review
+  kind: agent
+  label: Review
+  boardColumn: review
+  binding: profile.reviewer
+  requiredCapabilities:
+  - structuredOutput
+  inputs:
+  - task
+  - snapshot
+  - diff
+  outputSchema: step-result
+  timeoutSeconds: 600
+  retryLimit: 1
+  readOnly: true
+- id: verify
+  kind: verifier
+  label: 验证
+  boardColumn: verify
+  binding: verifier.project-checks
+  requiredCapabilities: []
+  inputs:
+  - task
+  - snapshot
+  outputSchema: step-result
+  timeoutSeconds: 600
+  retryLimit: 1
+  readOnly: true
+- id: accept
+  kind: approval
+  label: 最终验收
+  boardColumn: verify
+  binding: human.owner
+  requiredCapabilities: []
+  inputs:
+  - task
+  - snapshot
+  - evidence
+  outputSchema: approval-decision
+  timeoutSeconds: 600
+  retryLimit: 1
+  readOnly: true
+edges:
+- from: plan
+  'on': ready
+  to: develop
+- from: develop
+  'on': ready
+  to: review
+- from: review
+  'on': approved
+  to: verify
+- from: verify
+  'on': passed
+  to: accept
+rework:
+- from: review
+  'on': needs_changes
+  to: develop
+  maxCycles: 3
+  invalidateDescendants: true
+- from: verify
+  'on': failed
+  to: develop
+  maxCycles: 3
+  invalidateDescendants: true
+maxTotalAttempts: 20
+onUnmatched: escalate
+finalAcceptance: human

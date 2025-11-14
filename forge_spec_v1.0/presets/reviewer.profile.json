@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "id": "profile.reviewer",
+  "revision": 1,
+  "name": "Reviewer",
+  "role": "reviewer",
+  "executorId": "codex-sdk",
+  "modelId": null,
+  "promptTemplate": "prompts/reviewer.md",
+  "contextProviders": [
+    "project-rules",
+    "repo-search"
+  ],
+  "policyProfile": "read-only",
+  "limits": {
+    "maxTurns": 24,
+    "maxSeconds": 1800,
+    "maxOutputTokens": 12000
+  }
+}

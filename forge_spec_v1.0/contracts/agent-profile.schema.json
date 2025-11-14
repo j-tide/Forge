@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.local/schemas/agent-profile.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "refiner",
+        "planner",
+        "developer",
+        "reviewer"
+      ]
+    },
+    "executorId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "modelId": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "promptTemplate": {
+      "type": "string",
+      "minLength": 1
+    },
+    "contextProviders": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "policyProfile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxTurns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxOutputTokens": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "maxTurns",
+        "maxSeconds",
+        "maxOutputTokens"
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "revision",
+    "name",
+    "role",
+    "executorId",
+    "modelId",
+    "promptTemplate",
+    "contextProviders",
+    "policyProfile",
+    "limits"
+  ]
+}

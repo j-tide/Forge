@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.local/schemas/executor-capabilities.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "executorId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "adapterVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "upstreamVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "platform": {
+      "type": "string",
+      "minLength": 1
+    },
+    "structuredOutput": {
+      "type": "boolean"
+    },
+    "streamEvents": {
+      "type": "boolean"
+    },
+    "cancel": {
+      "type": "boolean"
+    },
+    "nativeResume": {
+      "type": "boolean"
+    },
+    "interactiveApproval": {
+      "type": "boolean"
+    },
+    "enforcement": {
+      "type": "string",
+      "enum": [
+        "native-sandbox",
+        "trusted-local",
+        "unavailable"
+      ]
+    },
+    "readOnlyEnforced": {
+      "type": "boolean"
+    },
+    "networkPolicyEnforced": {
+      "type": "boolean"
+    },
+    "modelIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "authModes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    }
+  },
+  "required": [
+    "executorId",
+    "adapterVersion",
+    "upstreamVersion",
+    "platform",
+    "structuredOutput",
+    "streamEvents",
+    "cancel",
+    "nativeResume",
+    "interactiveApproval",
+    "enforcement",
+    "readOnlyEnforced",
+    "networkPolicyEnforced",
+    "modelIds",
+    "authModes",
+    "warnings"
+  ]
+}

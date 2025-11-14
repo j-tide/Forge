@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.local/schemas/approval-decision.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "approvalId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "decision": {
+      "enum": [
+        "approve",
+        "reject"
+      ]
+    },
+    "expectedRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "scopeHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "approvalId",
+    "decision",
+    "expectedRevision",
+    "scopeHash",
+    "reason"
+  ]
+}

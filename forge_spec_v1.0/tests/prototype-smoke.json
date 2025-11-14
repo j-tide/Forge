@@ -1,0 +1,99 @@
+{
+  "scope": "Static HTML prototype only; no Electron, SDK, Windows/macOS runtime or real remote operations executed.",
+  "checks": [
+    {
+      "route": "board",
+      "rendered": true
+    },
+    {
+      "route": "draft",
+      "rendered": true
+    },
+    {
+      "route": "task",
+      "rendered": true
+    },
+    {
+      "route": "run",
+      "rendered": true
+    },
+    {
+      "route": "review",
+      "rendered": true
+    },
+    {
+      "route": "verify",
+      "rendered": true
+    },
+    {
+      "route": "workflows",
+      "rendered": true
+    },
+    {
+      "route": "workflow",
+      "rendered": true
+    },
+    {
+      "route": "agents",
+      "rendered": true
+    },
+    {
+      "route": "profile",
+      "rendered": true
+    },
+    {
+      "route": "plugins",
+      "rendered": true
+    },
+    {
+      "route": "knowledge",
+      "rendered": true
+    },
+    {
+      "route": "projects",
+      "rendered": true
+    },
+    {
+      "route": "devices",
+      "rendered": true
+    },
+    {
+      "route": "settings",
+      "rendered": true
+    },
+    {
+      "action": "approve adds TODO",
+      "passed": true
+    },
+    {
+      "action": "approved task starts mock run",
+      "passed": true
+    },
+    {
+      "action": "pause toggle",
+      "passed": true
+    },
+    {
+      "action": "acceptance checkbox gate",
+      "passed": true
+    },
+    {
+      "route": "mobile-inbox",
+      "rendered": true
+    },
+    {
+      "route": "mobile-task",
+      "rendered": true
+    },
+    {
+      "route": "mobile-approve",
+      "rendered": true
+    },
+    {
+      "action": "mobile approval mock",
+      "passed": true
+    }
+  ],
+  "javascriptErrors": [],
+  "passed": true
+}

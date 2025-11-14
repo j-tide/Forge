@@ -1,0 +1,310 @@
+[
+  {
+    "method": "projects.create",
+    "title": "创建项目",
+    "scope": "project:create",
+    "payloadSchema": "ProjectCreate",
+    "remoteAllowed": false
+  },
+  {
+    "method": "projects.archive",
+    "title": "归档项目",
+    "scope": "project:write",
+    "payloadSchema": "ProjectArchive",
+    "remoteAllowed": false
+  },
+  {
+    "method": "environments.save",
+    "title": "保存运行环境",
+    "scope": "project:write",
+    "payloadSchema": "EnvironmentSave",
+    "remoteAllowed": false
+  },
+  {
+    "method": "conversations.send",
+    "title": "发送自然语言消息",
+    "scope": "task:draft",
+    "payloadSchema": "ConversationSend",
+    "remoteAllowed": true
+  },
+  {
+    "method": "tasks.createDraft",
+    "title": "创建任务草稿",
+    "scope": "task:draft",
+    "payloadSchema": "TaskCreateDraft",
+    "remoteAllowed": true
+  },
+  {
+    "method": "tasks.revise",
+    "title": "创建任务修订",
+    "scope": "task:draft",
+    "payloadSchema": "TaskRevise",
+    "remoteAllowed": true
+  },
+  {
+    "method": "tasks.approve",
+    "title": "批准当前任务",
+    "scope": "task:approve",
+    "payloadSchema": "TaskApprove",
+    "remoteAllowed": true
+  },
+  {
+    "method": "tasks.reorder",
+    "title": "任务同列排序",
+    "scope": "task:write",
+    "payloadSchema": "TaskReorder",
+    "remoteAllowed": false
+  },
+  {
+    "method": "tasks.archive",
+    "title": "归档任务",
+    "scope": "task:write",
+    "payloadSchema": "TaskArchive",
+    "remoteAllowed": false
+  },
+  {
+    "method": "runs.start",
+    "title": "启动已批准任务",
+    "scope": "run:start",
+    "payloadSchema": "RunStart",
+    "remoteAllowed": true
+  },
+  {
+    "method": "runs.pause",
+    "title": "请求安全暂停",
+    "scope": "run:pause",
+    "payloadSchema": "RunPause",
+    "remoteAllowed": true
+  },
+  {
+    "method": "runs.resume",
+    "title": "恢复或发起新Attempt",
+    "scope": "run:start",
+    "payloadSchema": "RunResume",
+    "remoteAllowed": true
+  },
+  {
+    "method": "runs.cancel",
+    "title": "取消Run",
+    "scope": "run:cancel",
+    "payloadSchema": "RunCancel",
+    "remoteAllowed": true
+  },
+  {
+    "method": "approvals.decide",
+    "title": "人类决策审批",
+    "scope": "approval:decide",
+    "payloadSchema": "ApprovalDecide",
+    "remoteAllowed": false
+  },
+  {
+    "method": "acceptance.decide",
+    "title": "接受当前交付",
+    "scope": "acceptance:decide",
+    "payloadSchema": "AcceptanceDecide",
+    "remoteAllowed": true
+  },
+  {
+    "method": "deliveries.merge",
+    "title": "显式合并（本地默认）",
+    "scope": "merge:execute",
+    "payloadSchema": "DeliveryMerge",
+    "remoteAllowed": false
+  },
+  {
+    "method": "workflows.saveDraft",
+    "title": "保存流程草稿",
+    "scope": "workflow:write",
+    "payloadSchema": "WorkflowSave",
+    "remoteAllowed": false
+  },
+  {
+    "method": "workflows.publish",
+    "title": "发布流程版本",
+    "scope": "workflow:publish",
+    "payloadSchema": "WorkflowPublish",
+    "remoteAllowed": false
+  },
+  {
+    "method": "profiles.save",
+    "title": "保存角色版本",
+    "scope": "profile:write",
+    "payloadSchema": "ProfileSave",
+    "remoteAllowed": false
+  },
+  {
+    "method": "plugins.configure",
+    "title": "配置内置插件",
+    "scope": "plugin:configure",
+    "payloadSchema": "PluginConfigure",
+    "remoteAllowed": false
+  },
+  {
+    "method": "plugins.disable",
+    "title": "安全停用插件",
+    "scope": "plugin:configure",
+    "payloadSchema": "PluginDisable",
+    "remoteAllowed": false
+  },
+  {
+    "method": "knowledge.import",
+    "title": "导入已授权文档",
+    "scope": "knowledge:write",
+    "payloadSchema": "KnowledgeImport",
+    "remoteAllowed": false
+  },
+  {
+    "method": "knowledge.revoke",
+    "title": "撤销文档",
+    "scope": "knowledge:write",
+    "payloadSchema": "KnowledgeRevoke",
+    "remoteAllowed": false
+  },
+  {
+    "method": "memories.decide",
+    "title": "确认/撤销候选记忆",
+    "scope": "memory:write",
+    "payloadSchema": "MemoryDecide",
+    "remoteAllowed": false
+  },
+  {
+    "method": "devices.revoke",
+    "title": "撤销设备（本地）",
+    "scope": "device:admin",
+    "payloadSchema": "DeviceRevoke",
+    "remoteAllowed": false
+  },
+  {
+    "method": "projects.update",
+    "title": "更新项目设置",
+    "scope": "project:write",
+    "payloadSchema": "ProjectUpdate",
+    "remoteAllowed": false
+  },
+  {
+    "method": "environments.probe",
+    "title": "检测已批准环境",
+    "scope": "project:read",
+    "payloadSchema": "EnvironmentProbe",
+    "remoteAllowed": false
+  },
+  {
+    "method": "commandPresets.save",
+    "title": "创建命令预设草稿",
+    "scope": "command:configure",
+    "payloadSchema": "CommandPresetSave",
+    "remoteAllowed": false
+  },
+  {
+    "method": "commandPresets.approve",
+    "title": "授权精确命令配置",
+    "scope": "command:approve",
+    "payloadSchema": "CommandPresetApprove",
+    "remoteAllowed": false
+  },
+  {
+    "method": "review.acceptRisk",
+    "title": "人类接受具体审查风险",
+    "scope": "review:waive",
+    "payloadSchema": "ReviewAcceptRisk",
+    "remoteAllowed": false
+  },
+  {
+    "method": "verify.run",
+    "title": "重跑当前快照验证",
+    "scope": "verify:run",
+    "payloadSchema": "VerifyRun",
+    "remoteAllowed": false
+  },
+  {
+    "method": "workflows.validate",
+    "title": "校验工作流草稿",
+    "scope": "workflow:write",
+    "payloadSchema": "WorkflowValidate",
+    "remoteAllowed": false
+  },
+  {
+    "method": "workflows.setDefault",
+    "title": "设置项目默认流程",
+    "scope": "project:write",
+    "payloadSchema": "WorkflowSetDefault",
+    "remoteAllowed": false
+  },
+  {
+    "method": "executors.probe",
+    "title": "探测执行器真实能力",
+    "scope": "profile:write",
+    "payloadSchema": "ExecutorProbe",
+    "remoteAllowed": false
+  },
+  {
+    "method": "plugins.enable",
+    "title": "启用内置插件",
+    "scope": "plugin:configure",
+    "payloadSchema": "PluginEnable",
+    "remoteAllowed": false
+  },
+  {
+    "method": "devices.pair.issue",
+    "title": "生成配对请求",
+    "scope": "device:admin",
+    "payloadSchema": "PairIssue",
+    "remoteAllowed": false
+  },
+  {
+    "method": "devices.pair.decide",
+    "title": "本机决定新设备授权",
+    "scope": "device:admin",
+    "payloadSchema": "PairDecide",
+    "remoteAllowed": false
+  },
+  {
+    "method": "gateway.configure",
+    "title": "设置远程网关",
+    "scope": "host:admin",
+    "payloadSchema": "GatewayConfigure",
+    "remoteAllowed": false
+  },
+  {
+    "method": "settings.update",
+    "title": "保存应用偏好",
+    "scope": "settings:write",
+    "payloadSchema": "SettingsUpdate",
+    "remoteAllowed": false
+  },
+  {
+    "method": "credentials.set",
+    "title": "本地凭据保存或替换",
+    "scope": "credentials:write",
+    "payloadSchema": "CredentialSet",
+    "remoteAllowed": false
+  },
+  {
+    "method": "credentials.clear",
+    "title": "本地凭据撤销",
+    "scope": "credentials:write",
+    "payloadSchema": "CredentialClear",
+    "remoteAllowed": false
+  },
+  {
+    "method": "diagnostics.prepare",
+    "title": "生成待预览的脱敏诊断包",
+    "scope": "diagnostics:export",
+    "payloadSchema": "DiagnosticsPrepare",
+    "remoteAllowed": false
+  },
+  {
+    "method": "updates.check",
+    "title": "查询可用签名更新",
+    "scope": "app:update",
+    "payloadSchema": "UpdateCheck",
+    "remoteAllowed": false
+  },
+  {
+    "method": "updates.install",
+    "title": "安装已验证的更新",
+    "scope": "app:update",
+    "payloadSchema": "UpdateInstall",
+    "remoteAllowed": false
+  }
+]

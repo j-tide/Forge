@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.local/schemas/plugin-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "forgeApiRange": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entry": {
+      "type": "string",
+      "minLength": 1
+    },
+    "execution": {
+      "type": "string",
+      "enum": [
+        "bundled-trusted",
+        "external-process"
+      ]
+    },
+    "contributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "executors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "minItems": 0
+        },
+        "modelProviders": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "minItems": 0
+        },
+        "contextProviders": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "minItems": 0
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "minItems": 0
+        },
+        "verifiers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "minItems": 0
+        },
+        "viewTypes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "executors",
+        "modelProviders",
+        "contextProviders",
+        "tools",
+        "verifiers",
+        "viewTypes"
+      ]
+    },
+    "requires": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "requestedPermissions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "configSchema": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supportedPlatforms": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "darwin-arm64",
+          "darwin-x64",
+          "win32-x64",
+          "linux-x64"
+        ]
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "version",
+    "forgeApiRange",
+    "entry",
+    "execution",
+    "contributes",
+    "requires",
+    "requestedPermissions",
+    "configSchema",
+    "supportedPlatforms"
+  ]
+}
