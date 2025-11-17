@@ -1,0 +1,35 @@
+{
+  "ease": [
+    0.2,
+    0.75,
+    0.2,
+    1
+  ],
+  "page": {
+    "ms": 330,
+    "translateY": 7
+  },
+  "cardHover": {
+    "ms": 200,
+    "translateY": -3
+  },
+  "dialog": {
+    "ms": 320,
+    "translateY": 18,
+    "scaleFrom": 0.985
+  },
+  "drawer": {
+    "ms": 350,
+    "translateX": 30
+  },
+  "windowPreview": {
+    "ms": 340
+  },
+  "reducedMotion": "disable transforms and animated transitions; do not suppress state feedback",
+  "neverAnimateContinuously": [
+    "glass blur radius",
+    "full window opacity",
+    "entire background wallpaper",
+    "run success without actual completion event"
+  ]
+}

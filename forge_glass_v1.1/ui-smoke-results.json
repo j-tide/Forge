@@ -1,0 +1,137 @@
+{
+  "scope": "Standalone UI prototype only; simulated data; no model/Host/SDK/OS effect tests",
+  "executed_at": "2026-09-23",
+  "browser": "Chromium / Playwright; HTML injected with set_content",
+  "checks": [
+    {
+      "name": "看板初始显示五个阶段",
+      "passed": true
+    },
+    {
+      "name": "未审批的草稿不在看板中",
+      "passed": true
+    },
+    {
+      "name": "打开独立审批对话框",
+      "passed": true
+    },
+    {
+      "name": "空标题不能被审批",
+      "passed": true
+    },
+    {
+      "name": "批准后卡片进入 TODO",
+      "passed": true
+    },
+    {
+      "name": "批准不会自动进入开发",
+      "passed": true
+    },
+    {
+      "name": "显式开始后进入开发",
+      "passed": true
+    },
+    {
+      "name": "暂停可见状态可切换",
+      "passed": true
+    },
+    {
+      "name": "Escape 可关闭对话框",
+      "passed": true
+    },
+    {
+      "name": "未勾选人工确认不能完成任务",
+      "passed": true
+    },
+    {
+      "name": "勾选后完成且不触发外部合并",
+      "passed": true
+    },
+    {
+      "name": "快捷搜索能匹配指定卡片",
+      "passed": true
+    },
+    {
+      "name": "节点配置保留在原型状态",
+      "passed": true
+    },
+    {
+      "name": "发布新配置不修改已启动任务的流程版本",
+      "passed": true
+    },
+    {
+      "name": "可渲染页面 agents",
+      "passed": true
+    },
+    {
+      "name": "可渲染页面 knowledge",
+      "passed": true
+    },
+    {
+      "name": "可渲染页面 projects",
+      "passed": true
+    },
+    {
+      "name": "可渲染页面 devices",
+      "passed": true
+    },
+    {
+      "name": "可渲染页面 settings",
+      "passed": true
+    },
+    {
+      "name": "可渲染页面 board",
+      "passed": true
+    },
+    {
+      "name": "减少透明度模式可切换",
+      "passed": true
+    },
+    {
+      "name": "减少动效模式可切换",
+      "passed": true
+    },
+    {
+      "name": "聊天输入作为文本显示而非 HTML 执行",
+      "passed": true
+    },
+    {
+      "name": "占位验收标准不可审批",
+      "passed": true
+    },
+    {
+      "name": "主窗口在 1600×1000 视口内",
+      "passed": true
+    },
+    {
+      "name": "主窗口在 1440×900 视口内",
+      "passed": true
+    },
+    {
+      "name": "主窗口在 1280×800 视口内",
+      "passed": true
+    },
+    {
+      "name": "主窗口在 390×844 视口内",
+      "passed": true
+    },
+    {
+      "name": "390px 下审批面板不超出窗口",
+      "passed": true
+    },
+    {
+      "name": "脚本无运行异常",
+      "passed": true
+    }
+  ],
+  "passed": 30,
+  "total": 30,
+  "runtime_errors": [],
+  "not_tested": [
+    "真实 macOS / Windows 原生透明材质",
+    "实际模型、执行器、Host 与插件功能",
+    "移动端真实远程配对",
+    "完整键盘/读屏审计",
+    "全部内容在任意背景上的对比度合规"
+  ]
+}
