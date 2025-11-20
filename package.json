@@ -1,0 +1,24 @@
+{
+  "name": "forge-workspace",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.3.4",
+  "engines": {
+    "node": ">=22.13.0 <23",
+    "pnpm": "12.3.4"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm build && node --test tests/*.test.mjs",
+    "build": "pnpm -r run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@forge/contracts": "workspace:*",
+    "eslint": "10.11.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1"
+  }
+}
