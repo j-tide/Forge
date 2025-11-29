@@ -20,3 +20,5 @@ forge-data/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+.playwright-cli/
+output/playwright/

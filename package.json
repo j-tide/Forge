@@ -9,15 +9,27 @@
     "pnpm": "12.3.4"
   },
   "scripts": {
+    "dev:web": "pnpm --filter @forge/contracts build && pnpm --filter @forge/client build && pnpm --filter @forge/web dev",
+    "dev:host": "pnpm --filter @forge/contracts build && pnpm --filter @forge/core build && pnpm --filter @forge/persistence build && pnpm --filter @forge/process build && pnpm --filter @forge/workspace build && pnpm --filter @forge/plugin-api build && pnpm --filter @forge/executor-codex build && pnpm --filter @forge/host dev",
+    "dev:desktop": "node scripts/dev-desktop.mjs",
+    "start:desktop": "pnpm build && pnpm --filter @forge/desktop start",
+    "smoke:desktop": "pnpm build && node scripts/smoke-desktop.mjs",
+    "validate:contracts": "pnpm --filter @forge/contracts build && pnpm --filter @forge/persistence build && pnpm --filter @forge/contract-validator build && node packages/contract-validator/dist/cli.js",
     "lint": "eslint .",
-    "typecheck": "pnpm -r run typecheck",
-    "test": "pnpm build && node --test tests/*.test.mjs",
+    "typecheck": "pnpm --filter @forge/contracts build && pnpm --filter @forge/core build && pnpm --filter @forge/client build && pnpm --filter @forge/persistence build && pnpm --filter @forge/process build && pnpm --filter @forge/workspace build && pnpm --filter @forge/plugin-api build && pnpm --filter @forge/executor-codex build && pnpm -r run typecheck",
+    "probe:codex": "pnpm --filter @forge/contracts build && pnpm --filter @forge/plugin-api build && pnpm --filter @forge/process build && pnpm --filter @forge/executor-codex build && pnpm --filter @forge/host build && node scripts/probe-codex.mjs",
+    "test:codex-live": "pnpm --filter @forge/plugin-api build && pnpm --filter @forge/process build && pnpm --filter @forge/executor-codex build && pnpm --filter @forge/host build && node plugins/executor-codex/spikes/auth-missing.mjs && node plugins/executor-codex/spikes/invalid.mjs && node plugins/executor-codex/spikes/sdk.mjs && node plugins/executor-codex/spikes/read-only.mjs && node plugins/executor-codex/spikes/structured.mjs && node plugins/executor-codex/spikes/coding.mjs && node plugins/executor-codex/spikes/lifecycle.mjs && node plugins/executor-codex/spikes/resume-process.mjs && node plugins/executor-codex/spikes/approval.mjs",
+    "test:workspace-live": "pnpm --filter @forge/process build && pnpm --filter @forge/workspace build && pnpm --filter @forge/executor-codex build && pnpm --filter @forge/host build && node plugins/executor-codex/spikes/owned-workspace.mjs",
+    "test": "pnpm build && pnpm -r run test && node --test tests/*.test.mjs",
     "build": "pnpm -r run build"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@forge/contracts": "workspace:*",
     "eslint": "10.11.0",
+    "eslint-plugin-vue": "10.11.0",
+    "globals": "17.12.0",
+    "playwright-core": "1.63.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.70.1"
   }
