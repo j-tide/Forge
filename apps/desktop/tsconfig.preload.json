@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src/preload",
+    "outDir": "dist/preload",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "verbatimModuleSyntax": false,
+    "declaration": true
+  },
+  "include": ["src/preload/**/*.cts"]
+}
