@@ -16,3 +16,16 @@ export const contractSchemaNames = [
 ] as const;
 
 export type ContractSchemaName = (typeof contractSchemaNames)[number];
+
+import type { HostConnectionSnapshot, SystemCommandEnvelope, SystemCommandResult } from './host-protocol.js';
+
+/** Fixed, narrow Desktop capability exposed by the isolated preload. */
+export interface ForgeDesktopBridge {
+  readonly platform: string;
+  hostStatus(): Promise<HostConnectionSnapshot>;
+  hostHealth(): Promise<SystemCommandResult>;
+  invokeSystem(command: SystemCommandEnvelope): Promise<SystemCommandResult>;
+  onHostStatus(listener: (snapshot: HostConnectionSnapshot) => void): () => void;
+}
+
+export * from './host-protocol.js';
