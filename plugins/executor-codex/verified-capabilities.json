@@ -1,0 +1,23 @@
+{
+  "verifiedOn": "2026-09-23",
+  "upstreamVersion": "codex-cli 0.155.1",
+  "platform": "darwin/arm64",
+  "evidenceCommand": "pnpm test:codex-live",
+  "evidenceCases": ["sdk-read-only", "app-server-read-only-json", "adapter-structured-output",
+    "adapter-coding-fixture", "adapter-interrupt-resume", "process-restart-resume", "adapter-approval-approve-reject"],
+  "checks": {
+    "streaming": true,
+    "resume": true,
+    "interrupt": true,
+    "approval": true,
+    "structuredEvents": true,
+    "structuredOutput": true,
+    "workspaceControl": true,
+    "toolEvents": false,
+    "sessionPersistence": true,
+    "modelSelection": true,
+    "usageReporting": true,
+    "readOnlyEnforced": true,
+    "networkPolicyEnforced": false
+  }
+}
