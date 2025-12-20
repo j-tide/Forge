@@ -33,12 +33,32 @@ test('recorded direct dependency licenses match the installed inventory', async 
   const versions = await readJson('versions.lock.json');
   const inventory = await readJson('docs/dependency-licenses.json');
   assert.equal(workspace.version, versions.releaseVersion);
-  for (const [name, version] of Object.entries(workspace.devDependencies)) {
-    if (name.startsWith('@forge/')) continue;
-    const record = versions.lockedToolVersions[name];
-    assert.equal(record.version, version);
-    assert.ok(inventory.packages.some((entry) =>
-      entry.name === name && entry.version === version && entry.license === record.license),
-    `${name}@${version} license inventory mismatch`);
+  for (const [path, record] of [
+    ['package.json', versions.lockedToolVersions],
+    ['apps/web/package.json', versions.applicationDependencies['apps/web']],
+    ['apps/desktop/package.json', versions.applicationDependencies['apps/desktop']],
+    ['apps/host/package.json', versions.applicationDependencies['apps/host']],
+    ['packages/contracts/package.json', versions.applicationDependencies['packages/contracts']],
+    ['packages/core/package.json', {}],
+    ['packages/client/package.json', {}],
+    ['packages/persistence/package.json', versions.applicationDependencies['packages/persistence']],
+    ['packages/process/package.json', versions.applicationDependencies['packages/process']],
+    ['packages/workspace/package.json', versions.applicationDependencies['packages/workspace']],
+    ['packages/plugin-api/package.json', versions.applicationDependencies['packages/plugin-api']],
+    ['packages/contract-validator/package.json', versions.applicationDependencies['packages/contract-validator']],
+    ['plugins/executor-codex/package.json', versions.applicationDependencies['plugins/executor-codex']],
+  ]) {
+    const manifest = await readJson(path);
+    for (const [name, version] of Object.entries({ ...manifest.dependencies, ...manifest.devDependencies })) {
+      if (name.startsWith('@forge/')) {
+        assert.equal(version, 'workspace:*', `${path}: ${name} must use workspace protocol`);
+        continue;
+      }
+      assert.match(version, /^\d+\.\d+\.\d+$/, `${path}: ${name} must be pinned exactly`);
+      assert.equal(record[name]?.version, version, `${path}: ${name} version record mismatch`);
+      assert.ok(inventory.packages.some((entry) =>
+        entry.name === name && entry.version === version && entry.license === record[name].license),
+      `${name}@${version} license inventory mismatch`);
+    }
   }
 });
