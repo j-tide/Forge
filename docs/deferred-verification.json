@@ -1,0 +1,264 @@
+{
+  "schemaVersion": "1.0",
+  "entries": [
+    {
+      "testId": "T024",
+      "sourceTaskId": "P1-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-08",
+      "reason": "空/Host 离线状态已测；细粒度只读 principal/scope 依赖 P7-07 远端权限与审批 freshness，并在 P7-08 的只读模式页面首次可端到端验证。"
+    },
+    {
+      "testId": "T116",
+      "sourceTaskId": "P1-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "公平单 Agent/多角色流程对照及全角色预算需要 P3 流程、P4 角色/执行器和 P6 完整 Agent 对照验收。"
+    },
+    {
+      "testId": "T117",
+      "sourceTaskId": "P1-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "隐藏 holdout 与 Agent 上下文隔离需要正式运行上下文和 P6 的独立评测集。"
+    },
+    {
+      "testId": "T118",
+      "sourceTaskId": "P1-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P9-06",
+      "reason": "候选 Prompt 策略的离线评测、灰度与按 hash 回滚由 P9-06 首次提供。"
+    },
+    {
+      "testId": "T119",
+      "sourceTaskId": "P1-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P2-05 已测有限 429 与时限；turn/time/token 多角色工具循环总消耗预算需 P6-09 全角色验收。"
+    },
+    {
+      "testId": "T120",
+      "sourceTaskId": "P1-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P2-08 提供取消/中断状态，P6-09 首次有完整 Agent 评测汇总，可确认 cancelled/interrupted 不计 pass。"
+    },
+    {
+      "testId": "T041",
+      "sourceTaskId": "P2-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-10",
+      "reason": "公共接口和首个 Codex Adapter 已存在；两个真实执行器跑同一批准 TODO 需 P4-05 Claude 适配及 P4-10 替换性验收。"
+    },
+    {
+      "testId": "T042",
+      "sourceTaskId": "P2-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-06",
+      "reason": "不支持模型的 Adapter 拒绝已由 Codex spike 验过；Profile 保存与能力选择直到 P4-06 才存在。"
+    },
+    {
+      "testId": "T043",
+      "sourceTaskId": "P2-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P3-09",
+      "reason": "P0 原生 continuation、P2-08 正式 Run cancel/进程树已实测；正式重启恢复声明与 reconcile 需 P3-09 纵向验证。"
+    },
+    {
+      "testId": "T045",
+      "sourceTaskId": "P2-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-09",
+      "reason": "P2-08 验证取消/超时/隔离，但未注入真实运行途中认证失效；插件故障隔离与诊断首次在 P4-09 验证配置提示与凭据边界。"
+    },
+    {
+      "testId": "T041",
+      "sourceTaskId": "P2-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-10",
+      "reason": "本轮只有 Codex 一个真实执行器；第二个 Claude 适配器在 P4-05，两个执行器跑同一 TODO 在 P4-10 验收。"
+    },
+    {
+      "testId": "T042",
+      "sourceTaskId": "P2-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-06",
+      "reason": "Codex model/list 对未知模型拒绝已有证据；Profile 保存和模型组合选择属于 P4-06。"
+    },
+    {
+      "testId": "T043",
+      "sourceTaskId": "P2-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P3-09",
+      "reason": "P2-08 的真实 Run cancel/进程树已通过，P0 原生 continuation 也实测；正式恢复声明与重启 reconcile 需 P3-09 纵向验证。"
+    },
+    {
+      "testId": "T045",
+      "sourceTaskId": "P2-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-09",
+      "reason": "P2-08 验证取消/超时/隔离，但未注入真实运行途中认证失效；插件故障隔离与诊断首次在 P4-09 验证配置提示与凭据边界。"
+    },
+    {
+      "testId": "T071",
+      "sourceTaskId": "P2-06",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P5-09",
+      "reason": "P2-06 仅有当前 Run 的结构化 checkpoint，无项目记忆 candidate/validated 状态；P5-09 首次验证候选不能成为验收权威。"
+    },
+    {
+      "testId": "T072",
+      "sourceTaskId": "P2-06",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P5-09",
+      "reason": "P2-06 不检索持久项目记忆；P5-09 首次提供 expiresAt 与 stale 生命周期。"
+    },
+    {
+      "testId": "T073",
+      "sourceTaskId": "P2-06",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P5-09",
+      "reason": "P2-06 ContextBundle 与 checkpoint 已按项目隔离；跨项目经验共享默认关闭的正式记忆查询需 P5-09。"
+    },
+    {
+      "testId": "T074",
+      "sourceTaskId": "P2-06",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P5-09",
+      "reason": "P2-06 无项目接口路径记忆；P5-09 实现实时观察与旧记忆冲突候选。"
+    },
+    {
+      "testId": "T075",
+      "sourceTaskId": "P2-06",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P5-10",
+      "reason": "P2-06 不建立检索索引/项目记忆撤回 UI；P5-10 首次能由用户撤销并校验缓存/索引及墓碑。"
+    },
+    {
+      "testId": "T116",
+      "sourceTaskId": "P2-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P2 仅有单 Codex 开发节点；同任务同预算的单 Agent/多角色流程公平基线要等 P6-09 完整流程评测。"
+    },
+    {
+      "testId": "T117",
+      "sourceTaskId": "P2-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P2 没有隐藏 holdout 集、隔离评测注入或泄漏发布门禁；这些首次由 P6-09 的完整对照评测提供。"
+    },
+    {
+      "testId": "T118",
+      "sourceTaskId": "P2-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P9-06",
+      "reason": "Prompt 候选灰度、离线评测与按 hash 回滚属于 P9-06；P2 冻结 RunConfig 不等于策略回滚。"
+    },
+    {
+      "testId": "T119",
+      "sourceTaskId": "P2-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P2 已测单 Run 时间上限、有限 429 和观察到的用量；所有角色/tool 循环总预算及超限升级需 P6-09。"
+    },
+    {
+      "testId": "T120",
+      "sourceTaskId": "P2-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P2-10 真实取消独立保持 cancelled、没有快照交接；汇总评测中将 cancelled/interrupted 单列而不计 pass 需 P6-09 的评测统计。"
+    },
+    {
+      "testId": "T116",
+      "sourceTaskId": "P3-12",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P3-12 已实测单任务 Develop→Review→Verify→人审交付，但同任务同预算的单 Agent/多角色公平对照需要 P4 第二执行器和 P6-09 正式评测统计。"
+    },
+    {
+      "testId": "T117",
+      "sourceTaskId": "P3-12",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P3 当前没有正式 holdout 数据集与 Agent 评测上下文隔离；P6-09 才能对隐藏答案泄漏作真实验收。"
+    },
+    {
+      "testId": "T118",
+      "sourceTaskId": "P3-12",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P9-06",
+      "reason": "候选 Prompt 的离线评测、灰度推广及按 hash 回滚属于 P9-06；P3 的冻结 RunConfig 不等价于策略回滚。"
+    },
+    {
+      "testId": "T119",
+      "sourceTaskId": "P3-12",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P3 已有单 Run 时限与有限返工；所有角色/tool 循环的 turn/time/token 总预算和超限升级需 P6-09 评测体系。"
+    },
+    {
+      "testId": "T120",
+      "sourceTaskId": "P3-12",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P3 已验证取消/中断不写成 Task Done；但在正式评测汇总中将 cancelled/interrupted 单列且不计 pass 要等 P6-09。"
+    },
+    {
+      "testId": "T040",
+      "sourceTaskId": "P4-01",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-09",
+      "reason": "插件运行或进程崩溃后的 Task 影响与 Host 可用性需要 P4-09 故障隔离；P4-01 只保证无效 Manifest 无加载副作用。"
+    },
+    {
+      "testId": "T040",
+      "sourceTaskId": "P4-02",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-09",
+      "reason": "P4-02 验证部分激活失败的逆序清理；插件运行/进程崩溃的 Task 影响和 UI/只读可用性属于 P4-09。"
+    },
+    {
+      "testId": "T040",
+      "sourceTaskId": "P4-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-09",
+      "reason": "P4-03 验证内置版本锁、Run 绑定和 draining，但插件运行/子进程崩溃后 Task 影响、UI 与其余只读数据可用性由 P4-09 故障隔离验收。"
+    },
+    {
+      "testId": "T106",
+      "sourceTaskId": "P4-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-02",
+      "reason": "通用 Dialog/Drawer 的焦点单测已存在；本任务配置表单无需弹层。完整 Tab/ShiftTab/Esc/焦点回位 E2E 由 P6-02 全局键盘验收负责。"
+    },
+    {
+      "testId": "T107",
+      "sourceTaskId": "P4-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-01",
+      "reason": "正式 glass token 的亮色阅读面对比已有静态测试；权威测试要求亮暗双主题，全页面暗主题和状态对比在 P6-01 首次具备。"
+    },
+    {
+      "testId": "T108",
+      "sourceTaskId": "P4-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-07",
+      "reason": "当前 macOS arm64 Desktop 可渲染；Windows 150% DPI 与安装环境需 P6-07 实机，不能以 macOS 截图冒充。"
+    },
+    {
+      "testId": "T109",
+      "sourceTaskId": "P4-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-02",
+      "reason": "本轮配置字段有换行与可访问标签；权威测试的 120 字任务卡标题和长路径跨页面验收由 P6-02 全局中文排版/DPI 负责。"
+    },
+    {
+      "testId": "T110",
+      "sourceTaskId": "P4-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-02",
+      "reason": "P0 token 层已有 prefers-reduced-motion 和窗口设置回退；权威测试的运行状态/流程全局无强制循环动效由 P6-02 完整验收。"
+    }
+  ]
+}

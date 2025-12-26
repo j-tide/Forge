@@ -1,0 +1,9 @@
+{
+  "mode": "autopilot",
+  "autoCommit": false,
+  "autoPush": false,
+  "autoPublish": false,
+  "maxMeaningfulRepairAttemptsPerTask": 3,
+  "continueAcrossPhaseBoundaries": true,
+  "executeDeferredTasks": false
+}
