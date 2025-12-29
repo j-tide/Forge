@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { executorCapabilitiesSchema, executorEventSchema, executorRunRequestSchema, executorUsageSchema } from '../dist/index.js';
+import { ExecutorEventGate, executorCapabilitiesSchema, executorEventSchema,
+  executorRunRequestSchema, executorUsageSchema, scheduledExecutorRunRequestSchema } from '../dist/index.js';
 
 test('executor request rejects unknown fields, empty workspace and unsupported permission', () => {
   const request = { runId: 'r1', taskId: 't1', workspace: '/tmp/example', goal: 'Read code', context: [],
@@ -32,4 +33,37 @@ test('executor events require monotonic-ready metadata and forbid raw provider p
   assert.equal(executorEventSchema.parse(event).type, 'run.started');
   assert.equal(executorEventSchema.safeParse({ ...event, rawCodexEvent: {} }).success, false);
   assert.equal(executorEventSchema.safeParse({ ...event, sequence: 0 }).success, false);
+});
+
+test('scheduled request binds attempt, lease epoch and versioned context without arbitrary grants', () => {
+  const request = { runId: 'r1', taskId: 't1', workspace: '/fixture', goal: 'Inspect code',
+    context: [], permission: 'read-only', approval: 'never', maxDurationMs: 1000,
+    attempt: { attemptId: 'a1', leaseEpoch: 2, contractRevision: 1,
+      workspaceLeaseId: '9ed91d0e-3952-48ef-8285-d56cb4b26188',
+      contextBundleId: 'context1', profileRevision: 1, outputSchemaId: 'result1' } };
+  assert.equal(scheduledExecutorRunRequestSchema.parse(request).attempt.leaseEpoch, 2);
+  assert.equal(scheduledExecutorRunRequestSchema.safeParse({ ...request, attempt: undefined }).success, false);
+  assert.equal(scheduledExecutorRunRequestSchema.safeParse({ ...request, attempt: {
+    ...request.attempt, leaseEpoch: 0 } }).success, false);
+  assert.equal(scheduledExecutorRunRequestSchema.safeParse({ ...request, attempt: {
+    ...request.attempt, shell: 'rm -rf /' } }).success, false);
+});
+
+test('event gate rejects wrong run, duplicate, gaps, invalid output and post-terminal events', () => {
+  const gate = new ExecutorEventGate('r1');
+  const started = { type: 'run.started', runId: 'r1', sequence: 1,
+    timestamp: new Date().toISOString(), providerSessionId: 'session1' };
+  assert.throws(() => gate.accept({ ...started, type: 'assistant.message', text: 'early' }),
+    { code: 'EXECUTOR_PROTOCOL_ERROR' });
+  assert.throws(() => gate.accept({ ...started, runId: 'r2' }), { code: 'EXECUTOR_PROTOCOL_ERROR' });
+  assert.deepEqual(gate.accept(started), started);
+  assert.throws(() => gate.accept(started), { code: 'EXECUTOR_PROTOCOL_ERROR' });
+  assert.throws(() => gate.accept({ ...started, sequence: 3, type: 'assistant.message', text: 'gap' }),
+    { code: 'EXECUTOR_PROTOCOL_ERROR' });
+  assert.throws(() => gate.accept({ ...started, sequence: 2, rawProviderPayload: {} }),
+    { code: 'EXECUTOR_PROTOCOL_ERROR' });
+  assert.equal(gate.accept({ type: 'run.cancelled', runId: 'r1', sequence: 2,
+    timestamp: started.timestamp }).type,
+    'run.cancelled');
+  assert.throws(() => gate.accept({ ...started, sequence: 3 }), { code: 'EXECUTOR_PROTOCOL_ERROR' });
 });
