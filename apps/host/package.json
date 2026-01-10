@@ -25,6 +25,7 @@
     "@forge/workspace": "workspace:*",
     "@forge/plugin-api": "workspace:*",
     "@forge/executor-codex": "workspace:*"
+    ,"@forge/refiner": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "22.20.4"

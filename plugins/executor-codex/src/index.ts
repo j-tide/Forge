@@ -28,6 +28,14 @@ const itemNotice = z.object({ threadId: z.string().optional(), turnId: z.string(
   server: z.string().optional(), tool: z.string().optional(),
   changes: z.array(z.object({ path: z.string(), kind: z.object({ type: z.enum(['add', 'delete', 'update']) }) })).optional(),
 }) });
+const messageDeltaNotice = z.object({ threadId: z.string().optional(), turnId: z.string().optional(),
+  delta: z.string() });
+const usageNotice = z.object({ threadId: z.string().optional(), turnId: z.string().optional(),
+  tokenUsage: z.object({ total: z.object({ inputTokens: z.number().int().nonnegative(),
+    outputTokens: z.number().int().nonnegative(),
+    cachedInputTokens: z.number().int().nonnegative().optional() }) }) });
+const approvalNotice = z.object({ threadId: z.string().optional(), turnId: z.string().optional(),
+  itemId: z.string().min(1), reason: z.string().optional(), command: z.string().optional() });
 
 function object(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -132,17 +140,17 @@ class CodexRun implements ExecutorRunHandle {
       return;
     }
     if (message.method === 'item/agentMessage/delta') {
-      if (typeof params?.delta === 'string') this.emit({ type: 'assistant.message', text: params.delta });
+      const parsed = messageDeltaNotice.safeParse(message.params);
+      if (!parsed.success) { this.fail(new ExecutorError('EXECUTOR_PROTOCOL_ERROR', 'Invalid Codex message delta')); return; }
+      this.emit({ type: 'assistant.message', text: parsed.data.delta });
       return;
     }
     if (message.method === 'thread/tokenUsage/updated') {
-      const token = object(params?.tokenUsage);
-      const total = object(token?.total);
-      if (typeof total?.inputTokens === 'number' && typeof total.outputTokens === 'number') {
-        this.emit({ type: 'usage.updated', inputTokens: total.inputTokens, outputTokens: total.outputTokens,
-          cachedInputTokens: typeof total.cachedInputTokens === 'number' ? total.cachedInputTokens : null,
-          cost: null, currency: null });
-      }
+      const parsed = usageNotice.safeParse(message.params);
+      if (!parsed.success) { this.fail(new ExecutorError('EXECUTOR_PROTOCOL_ERROR', 'Invalid Codex usage')); return; }
+      const total = parsed.data.tokenUsage.total;
+      this.emit({ type: 'usage.updated', inputTokens: total.inputTokens, outputTokens: total.outputTokens,
+        cachedInputTokens: total.cachedInputTokens ?? null, cost: null, currency: null });
       return;
     }
     if (message.method === 'item/started' || message.method === 'item/completed') {
@@ -168,7 +176,8 @@ class CodexRun implements ExecutorRunHandle {
       return;
     }
     if (message.method === 'item/commandExecution/requestApproval' || message.method === 'item/fileChange/requestApproval') {
-      if (typeof message.id !== 'number' || typeof params?.itemId !== 'string') {
+      const parsed = approvalNotice.safeParse(message.params);
+      if (typeof message.id !== 'number' || !parsed.success) {
         this.fail(new ExecutorError('EXECUTOR_PROTOCOL_ERROR', 'Invalid Codex approval request')); return;
       }
       const approvalId = `${this.runId}:${message.id}`;
@@ -176,8 +185,7 @@ class CodexRun implements ExecutorRunHandle {
       this.approvals.set(approvalId, { requestId: message.id, timer });
       this.emit({ type: 'run.status', status: 'waiting_approval' });
       this.emit({ type: 'approval.requested', approvalId,
-        summary: typeof params.reason === 'string' ? params.reason :
-          typeof params.command === 'string' ? params.command : 'Codex file change requires approval',
+        summary: parsed.data.reason ?? parsed.data.command ?? 'Codex file change requires approval',
         capability: message.method.includes('commandExecution') ? 'command' : 'file_change',
         expiresAt: new Date(Date.now() + 120_000).toISOString() });
       return;

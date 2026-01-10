@@ -4,19 +4,27 @@ import { lstat, mkdir, readFile, readdir, realpath, rename, writeFile } from 'no
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { z } from 'zod';
+import { materializeSnapshot, type SnapshotMaterial } from './snapshot.js';
+export { SnapshotError, type SnapshotFile, type SnapshotMaterial } from './snapshot.js';
 
 const runGit = promisify(execFile);
 const runIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/);
 export const workspaceDescriptorSchema = z.strictObject({
   workspaceId: z.uuid(), rootPath: z.string().min(1), sourceRepo: z.string().min(1),
   sourceRepoIdentity: z.string().min(1), baseRevision: z.string().regex(/^[0-9a-f]{40,64}$/),
-  mode: z.literal('detached-worktree'), createdAt: z.string().datetime(), ownerRunId: runIdSchema,
+  baseTree: z.string().regex(/^[0-9a-f]{40,64}$/).optional(),
+  branch: z.string().regex(/^forge\/run\/[0-9a-f-]{36}$/).nullable().optional(),
+  leaseEpoch: z.number().int().nonnegative().optional(), activeLeaseId: z.uuid().nullable().optional(),
+  snapshotExclusions: z.array(z.string()).optional(),
+  mode: z.enum(['detached-worktree', 'task-branch']), createdAt: z.string().datetime(), ownerRunId: runIdSchema,
   runtimeId: z.uuid(), ownershipId: z.uuid(),
   status: z.enum(['creating', 'ready', 'busy', 'releasing', 'released', 'failed']),
 });
 export type WorkspaceDescriptor = z.infer<typeof workspaceDescriptorSchema>;
-export type CreateWorkspace = { sourceRepo: string; ownerRunId: string; baseRevision?: string };
+export type CreateWorkspace = { sourceRepo: string; ownerRunId: string; baseRevision?: string;
+  mode?: 'detached-worktree' | 'task-branch' };
 export type ReleaseOptions = { discardChanges?: boolean };
+export const workspaceSnapshotExclusions = Object.freeze(['.git', 'node_modules', '.env', '.env.*']);
 
 async function git(cwd: string, args: string[], hooksPath: string): Promise<string> {
   const { stdout } = await runGit('git', ['-c', `core.hooksPath=${hooksPath}`, '-C', cwd, ...args],
@@ -33,6 +41,9 @@ function contained(root: string, candidate: string): boolean {
 export class WorkspaceManager {
   private readonly records = new Map<string, WorkspaceDescriptor>();
   private readonly releasing = new Map<string, Promise<WorkspaceDescriptor>>();
+  private readonly acquiring = new Set<string>();
+  private readonly releasingLease = new Set<string>();
+  private readonly freezing = new Set<string>();
   private root = '';
   private trees = '';
   private metadata = '';
@@ -79,19 +90,24 @@ export class WorkspaceManager {
     const common = await git(source, ['rev-parse', '--git-common-dir'], this.hooks);
     const sourceRepoIdentity = await realpath(resolve(source, common));
     const baseRevision = await git(source, ['rev-parse', '--verify', `${input.baseRevision ?? 'HEAD'}^{commit}`], this.hooks);
+    const baseTree = await git(source, ['rev-parse', '--verify', `${baseRevision}^{tree}`], this.hooks);
     const workspaceId = randomUUID();
+    const mode = input.mode ?? 'detached-worktree';
+    const branch = mode === 'task-branch' ? `forge/run/${workspaceId}` : null;
     const rootPath = join(this.trees, workspaceId);
     if (!contained(this.trees, rootPath)) throw new Error('Workspace path escapes managed root');
     try { await lstat(rootPath); throw new Error('Workspace directory already exists'); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
     const descriptor = workspaceDescriptorSchema.parse({ workspaceId, rootPath, sourceRepo: source,
-      sourceRepoIdentity, baseRevision, mode: 'detached-worktree', createdAt: new Date().toISOString(),
+      sourceRepoIdentity, baseRevision, baseTree, branch, mode, leaseEpoch: 0, activeLeaseId: null,
+      snapshotExclusions: [...workspaceSnapshotExclusions], createdAt: new Date().toISOString(),
       ownerRunId: input.ownerRunId, runtimeId: this.runtimeId, ownershipId: randomUUID(), status: 'creating' });
     this.records.set(workspaceId, descriptor);
     await this.save(descriptor);
     try {
-      await git(source, ['worktree', 'add', '--detach', rootPath, baseRevision], this.hooks);
+      await git(source, ['worktree', 'add', ...(branch ? ['-b', branch] : ['--detach']), rootPath, baseRevision], this.hooks);
       await this.assertOwnedTree(descriptor);
+      if (!this.accepting) throw new Error('WorkspaceManager is stopping');
       descriptor.status = 'ready';
       await this.save(descriptor);
       return { ...descriptor };
@@ -120,6 +136,9 @@ export class WorkspaceManager {
     const top = await realpath(await git(record.rootPath, ['rev-parse', '--show-toplevel'], this.hooks));
     const common = await realpath(resolve(record.rootPath, await git(record.rootPath, ['rev-parse', '--git-common-dir'], this.hooks)));
     if (top !== record.rootPath || common !== record.sourceRepoIdentity) throw new Error('Git worktree identity mismatch');
+    if (record.branch && await git(record.rootPath, ['branch', '--show-current'], this.hooks) !== record.branch) {
+      throw new Error('Forge task branch identity mismatch');
+    }
     const listed = await git(record.sourceRepo, ['worktree', 'list', '--porcelain', '-z'], this.hooks);
     if (!listed.split('\0').some((entry) => entry === `worktree ${record.rootPath}`)) {
       throw new Error('Git does not register the owned worktree');
@@ -132,11 +151,54 @@ export class WorkspaceManager {
     this.requireOpen();
     runIdSchema.parse(runId);
     const record = this.owned(workspaceId);
-    if (record.ownerRunId !== runId || record.status !== 'ready') throw new Error('Workspace already leased or not ready');
-    await this.assertOwnedTree(record);
-    record.status = 'busy';
-    await this.save(record);
-    return { ...record };
+    if (record.ownerRunId !== runId || record.status !== 'ready' ||
+      this.acquiring.has(workspaceId) || this.freezing.has(workspaceId)) {
+      throw new Error('Workspace already leased or not ready');
+    }
+    this.acquiring.add(workspaceId);
+    try {
+      await this.assertOwnedTree(record);
+      if (!this.accepting || record.status !== 'ready') throw new Error('Workspace is stopping or not ready');
+      record.status = 'busy';
+      record.leaseEpoch = (record.leaseEpoch ?? 0) + 1;
+      record.activeLeaseId = randomUUID();
+      await this.save(record);
+      return { ...record };
+    } finally { this.acquiring.delete(workspaceId); }
+  }
+
+  /** Freeze only a stopped Forge-owned worktree; never stages into the user's index. */
+  async freezeSnapshot(workspaceId: string, runId: string,
+    noChangeExplanation?: string): Promise<SnapshotMaterial> {
+    this.requireOpen();
+    const record = this.owned(workspaceId);
+    if (!this.accepting || record.ownerRunId !== runId || record.status !== 'ready' ||
+      record.activeLeaseId || this.acquiring.has(workspaceId) || this.freezing.has(workspaceId) ||
+      this.isRunActive(runId)) throw new Error('Workspace is not available for snapshot');
+    this.freezing.add(workspaceId);
+    try {
+      await this.assertOwnedTree(record);
+      if (record.status !== 'ready' || this.isRunActive(runId)) {
+        throw new Error('Workspace changed while preparing snapshot');
+      }
+      return await materializeSnapshot(record, join(this.metadata, `${randomUUID()}.index`),
+        this.hooks, noChangeExplanation);
+    } finally { this.freezing.delete(workspaceId); }
+  }
+
+  async verifySnapshotRef(workspaceId: string, snapshotId: string,
+    commitSha: string, treeSha: string): Promise<void> {
+    this.requireOpen();
+    z.uuid().parse(snapshotId);
+    const record = this.owned(workspaceId);
+    if (!/^[0-9a-f]{40,64}$/.test(commitSha) || !/^[0-9a-f]{40,64}$/.test(treeSha)) {
+      throw new Error('CodeSnapshot hash is invalid');
+    }
+    const ref = `refs/forge/snapshots/${snapshotId}`;
+    if (await git(record.sourceRepo, ['rev-parse', '--verify', `${ref}^{commit}`], this.hooks) !== commitSha ||
+      await git(record.sourceRepo, ['rev-parse', '--verify', `${commitSha}^{tree}`], this.hooks) !== treeSha) {
+      throw new Error('CodeSnapshot Git ref or tree no longer matches the saved record');
+    }
   }
 
   async quarantine(workspaceId: string): Promise<WorkspaceDescriptor> {
@@ -146,6 +208,28 @@ export class WorkspaceManager {
     record.status = 'failed';
     await this.save(record);
     return { ...record };
+  }
+
+  async releaseLease(workspaceId: string, leaseId: string): Promise<WorkspaceDescriptor> {
+    this.requireOpen();
+    z.uuid().parse(leaseId);
+    const record = this.owned(workspaceId);
+    if (record.status !== 'busy' || record.activeLeaseId !== leaseId ||
+      this.acquiring.has(workspaceId) || this.releasingLease.has(workspaceId)) {
+      throw new Error('Workspace lease identity is stale or not active');
+    }
+    this.releasingLease.add(workspaceId);
+    try {
+      if (this.isRunActive(record.ownerRunId)) throw new Error('Workspace has active owned processes');
+      await this.assertOwnedTree(record);
+      if (record.status !== 'busy' || record.activeLeaseId !== leaseId || !this.accepting) {
+        throw new Error('Workspace lease changed during release');
+      }
+      record.status = 'ready';
+      record.activeLeaseId = null;
+      await this.save(record);
+      return { ...record };
+    } finally { this.releasingLease.delete(workspaceId); }
   }
 
   release(workspaceId: string, options: ReleaseOptions = {}): Promise<WorkspaceDescriptor> {
@@ -160,6 +244,10 @@ export class WorkspaceManager {
 
   private async releaseOwned(workspaceId: string, options: ReleaseOptions): Promise<WorkspaceDescriptor> {
     const record = this.owned(workspaceId);
+    if (this.acquiring.has(workspaceId) || this.releasingLease.has(workspaceId) ||
+      this.freezing.has(workspaceId)) {
+      throw new Error('Workspace lease transition is in progress');
+    }
     if (record.status === 'released') return { ...record };
     if (!['ready', 'busy'].includes(record.status)) throw new Error('Workspace is not releasable');
     if (this.isRunActive(record.ownerRunId)) throw new Error('Workspace has active owned processes');
@@ -171,6 +259,7 @@ export class WorkspaceManager {
     try {
       await git(record.sourceRepo, ['worktree', 'remove', ...(dirty ? ['--force'] : []), record.rootPath], this.hooks);
       record.status = 'released';
+      record.activeLeaseId = null;
       await this.save(record);
       return { ...record };
     } catch (error) {
