@@ -70,7 +70,7 @@
     "vueAndVite": "Vue 3.5.43 and Vite 8.3.0 Web build, browser startup, and Desktop renderer passed on macOS arm64",
     "sqliteAndDrizzle": "P0-04: better-sqlite3 13.0.3 and Drizzle 0.45.3 installed; Node and Electron utilityProcess SQLite runtime tested on macOS arm64; packaged app and Windows/macOS Intel unverified",
     "codexSdk": "Codex SDK 0.155.1 and app-server CLI 0.155.1: real read-only, coding, streaming, interrupt, resume, approval approve/reject on macOS arm64; Windows/Intel and packaged app unverified",
-    "claudeAgentSdk": "P4: not installed or tested",
+    "claudeAgentSdk": "claude-agent-sdk 0.2.159 pinned; bundled Claude Code CLI 2.1.281 --version loaded in an owned process on macOS arm64. No Anthropic API key: agent run, auth, approvals, resume, model compatibility, cancellation and Windows/Intel are UNVERIFIED; not activated as a Forge Executor.",
     "codexPlatformBinary": "@openai/codex@0.155.1-darwin-arm64 optional binary in lockfile, real app-server and SDK runs on macOS arm64; Windows/Intel and packaged paths unverified",
     "workspaceAndProcess": "P0-06: Node POSIX detached process groups and Git worktree verified on macOS arm64; Windows process-tree backend unavailable/unverified, macOS Intel unverified",
     "designSystem": "P0-07: @forge/ui reuses exact Vue 3.5.43, TypeScript 5.9.3 and vue-tsc 3.3.11; Web and Electron renderer verified on macOS arm64. Windows and system DPI unverified.",
@@ -171,6 +171,14 @@
         "role": "strict Host protocol request and response validation"
       }
     },
+    "packages/core": {
+      "@types/node": {
+        "version": "22.20.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 2438105,
+        "role": "approval digest and Host domain TypeScript declarations"
+      }
+    },
     "packages/persistence": {
       "better-sqlite3": {
         "version": "13.0.3",
@@ -231,6 +239,14 @@
         "license": "MIT",
         "registryUnpackedBytes": 6138878,
         "role": "Executor API runtime validation"
+      }
+    },
+    "plugins/refiner": {
+      "zod": {
+        "version": "4.6.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 6138878,
+        "role": "strict Task Draft and model output validation"
       }
     },
     "plugins/executor-codex": {
@@ -302,6 +318,22 @@
         "registryUnpackedBytes": 23625066,
         "role": "typed design token exports and strict component check"
       }
+    }
+  },
+  "pythonToolVersions": {
+    "python": "3.12.13",
+    "uv": "0.11.14",
+    "project": "forge-core@0.0.1",
+    "lockfile": "python/uv.lock",
+    "licenses": "docs/python-dependency-licenses.json",
+    "direct": {
+      "pydantic": "2.13.5",
+      "pytest": "9.1.1",
+      "pytest-asyncio": "1.4.0",
+      "ruff": "0.16.8",
+      "mypy": "2.3.1",
+      "hatchling": "1.32.4",
+      "claude-agent-sdk": "0.2.159"
     }
   }
 }

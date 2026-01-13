@@ -1,0 +1,191 @@
+{
+  "verifiedOn": "2026-09-24",
+  "source": "Installed wheel License-Expression and https://pypi.org/pypi/<package>/<version>/json; platform-only httpx2-jsfetch and pywin32 from PyPI. Claude Agent SDK code is MIT; bundled CLI use is governed by Anthropic commercial terms.",
+  "packages": {
+    "annotated-types": {
+      "version": "0.8.0",
+      "license": "MIT"
+    },
+    "anyio": {
+      "version": "4.15.1",
+      "license": "MIT"
+    },
+    "ast-serialize": {
+      "version": "0.11.2",
+      "license": "MIT"
+    },
+    "attrs": {
+      "version": "26.1.0",
+      "license": "MIT"
+    },
+    "cffi": {
+      "version": "2.1.1",
+      "license": "MIT-0"
+    },
+    "claude-agent-sdk": {
+      "version": "0.2.159",
+      "license": "MIT"
+    },
+    "click": {
+      "version": "8.5.0",
+      "license": "BSD-3-Clause"
+    },
+    "colorama": {
+      "version": "0.4.6",
+      "license": "BSD"
+    },
+    "cryptography": {
+      "version": "50.0.1",
+      "license": "Apache-2.0 OR BSD-3-Clause"
+    },
+    "h11": {
+      "version": "0.16.0",
+      "license": "MIT"
+    },
+    "hatchling": {
+      "version": "1.32.4",
+      "license": "MIT",
+      "buildOnly": true
+    },
+    "httpcore2": {
+      "version": "2.13.1",
+      "license": "BSD-3-Clause"
+    },
+    "httpx2": {
+      "version": "2.13.1",
+      "license": "BSD-3-Clause"
+    },
+    "httpx2-jsfetch": {
+      "version": "1.0",
+      "license": "BSD-3-Clause"
+    },
+    "idna": {
+      "version": "3.20",
+      "license": "BSD-3-Clause"
+    },
+    "iniconfig": {
+      "version": "2.3.0",
+      "license": "MIT"
+    },
+    "jsonschema": {
+      "version": "4.26.0",
+      "license": "MIT"
+    },
+    "jsonschema-specifications": {
+      "version": "2025.9.1",
+      "license": "MIT"
+    },
+    "librt": {
+      "version": "0.15.0",
+      "license": "MIT"
+    },
+    "mcp": {
+      "version": "2.2.0",
+      "license": "MIT"
+    },
+    "mcp-types": {
+      "version": "2.2.0",
+      "license": "MIT"
+    },
+    "mypy": {
+      "version": "2.3.1",
+      "license": "MIT"
+    },
+    "mypy-extensions": {
+      "version": "1.1.0",
+      "license": "MIT"
+    },
+    "opentelemetry-api": {
+      "version": "1.44.0",
+      "license": "Apache-2.0"
+    },
+    "packaging": {
+      "version": "26.3",
+      "license": "Apache-2.0 OR BSD-2-Clause"
+    },
+    "pathspec": {
+      "version": "1.1.1",
+      "license": "MPL-2.0"
+    },
+    "pluggy": {
+      "version": "1.6.0",
+      "license": "MIT"
+    },
+    "pycparser": {
+      "version": "3.0",
+      "license": "BSD-3-Clause"
+    },
+    "pydantic": {
+      "version": "2.13.5",
+      "license": "MIT"
+    },
+    "pydantic-core": {
+      "version": "2.46.5",
+      "license": "MIT"
+    },
+    "pygments": {
+      "version": "2.21.0",
+      "license": "BSD-2-Clause"
+    },
+    "pyjwt": {
+      "version": "2.15.0",
+      "license": "MIT"
+    },
+    "pytest": {
+      "version": "9.1.1",
+      "license": "MIT"
+    },
+    "pytest-asyncio": {
+      "version": "1.4.0",
+      "license": "Apache-2.0"
+    },
+    "python-multipart": {
+      "version": "0.0.32",
+      "license": "Apache-2.0"
+    },
+    "pywin32": {
+      "version": "312",
+      "license": "PSF-2.0"
+    },
+    "referencing": {
+      "version": "0.37.0",
+      "license": "MIT"
+    },
+    "rpds-py": {
+      "version": "2026.6.3",
+      "license": "MIT"
+    },
+    "ruff": {
+      "version": "0.16.8",
+      "license": "MIT"
+    },
+    "sniffio": {
+      "version": "1.3.1",
+      "license": "MIT OR Apache-2.0"
+    },
+    "sse-starlette": {
+      "version": "3.4.11",
+      "license": "BSD-3-Clause"
+    },
+    "starlette": {
+      "version": "1.7.0",
+      "license": "BSD-3-Clause"
+    },
+    "truststore": {
+      "version": "0.10.4",
+      "license": "MIT"
+    },
+    "typing-extensions": {
+      "version": "4.16.0",
+      "license": "PSF-2.0"
+    },
+    "typing-inspection": {
+      "version": "0.4.4",
+      "license": "MIT"
+    },
+    "uvicorn": {
+      "version": "0.53.0",
+      "license": "BSD-3-Clause"
+    }
+  }
+}
