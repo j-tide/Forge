@@ -1,0 +1,25 @@
+{
+  "verifiedOn": "2026-09-24",
+  "upstreamVersion": "codex-cli 0.155.1",
+  "platform": "darwin/arm64",
+  "evidenceCommand": "uv run --project python python python/spikes/codex_live.py <mode>",
+  "evidenceCases": [
+    "structured", "coding", "cancel", "approve", "reject",
+    "continuation", "restart-continuation", "invalid-model", "missing-auth"
+  ],
+  "checks": {
+    "streaming": true,
+    "resume": true,
+    "interrupt": true,
+    "approval": true,
+    "structuredEvents": true,
+    "structuredOutput": true,
+    "workspaceControl": true,
+    "toolEvents": false,
+    "sessionPersistence": true,
+    "modelSelection": true,
+    "usageReporting": true,
+    "readOnlyEnforced": true,
+    "networkPolicyEnforced": false
+  }
+}
