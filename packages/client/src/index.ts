@@ -2,6 +2,20 @@ import {
   forgeError, hostConnectionSnapshotSchema, hostProtocolVersion, systemCommandEnvelopeSchema,
   systemCommandResultSchema, type ForgeDesktopBridge, type HostConnectionSnapshot,
   type SystemCommandEnvelope, type SystemCommandResult,
+  projectCommandEnvelopeSchema, projectCommandResultSchema,
+  type ProjectCommandEnvelope, type ProjectCommandResult,
+  conversationCommandEnvelopeSchema, conversationCommandResultSchema,
+  conversationStreamEventSchema, type ConversationCommandEnvelope, type ConversationCommandResult,
+  type ConversationStreamEvent,
+  draftCommandEnvelopeSchema, draftCommandResultSchema,
+  type DraftCommandEnvelope, type DraftCommandResult,
+  approvalCommandEnvelopeSchema, approvalCommandResultSchema,
+  type ApprovalCommandEnvelope, type ApprovalCommandResult,
+  boardCommandEnvelopeSchema, boardCommandResultSchema,
+  type BoardCommandEnvelope, type BoardCommandResult,
+  runCommandEnvelopeSchema, runCommandResultSchema,
+  bundledPluginInspectionSchema, type BundledPluginInspection,
+  type RunCommandEnvelope, type RunCommandResult,
 } from '@forge/contracts';
 
 export interface ForgeTransport {
@@ -132,7 +146,7 @@ export class LocalTransport implements ForgeTransport {
 export class ForgeClient {
   readonly transport: ForgeTransport;
 
-  constructor(bridge?: ForgeDesktopBridge) {
+  constructor(private readonly bridge?: ForgeDesktopBridge) {
     this.transport = bridge ? new LocalTransport(bridge) : new UnavailableTransport();
   }
 
@@ -148,5 +162,87 @@ export class ForgeClient {
       createdAt: new Date().toISOString(), protocolVersion: hostProtocolVersion, payload: {},
     });
     return this.transport.invoke(command);
+  }
+
+  async inspectBundledPlugin(): Promise<BundledPluginInspection | null> {
+    if (!this.bridge) return null;
+    const raw: unknown = await this.bridge.inspectBundledPlugin();
+    return bundledPluginInspectionSchema.parse(raw);
+  }
+
+  async chooseProjectFolder(): Promise<string | null> {
+    if (!this.bridge) return null;
+    const selected: unknown = await this.bridge.chooseProjectFolder();
+    if (selected === null) return null;
+    if (typeof selected !== 'string' || !selected) throw new Error('Invalid folder picker result');
+    return selected;
+  }
+
+  async project(command: Pick<ProjectCommandEnvelope, 'type' | 'payload'>): Promise<ProjectCommandResult> {
+    const envelope = projectCommandEnvelopeSchema.parse({ ...command, schemaVersion: '1.0',
+      commandId: crypto.randomUUID(), createdAt: new Date().toISOString(), protocolVersion: hostProtocolVersion });
+    if (!this.bridge) return projectCommandResultSchema.parse({ commandId: envelope.commandId, ok: false,
+      error: forgeError('HOST_UNAVAILABLE', 'Local Host unavailable', envelope.commandId),
+      durationMs: 0, hostTimestamp: new Date().toISOString() });
+    const raw: unknown = await this.bridge.invokeProject(envelope);
+    return projectCommandResultSchema.parse(raw);
+  }
+
+  async conversation(command: Pick<ConversationCommandEnvelope, 'type' | 'payload'>): Promise<ConversationCommandResult> {
+    const envelope = conversationCommandEnvelopeSchema.parse({ ...command, schemaVersion: '1.0',
+      commandId: crypto.randomUUID(), createdAt: new Date().toISOString(), protocolVersion: hostProtocolVersion });
+    if (!this.bridge) return conversationCommandResultSchema.parse({ commandId: envelope.commandId, ok: false,
+      error: forgeError('HOST_UNAVAILABLE', 'Local Host unavailable', envelope.commandId),
+      durationMs: 0, hostTimestamp: new Date().toISOString() });
+    const raw: unknown = await this.bridge.invokeConversation(envelope);
+    return conversationCommandResultSchema.parse(raw);
+  }
+
+  async draft(command: Pick<DraftCommandEnvelope, 'type' | 'payload'>): Promise<DraftCommandResult> {
+    const envelope = draftCommandEnvelopeSchema.parse({ ...command, schemaVersion: '1.0',
+      commandId: crypto.randomUUID(), createdAt: new Date().toISOString(), protocolVersion: hostProtocolVersion });
+    if (!this.bridge) return draftCommandResultSchema.parse({ commandId: envelope.commandId, ok: false,
+      error: forgeError('HOST_UNAVAILABLE', 'Local Host unavailable', envelope.commandId),
+      durationMs: 0, hostTimestamp: new Date().toISOString() });
+    const raw: unknown = await this.bridge.invokeDraft(envelope);
+    return draftCommandResultSchema.parse(raw);
+  }
+
+  async approval(command: Pick<ApprovalCommandEnvelope, 'type' | 'payload'>): Promise<ApprovalCommandResult> {
+    const envelope = approvalCommandEnvelopeSchema.parse({ ...command, schemaVersion: '1.0',
+      commandId: crypto.randomUUID(), createdAt: new Date().toISOString(), protocolVersion: hostProtocolVersion });
+    if (!this.bridge) return approvalCommandResultSchema.parse({ commandId: envelope.commandId, ok: false,
+      error: forgeError('HOST_UNAVAILABLE', 'Local Host unavailable', envelope.commandId),
+      durationMs: 0, hostTimestamp: new Date().toISOString() });
+    const raw: unknown = await this.bridge.invokeApproval(envelope);
+    return approvalCommandResultSchema.parse(raw);
+  }
+
+  async board(command: Pick<BoardCommandEnvelope, 'type' | 'payload'>): Promise<BoardCommandResult> {
+    const envelope = boardCommandEnvelopeSchema.parse({ ...command, schemaVersion: '1.0',
+      commandId: crypto.randomUUID(), createdAt: new Date().toISOString(), protocolVersion: hostProtocolVersion });
+    if (!this.bridge) return boardCommandResultSchema.parse({ commandId: envelope.commandId, ok: false,
+      error: forgeError('HOST_UNAVAILABLE', 'Local Host unavailable', envelope.commandId),
+      durationMs: 0, hostTimestamp: new Date().toISOString() });
+    const raw: unknown = await this.bridge.invokeBoard(envelope);
+    return boardCommandResultSchema.parse(raw);
+  }
+
+  async run(command: Pick<RunCommandEnvelope, 'type' | 'payload'>): Promise<RunCommandResult> {
+    const envelope = runCommandEnvelopeSchema.parse({ ...command, schemaVersion: '1.0',
+      commandId: crypto.randomUUID(), createdAt: new Date().toISOString(), protocolVersion: hostProtocolVersion });
+    if (!this.bridge) return runCommandResultSchema.parse({ commandId: envelope.commandId, ok: false,
+      error: forgeError('HOST_UNAVAILABLE', 'Local Host unavailable', envelope.commandId),
+      durationMs: 0, hostTimestamp: new Date().toISOString() });
+    const raw: unknown = await this.bridge.invokeRun(envelope);
+    return runCommandResultSchema.parse(raw);
+  }
+
+  onConversationEvent(listener: (event: ConversationStreamEvent) => void): () => void {
+    if (!this.bridge) return () => {};
+    return this.bridge.onConversationEvent((raw) => {
+      const checked = conversationStreamEventSchema.safeParse(raw);
+      if (checked.success) listener(checked.data);
+    });
   }
 }

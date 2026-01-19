@@ -1,11 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import { utilityProcess, type UtilityProcess } from 'electron';
+import { hostEnvironment } from './host-environment.js';
 import {
   forgeError, hostConnectionSnapshotSchema, hostHealthSchema, hostProtocolVersion,
   hostWireRequestSchema, hostWireResponseSchema, systemCommandEnvelopeSchema,
   systemCommandResultSchema, type ForgeError, type HostConnectionSnapshot,
   type HostInfo, type HostWireRequest, type HostWireResponse,
   type SystemCommandEnvelope, type SystemCommandResult,
+  projectCommandEnvelopeSchema, projectCommandResultSchema,
+  type ProjectCommandResult,
+  conversationCommandEnvelopeSchema, conversationCommandResultSchema,
+  type ConversationCommandResult, type ConversationStreamEvent,
+  draftCommandEnvelopeSchema, draftCommandResultSchema, type DraftCommandResult,
+  approvalCommandEnvelopeSchema, approvalCommandResultSchema, type ApprovalCommandResult,
+  boardCommandEnvelopeSchema, boardCommandResultSchema, type BoardCommandResult,
+  runCommandEnvelopeSchema, runCommandResultSchema, type RunCommandResult,
 } from '@forge/contracts';
 
 export const hostLifecycleConfig = Object.freeze({
@@ -15,6 +24,7 @@ export const hostLifecycleConfig = Object.freeze({
   shutdownTimeoutMs: 8000,
   terminateTimeoutMs: 1000,
 });
+
 
 type ErrorCode = ForgeError['code'];
 
@@ -57,6 +67,7 @@ export class HostController {
     private readonly hostVersion: string,
     private readonly hostDataDir: string,
     private readonly onStatus: (snapshot: HostConnectionSnapshot) => void,
+    private readonly onConversationEvent: (event: ConversationStreamEvent) => void = () => {},
   ) {}
 
   get status(): HostConnectionSnapshot { return this.snapshot; }
@@ -78,7 +89,7 @@ export class HostController {
       child = utilityProcess.fork(this.hostEntryPath, [], {
         serviceName: 'Forge Host',
         stdio: 'pipe',
-        env: { FORGE_HOST_TRANSPORT: 'desktop', FORGE_HOST_OWNERSHIP_TOKEN: token,
+        env: { ...hostEnvironment(process.env), FORGE_HOST_TRANSPORT: 'desktop', FORGE_HOST_OWNERSHIP_TOKEN: token,
           FORGE_HOST_DATA_DIR: this.hostDataDir },
       });
     } catch {
@@ -158,6 +169,10 @@ export class HostController {
       this.pendingReady?.resolve(response.info);
       return;
     }
+    if (response.kind === 'conversation-event') {
+      this.onConversationEvent(response.event);
+      return;
+    }
     const pending = this.pending.get(response.requestId);
     if (!pending) return;
     this.pending.delete(response.requestId);
@@ -183,14 +198,15 @@ export class HostController {
     }
   }
 
-  private request(owned: OwnedHost, request: HostWireRequest): Promise<HostWireResponse> {
+  private request(owned: OwnedHost, request: HostWireRequest,
+    timeoutMs: number = hostLifecycleConfig.requestTimeoutMs): Promise<HostWireResponse> {
     if (owned.exited || this.owned !== owned) return Promise.reject(new HostConnectionError('HOST_EXITED', 'Host process exited'));
     const validated = hostWireRequestSchema.parse(request);
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(validated.requestId);
         reject(new HostConnectionError('TRANSPORT_TIMEOUT', 'Host request timed out'));
-      }, hostLifecycleConfig.requestTimeoutMs);
+      }, timeoutMs);
       this.pending.set(validated.requestId, { resolve, reject, timer });
       try { owned.child.postMessage(validated); }
       catch {
@@ -281,6 +297,167 @@ export class HostController {
           error: forgeError(code, this.safeMessage(code), randomUUID()) });
       }
       return this.fail(commandId, code, this.safeMessage(code));
+    }
+  }
+
+  async invokeProject(raw: unknown): Promise<ProjectCommandResult> {
+    const parsed = projectCommandEnvelopeSchema.safeParse(raw);
+    const commandId = parsed.success ? parsed.data.commandId : randomUUID();
+    const failure = (code: ErrorCode, message: string): ProjectCommandResult => ({
+      commandId, ok: false, error: forgeError(code, message, commandId),
+      durationMs: 0, hostTimestamp: new Date().toISOString(),
+    });
+    if (!parsed.success) return failure('VALIDATION_ERROR', 'Invalid project command');
+    const owned = this.owned;
+    if (!owned || !['connected', 'degraded'].includes(this.snapshot.state)) {
+      return failure(this.snapshot.error?.code ?? 'HOST_UNAVAILABLE', 'Local Host unavailable');
+    }
+    try {
+      const response = await this.request(owned, { kind: 'project-command', requestId: randomUUID(), command: parsed.data });
+      if (response.kind !== 'project-command-result') throw new HostConnectionError('INVALID_RESPONSE', 'Invalid project response');
+      const result = projectCommandResultSchema.parse(response.result);
+      if (result.commandId !== commandId) throw new HostConnectionError('INVALID_RESPONSE', 'Project command ID mismatch');
+      return result;
+    } catch (error) {
+      const code = error instanceof HostConnectionError ? error.code : 'INVALID_RESPONSE';
+      return failure(code, this.safeMessage(code));
+    }
+  }
+
+  async invokeConversation(raw: unknown): Promise<ConversationCommandResult> {
+    const parsed = conversationCommandEnvelopeSchema.safeParse(raw);
+    const commandId = parsed.success ? parsed.data.commandId : randomUUID();
+    const failure = (code: ErrorCode, message: string): ConversationCommandResult => ({
+      commandId, ok: false, error: forgeError(code, message, commandId),
+      durationMs: 0, hostTimestamp: new Date().toISOString(),
+    });
+    if (!parsed.success) return failure('VALIDATION_ERROR', 'Invalid conversation command');
+    const owned = this.owned;
+    if (!owned || !['connected', 'degraded'].includes(this.snapshot.state)) {
+      return failure(this.snapshot.error?.code ?? 'HOST_UNAVAILABLE', 'Local Host unavailable');
+    }
+    try {
+      const response = await this.request(owned, { kind: 'conversation-command',
+        requestId: randomUUID(), command: parsed.data });
+      if (response.kind !== 'conversation-command-result') {
+        throw new HostConnectionError('INVALID_RESPONSE', 'Invalid conversation response');
+      }
+      const result = conversationCommandResultSchema.parse(response.result);
+      if (result.commandId !== commandId) throw new HostConnectionError('INVALID_RESPONSE', 'Conversation command ID mismatch');
+      return result;
+    } catch (error) {
+      const code = error instanceof HostConnectionError ? error.code : 'INVALID_RESPONSE';
+      return failure(code, this.safeMessage(code));
+    }
+  }
+
+  async invokeDraft(raw: unknown): Promise<DraftCommandResult> {
+    const parsed = draftCommandEnvelopeSchema.safeParse(raw);
+    const commandId = parsed.success ? parsed.data.commandId : randomUUID();
+    const failure = (code: ErrorCode, message: string): DraftCommandResult => ({
+      commandId, ok: false, error: forgeError(code, message, commandId),
+      durationMs: 0, hostTimestamp: new Date().toISOString(),
+    });
+    if (!parsed.success) return failure('VALIDATION_ERROR', 'Invalid draft command');
+    const owned = this.owned;
+    if (!owned || !['connected', 'degraded'].includes(this.snapshot.state)) {
+      return failure(this.snapshot.error?.code ?? 'HOST_UNAVAILABLE', 'Local Host unavailable');
+    }
+    try {
+      const response = await this.request(owned, { kind: 'draft-command',
+        requestId: randomUUID(), command: parsed.data });
+      if (response.kind !== 'draft-command-result') {
+        throw new HostConnectionError('INVALID_RESPONSE', 'Invalid draft response');
+      }
+      const result = draftCommandResultSchema.parse(response.result);
+      if (result.commandId !== commandId) throw new HostConnectionError('INVALID_RESPONSE', 'Draft command ID mismatch');
+      return result;
+    } catch (error) {
+      const code = error instanceof HostConnectionError ? error.code : 'INVALID_RESPONSE';
+      return failure(code, this.safeMessage(code));
+    }
+  }
+
+  async invokeApproval(raw: unknown): Promise<ApprovalCommandResult> {
+    const parsed = approvalCommandEnvelopeSchema.safeParse(raw);
+    const commandId = parsed.success ? parsed.data.commandId : randomUUID();
+    const failure = (code: ErrorCode, message: string): ApprovalCommandResult => ({
+      commandId, ok: false, error: forgeError(code, message, commandId),
+      durationMs: 0, hostTimestamp: new Date().toISOString(),
+    });
+    if (!parsed.success) return failure('VALIDATION_ERROR', 'Invalid approval command');
+    const owned = this.owned;
+    if (!owned || !['connected', 'degraded'].includes(this.snapshot.state)) {
+      return failure(this.snapshot.error?.code ?? 'HOST_UNAVAILABLE', 'Local Host unavailable');
+    }
+    try {
+      const response = await this.request(owned, { kind: 'approval-command',
+        requestId: randomUUID(), command: parsed.data });
+      if (response.kind !== 'approval-command-result') {
+        throw new HostConnectionError('INVALID_RESPONSE', 'Invalid approval response');
+      }
+      const result = approvalCommandResultSchema.parse(response.result);
+      if (result.commandId !== commandId) throw new HostConnectionError('INVALID_RESPONSE', 'Approval command ID mismatch');
+      return result;
+    } catch (error) {
+      const code = error instanceof HostConnectionError ? error.code : 'INVALID_RESPONSE';
+      return failure(code, this.safeMessage(code));
+    }
+  }
+
+  async invokeBoard(raw: unknown): Promise<BoardCommandResult> {
+    const parsed = boardCommandEnvelopeSchema.safeParse(raw);
+    const commandId = parsed.success ? parsed.data.commandId : randomUUID();
+    const failure = (code: ErrorCode, message: string): BoardCommandResult => ({
+      commandId, ok: false, error: forgeError(code, message, commandId),
+      durationMs: 0, hostTimestamp: new Date().toISOString(),
+    });
+    if (!parsed.success) return failure('VALIDATION_ERROR', 'Invalid board command');
+    const owned = this.owned;
+    if (!owned || !['connected', 'degraded'].includes(this.snapshot.state)) {
+      return failure(this.snapshot.error?.code ?? 'HOST_UNAVAILABLE', 'Local Host unavailable');
+    }
+    try {
+      const response = await this.request(owned, { kind: 'board-command',
+        requestId: randomUUID(), command: parsed.data });
+      if (response.kind !== 'board-command-result') {
+        throw new HostConnectionError('INVALID_RESPONSE', 'Invalid board response');
+      }
+      const result = boardCommandResultSchema.parse(response.result);
+      if (result.commandId !== commandId) throw new HostConnectionError('INVALID_RESPONSE', 'Board command ID mismatch');
+      return result;
+    } catch (error) {
+      const code = error instanceof HostConnectionError ? error.code : 'INVALID_RESPONSE';
+      return failure(code, this.safeMessage(code));
+    }
+  }
+
+  async invokeRun(raw: unknown): Promise<RunCommandResult> {
+    const parsed = runCommandEnvelopeSchema.safeParse(raw);
+    const commandId = parsed.success ? parsed.data.commandId : randomUUID();
+    const failure = (code: ErrorCode, message: string): RunCommandResult => ({
+      commandId, ok: false, error: forgeError(code, message, commandId),
+      durationMs: 0, hostTimestamp: new Date().toISOString(),
+    });
+    if (!parsed.success) return failure('VALIDATION_ERROR', 'Invalid Run command');
+    const owned = this.owned;
+    if (!owned || !['connected', 'degraded'].includes(this.snapshot.state)) {
+      return failure(this.snapshot.error?.code ?? 'HOST_UNAVAILABLE', 'Local Host unavailable');
+    }
+    try {
+      const response = await this.request(owned, { kind: 'run-command',
+        requestId: randomUUID(), command: parsed.data },
+      parsed.data.type === 'run.start' || parsed.data.type === 'run.capabilities' ? 20_000 :
+        hostLifecycleConfig.requestTimeoutMs);
+      if (response.kind !== 'run-command-result') {
+        throw new HostConnectionError('INVALID_RESPONSE', 'Invalid Run inspection response');
+      }
+      const result = runCommandResultSchema.parse(response.result);
+      if (result.commandId !== commandId) throw new HostConnectionError('INVALID_RESPONSE', 'Run command ID mismatch');
+      return result;
+    } catch (error) {
+      const code = error instanceof HostConnectionError ? error.code : 'INVALID_RESPONSE';
+      return failure(code, this.safeMessage(code));
     }
   }
 

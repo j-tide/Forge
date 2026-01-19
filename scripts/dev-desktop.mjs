@@ -26,11 +26,21 @@ async function buildPackage(name) {
   if (exitCode !== 0) throw new Error(`${name} build exited with ${exitCode}`);
 }
 
+async function syncPython() {
+  if (stopping) throw new Error('Desktop development startup interrupted');
+  build = spawn(pnpm, ['py:sync'], { stdio: 'inherit' });
+  const exitCode = await new Promise((resolve) => build.once('exit', (code) => resolve(code ?? 1)));
+  build = undefined;
+  if (stopping) throw new Error('Desktop development startup interrupted');
+  if (exitCode !== 0) throw new Error(`Python frozen sync exited with ${exitCode}`);
+}
+
 process.once('SIGINT', stop);
 process.once('SIGTERM', stop);
 
 try {
-  for (const name of ['@forge/contracts', '@forge/core', '@forge/client', '@forge/persistence', '@forge/process', '@forge/workspace', '@forge/plugin-api', '@forge/executor-codex', '@forge/host']) {
+  await syncPython();
+  for (const name of ['@forge/contracts', '@forge/client', '@forge/ui', '@forge/web']) {
     await buildPackage(name);
   }
   web = spawn(pnpm, ['--filter', '@forge/web', 'dev'], { stdio: ['inherit', 'pipe', 'pipe'] });
