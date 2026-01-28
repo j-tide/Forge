@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { HostConnectionSnapshot } from '@forge/contracts';
+import type { HostConnectionSnapshot, PythonHostSnapshot } from '@forge/contracts';
 import { ForgeAppShell, ForgeContentArea, ForgeIconRail, ForgePopover, ForgeWorkspaceHeader } from '@forge/ui';
 import type { ForgeView } from '../views';
 
@@ -9,6 +9,8 @@ const props = defineProps<{
   runtimeLabel: string;
   webRuntime: boolean;
   hostStatus: HostConnectionSnapshot;
+  pythonHostStatus?: PythonHostSnapshot | null;
+  projectName: string | null;
   reduceTransparency: boolean;
   reduceMotion: boolean;
 }>();
@@ -44,7 +46,7 @@ function navigate(id: string): void { emit('navigate', id as ForgeView); }
     <template #header>
       <ForgeWorkspaceHeader>
         <div class="topbar-brand"><strong>Forge</strong><span>研发工作台</span></div>
-        <button class="project-picker" type="button" @click="emit('navigate', 'projects')"><span class="project-dot" aria-hidden="true" /> 未选择项目 <span class="project-chevron" aria-hidden="true">⌄</span></button>
+        <button class="project-picker" type="button" @click="emit('navigate', 'projects')"><span class="project-dot" aria-hidden="true" /> {{ projectName ?? '未选择项目' }} <span class="project-chevron" aria-hidden="true">⌄</span></button>
         <div class="topbar-spacer" />
         <span class="runtime-badge">{{ runtimeLabel }}</span>
         <div class="host-area">
@@ -55,6 +57,7 @@ function navigate(id: string): void { emit('navigate', id as ForgeView); }
             <dl>
               <dt>Host ID</dt><dd>{{ hostStatus.info?.hostId ?? '—' }}</dd>
               <dt>Host Version</dt><dd>{{ hostStatus.info?.version ?? '—' }}</dd>
+              <dt>Python Version</dt><dd>{{ pythonHostStatus?.info?.runtime.python ?? '—' }}</dd>
               <dt>Protocol</dt><dd>{{ hostStatus.info?.protocolVersion ?? '—' }}</dd>
               <dt>PID</dt><dd>{{ hostStatus.info?.pid ?? '—' }}</dd>
               <dt>Uptime</dt><dd>{{ uptime }}</dd>
@@ -69,6 +72,6 @@ function navigate(id: string): void { emit('navigate', id as ForgeView); }
       </ForgeWorkspaceHeader>
     </template>
     <ForgeContentArea><slot /></ForgeContentArea>
-    <template #footer><footer class="shell-footer">当前为空工作区 · Agent runtime 尚未启用</footer></template>
+    <template #footer><footer class="shell-footer">{{ projectName ? `${projectName} · 仅执行已批准的任务` : '当前为空工作区' }}</footer></template>
   </ForgeAppShell>
 </template>
