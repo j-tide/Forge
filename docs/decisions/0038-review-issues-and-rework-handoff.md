@@ -1,6 +1,6 @@
 # ADR 0038 · Review issue history and compact rework handoff
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for P3-03 under the Python Core and canonical P3 task map
 
 ## Decision

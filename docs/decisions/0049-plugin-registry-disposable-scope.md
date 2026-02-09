@@ -1,6 +1,6 @@
 # ADR 0049 · Plugin Registry dependency and disposable scope
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for canonical P4-02
 
 ## Decision

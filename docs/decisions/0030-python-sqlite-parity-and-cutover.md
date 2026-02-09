@@ -1,6 +1,6 @@
 # ADR 0030 · Python SQLite parity and deferred schema cutover
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted as the minimum reversible implementation of ADR 0029
 
 ## Decision

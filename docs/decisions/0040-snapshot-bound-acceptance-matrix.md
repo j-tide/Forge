@@ -1,6 +1,6 @@
 # ADR 0040 · Snapshot-bound acceptance matrix
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for P3-05 on the Python Core path
 
 ## Decision

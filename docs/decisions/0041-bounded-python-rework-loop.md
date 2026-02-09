@@ -1,6 +1,6 @@
 # ADR 0041 · Bounded Python Review and Verify rework
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for P3-06 on the Python Core path
 
 ## Decision

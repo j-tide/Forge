@@ -1,6 +1,6 @@
 # ADR 0028 · P2 vertical development entry
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for the P2-10 single executor path
 
 ## Decision

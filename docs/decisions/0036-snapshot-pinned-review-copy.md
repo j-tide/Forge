@@ -1,6 +1,6 @@
 # ADR 0036 · Snapshot-pinned review copy and enforced read-only gate
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for P3-01 under the existing Python Core and security boundaries
 
 ## Decision

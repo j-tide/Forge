@@ -1,6 +1,6 @@
 # ADR 0043 · Immutable delivery record and explicit local merge
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for P3-08 on the Python Core path
 
 ## Decision

@@ -1,6 +1,6 @@
 # ADR 0039 · Python project command verifier
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for canonical P3-04 on the Python Core development path
 
 ## Decision
