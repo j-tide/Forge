@@ -1,7 +1,7 @@
 # ADR 0052 · Claude Agent SDK preflight and API-key gate
 
 Date: 2026-09-24<br>
-Status: Accepted for the offline portion of P4-05; live Executor decision pending
+Status: Accepted for offline P4-05 and the narrow development dependency exception; live Executor decision pending
 
 ## Context and decision
 
@@ -49,6 +49,26 @@ this evidence. Resume only after the user configures an authorized Anthropic
 API key outside the repository and explicitly authorizes a bounded paid live
 fixture. At that time, implement and verify the actual adapter, event mapping,
 workspace, cancel/approval/resume/auth failure, and Codex↔Claude replacement
-before marking P4-05 DONE. P4-06 depends on P4-05, so the canonical chain
-does not advance while this gate is unmet. Windows, macOS Intel and packaged
+before marking P4-05 DONE. Windows, macOS Intel and packaged
 SDK binary behavior remain UNVERIFIED.
+
+## 2026-09-24 authorized development exception
+
+The user explicitly permits P4-06～P4-09 to proceed **only for work that does
+not depend on a real Claude run**. This is a development scheduling exception,
+not a change to the canonical `P4-05 → P4-06` dependency, P4-05 BLOCKED status,
+or the two-real-Executor acceptance. The provider-neutral Executor API and
+current Codex path already exist; each downstream task must still verify its
+own capability and approval gates. Claude remains unavailable and unselectable
+without authorized API credentials and real online verification. No Anthropic
+model call or auto approval is authorized. P4-05 has no registered adapter:
+only the SDK wheel/CLI version probe and local preflight test exist.
+
+After applicable P4-06～P4-09 work, P4-10 must execute its Codex and
+Executor-independent checks but retain its second-real-Executor same-TODO
+requirement as `DEFERRED_VERIFICATION`. P4 Phase Gate and full multi-Executor
+release remain unpassed. The user also permits P5 tasks independent of the
+second Executor after those applicable P4 checks. The only authorized task
+edges are recorded in `docs/development-dependency-exceptions.json` and checked
+by `pnpm validate:task-map`. This exception does not generalize to other
+external providers, costs, credentials, safety gates, or blocked dependencies.

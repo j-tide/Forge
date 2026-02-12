@@ -13,8 +13,8 @@ test('plugin schema rejects unknown vocabulary and non-reference secret type', (
 });
 
 test('bundled inspection cannot claim arbitrary plugin identity or leak unknown fields', () => {
-  const inspect = { pluginId: 'forge.executor.codex', version: '0.0.1', forgeApiRange: '^1.0.0',
-    compatible: true, active: true, issues: [], configSchema: {
+  const inspect = { pluginId: 'forge.executor.codex', version: '0.0.2', forgeApiRange: '^1.0.0',
+    compatible: true, active: true, enabled: true, restartRequired: false, issues: [], faults: [], configSchema: {
       type: 'object', additionalProperties: false, properties: {}, required: [],
     } };
   assert.equal(bundledPluginInspectionSchema.safeParse(inspect).success, true);

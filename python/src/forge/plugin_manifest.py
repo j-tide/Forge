@@ -206,8 +206,8 @@ def inspect_manifest(
             add("PLUGIN_PERMISSION_DENIED", "requestedPermissions", "Permission not granted")
         if set(manifest.requires) - available_services:
             add("PLUGIN_SERVICE_UNAVAILABLE", "requires", "Required Host service is unavailable")
-        if any((manifest.contributes.modelProviders, manifest.contributes.contextProviders,
-                manifest.contributes.tools, manifest.contributes.verifiers,
+        if any((manifest.contributes.contextProviders,
+                manifest.contributes.verifiers,
                 manifest.contributes.viewTypes)):
             add("PLUGIN_CONTRIBUTION_UNSUPPORTED", "contributes", "Contribution unavailable")
     return ManifestReport(manifest, tuple(issues))

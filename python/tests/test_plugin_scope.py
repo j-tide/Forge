@@ -32,6 +32,16 @@ class Executor:
     id = "executor.codex"
 
 
+class FixtureModelProvider:
+    id = "model.codex"
+
+    async def probe(self):  # type: ignore[no-untyped-def]
+        raise AssertionError("Synthetic activation test must not probe a model")
+
+    def session(self):  # type: ignore[no-untyped-def]
+        raise AssertionError("Synthetic activation test must not open a model")
+
+
 class FixturePlugin:
     def __init__(self, events: list[str], live: set[str], fail: bool) -> None:
         self.events = events
@@ -41,6 +51,7 @@ class FixturePlugin:
     async def activate(self, context: object) -> None:
         context.track_disposable(Resource("first", self.events, self.live))
         context.register_executor(Executor())
+        context.register_model_provider(FixtureModelProvider())
         context.track_disposable(Resource("second", self.events, self.live))
         if self.fail:
             raise PluginError("TEST_PARTIAL_ACTIVATION")
@@ -96,6 +107,7 @@ async def test_t036_real_owned_process_returns_to_baseline_ten_times(
             children.append(process)
             context.track_disposable(OwnedProcess(process))
             context.register_executor(Executor())
+            context.register_model_provider(FixtureModelProvider())
 
         async def dispose(self) -> None:
             pass

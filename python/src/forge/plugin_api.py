@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Awaitable, Callable
 from pathlib import PurePosixPath, PureWindowsPath
-from typing import Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from forge.executor_contracts import ExecutorAdapter
+from forge.model_provider import ModelProvider
+
+if TYPE_CHECKING:
+    from forge.tool_registry import ToolDefinition
 
 PLUGIN_API_RANGE = "^1.0.0"
 PLUGIN_API_VERSION = "1.0.0"
@@ -82,6 +87,12 @@ class PluginContext(Protocol):
     def require_service(self, service_id: str) -> object: ...
 
     def register_executor(self, adapter: ExecutorAdapter) -> Disposable: ...
+
+    def register_model_provider(self, provider: ModelProvider) -> Disposable: ...
+
+    def register_tool(
+        self, definition: ToolDefinition, handler: Callable[[Any], Awaitable[Any]],
+    ) -> Disposable: ...
 
     def track_disposable(self, disposable: Disposable) -> Disposable: ...
 
