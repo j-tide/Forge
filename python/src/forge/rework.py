@@ -15,13 +15,28 @@ from forge.handoffs import HandoffService
 from forge.persistence import ForgePersistence
 from forge.projects import TRUST_VERSION, ProjectService
 from forge.review_issues import ReviewIssueService, ReviewReport
-from forge.run_config import RunConfigService
+from forge.run_config import RunConfigService, RunConfigSnapshot
 from forge.run_inspection import RunInspectionService
 from forge.runs import RunService
 from forge.verifier_project import ProjectCommandVerifier, VerifyReport
+from forge.workflow_drafts import WorkflowDraftError, WorkflowDraftService
 
 MAX_REWORK_CYCLES = 3
 MAX_TOTAL_ATTEMPTS = 20
+
+
+def frozen_attempt_limit(storage: ForgePersistence, config: RunConfigSnapshot) -> int:
+    if not config.workflow.id.startswith("workflow."):
+        return MAX_TOTAL_ATTEMPTS
+    try:
+        publication = WorkflowDraftService(storage).published(
+            config.workflow.id, int(config.workflow.version),
+        )
+    except (WorkflowDraftError, ValueError) as error:
+        raise ReworkError("WORKFLOW_RUNTIME_UNAVAILABLE") from error
+    if publication.contentHash != config.workflow.contentHash:
+        raise ReworkError("WORKFLOW_RUNTIME_UNAVAILABLE")
+    return min(MAX_TOTAL_ATTEMPTS, publication.definition.maxTotalAttempts)
 
 
 class ReworkError(Exception):
@@ -65,6 +80,9 @@ class ReworkService:
         self.verifier = verifier
         self.inspections = inspections
         self.lock = asyncio.Lock()
+
+    def _attempt_limit(self, config: RunConfigSnapshot) -> int:
+        return frozen_attempt_limit(self.storage, config)
 
     def _view(self, row: sqlite3.Row) -> ReworkCycle:
         next_run = UUID(row["next_run_id"]) if row["next_run_id"] else None
@@ -147,6 +165,10 @@ class ReworkService:
                                    report.snapshotId, "verify", report.reportId)
 
     def feedback(self, cycle: ReworkCycle) -> list[ContextItem]:
+        config = self.configs.get(cycle.projectId, cycle.sourceRunId)
+        if config is None:
+            raise ReworkError("REWORK_SOURCE_STALE")
+        attempt_limit = self._attempt_limit(config)
         authority: Literal["review_evidence", "verify_evidence"] = (
             "review_evidence" if cycle.triggerKind == "review" else "verify_evidence"
         )
@@ -159,7 +181,7 @@ class ReworkService:
                 raise ReworkError("REWORK_TRIGGER_INVALID")
             handoff = report.reworkHandoff
             parts = [f"Rework cycle {cycle.cycleNo}/{MAX_REWORK_CYCLES}; "
-                     f"total attempts {cycle.totalAttempts}/{MAX_TOTAL_ATTEMPTS}.",
+                     f"total attempts {cycle.totalAttempts}/{attempt_limit}.",
                      handoff.summary]
             parts.extend(
                 f"{issue.anchor.path}: {issue.reason}" for issue in handoff.issues[:3]
@@ -177,7 +199,7 @@ class ReworkService:
                     or verify_report.status != "failed"):
                 raise ReworkError("REWORK_TRIGGER_INVALID")
             parts = [f"Rework cycle {cycle.cycleNo}/{MAX_REWORK_CYCLES}; "
-                     f"total attempts {cycle.totalAttempts}/{MAX_TOTAL_ATTEMPTS}.",
+                     f"total attempts {cycle.totalAttempts}/{attempt_limit}.",
                      f"{verify_report.kind} check failed with exit code "
                      f"{verify_report.exitCode}."]
             for artifact_id in (verify_report.stderrArtifactId, verify_report.stdoutArtifactId):
@@ -240,7 +262,7 @@ class ReworkService:
             assert prior is not None
             cycle_no = prior["n"] + 1
             total = self._attempt_count(project_id, task_id)
-            blocked = cycle_no > MAX_REWORK_CYCLES or total >= MAX_TOTAL_ATTEMPTS
+            blocked = cycle_no > MAX_REWORK_CYCLES or total >= self._attempt_limit(config)
             now = timestamp()
             cycle_id = uuid4()
             with self.storage.transaction() as db:

@@ -14,6 +14,8 @@ from forge.conversations import timestamp
 from forge.drafts import TaskContract
 from forge.environments import EnvironmentService, ProjectEnvironment
 from forge.persistence import ForgePersistence
+from forge.workflow_compiler import compile_workflow
+from forge.workflow_templates import WorkflowTemplate
 
 
 class RunConfigError(Exception):
@@ -52,6 +54,7 @@ class RunConfigSelection(BaseModel):
     expectedTaskRevision: int = Field(ge=1)
     workflow: VersionLock
     profile: ProfileLock
+    stageProfiles: list[ProfileLock] = Field(default_factory=list, max_length=8)
     plugins: list[VersionLock] = Field(max_length=32)
     budget: RunBudget
     environmentId: UUID
@@ -70,6 +73,7 @@ class RunConfigSnapshot(BaseModel):
     taskContract: TaskContract
     workflow: VersionLock
     profile: ProfileLock
+    stageProfiles: list[ProfileLock] = Field(default_factory=list, max_length=8)
     plugins: list[VersionLock] = Field(max_length=32)
     budget: RunBudget
     environment: ProjectEnvironment
@@ -87,7 +91,10 @@ def verify_snapshot(value: object) -> RunConfigSnapshot:
             value if isinstance(value, RunConfigSnapshot)
             else RunConfigSnapshot.model_validate_json(json.dumps(value))
         )
-        body = snapshot.model_dump(mode="json", exclude={"snapshotHash"})
+        excluded = {"snapshotHash"}
+        if "stageProfiles" not in snapshot.model_fields_set:
+            excluded.add("stageProfiles")
+        body = snapshot.model_dump(mode="json", exclude=excluded)
         if (
             _digest(body) != snapshot.snapshotHash
             or contract_digest(snapshot.taskContract) != snapshot.taskContractHash
@@ -127,7 +134,10 @@ class RunConfigService:
             raise RunConfigError("RUN_CONFIG_INVALID") from error
 
     def create(self, selection: RunConfigSelection) -> RunConfigSnapshot:
-        request_hash = _digest(selection.model_dump(mode="json"))
+        selection_body = selection.model_dump(mode="json")
+        if "stageProfiles" not in selection.model_fields_set:
+            selection_body.pop("stageProfiles")
+        request_hash = _digest(selection_body)
         with self.storage.transaction() as db:
             existing = db.execute(
                 "SELECT project_id,request_hash FROM run_config_snapshots WHERE run_id=?",
@@ -184,6 +194,32 @@ class RunConfigService:
                 )
             ):
                 raise RunConfigError("RUN_CONFIG_INVALID")
+            if selection.workflow.id.startswith("workflow."):
+                if self.storage.schema_version() < 26:
+                    raise RunConfigError("RUN_CONFIG_WORKFLOW_STALE")
+                try:
+                    workflow_revision = int(selection.workflow.version)
+                except ValueError as error:
+                    raise RunConfigError("RUN_CONFIG_WORKFLOW_STALE") from error
+                publication = db.execute(
+                    "SELECT definition_json,content_hash,state FROM workflow_revisions "
+                    "WHERE id=? AND revision=?",
+                    (selection.workflow.id, workflow_revision),
+                ).fetchone()
+                if (publication is None or publication["state"] != "published" or
+                        publication["content_hash"] != selection.workflow.contentHash):
+                    raise RunConfigError("RUN_CONFIG_WORKFLOW_STALE")
+                try:
+                    definition = WorkflowTemplate.model_validate_json(
+                        publication["definition_json"]
+                    )
+                    if (definition.id != selection.workflow.id or
+                            definition.revision != workflow_revision or
+                            compile_workflow(definition).contentHash !=
+                            selection.workflow.contentHash):
+                        raise RunConfigError("RUN_CONFIG_WORKFLOW_STALE")
+                except ValidationError as error:
+                    raise RunConfigError("RUN_CONFIG_WORKFLOW_STALE") from error
             body = {
                 "schemaVersion": "1.0", "runId": str(selection.runId),
                 "projectId": str(selection.projectId), "taskId": str(selection.taskId),
@@ -199,15 +235,21 @@ class RunConfigService:
                 "environment": environment.model_dump(mode="json"),
                 "createdAt": timestamp(),
             }
+            if "stageProfiles" in selection.model_fields_set:
+                body["stageProfiles"] = [item.model_dump(mode="json")
+                                         for item in selection.stageProfiles]
             snapshot = RunConfigSnapshot.model_validate_json(json.dumps({
                 **body, "snapshotHash": _digest(body)
             }, ensure_ascii=False))
+            serialized = snapshot.model_dump(mode="json")
+            if "stageProfiles" not in snapshot.model_fields_set:
+                serialized.pop("stageProfiles")
             db.execute(
                 "INSERT INTO run_config_snapshots(run_id,project_id,task_id,request_hash,"
                 "snapshot_hash,snapshot_json,created_at) VALUES(?,?,?,?,?,?,?)",
                 (str(selection.runId), str(selection.projectId), str(selection.taskId),
                  request_hash, snapshot.snapshotHash,
-                 json.dumps(snapshot.model_dump(mode="json"), ensure_ascii=False),
+                 json.dumps(serialized, ensure_ascii=False),
                  snapshot.createdAt),
             )
             return snapshot

@@ -15,7 +15,7 @@ from forge.conversations import timestamp
 from forge.persistence import ForgePersistence
 from forge.projects import TRUST_VERSION, ProjectService
 from forge.review import ReviewFinding
-from forge.rework import MAX_TOTAL_ATTEMPTS
+from forge.rework import ReworkError, frozen_attempt_limit
 from forge.run_inspection import redact
 
 
@@ -317,7 +317,19 @@ class FinalAcceptanceService:
                     parameters,
                 ).fetchone()
                 assert development is not None and reviews is not None and checks is not None
-                if sum((development["n"], reviews["n"], checks["n"])) >= MAX_TOTAL_ATTEMPTS:
+                source = db.execute(
+                    "SELECT run_id FROM code_snapshots WHERE project_id=? AND snapshot_id=?",
+                    (str(value.projectId), str(view.snapshotId)),
+                ).fetchone()
+                config = (self.matrix.configs.get(value.projectId, UUID(source["run_id"]))
+                          if source is not None else None)
+                if config is None:
+                    raise FinalAcceptanceError("ACCEPTANCE_GATE_BLOCKED")
+                try:
+                    limit = frozen_attempt_limit(self.storage, config)
+                except ReworkError as error:
+                    raise FinalAcceptanceError(error.code) from error
+                if sum((development["n"], reviews["n"], checks["n"])) >= limit:
                     raise FinalAcceptanceError("REWORK_LIMIT_REACHED")
             db.execute(
                 "INSERT INTO final_acceptance_decisions(decision_id,idempotency_key,"

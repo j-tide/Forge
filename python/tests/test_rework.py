@@ -300,3 +300,40 @@ async def test_total_attempt_budget_blocks_before_first_rework(
         assert cycle.reasonCode == "REWORK_LIMIT_REACHED"
     finally:
         await host.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_published_workflow_global_budget_blocks_rework_at_frozen_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _, _, storage, project_id, task_id, run_id, snapshot_id, preset, \
+        verifier, processes = await fixture(
+            tmp_path, mode="fail", rework_ready=True, custom_workflow=True,
+        )
+    assert preset is not None
+    await verifier.shutdown()
+    await processes.dispose()
+    storage.close()
+    monkeypatch.setenv("FORGE_HOST_DATA_DIR", str(tmp_path / "data"))
+    host = HostRuntime()
+    host.storage_health()
+    assert await host.verifier.open() == 0
+    host.verifier_ready = True
+    try:
+        config = host.configs.get(project_id, run_id)
+        assert config is not None and host.rework._attempt_limit(config) == 16
+        last = None
+        for _ in range(15):
+            job = await host.verifier.start(request(
+                project_id, task_id, run_id, snapshot_id, preset.presetId,
+            ))
+            await asyncio.wait_for(asyncio.gather(*host.verifier.running.values()), 10)
+            last = host.verifier.report(project_id, job.verificationId)
+            assert last is not None and last.status == "failed"
+        assert last is not None
+        cycle = await host.rework.reserve_verify(last)
+        assert cycle.totalAttempts == 16
+        assert cycle.state == "blocked" and cycle.nextRunId is None
+        assert cycle.reasonCode == "REWORK_LIMIT_REACHED"
+    finally:
+        await host.shutdown()

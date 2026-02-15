@@ -72,7 +72,7 @@ def git(cwd: Path, *args: str) -> str:
 
 
 async def fixture(tmp_path: Path, *, mode: str = "pass", configured: bool = True,
-                  rework_ready: bool = False):
+                  rework_ready: bool = False, custom_workflow: bool = False):
     source = tmp_path / "Forge 验证 fixture with spaces"
     source.mkdir()
     git(source, "init", "-b", "main")
@@ -120,6 +120,26 @@ async def fixture(tmp_path: Path, *, mode: str = "pass", configured: bool = True
     ))
     decision_id = uuid4()
     decision_ref = f"decision:{decision_id}"
+    workflow_ref = "workflow.reworkfixture" if custom_workflow else "standard"
+    if custom_workflow:
+        from test_workflow_compiler import catalog
+
+        from forge.workflow_drafts import (
+            WorkflowDraftService,
+            WorkflowPublishInput,
+            WorkflowSaveInput,
+        )
+        from forge.workflow_templates import load_template
+
+        workflows = WorkflowDraftService(storage)
+        template = load_template("quick").model_copy(update={"id": workflow_ref})
+        workflows.save(WorkflowSaveInput(template=template, expectedRevision=0))
+        workflows.publish(WorkflowPublishInput(
+            workflowId=workflow_ref, expectedDraftRevision=1,
+        ), catalog())
+        workflow_lock = workflows.published_lock(workflow_ref)
+    else:
+        workflow_lock = None
     contract = TaskContract(
         schemaVersion="1.0", taskId=str(draft.draftId), projectId=str(project.projectId),
         revision=2, title="Verify change", type="feature", goal="Change result file",
@@ -131,7 +151,7 @@ async def fixture(tmp_path: Path, *, mode: str = "pass", configured: bool = True
             required=True, sourceRefs=[decision_ref],
         )], constraints=[], scope=["result.txt"], outOfScope=[], dependencies=[],
         openQuestions=[], assumptions=[], sourceRefs=[f"message:{message.messageId}", decision_ref],
-        workflowRef="standard", priority="normal",
+        workflowRef=workflow_ref, priority="normal",
     )
     drafts.revise(DraftReviseInput(
         projectId=project.projectId, draftId=draft.draftId, expectedRevision=1,
@@ -178,8 +198,9 @@ async def fixture(tmp_path: Path, *, mode: str = "pass", configured: bool = True
     config = configs.create(RunConfigSelection(
         runId=run_id, projectId=project.projectId, taskId=draft.draftId,
         expectedTaskRevision=2,
-        workflow=VersionLock(id="standard", version=_WORKFLOW_VERSION if rework_ready else "1",
-                             contentHash=_hash(node) if rework_ready else lock),
+        workflow=workflow_lock or VersionLock(
+            id="standard", version=_WORKFLOW_VERSION if rework_ready else "1",
+            contentHash=_hash(node) if rework_ready else lock),
         profile=ProfileLock(id=_PROFILE_ID if rework_ready else "developer",
                             version=_WORKFLOW_VERSION if rework_ready else "1",
                             contentHash=_hash({**node, "modelId": "fixture-model"}) if
