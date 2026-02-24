@@ -137,7 +137,7 @@ watch(() => props.connected, (connected) => { if (connected) void refresh(); });
       </ForgeCard>
       <ForgeCard v-else-if="stage === 'ready' && activeProject" tone="reading" class="project-step project-ready">
         <ForgeBadge>PROJECT CONNECTED</ForgeBadge><h2>{{ activeProject.name }}</h2>
-        <p>已保存信任决定。当前工作区为该项目；Task refinement 和 Agent runtime 尚未启用。</p>
+        <p>已保存信任决定。当前工作区为该项目；任务草稿需人工批准，开发运行需单独启动。</p>
         <div class="project-actions"><ForgeButton variant="secondary" @click="stage = 'choose'">连接其他项目</ForgeButton><ForgeButton variant="primary" @click="emit('home')">进入 Forge Workspace</ForgeButton></div>
       </ForgeCard>
       <section v-if="projects.length" class="saved-projects" aria-labelledby="saved-projects-title"><h2 id="saved-projects-title">已保存项目</h2>

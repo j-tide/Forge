@@ -14,6 +14,7 @@ const emit = defineEmits<{ select: [id: string] }>();
           <template v-else-if="item.icon === 'agents'"><circle cx="9" cy="8" r="3" /><path d="M3.5 19c.3-3 2.3-5 5.5-5s5.2 2 5.5 5" /><path d="M16 5.5a2.7 2.7 0 0 1 0 5.2M17 14c2 .3 3.1 2 3.5 5" /></template>
           <template v-else-if="item.icon === 'plugins'"><path d="M4 4.5h5.5a2.5 2.5 0 1 0 5 0H20v5.7a2.5 2.5 0 1 0 0 5v4.3h-5.5a2.5 2.5 0 1 0-5 0H4v-5.7a2.5 2.5 0 1 0 0-5z" /></template>
           <template v-else-if="item.icon === 'projects'"><path d="M3.5 7h6l2 2h9v10.5h-17z" /><path d="M3.5 7V4.5h7" /></template>
+          <template v-else-if="item.icon === 'knowledge'"><path d="M4 4.5h6a3 3 0 0 1 3 3v12a3 3 0 0 0-3-3H4z" /><path d="M20 4.5h-4a3 3 0 0 0-3 3v12a3 3 0 0 1 3-3h4z" /></template>
           <template v-else-if="item.icon === 'settings'"><path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="2" /><circle cx="16" cy="17" r="2" /></template>
         </svg>
       </button>

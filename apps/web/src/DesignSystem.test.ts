@@ -6,8 +6,9 @@ import {
 
 let app: VueApp | undefined;
 let container: HTMLDivElement | undefined;
-function mount(render: () => ReturnType<typeof h>): HTMLDivElement {
+function mount(render: () => ReturnType<typeof h>, appRoot = false): HTMLDivElement {
   container = document.createElement('div');
+  if (appRoot) container.id = 'app';
   document.body.append(container);
   app = createApp({ render });
   app.mount(container);
@@ -106,6 +107,53 @@ describe('Forge UI primitives', () => {
     document.querySelector<HTMLButtonElement>('[aria-label="关闭抽屉"]')!.click();
     await vi.waitFor(() => expect(document.querySelector('.forge-drawer')).toBeNull());
     await nextTick();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('restores focus when the parent unmounts a closing drawer', async () => {
+    const open = ref(false);
+    const root = mount(() => h('div', [
+      h('article', { id: 'task-trigger', tabindex: 0, onClick: () => { open.value = true; } }, 'Task'),
+      open.value ? h(ForgeDrawer, { title: 'Task', open: open.value,
+        'onUpdate:open': (next: boolean) => { open.value = next; } },
+      { default: () => h('p', 'Details') }) : null,
+    ]));
+    const trigger = root.querySelector<HTMLElement>('#task-trigger')!;
+    trigger.focus(); trigger.click();
+    await vi.waitFor(() => expect(document.querySelector('.forge-drawer')).not.toBeNull());
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await vi.waitFor(() => expect(document.querySelector('.forge-drawer')).toBeNull());
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('keeps the app inert until the last nested overlay closes', async () => {
+    const outer = ref(false);
+    const inner = ref(false);
+    const root = mount(() => h('div', [
+      h('button', { id: 'outer-trigger', onClick: () => { outer.value = true; } }, 'Open outer'),
+      h(ForgeDialog, { title: 'Outer', open: outer.value,
+        'onUpdate:open': (value: boolean) => { outer.value = value; } }, {
+        default: () => [
+          h('button', { id: 'inner-trigger', onClick: () => { inner.value = true; } }, 'Open inner'),
+          h(ForgeDialog, { title: 'Inner', open: inner.value,
+            'onUpdate:open': (value: boolean) => { inner.value = value; } },
+          { default: () => h('button', 'Inner action') }),
+        ],
+      }),
+    ]), true);
+    const trigger = root.querySelector<HTMLButtonElement>('#outer-trigger')!;
+    trigger.focus(); trigger.click();
+    await vi.waitFor(() => expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1));
+    expect(root.inert).toBe(true);
+    document.querySelector<HTMLButtonElement>('#inner-trigger')!.click();
+    await vi.waitFor(() => expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(2));
+    expect(root.inert).toBe(true);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await vi.waitFor(() => expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1));
+    expect(root.inert).toBe(true);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await vi.waitFor(() => expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(0));
+    expect(root.inert).toBe(false);
     expect(document.activeElement).toBe(trigger);
   });
 

@@ -6,6 +6,8 @@
   "color-accent": "#426fd0",
   "color-accent-text": "#345bad",
   "color-action": "#222b3c",
+  "color-on-action": "#f3f7ff",
+  "color-on-danger": "#f3f7ff",
   "color-success": "#357362",
   "color-danger": "#a34757",
   "color-warning": "#8b642f",

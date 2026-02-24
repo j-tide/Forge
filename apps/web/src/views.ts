@@ -1,1 +1,1 @@
-export type ForgeView = 'home' | 'board' | 'projects' | 'settings' | 'workflows' | 'agents' | 'plugins';
+export type ForgeView = 'home' | 'board' | 'projects' | 'settings' | 'workflows' | 'agents' | 'plugins' | 'knowledge';

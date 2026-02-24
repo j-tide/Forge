@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, useId } from 'vue';
 import { useOverlayFocus } from '../composables/useOverlayFocus';
-const props = withDefaults(defineProps<{ title: string; closeOnOverlay?: boolean }>(), { closeOnOverlay: true });
+const props = withDefaults(defineProps<{ title: string; closeOnOverlay?: boolean; initialFocus?: string }>(), { closeOnOverlay: true });
 const open = defineModel<boolean>('open', { required: true });
 const panel = ref<HTMLElement | null>(null);
 const titleId = useId();
 function close(): void { open.value = false; }
 function overlayClick(): void { if (props.closeOnOverlay) close(); }
-useOverlayFocus(open, panel, close);
+useOverlayFocus(open, panel, close, props.initialFocus);
 </script>
 
 <template>
