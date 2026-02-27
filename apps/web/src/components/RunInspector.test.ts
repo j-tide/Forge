@@ -59,9 +59,37 @@ it('renders Host sourced malicious activity as text and keeps unknown cost unkno
   await vi.waitFor(()=>expect(root?.textContent).toContain('Token 用量：未知 · 费用：未知'));
   tabs.find((item)=>item.textContent==='diff')!.click();
   await vi.waitFor(()=>expect(root?.textContent).toContain('real code'));
+  tabs.find((item)=>item.textContent==='files')!.click();
+  await vi.waitFor(()=>expect(root?.querySelector('.run-code-files button')).not.toBeNull());
+  const fileButton=[...root.querySelectorAll<HTMLButtonElement>('.run-code-files button')]
+    .find((button)=>button.textContent?.includes('src/add.ts'))!;
+  fileButton.click();
+  await vi.waitFor(()=>expect(fileButton.getAttribute('aria-pressed')).toBe('true'));
+  expect(root.textContent).toContain('已保存的只读补丁');
+  expect(root.textContent).toContain('应用预览（独立隔离窗口）');
+  expect(root.textContent).toContain('普通 Web 无本地预览能力');
+  expect(root.textContent).not.toContain('打开隔离预览');
   connected.value=false;
   await vi.waitFor(()=>expect(root?.textContent).toContain('Host 不可用'));
   expect(root.textContent).not.toContain('real code');
+});
+
+it('opens a Desktop preview only through the explicit client capability', async () => {
+  const openAppPreview = vi.fn(async () => ({ origin: 'http://127.0.0.1:43210' }));
+  const client = { canOpenAppPreview: true, openAppPreview,
+    run: vi.fn(async () => ({ ok: false, error: { code: 'HOST_UNAVAILABLE', message: 'Offline' } })),
+    agentProfileCatalog: vi.fn(async () => null) } as unknown as ForgeClient;
+  root=document.createElement('div');document.body.append(root);
+  app=createApp(RunInspector,{client,projectId,taskId,taskRevision:1,
+    taskState:'todo',connected:true});app.mount(root);
+  await vi.waitFor(()=>expect(root?.querySelector('.run-preview-entry input')).not.toBeNull());
+  const input=root.querySelector<HTMLInputElement>('.run-preview-entry input')!;
+  input.value='http://127.0.0.1:43210/demo';
+  input.dispatchEvent(new Event('input',{bubbles:true}));
+  await vi.waitFor(()=>expect(root?.querySelector<HTMLButtonElement>('.run-preview-entry button')?.disabled).toBe(false));
+  root.querySelector<HTMLButtonElement>('.run-preview-entry button')!.click();
+  await vi.waitFor(()=>expect(openAppPreview).toHaveBeenCalledWith('http://127.0.0.1:43210/demo'));
+  await vi.waitFor(()=>expect(root?.textContent).toContain('已在隔离窗口打开'));
 });
 
 it('labels an old handoff as history and refuses a new Review on it', async () => {
@@ -99,4 +127,57 @@ it('labels an old handoff as history and refuses a new Review on it', async () =
     button.textContent?.includes('明确启动只读 Review'));
   expect(action?.disabled).toBe(true);
   expect(call).not.toHaveBeenCalledWith(expect.objectContaining({type:'run.reviewStart'}));
+});
+
+it('shows Host Stage Context conflict and truncation as a preview, never as accepted input', async () => {
+  const sourceRef = 'knowledge:11111111-1111-4111-8111-111111111111@2#0';
+  const preview = { projectId, runId, taskRevision: 1, configHash: 'a'.repeat(64),
+    indexVersion: 'forge-knowledge-search/v1-fts5-trigram-cjk-short',
+    query: '日期筛选 start_date', status: 'needs_human_decision',
+    items: [{priority: 1, kind: 'approved_task', trust: 'approved', sourceRef: `task:${taskId}@1`,
+      sourceHash: 'b'.repeat(64), text: 'Keep approved task first'},
+    {priority: 6, kind: 'retrieved_knowledge', trust: 'untrusted', sourceRef,
+      sourceHash: 'c'.repeat(64), text: 'Current source text'}],
+    sourceRefs: [`task:${taskId}@1`, sourceRef], conflicts: [{currentSourceRef: sourceRef,
+      otherSourceRef: sourceRef.replace('@2#0','@1#0'),
+      reason: 'SOURCE_VERSION_CHANGED', question: '请选择适用版本。'}],
+    omittedItems: 1, usedChars: 180, maxChars: 1000, truncated: true };
+  const call = vi.fn(async (command:{type:string}) => ({ok:true,data:
+    command.type === 'run.capabilities' ? {available:false,executorId:'executor.codex',
+      adapterVersion:'fixture/1',upstreamVersion:'fixture/1',modelIds:[],
+      workspaceControl:false,streaming:false,interrupt:false,warnings:[]} :
+    command.type === 'run.list' ? [run] : command.type === 'context.preview' ? preview :
+    command.type === 'context.sources' ? [{kind:'retrieved_knowledge',sourceRef,
+      status:'revoked'}] :
+    command.type === 'run.config' ? {
+      projectId,runId,taskId,taskRevision:1,configHash:'a'.repeat(64),
+      workflow:{id:'workflow.fixture',version:'1',contentHash:'b'.repeat(64)},
+      developerProfile:{id:'profile.developer',version:'1',contentHash:'c'.repeat(64),
+        executorPluginId:'executor.codex'},
+      stageProfiles:[],environmentId:projectId,environmentRevision:1,actualNodeId:'develop',
+    } :
+    command.type === 'run.handoff' ? null :
+    ['run.reviewReports','run.issueHistory','run.reviewJobs'].includes(command.type) ? [] :
+    {run,observations:[],nextCursor:0,hasMore:false,diff:null,contextSources:[],usage:null},
+  }));
+  root=document.createElement('div');document.body.append(root);
+  app=createApp(RunInspector,{client:{run:call} as unknown as ForgeClient,
+    projectId,taskId,taskRevision:1,taskState:'todo',connected:true});app.mount(root);
+  await vi.waitFor(()=>expect([...root!.querySelectorAll('[role=tab]')].some((button)=>
+    button.textContent==='context')).toBe(true));
+  [...root.querySelectorAll<HTMLButtonElement>('[role=tab]')].find((button)=>
+    button.textContent==='context')!.click();
+  await vi.waitFor(()=>expect(root?.textContent).toContain('历史 Run 输入已冻结'));
+  await vi.waitFor(()=>expect(root?.textContent).toContain('Workflow：workflow.fixture @1'));
+  await vi.waitFor(()=>expect(root?.querySelector('input[placeholder="日期筛选 start_date"]')).not.toBeNull());
+  const input=root.querySelector<HTMLInputElement>('input[placeholder="日期筛选 start_date"]')!;
+  input.value='日期筛选 start_date';input.dispatchEvent(new Event('input',{bubbles:true}));
+  await vi.waitFor(()=>expect([...root!.querySelectorAll('button')].find((button)=>
+    button.textContent?.includes('预览上下文'))?.disabled).toBe(false));
+  [...root.querySelectorAll('button')].find((button)=>button.textContent?.includes('预览上下文'))!.click();
+  await vi.waitFor(()=>expect(root?.textContent).toContain('请选择适用版本'));
+  expect(root.textContent).toContain('省略 1 项（已截断）');
+  expect(root.textContent).toContain('不会自动送入当前 Run');
+  expect(call).toHaveBeenCalledWith(expect.objectContaining({type:'context.preview',
+    payload:{projectId,runId,query:'日期筛选 start_date'}}));
 });

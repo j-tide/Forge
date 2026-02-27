@@ -9,6 +9,7 @@ import { finalAcceptanceViewSchema } from './final-acceptance.js';
 import { deliverySummarySchema, mergePreviewSchema, mergeReceiptSchema } from './delivery.js';
 import { taskChangeViewSchema } from './task-change.js';
 import { taskContractSchema } from './task-draft.js';
+import { stageContextPreviewSchema } from './context-builder.js';
 
 const id = z.uuid();
 const envelope = { schemaVersion: z.literal('1.0'), commandId: id,
@@ -36,6 +37,24 @@ export const runInspectionSchema = z.strictObject({
     cachedInputTokens: z.int().nonnegative().nullable(), cost: z.number().nonnegative().nullable(),
     currency: z.string().nullable() }).nullable(),
 });
+export const contextSourceStatusSchema = z.strictObject({
+  sourceRef: z.string().min(1).max(256),
+  kind: z.enum(['retrieved_knowledge', 'validated_memory']),
+  status: z.enum(['current', 'revoked', 'superseded', 'expired', 'missing']),
+});
+const versionLockSchema = z.strictObject({
+  id: z.string().min(1).max(128), version: z.string().min(1).max(80),
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+});
+const profileLockSchema = versionLockSchema.extend({ executorPluginId: z.string().min(1).max(128) });
+export const runConfigurationSourceSchema = z.strictObject({
+  projectId: id, runId: id, taskId: id, taskRevision: z.int().positive(),
+  configHash: z.string().regex(/^[a-f0-9]{64}$/),
+  workflow: versionLockSchema, developerProfile: profileLockSchema,
+  stageProfiles: z.array(profileLockSchema).max(8),
+  environmentId: id, environmentRevision: z.int().positive(),
+  actualNodeId: z.string().min(1).max(128),
+});
 export const runLaunchCapabilitiesSchema = z.strictObject({
   available: z.boolean(), executorId: z.literal('executor.codex'),
   adapterVersion: z.string().min(1), upstreamVersion: z.string().min(1),
@@ -44,6 +63,16 @@ export const runLaunchCapabilitiesSchema = z.strictObject({
   warnings: z.array(z.string()).max(32),
 });
 export const runCommandEnvelopeSchema = z.discriminatedUnion('type', [
+  z.strictObject({ ...envelope, type: z.literal('context.sources'), payload: z.strictObject({
+    projectId: id, runId: id,
+  }) }),
+  z.strictObject({ ...envelope, type: z.literal('run.config'), payload: z.strictObject({
+    projectId: id, runId: id,
+  }) }),
+  z.strictObject({ ...envelope, type: z.literal('context.preview'), payload: z.strictObject({
+    projectId: id, runId: id, query: z.string().min(1).max(160),
+    maxChars: z.int().min(1000).max(32000).optional(),
+  }) }),
   z.strictObject({ ...envelope, type:z.literal('task.change.get'), payload:z.strictObject({
     projectId:id,taskId:id,
   }) }),
@@ -106,6 +135,9 @@ export const runCommandEnvelopeSchema = z.discriminatedUnion('type', [
   z.strictObject({ ...envelope, type: z.literal('run.start'), payload: z.strictObject({
     projectId: id, taskId: id, expectedTaskRevision: z.int().positive(),
     modelId: z.string().min(1).max(128), idempotencyKey: id,
+    profileId: z.string().min(1).max(128).optional(),
+    profileRevision: z.int().positive().optional(),
+    contextQuery: z.string().min(1).max(160).optional(),
   }) }),
   z.strictObject({ ...envelope, type: z.literal('run.cancel'), payload: z.strictObject({
     projectId: id, runId: id,
@@ -128,6 +160,8 @@ export const runCommandEnvelopeSchema = z.discriminatedUnion('type', [
   z.strictObject({ ...envelope, type: z.literal('run.reviewStart'), payload: z.strictObject({
     projectId: id, taskId: id, developmentRunId: id, expectedSnapshotId: id,
     modelId: z.string().min(1).max(128), idempotencyKey: id,
+    profileId: z.string().min(1).max(128).optional(),
+    profileRevision: z.int().positive().optional(),
   }) }),
   z.strictObject({ ...envelope, type: z.literal('run.verifyStart'), payload: z.strictObject({
     projectId: id, taskId: id, developmentRunId: id, expectedSnapshotId: id,
@@ -164,7 +198,9 @@ export const runCommandResultSchema = z.union([
     z.array(verifyJobSchema).max(50), verifyJobSchema, verifyReportSchema.nullable(),
     verifyArtifactSchema, acceptanceMatrixSchema,
     finalAcceptanceViewSchema, deliverySummarySchema, mergePreviewSchema, mergeReceiptSchema,
-    taskChangeViewSchema, taskChangeViewSchema.nullable(),
+    taskChangeViewSchema, taskChangeViewSchema.nullable(), stageContextPreviewSchema,
+    z.array(contextSourceStatusSchema).max(40),
+    runConfigurationSourceSchema,
     z.array(reworkCycleSchema).max(20),
   ]), durationMs: z.number().nonnegative(), hostTimestamp: z.iso.datetime() }),
   z.strictObject({ commandId: id, ok: z.literal(false), error: z.strictObject({
@@ -175,6 +211,8 @@ export const runCommandResultSchema = z.union([
 export type RunObservation = z.infer<typeof runObservationSchema>;
 export type RunDiffPreview = z.infer<typeof runDiffPreviewSchema>;
 export type RunInspection = z.infer<typeof runInspectionSchema>;
+export type ContextSourceStatus = z.infer<typeof contextSourceStatusSchema>;
+export type RunConfigurationSource = z.infer<typeof runConfigurationSourceSchema>;
 export type RunLaunchCapabilities = z.infer<typeof runLaunchCapabilitiesSchema>;
 export type RunCommandEnvelope = z.infer<typeof runCommandEnvelopeSchema>;
 export type RunCommandResult = z.infer<typeof runCommandResultSchema>;
