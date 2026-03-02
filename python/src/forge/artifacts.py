@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import stat
+from datetime import UTC, datetime, timedelta
 from pathlib import Path, PureWindowsPath
 from typing import Literal
 from uuid import UUID, uuid4
@@ -17,6 +18,8 @@ from forge.persistence import ForgePersistence
 from forge.run_inspection import redact
 
 MAX_ARTIFACT_BYTES = 1_048_576
+IMPORTED_ARTIFACT_RETENTION_DAYS = 30
+MAX_CLEANUP_BATCH = 500
 
 
 class ArtifactError(Exception):
@@ -128,12 +131,59 @@ class ArtifactStore:
 
     def read(self, project_id: UUID, artifact_id: UUID) -> bytes:
         row = self.storage.session().execute(
-            "SELECT content_blob,content_hash FROM imported_artifacts "
+            "SELECT content_blob,content_hash, "
+            "EXISTS(SELECT 1 FROM imported_artifact_tombstones t "
+            "WHERE t.artifact_id=a.artifact_id) AS purged FROM imported_artifacts a "
             "WHERE project_id=? AND artifact_id=?", (str(project_id), str(artifact_id)),
         ).fetchone()
         if row is None:
             raise ArtifactError("ARTIFACT_NOT_FOUND")
+        if row["purged"]:
+            raise ArtifactError("ARTIFACT_PURGED")
         content = bytes(row["content_blob"])
         if hashlib.sha256(content).hexdigest() != row["content_hash"]:
             raise ArtifactError("ARTIFACT_CORRUPT")
         return content
+
+    def expired_candidates(self, *, now: datetime | None = None) -> tuple[list[str], bool]:
+        instant = now or datetime.now(UTC)
+        cutoff = (instant - timedelta(days=IMPORTED_ARTIFACT_RETENTION_DAYS)).isoformat(
+            timespec="milliseconds"
+        ).replace("+00:00", "Z")
+        rows = self.storage.session().execute(
+            "SELECT artifact_id FROM imported_artifacts a WHERE a.created_at < ? "
+            "AND NOT EXISTS(SELECT 1 FROM imported_artifact_tombstones t "
+            "WHERE t.artifact_id=a.artifact_id) "
+            "ORDER BY a.created_at,a.artifact_id LIMIT ?",
+            (cutoff, MAX_CLEANUP_BATCH + 1),
+        ).fetchall()
+        return ([str(row["artifact_id"]) for row in rows[:MAX_CLEANUP_BATCH]],
+                len(rows) > MAX_CLEANUP_BATCH)
+
+    def purge_expired(self, artifact_ids: list[str], *, now: datetime | None = None) -> int:
+        """Clear only previewed, expired Host-imported bytes; preserve immutable metadata."""
+        if len(artifact_ids) > MAX_CLEANUP_BATCH or len(set(artifact_ids)) != len(artifact_ids):
+            raise ArtifactError("ARTIFACT_CLEANUP_INVALID")
+        instant = now or datetime.now(UTC)
+        cutoff = (instant - timedelta(days=IMPORTED_ARTIFACT_RETENTION_DAYS)).isoformat(
+            timespec="milliseconds"
+        ).replace("+00:00", "Z")
+        purged_at = instant.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        with self.storage.transaction() as db:
+            for artifact_id in artifact_ids:
+                row = db.execute(
+                    "SELECT 1 FROM imported_artifacts a WHERE a.artifact_id=? "
+                    "AND a.created_at < ? AND NOT EXISTS("
+                    "SELECT 1 FROM imported_artifact_tombstones t "
+                    "WHERE t.artifact_id=a.artifact_id)",
+                    (artifact_id, cutoff),
+                ).fetchone()
+                if row is None:
+                    raise ArtifactError("ARTIFACT_CLEANUP_STALE")
+                db.execute(
+                    "INSERT INTO imported_artifact_tombstones(artifact_id,purged_at,reason) "
+                    "VALUES(?,?,'expired-user-confirmed')", (artifact_id, purged_at),
+                )
+                db.execute("UPDATE imported_artifacts SET content_blob=X'' WHERE artifact_id=?",
+                           (artifact_id,))
+        return len(artifact_ids)
