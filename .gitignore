@@ -22,6 +22,7 @@ forge-data/
 *.sqlite-wal
 .playwright-cli/
 output/playwright/
+build/macos/
 python/.venv/
 python/dist/
 **/__pycache__/
