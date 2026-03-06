@@ -1,0 +1,13 @@
+# P7-02 loopback staging — remote control still disabled
+
+This is a **development-only static Web entrance**, separate from the Python business Host. Normal Forge Desktop startup opens **no gateway port**. After `pnpm build`, a developer may explicitly run `pnpm remote:loopback:static`; it binds only `127.0.0.1` on a randomly assigned port and serves the built Vue assets. The page truthfully reports no Remote Host bridge. `/v1/*` provides no Host data, command or SSE access: read requests return `REMOTE_AUTH_UNAVAILABLE` and writes return `REMOTE_COMMANDS_DISABLED`. This is not a usable phone connection.
+
+The actual local Host remains on versioned JSON-RPC over stdio. This static adapter neither imports Electron nor connects to the Host or SQLite. It rejects invalid Host headers, non-allowlisted paths, traversal, symlinked assets and mutations. It emits no request URLs, cookies or credentials in logs. No access to a public interface, tunneling, automatic startup, cloud resource or paid account is configured.
+
+## Future private HTTPS entrance
+
+The authority in `forge_spec_v1.0/contracts/openapi.yaml` describes a **future** same-origin HTTPS PWA/API, not a running service. When P7-03 through P7-07 provide pairing, device sessions, Origin/CSRF checks, narrow command allowlists, project scopes and revocation, the explicit private-network front end may proxy HTTPS to this loopback origin. It must use a user-controlled private network and an authenticated TLS endpoint; transport encryption does not replace Forge device authorization. The Python gateway must remain bound to `127.0.0.1`, and the public internet must not reach it directly. A private proxy, certificate, phone and separate network have not yet been supplied or tested; no instructions here authorize exposing the current static staging endpoint as a functional Forge remote service.
+
+Before any remote action is enabled, verify on the target host that the listener is loopback-only; verify on a second authorized device that TLS identity, pairing, project scope, CSRF, approval freshness, revocation and offline no-replay work. A missing prerequisite leaves remote disabled. Host/desktop failure should display offline and last verified time, never a fabricated completed Run.
+
+Current real macOS arm64 check: `python/tests/test_remote_gateway.py` starts an actual loopback HTTP server, reads static assets, rejects host spoofing/traversal/symlink paths and all `/v1` reads/writes, then closes the listener. The built Web asset probe is recorded separately in `docs/implementation-status.md`. Windows and another-device HTTPS remain unverified.
