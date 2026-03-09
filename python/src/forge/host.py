@@ -24,19 +24,29 @@ from forge.acceptance_matrix import (
     AcceptanceMatrixError,
     AcceptanceMatrixService,
 )
+from forge.agent_profiles import AgentProfileError, AgentProfileService, ProfileSave, availability
 from forge.approvals import (
     ApprovalDecideInput,
     ApprovalError,
     ApprovalRequestInput,
     ApprovalService,
 )
-from forge.artifacts import ArtifactStore
+from forge.artifacts import ArtifactError, ArtifactStore
 from forge.board import BoardError, BoardReorderInput, BoardService
 from forge.codex_refiner import CodexReadOnlyRefiner
-from forge.context import ContextService
+from forge.context import ContextError, ContextService
+from forge.context_builder import StageContextBuilder, StageContextInput
 from forge.conversations import ConversationError, ConversationSend, ConversationService
 from forge.delivery import DeliveryError, DeliveryService, MergeRequest
 from forge.development import DevelopmentError, HostDevelopmentService, RunLaunchInput
+from forge.device_pairing import (
+    DevicePairingService,
+    PairingDecisionInput,
+    PairingError,
+    PairingIdInput,
+    PairingIssueInput,
+)
+from forge.diagnostics import DiagnosticsError, DiagnosticsService
 from forge.drafts import DraftError, DraftRequest, DraftReviseInput, DraftService
 from forge.environments import (
     EnvironmentError,
@@ -52,11 +62,31 @@ from forge.final_acceptance import (
     FinalAcceptanceService,
 )
 from forge.handoffs import DevelopmentHandoff, HandoffError, HandoffService, HostSnapshotService
+from forge.knowledge_ingestion import (
+    KnowledgeChunkInput,
+    KnowledgeError,
+    KnowledgeImportInput,
+    KnowledgeIngestionService,
+    KnowledgeProjectInput,
+    KnowledgeSearchInput,
+    KnowledgeSourceInput,
+)
+from forge.model_provider import ModelCapabilities
 from forge.persistence import LATEST_SCHEMA, ForgePersistence, PersistenceError, resolve_data_dir
 from forge.plugin_api import PluginError
 from forge.plugin_storage import PluginStorageBroker
 from forge.plugins import PluginRegistry
 from forge.processes import ProcessController
+from forge.project_memory import (
+    MemoryDecision,
+    MemoryEdit,
+    MemoryError,
+    MemoryIdInput,
+    MemoryProjectInput,
+    MemoryProposal,
+    MemoryQuery,
+    ProjectMemoryService,
+)
 from forge.projects import ProjectError, ProjectService
 from forge.protocol import (
     HOST_PROTOCOL_VERSION,
@@ -68,6 +98,9 @@ from forge.protocol import (
     parse_frame,
 )
 from forge.recovery import RecoveryService
+from forge.remote_auth import RemoteAuthDispatcher
+from forge.remote_commands import RemoteCommandDispatcher
+from forge.remote_sessions import RemoteSessionService
 from forge.review_copies import ReviewCopyError, ReviewCopyManager
 from forge.review_issues import ReviewIssueService, ReviewReport
 from forge.review_runtime import HostReviewService, ReviewRuntimeError, ReviewStartInput
@@ -89,6 +122,16 @@ from forge.verifier_project import (
     VerifyReport,
     VerifyStartInput,
 )
+from forge.workflow_compiler import WorkflowCatalog, WorkflowCompileRequest, compile_workflow
+from forge.workflow_drafts import (
+    WorkflowDraftError,
+    WorkflowDraftService,
+    WorkflowGetInput,
+    WorkflowPublishedInput,
+    WorkflowPublishInput,
+    WorkflowSaveInput,
+)
+from forge.workflow_templates import list_templates, load_template
 from forge.workspaces import WorkspaceManager
 
 LOGGER = logging.getLogger("forge.host")
@@ -105,6 +148,13 @@ class Handshake(BaseModel):
     hostVersion: str = Field(min_length=1, max_length=64)
     protocolVersion: str = Field(min_length=1, max_length=80)
     ownershipToken: str = Field(min_length=1, max_length=128)
+
+
+class DiagnosticsCleanupInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    previewId: UUID
+    confirmed: Literal[True]
 
 
 class ProjectPathInput(BaseModel):
@@ -220,6 +270,12 @@ class RunInspectInput(RunIdInput):
     limit: int = Field(ge=1, le=100)
 
 
+class BundledPluginEnabledInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    enabled: bool
+
+
 class ReviewJobInput(ConversationProjectInput):
     reviewRunId: UUID
 
@@ -248,9 +304,18 @@ class HostRuntime:
         self.storage = ForgePersistence(
             data_dir, read_only=os.environ.get("FORGE_PYTHON_DB_READ_ONLY") == "1"
         )
+        self.agent_profiles = AgentProfileService(self.storage)
+        self.workflow_drafts = WorkflowDraftService(self.storage)
         self.artifacts = ArtifactStore(self.storage)
+        self.diagnostics = DiagnosticsService(self.storage, self.artifacts)
         self.storage_error: str | None = None
         self.projects = ProjectService(self.storage)
+        self.device_pairing = DevicePairingService(self.storage)
+        self.remote_sessions = RemoteSessionService(self.storage)
+        self.remote_auth = RemoteAuthDispatcher(self.device_pairing, self.remote_sessions)
+        self.remote_commands = RemoteCommandDispatcher(self.remote_sessions, self.dispatch_async)
+        self.knowledge = KnowledgeIngestionService(self.storage, self.projects)
+        self.memories = ProjectMemoryService(self.storage, self.projects)
         self.conversations = ConversationService(self.storage)
         self.drafts = DraftService(self.storage)
         self.approvals = ApprovalService(self.storage, self.drafts)
@@ -258,13 +323,17 @@ class HostRuntime:
         self.environments = EnvironmentService(self.storage)
         self.configs = RunConfigService(self.storage, self.environments)
         self.contexts = ContextService(self.storage, self.configs)
+        self.stage_contexts = StageContextBuilder(
+            self.storage, self.configs, self.knowledge, self.memories,
+        )
         self.runs = RunService(self.storage, self.configs)
         self.inspections = RunInspectionService(self.storage, self.runs)
         self.handoffs = HandoffService(self.storage)
         self.processes = ProcessController(uuid4(), data_dir / "process-records")
+        self.model_provider_id = os.environ.get("FORGE_MODEL_PROVIDER", "model.codex")
         self.plugins = PluginRegistry(granted_permissions=frozenset((
             "workspace.read", "workspace.write", "process.spawn"
-        )))
+        )), model_provider_enabled=self.model_provider_id != "disabled")
         self.plugins.register_service("process.v1", self.processes)
         self.plugins.register_service("storage.v1", PluginStorageBroker(self.storage))
         self.workspaces = WorkspaceManager(
@@ -365,6 +434,21 @@ class HostRuntime:
             "storage": storage,
         }
 
+    def inspect_bundled_plugin(self) -> dict[str, object]:
+        inspection = self.plugins.inspect_builtin_config()
+        enabled = self.storage.get_metadata("plugin.forge.executor.codex.enabled") != "0"
+        inspection["enabled"] = enabled
+        inspection["restartRequired"] = enabled and not inspection["active"]
+        return inspection
+
+    async def dispatch_remote(self, method: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Only the optional authenticated gateway may call this on the Host loop."""
+        if method == "command":
+            return self.remote_commands.handle_command(payload)
+        if method == "query":
+            return await self.remote_commands.handle_query(payload)
+        return self.remote_auth.handle(method, payload)
+
     def dispatch(self, request: RpcRequest) -> dict[str, Any]:
         if request.method == "system.handshake":
             try:
@@ -381,12 +465,42 @@ class HostRuntime:
             return self.info()
         if self.status == "starting":
             raise ProtocolError("HOST_UNAVAILABLE", "Complete handshake first")
+        if request.method == "diagnostics.prepare":
+            if request.params:
+                raise ProtocolError("INVALID_REQUEST", "Diagnostics preview takes no parameters")
+            try:
+                return {"data": self.diagnostics.prepare()}
+            except DiagnosticsError as error:
+                raise ProtocolError(error.code, error.code) from error
+        if request.method == "diagnostics.cleanup":
+            if self.storage.health()["status"] != "ready":
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
+            try:
+                cleanup_request = DiagnosticsCleanupInput.model_validate_json(
+                    json.dumps(request.params))
+                return {"data": self.diagnostics.cleanup(str(cleanup_request.previewId))}
+            except ValidationError as error:
+                raise ProtocolError("INVALID_REQUEST", "Invalid diagnostics cleanup") from error
+            except (DiagnosticsError, ArtifactError) as error:
+                raise ProtocolError(error.code, error.code) from error
         if request.method == "plugin.inspectBundled":
             if request.params:
                 raise ProtocolError("INVALID_REQUEST", "Plugin inspection takes no parameters")
-            return {"data": self.plugins.inspect_builtin_config()}
+            return {"data": self.inspect_bundled_plugin()}
+        if request.method == "agent.profileSave":
+            if self.storage.health()["status"] != "ready":
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
+            try:
+                value = ProfileSave.model_validate(request.params)
+                return {"data": self.agent_profiles.save(value).model_dump(mode="json")}
+            except ValidationError as error:
+                raise ProtocolError("INVALID_REQUEST", "Invalid Agent Profile") from error
+            except AgentProfileError as error:
+                raise ProtocolError(error.code, error.code) from error
         if request.method.startswith("project."):
             return self.project_command(request)
+        if request.method.startswith("devices.pair."):
+            return self.device_pairing_command(request)
         if request.method.startswith(("environment.", "commandPreset.")):
             return self.environment_command(request)
         if request.method.startswith("conversation."):
@@ -399,10 +513,13 @@ class HostRuntime:
             return self.approval_command(request)
         if request.method in ("board.snapshot", "task.detail", "tasks.reorder"):
             return self.board_command(request)
-        if request.method.startswith(("run.", "deliveries.", "task.change.")):
+        if request.method == "context.sources" or request.method.startswith(
+            ("run.", "deliveries.", "task.change.")
+        ):
             return self.run_command(request)
         if request.method not in (
-            "system.ping", "system.info", "system.health", "system.shutdown"
+            "system.ping", "system.info", "system.health", "system.activity",
+            "system.shutdown"
         ):
             raise ProtocolError("UNKNOWN_COMMAND", "Method is not registered")
         if request.params:
@@ -413,6 +530,22 @@ class HostRuntime:
             return self.info()
         if request.method == "system.health":
             return self.health()
+        if request.method == "system.activity":
+            development = self.development
+            counts = {
+                "startingRuns": len(development.starting) if development else 0,
+                "developmentRuns": len(development.running) if development else 0,
+                "scheduledRuns": len(development.scheduler.active) if development else 0,
+                "reviewJobs": len(self.review_runtime.running) if self.review_runtime else 0,
+                "verifyJobs": len(self.verifier.running),
+                "refinerJobs": len(self.refiner_jobs),
+                "ownedProcesses": sum(
+                    item.session.descriptor.status in ("running", "cancelling")
+                    for item in self.processes.records.values()
+                ),
+            }
+            return {"activityCount": sum(counts.values()), "counts": counts,
+                    "timestamp": timestamp()}
         if request.method == "system.shutdown":
             self.status = "stopping"
             self.running = False
@@ -445,11 +578,14 @@ class HostRuntime:
                 self.configs, self.contexts,
             ), adapter,
             self.plugins if self.plugins.resolve_executor(adapter.id) is adapter else None,
+            self.agent_profiles, self.stage_contexts,
         )
+        self.development.workflow_catalog = self.workflow_catalog
         self.development.on_handoff = self._advance_rework
         self.review_runtime = HostReviewService(
             self.storage, self.projects, self.handoffs, self.configs,
             self.inspections, self.review_copies, self.review_issues, adapter,
+            self.agent_profiles,
         )
         self.review_runtime.on_rework = self._review_rework
         self.verifier.on_rework = self._verify_rework
@@ -529,7 +665,232 @@ class HostRuntime:
             LOGGER.warning(json.dumps({"event": "rework_gate_blocked", "code": code,
                                        "cycleId": str(cycle.cycleId)}))
 
+    async def workflow_catalog(self) -> WorkflowCatalog:
+        profiles = {profile.id: profile for profile in self.agent_profiles.list()}
+        adapter = self.plugins.resolve_executor("executor.codex")
+        caps = await adapter.probe() if adapter is not None else None
+        return WorkflowCatalog(
+            profiles=profiles,
+            executors={caps.executorId: caps} if caps is not None else {},
+            verifiers=frozenset(("verifier.project-checks",))
+            if self.verifier_ready else frozenset(),
+        )
+
     async def dispatch_async(self, request: RpcRequest) -> dict[str, Any]:
+        if request.method == "plugin.setBundledEnabled":
+            if self.status == "starting" or self.storage.health()["status"] != "ready":
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
+            try:
+                setting = BundledPluginEnabledInput.model_validate(request.params)
+            except ValidationError as error:
+                raise ProtocolError("INVALID_REQUEST", "Invalid bundled plugin setting") from error
+            if setting.enabled:
+                # Rebinding the active Run scheduler to a new plugin instance is unsafe.
+                # Apply this persisted preference when the owned Host next starts.
+                self.storage.set_metadata("plugin.forge.executor.codex.enabled", "1")
+            else:
+                if (self.plugins.run_leases.get("forge.executor.codex")
+                    or (self.development is not None and (
+                        self.development.starting or self.development.running
+                        or self.development.scheduler.active
+                    ))
+                    or (self.review_runtime is not None and self.review_runtime.running)
+                    or self.refiner_jobs):
+                    raise ProtocolError("PLUGIN_BUSY", "An active Run still owns the plugin")
+                self.storage.set_metadata("plugin.forge.executor.codex.enabled", "0")
+                try:
+                    await self.plugins.deactivate("forge.executor.codex")
+                except PluginError as error:
+                    raise ProtocolError(error.code, error.code) from error
+            return {"data": self.inspect_bundled_plugin()}
+        if request.method.startswith("memory."):
+            if self.status == "starting" or self.storage.health()["status"] != "ready":
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
+            try:
+                params_json = json.dumps(request.params)
+                if request.method == "memory.propose":
+                    memory_result = self.memories.propose(
+                        MemoryProposal.model_validate_json(params_json))
+                elif request.method == "memory.decide":
+                    memory_result = self.memories.decide(
+                        MemoryDecision.model_validate_json(params_json))
+                elif request.method == "memory.edit":
+                    memory_result = self.memories.edit(
+                        MemoryEdit.model_validate_json(params_json))
+                elif request.method == "memory.get":
+                    memory_result = self.memories.get(
+                        MemoryIdInput.model_validate_json(params_json))
+                elif request.method == "memory.list":
+                    memories = self.memories.list(
+                        MemoryProjectInput.model_validate_json(params_json))
+                    return {"data": [item.model_dump(mode="json") for item in memories]}
+                elif request.method == "memory.retrieve":
+                    found_memory = self.memories.retrieve(
+                        MemoryQuery.model_validate_json(params_json))
+                    return {"data": found_memory.model_dump(mode="json")}
+                else:
+                    raise ProtocolError("UNKNOWN_COMMAND", "Memory method is not registered")
+                return {"data": memory_result.model_dump(mode="json")}
+            except ValidationError as error:
+                raise ProtocolError("INVALID_REQUEST", "Invalid memory payload") from error
+            except MemoryError as error:
+                raise ProtocolError(error.code, error.code) from error
+        if request.method == "context.preview":
+            if self.status == "starting" or self.storage.health()["status"] != "ready":
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
+            try:
+                stage_input = StageContextInput.model_validate_json(json.dumps(request.params))
+                return {"data": self.stage_contexts.preview(stage_input).model_dump(mode="json")}
+            except ValidationError as error:
+                raise ProtocolError("INVALID_REQUEST", "Invalid context payload") from error
+            except (ContextError, KnowledgeError, MemoryError) as error:
+                raise ProtocolError(error.code, error.code) from error
+        if request.method.startswith("knowledge."):
+            if self.status == "starting" or self.storage.health()["status"] != "ready":
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
+            try:
+                params_json = json.dumps(request.params)
+                if request.method == "knowledge.list":
+                    sources = self.knowledge.list(
+                        KnowledgeProjectInput.model_validate_json(params_json)
+                    )
+                    return {"data": [item.model_dump(mode="json") for item in sources]}
+                if request.method == "knowledge.import":
+                    imported_source = self.knowledge.import_source(
+                        KnowledgeImportInput.model_validate_json(params_json)
+                    )
+                    return {"data": imported_source.model_dump(mode="json")}
+                if request.method == "knowledge.chunk":
+                    source_chunk = self.knowledge.chunk(
+                        KnowledgeChunkInput.model_validate_json(params_json)
+                    )
+                    return {"data": source_chunk.model_dump(mode="json")}
+                if request.method == "knowledge.search":
+                    found = self.knowledge.search(
+                        KnowledgeSearchInput.model_validate_json(params_json)
+                    )
+                    return {"data": found.model_dump(mode="json")}
+                if request.method == "knowledge.revoke":
+                    revoked_source = self.knowledge.revoke(
+                        KnowledgeSourceInput.model_validate_json(params_json)
+                    )
+                    return {"data": revoked_source.model_dump(mode="json")}
+            except ValidationError as error:
+                raise ProtocolError("INVALID_REQUEST", "Invalid knowledge payload") from error
+            except KnowledgeError as error:
+                raise ProtocolError(error.code, error.code) from error
+            raise ProtocolError("UNKNOWN_COMMAND", "Knowledge method is not registered")
+        if request.method.startswith("workflow."):
+            if self.status == "starting" or self.storage.health()["status"] != "ready":
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
+            try:
+                if request.method == "workflow.presets":
+                    if request.params:
+                        raise ProtocolError(
+                            "INVALID_REQUEST", "Workflow presets take no parameters",
+                        )
+                    return {"data": [item.model_dump(mode="json", by_alias=True)
+                                     for item in list_templates()]}
+                if request.method == "workflow.list":
+                    if request.params:
+                        raise ProtocolError("INVALID_REQUEST", "Workflow list takes no parameters")
+                    return {"data": [item.model_dump(mode="json", by_alias=True)
+                                     for item in self.workflow_drafts.list()]}
+                if request.method == "workflow.get":
+                    value_get = WorkflowGetInput.model_validate(request.params)
+                    record = self.workflow_drafts.get(value_get.workflowId)
+                    if record is None:
+                        raise WorkflowDraftError("WORKFLOW_NOT_FOUND")
+                    return {"data": record.model_dump(mode="json", by_alias=True)}
+                if request.method == "workflow.getPublished":
+                    value_published = WorkflowPublishedInput.model_validate(request.params)
+                    publication = self.workflow_drafts.published(
+                        value_published.workflowId, value_published.revision)
+                    return {"data": publication.model_dump(mode="json", by_alias=True)}
+                if request.method == "workflow.impact":
+                    value_impact = WorkflowGetInput.model_validate(request.params)
+                    return {"data": self.workflow_drafts.impact(
+                        value_impact.workflowId
+                    ).model_dump(mode="json")}
+                if request.method == "workflow.saveDraft":
+                    template_raw = request.params.get("template")
+                    if (isinstance(template_raw, dict)
+                            and "schemaVersion" in template_raw
+                            and template_raw["schemaVersion"] != "1.0"):
+                        raise ProtocolError("WORKFLOW_DSL_VERSION_UNSUPPORTED",
+                                            "Workflow DSL schemaVersion is unsupported")
+                    value_save = WorkflowSaveInput.model_validate(request.params)
+                    record = self.workflow_drafts.save(value_save)
+                    compiled = compile_workflow(record.draft,
+                                                catalog=await self.workflow_catalog())
+                    return {"data": {"record": record.model_dump(mode="json", by_alias=True),
+                                     "compiled": compiled.model_dump(mode="json")}}
+                if request.method == "workflow.compileDraft":
+                    template_raw = request.params.get("template")
+                    if (isinstance(template_raw, dict)
+                            and "schemaVersion" in template_raw
+                            and template_raw["schemaVersion"] != "1.0"):
+                        raise ProtocolError("WORKFLOW_DSL_VERSION_UNSUPPORTED",
+                                            "Workflow DSL schemaVersion is unsupported")
+                    value_compile = WorkflowSaveInput.model_validate(request.params)
+                    compiled = compile_workflow(value_compile.template,
+                                                catalog=await self.workflow_catalog())
+                    return {"data": compiled.model_dump(mode="json")}
+                if request.method == "workflow.publish":
+                    value_publish = WorkflowPublishInput.model_validate(request.params)
+                    record, compiled = self.workflow_drafts.publish(
+                        value_publish, await self.workflow_catalog(),
+                    )
+                    return {"data": {"record": record.model_dump(mode="json", by_alias=True),
+                                     "compiled": compiled.model_dump(mode="json")}}
+                if request.method != "workflow.compilePreset":
+                    raise ProtocolError("UNKNOWN_COMMAND", "Workflow method is not registered")
+                value = WorkflowCompileRequest.model_validate(request.params)
+            except ValidationError as error:
+                message = ("Invalid Workflow preset" if request.method == "workflow.compilePreset"
+                           else "Invalid Workflow payload")
+                raise ProtocolError("INVALID_REQUEST", message) from error
+            except WorkflowDraftError as error:
+                raise ProtocolError(error.code, error.code) from error
+            compiled = compile_workflow(load_template(value.templateId),
+                                        catalog=await self.workflow_catalog())
+            return {"data": compiled.model_dump(mode="json")}
+        if request.method == "agent.profileCatalog":
+            if request.params:
+                raise ProtocolError("INVALID_REQUEST", "Profile catalog takes no parameters")
+            if self.status == "starting" or self.storage.health()["status"] != "ready":
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
+            adapter = self.plugins.resolve_executor("executor.codex")
+            caps = await adapter.probe() if adapter is not None else None
+            provider = self.plugins.resolve_model_provider(self.model_provider_id)
+            model_caps = await provider.probe() if provider is not None else ModelCapabilities(
+                providerId=("model.codex" if self.model_provider_id == "disabled"
+                            else self.model_provider_id), available=False, modelIds=[],
+                structuredOutput=False, textStreaming=False, usageReporting=False,
+                tokenLimitEnforced=False,
+                authentication="none", reason=("MODEL_PROVIDER_DISABLED"
+                                               if self.model_provider_id == "disabled"
+                                               else "MODEL_PROVIDER_UNAVAILABLE"),
+            )
+            profiles = self.agent_profiles.list()
+            return {"data": {
+                "profiles": [profile.model_dump(mode="json") for profile in profiles],
+                "availability": [availability(profile, caps).model_dump(mode="json")
+                                 for profile in profiles],
+                "executors": [
+                    {"executorId": "executor.codex", "available": bool(caps and caps.available),
+                     "modelIds": caps.modelIds if caps and caps.available else [],
+                     "readOnlyEnforced": bool(caps and caps.readOnlyEnforced),
+                     "networkPolicyEnforced": bool(caps and caps.networkPolicyEnforced),
+                     "approval": bool(caps and caps.approval),
+                     "reason": None if caps and caps.available else "EXECUTOR_UNAVAILABLE"},
+                    {"executorId": "executor.claude", "available": False,
+                     "modelIds": [], "readOnlyEnforced": False,
+                     "networkPolicyEnforced": False, "approval": False,
+                     "reason": "CLAUDE_NOT_VERIFIED"},
+                ],
+                "modelProviders": [model_caps.model_dump(mode="json")],
+            }}
         if request.method not in (
             "run.start", "run.cancel", "run.capabilities", "run.reviewStart",
             "run.verifyStart", "run.finalDecide", "deliveries.merge",
@@ -559,6 +920,11 @@ class HostRuntime:
             raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
         if request.method == "run.verifyStart" and not self.verifier_ready:
             raise ProtocolError("HOST_UNAVAILABLE", "Verifier is not available")
+        if (self.development is not None and self.development.plugins is not None and (
+            request.method == "run.reviewStart" or (
+            request.method == "run.finalDecide" and final_decision.decision == "return"
+        ))) and not self.plugins.resolve_executor("executor.codex"):
+            raise ProtocolError("RUN_PLUGIN_UNAVAILABLE", "Executor plugin is disabled")
         if self.development is None and request.method not in (
             "run.verifyStart", "run.finalDecide", "deliveries.merge",
         ):
@@ -667,6 +1033,30 @@ class HostRuntime:
             raise ProtocolError("INVALID_REQUEST", "Invalid project command payload") from error
         except ProjectError as error:
             raise ProtocolError(error.code, str(error)) from error
+        except PersistenceError as error:
+            raise ProtocolError(error.code, error.code) from error
+
+    def device_pairing_command(self, request: RpcRequest) -> dict[str, Any]:
+        if self.storage.health()["status"] != "ready":
+            raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
+        try:
+            params_json = json.dumps(request.params)
+            if request.method == "devices.pair.issue":
+                PairingIssueInput.model_validate_json(params_json)
+                value = self.device_pairing.issue()
+            elif request.method == "devices.pair.inspect":
+                data = PairingIdInput.model_validate_json(params_json)
+                value = self.device_pairing.inspect_local(data.pairingId)
+            elif request.method == "devices.pair.decide":
+                data = PairingDecisionInput.model_validate_json(params_json)
+                value = self.device_pairing.decide(data)
+            else:
+                raise ProtocolError("UNKNOWN_COMMAND", "Pairing method is not registered")
+            return {"data": value}
+        except ValidationError as error:
+            raise ProtocolError("INVALID_REQUEST", "Invalid pairing command payload") from error
+        except PairingError as error:
+            raise ProtocolError(error.code, error.code) from error
         except PersistenceError as error:
             raise ProtocolError(error.code, error.code) from error
 
@@ -794,8 +1184,10 @@ class HostRuntime:
                 result: Any = self.drafts.manual(manual_input)
             elif method == "draft.generate":
                 generate_input = DraftRequest.model_validate_json(params)
+                provider = self.plugins.resolve_model_provider(self.model_provider_id)
                 result = self.drafts.begin(
-                    generate_input, "generating", CodexReadOnlyRefiner.provider_id
+                    generate_input, "generating",
+                    provider.id if provider is not None else "model.unavailable",
                 )
                 draft_id = str(result.draftId)
                 if result.status == "generating" and draft_id not in self.refiner_jobs:
@@ -863,7 +1255,12 @@ class HostRuntime:
                     name for name, value in project.probe.scripts.model_dump().items() if value
                 ],
             })
-            intent, contract, error = await CodexReadOnlyRefiner().refine(
+            provider = self.plugins.resolve_model_provider(self.model_provider_id)
+            if provider is None:
+                self.drafts.finish(project_id, draft_id, "new_task", None,
+                                   "REFINER_UNAVAILABLE")
+                return
+            intent, contract, error = await CodexReadOnlyRefiner(provider).refine(
                 project_id, draft_id, row["source_message_id"], message.content, summary
             )
             self.drafts.finish(project_id, draft_id, intent, contract, error)
@@ -917,6 +1314,26 @@ class HostRuntime:
                     inspect_input.projectId, inspect_input.runId,
                     inspect_input.afterCursor, inspect_input.limit
                 )
+            elif request.method == "context.sources":
+                source_input = RunIdInput.model_validate_json(params)
+                result = self.contexts.run_sources(source_input.projectId, source_input.runId)
+            elif request.method == "run.config":
+                config_input = RunIdInput.model_validate_json(params)
+                config = self.configs.get(config_input.projectId, config_input.runId)
+                run = self.runs.get(config_input.projectId, config_input.runId)
+                if config is None or run is None:
+                    raise ProtocolError("RUN_NOT_FOUND", "Run configuration is unavailable")
+                result = {
+                    "projectId": config.projectId, "runId": config.runId,
+                    "taskId": config.taskId, "taskRevision": config.taskRevision,
+                    "configHash": config.snapshotHash,
+                    "workflow": config.workflow,
+                    "developerProfile": config.profile,
+                    "stageProfiles": config.stageProfiles,
+                    "environmentId": config.environment.environmentId,
+                    "environmentRevision": config.environment.revision,
+                    "actualNodeId": run.attempt.nodeId,
+                }
             elif request.method == "run.handoff":
                 handoff_input = RunIdInput.model_validate_json(params)
                 result = self.handoffs.get(handoff_input.projectId, handoff_input.runId)
@@ -1002,7 +1419,8 @@ class HostRuntime:
             raise ProtocolError("INVALID_REQUEST", "Invalid Run command payload") from error
         except (RunError, InspectionError, HandoffError, PersistenceError,
                 ReviewRuntimeError, VerifierError, AcceptanceMatrixError,
-                ReworkError, FinalAcceptanceError, DeliveryError, TaskChangeError) as error:
+                ReworkError, FinalAcceptanceError, DeliveryError, TaskChangeError,
+                ContextError) as error:
             raise ProtocolError(error.code, error.code) from error
 
     def approval_command(self, request: RpcRequest) -> dict[str, Any]:
@@ -1083,19 +1501,24 @@ async def serve() -> int:
                 and not runtime.storage.read_only and runtime.development is None
             ):
                 try:
-                    if "forge.executor.codex" not in runtime.plugins.manifests:
-                        runtime.plugins.discover_builtin("forge.executor.codex")
-                    if "forge.executor.codex" not in runtime.plugins.activated:
-                        await runtime.plugins.activate("forge.executor.codex")
-                    adapter = runtime.plugins.resolve_executor("executor.codex")
-                    if adapter is None:
-                        raise PluginError("PLUGIN_EXECUTOR_UNAVAILABLE")
-                    await runtime.attach_executor(adapter)
+                    if runtime.storage.get_metadata(
+                        "plugin.forge.executor.codex.enabled"
+                    ) != "0":
+                        if "forge.executor.codex" not in runtime.plugins.manifests:
+                            runtime.plugins.discover_builtin("forge.executor.codex")
+                        if "forge.executor.codex" not in runtime.plugins.activated:
+                            await runtime.plugins.activate("forge.executor.codex")
+                        adapter = runtime.plugins.resolve_executor("executor.codex")
+                        if adapter is None:
+                            raise PluginError("PLUGIN_EXECUTOR_UNAVAILABLE")
+                        await runtime.attach_executor(adapter)
                 except PluginError as error:
                     LOGGER.warning(json.dumps({"event": "executor_unavailable",
                                                "code": error.code}))
                 except Exception:
                     # Project and P1 operations remain available; run.start fails closed.
+                    runtime.plugins.record_fault("forge.executor.codex", "activation",
+                                                 "PLUGIN_ATTACHMENT_FAILED")
                     LOGGER.exception("Executor attachment failed")
                     await runtime.plugins.deactivate("forge.executor.codex")
             response: dict[str, Any] = {"jsonrpc": "2.0", "id": request.id, "result": result}

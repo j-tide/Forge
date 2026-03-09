@@ -72,11 +72,15 @@ _SECRETS = re.compile(
     r"|(?im:^\s*(?:Set-)?Cookie\s*:\s*[^\r\n]+)"
     r"|(?i:(?:api[_-]?key|token|password|secret)\s*[:=]\s*)[^\s,'\";]+"
 )
+_PRIVATE_KEY = re.compile(
+    r"(?im)^[+ -]*-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?"
+    r"(?:^[+ -]*-----END [A-Z0-9 ]*PRIVATE KEY-----|\Z)"
+)
 _SENSITIVE_PATH = re.compile(r"(^|/)(\.env(?:\.|$)|[^/]+\.(?:pem|key|p12|pfx)$)", re.I)
 
 
 def redact(text: str) -> str:
-    return _SECRETS.sub("[REDACTED]", text)
+    return _SECRETS.sub("[REDACTED]", _PRIVATE_KEY.sub("[REDACTED PRIVATE KEY]", text))
 
 
 def _summary(event: ExecutorEvent) -> str:

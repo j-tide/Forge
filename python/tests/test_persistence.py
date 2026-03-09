@@ -2,10 +2,17 @@
 
 import sqlite3
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
+from test_agent_profiles import profile
+from test_workflow_versioning import approved_task, selection
 
 import forge.persistence as persistence_module
+from forge.agent_profiles import AgentProfileService, ProfileSave
+from forge.board import BoardService
+from forge.conversations import timestamp
+from forge.environments import EnvironmentService
 from forge.persistence import (
     CURRENT_COMPATIBLE_SCHEMA,
     LATEST_SCHEMA,
@@ -14,6 +21,8 @@ from forge.persistence import (
     PersistenceError,
     resolve_data_dir,
 )
+from forge.run_config import RunConfigService, VersionLock
+from forge.runs import RunService, RunStartIntent
 
 
 def test_path_requires_absolute_override(tmp_path: Path) -> None:
@@ -37,7 +46,7 @@ def test_legacy_migrations_restart_and_safe_python_upgrade(tmp_path: Path) -> No
     restored.open()
     assert restored.get_metadata("migration.test") == "value-preserved"
     assert restored.migrate(CURRENT_COMPATIBLE_SCHEMA) == 15
-    assert restored.migrate(LATEST_SCHEMA) == 24
+    assert restored.migrate(LATEST_SCHEMA) == LATEST_SCHEMA
     assert restored.get_metadata("migration.test") == "value-preserved"
     migration_count = restored._db().execute(
         "SELECT count(*) FROM schema_migrations"
@@ -54,8 +63,8 @@ def test_acceptance_schema_upgrades_additively_to_rework(tmp_path: Path) -> None
     db.close()
     upgraded = ForgePersistence(tmp_path)
     upgraded.open()
-    assert upgraded.migrate(LATEST_SCHEMA) == 24
-    assert upgraded.migrate(LATEST_SCHEMA) == 24
+    assert upgraded.migrate(LATEST_SCHEMA) == LATEST_SCHEMA
+    assert upgraded.migrate(LATEST_SCHEMA) == LATEST_SCHEMA
     assert upgraded.get_metadata("schema19.preserved") == "yes"
     assert upgraded.session().execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='acceptance_decisions'"
@@ -76,8 +85,8 @@ def test_delivery_schema_upgrades_from_final_acceptance_without_data_reset(
     db.close()
     upgraded = ForgePersistence(tmp_path)
     upgraded.open()
-    assert upgraded.migrate(LATEST_SCHEMA) == 24
-    assert upgraded.migrate(LATEST_SCHEMA) == 24
+    assert upgraded.migrate(LATEST_SCHEMA) == LATEST_SCHEMA
+    assert upgraded.migrate(LATEST_SCHEMA) == LATEST_SCHEMA
     assert upgraded.get_metadata("schema21.preserved") == "still-here"
     assert upgraded.session().execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='delivery_records'"
@@ -88,6 +97,50 @@ def test_delivery_schema_upgrades_from_final_acceptance_without_data_reset(
     assert upgraded.session().execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='task_change_requests'"
     ).fetchone() is not None
+    upgraded.close()
+
+
+def test_populated_p3_p4_database_upgrades_without_losing_task_run_or_profile(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "old project"
+    source.mkdir()
+    data = tmp_path / "existing-data"
+    old = ForgePersistence(data)
+    old.open()
+    assert old.migrate(25) == 25
+    project, task, environment = approved_task(old, source, "standard")
+    saved_profile = profile()
+    AgentProfileService(old).save(ProfileSave(profile=saved_profile, expectedRevision=0))
+    configs = RunConfigService(old, EnvironmentService(old))
+    config = configs.create(selection(project, task, environment, VersionLock(
+        id="standard", version="1", contentHash="a" * 64,
+    )))
+    attempt = uuid4()
+    RunService(old, configs).begin(RunStartIntent(
+        runId=config.runId, projectId=project.projectId, taskId=task.draftId,
+        attemptId=attempt, workspaceId=uuid4(), workspaceLeaseId=uuid4(),
+        leaseEpoch=1, baseRevision="a" * 40, nodeId="develop",
+        executorId="forge.executor.codex", configHash=config.snapshotHash,
+        createdAt=timestamp(),
+    ))
+    old.close()
+
+    upgraded = ForgePersistence(data)
+    upgraded.open()
+    assert upgraded.migrate(LATEST_SCHEMA) == LATEST_SCHEMA
+    assert upgraded.migrate(LATEST_SCHEMA) == LATEST_SCHEMA
+    detail = BoardService(upgraded).detail(str(project.projectId), str(task.draftId))
+    assert detail.detail.contract.title == "Version freeze"
+    assert AgentProfileService(upgraded).get(saved_profile.id, 1) == saved_profile
+    assert RunConfigService(upgraded, EnvironmentService(upgraded)).get(
+        project.projectId, config.runId) == config
+    restored_run = RunService(upgraded, RunConfigService(
+        upgraded, EnvironmentService(upgraded))).get(project.projectId, config.runId)
+    assert restored_run is not None and restored_run.attempt.attemptId == attempt
+    assert upgraded.session().execute("PRAGMA foreign_key_check").fetchone() is None
+    backup = upgraded.backup()
+    assert backup.exists()
     upgraded.close()
 
 
