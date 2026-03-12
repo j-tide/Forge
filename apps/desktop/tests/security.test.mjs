@@ -12,6 +12,9 @@ test('owned Host gets runtime hints and non-credential proxies but no arbitrary 
     ANOTHER_TOKEN: 'private' }), {
     HOME: '/example/home', PATH: '/bin', HTTPS_PROXY: 'http://127.0.0.1:7890',
   });
+  assert.deepEqual(hostEnvironment({ FORGE_MODEL_PROVIDER: 'disabled', ANTHROPIC_API_KEY: 'secret' }),
+    { FORGE_MODEL_PROVIDER: 'disabled' });
+  assert.deepEqual(hostEnvironment({ FORGE_MODEL_PROVIDER: 'model.external.unapproved' }), {});
 });
 
 test('BrowserWindow enables renderer isolation and sandboxing', () => {
@@ -49,7 +52,7 @@ test('compiled preload exposes only fixed Host methods and releases its listener
   });
   assert.equal(exposed.length, 1);
   assert.equal(exposed[0].name, 'forge');
-  assert.deepEqual(Object.keys(exposed[0].value), ['platform', 'hostStatus', 'hostHealth', 'pythonHostStatus', 'invokeSystem', 'inspectBundledPlugin', 'chooseProjectFolder', 'invokeProject', 'invokeConversation', 'invokeDraft', 'invokeApproval', 'invokeBoard', 'invokeRun', 'onConversationEvent', 'onHostStatus', 'onPythonHostStatus']);
+  assert.deepEqual(Object.keys(exposed[0].value), ['platform', 'hostStatus', 'hostHealth', 'pythonHostStatus', 'invokeSystem', 'inspectBundledPlugin', 'setBundledPluginEnabled', 'agentProfileCatalog', 'saveAgentProfile', 'invokeWorkflow', 'invokeKnowledge', 'invokeMemory', 'invokeDevicePairing', 'chooseProjectFolder', 'openAppPreview', 'prepareDiagnostics', 'exportDiagnostics', 'cleanupExpiredArtifacts', 'invokeProject', 'invokeConversation', 'invokeDraft', 'invokeApproval', 'invokeBoard', 'invokeRun', 'onConversationEvent', 'onHostStatus', 'onPythonHostStatus']);
   assert.equal(exposed[0].value.platform, 'darwin');
   assert.equal(Object.isFrozen(exposed[0].value), true);
   await exposed[0].value.hostStatus();
@@ -57,14 +60,25 @@ test('compiled preload exposes only fixed Host methods and releases its listener
   await exposed[0].value.pythonHostStatus();
   await exposed[0].value.invokeSystem({ type: 'system.ping' });
   await exposed[0].value.inspectBundledPlugin();
+  await exposed[0].value.setBundledPluginEnabled(false);
+  await exposed[0].value.agentProfileCatalog();
+  await exposed[0].value.saveAgentProfile({ profile: { id: 'profile.test' }, expectedRevision: 0 });
+  await exposed[0].value.invokeWorkflow({ type: 'list', payload: {} });
+  await exposed[0].value.invokeKnowledge({ type: 'list', payload: { projectId: 'fixture' } });
+  await exposed[0].value.invokeMemory({ type: 'list', payload: { projectId: 'fixture' } });
+  await exposed[0].value.invokeDevicePairing({ type: 'issue', payload: {} });
   await exposed[0].value.chooseProjectFolder();
+  await exposed[0].value.openAppPreview({ url: 'http://127.0.0.1:43210/' });
+  await exposed[0].value.prepareDiagnostics();
+  await exposed[0].value.exportDiagnostics('preview-id');
+  await exposed[0].value.cleanupExpiredArtifacts('preview-id');
   await exposed[0].value.invokeProject({ type: 'project.list' });
   await exposed[0].value.invokeConversation({ type: 'conversation.list' });
   await exposed[0].value.invokeDraft({ type: 'draft.list' });
   await exposed[0].value.invokeApproval({ type: 'approval.forDraft' });
   await exposed[0].value.invokeBoard({ type: 'board.snapshot' });
   await exposed[0].value.invokeRun({ type: 'run.list' });
-  assert.deepEqual(calls.map((call) => call.channel), ['forge:host-status', 'forge:host-health', 'forge:python-host-status', 'forge:system-command', 'forge:plugin-inspect-bundled', 'forge:choose-project-folder', 'forge:project-command', 'forge:conversation-command', 'forge:draft-command', 'forge:approval-command', 'forge:board-command', 'forge:run-command']);
+  assert.deepEqual(calls.map((call) => call.channel), ['forge:host-status', 'forge:host-health', 'forge:python-host-status', 'forge:system-command', 'forge:plugin-inspect-bundled', 'forge:plugin-set-bundled-enabled', 'forge:agent-profile-catalog', 'forge:agent-profile-save', 'forge:workflow-command', 'forge:knowledge-command', 'forge:memory-command', 'forge:device-pairing', 'forge:choose-project-folder', 'forge:open-app-preview', 'forge:diagnostics-prepare', 'forge:diagnostics-export', 'forge:diagnostics-cleanup', 'forge:project-command', 'forge:conversation-command', 'forge:draft-command', 'forge:approval-command', 'forge:board-command', 'forge:run-command']);
   const stop = exposed[0].value.onHostStatus(() => {});
   assert.equal(listeners.size, 1);
   stop();

@@ -14,5 +14,6 @@ export function hostEnvironment(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
     } catch { /* malformed or credential-bearing proxy is not forwarded */ }
   }
   for (const key of ['NO_PROXY', 'no_proxy']) if (source[key]) selected[key] = source[key];
+  if (source.FORGE_MODEL_PROVIDER === 'disabled') selected.FORGE_MODEL_PROVIDER = 'disabled';
   return selected;
 }

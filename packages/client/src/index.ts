@@ -15,7 +15,22 @@ import {
   type BoardCommandEnvelope, type BoardCommandResult,
   runCommandEnvelopeSchema, runCommandResultSchema,
   bundledPluginInspectionSchema, type BundledPluginInspection,
+  agentProfileCatalogSchema, agentProfileSchema, agentProfileSaveSchema,
+  type AgentProfileCatalog, type AgentProfile, type AgentProfileSave,
+  workflowCommandSchema, workflowCompileSchema, workflowImpactSchema, workflowRecordSchema,
+  publishedWorkflowSchema,
+  workflowTemplateSchema, workflowWriteResultSchema, type WorkflowCommand,
+  type WorkflowCompile, type WorkflowImpact, type WorkflowRecord, type WorkflowTemplate,
+  knowledgeCommandSchema, knowledgeSourceSchema, knowledgeChunkSchema, knowledgeSearchResultSchema,
+  type KnowledgeCommand, type KnowledgeSource, type KnowledgeChunk, type KnowledgeSearchResult,
+  memoryCommandSchema, projectMemorySchema, memorySearchResultSchema,
+  devicePairingCommandSchema, pairingIssuedSchema, pairingInspectionSchema,
+  pairingDecisionResultSchema, type DevicePairingCommand,
+  type MemoryCommand, type ProjectMemory, type MemorySearchResult,
   type RunCommandEnvelope, type RunCommandResult,
+  appPreviewRequestSchema, appPreviewResultSchema, type AppPreviewResult,
+  diagnosticsPreviewSchema, diagnosticsExportResultSchema, diagnosticsCleanupResultSchema,
+  type DiagnosticsPreview, type DiagnosticsExportResult, type DiagnosticsCleanupResult,
 } from '@forge/contracts';
 
 export interface ForgeTransport {
@@ -156,6 +171,29 @@ export class ForgeClient {
   health(): Promise<SystemCommandResult> { return this.transport.health(); }
   subscribe(listener: (snapshot: HostConnectionSnapshot) => void): () => void { return this.transport.subscribe(listener); }
 
+  get canOpenAppPreview(): boolean { return typeof this.bridge?.openAppPreview === 'function'; }
+  async openAppPreview(url: string): Promise<AppPreviewResult> {
+    if (!this.bridge?.openAppPreview) throw new Error('DESKTOP_PREVIEW_UNAVAILABLE');
+    const raw: unknown = await this.bridge.openAppPreview(appPreviewRequestSchema.parse({ url }));
+    return appPreviewResultSchema.parse(raw);
+  }
+  get canManageDiagnostics(): boolean { return typeof this.bridge?.prepareDiagnostics === 'function'; }
+  async prepareDiagnostics(): Promise<DiagnosticsPreview> {
+    if (!this.bridge?.prepareDiagnostics) throw new Error('HOST_UNAVAILABLE');
+    const raw: unknown = await this.bridge.prepareDiagnostics();
+    return diagnosticsPreviewSchema.parse(raw);
+  }
+  async exportDiagnostics(previewId: string): Promise<DiagnosticsExportResult> {
+    if (!this.bridge?.exportDiagnostics) throw new Error('HOST_UNAVAILABLE');
+    const raw: unknown = await this.bridge.exportDiagnostics(previewId);
+    return diagnosticsExportResultSchema.parse(raw);
+  }
+  async cleanupExpiredArtifacts(previewId: string): Promise<DiagnosticsCleanupResult> {
+    if (!this.bridge?.cleanupExpiredArtifacts) throw new Error('HOST_UNAVAILABLE');
+    const raw: unknown = await this.bridge.cleanupExpiredArtifacts(previewId);
+    return diagnosticsCleanupResultSchema.parse(raw);
+  }
+
   invoke(type: string): Promise<SystemCommandResult> {
     const command = systemCommandEnvelopeSchema.parse({
       schemaVersion: '1.0', commandId: crypto.randomUUID(), type,
@@ -168,6 +206,128 @@ export class ForgeClient {
     if (!this.bridge) return null;
     const raw: unknown = await this.bridge.inspectBundledPlugin();
     return bundledPluginInspectionSchema.parse(raw);
+  }
+
+  async setBundledPluginEnabled(enabled: boolean): Promise<BundledPluginInspection> {
+    if (!this.bridge) throw new Error('HOST_UNAVAILABLE');
+    const raw: unknown = await this.bridge.setBundledPluginEnabled(enabled);
+    return bundledPluginInspectionSchema.parse(raw);
+  }
+
+  async agentProfileCatalog(): Promise<AgentProfileCatalog | null> {
+    if (!this.bridge) return null;
+    const raw: unknown = await this.bridge.agentProfileCatalog();
+    return agentProfileCatalogSchema.parse(raw);
+  }
+
+  async saveAgentProfile(value: AgentProfileSave): Promise<AgentProfile> {
+    if (!this.bridge) throw new Error('HOST_UNAVAILABLE');
+    const raw: unknown = await this.bridge.saveAgentProfile(agentProfileSaveSchema.parse(value));
+    return agentProfileSchema.parse(raw);
+  }
+
+  private async workflow(command: WorkflowCommand): Promise<unknown> {
+    if (!this.bridge) throw new Error('HOST_UNAVAILABLE');
+    return this.bridge.invokeWorkflow(workflowCommandSchema.parse(command));
+  }
+  async workflowPresets(): Promise<WorkflowTemplate[]> {
+    return workflowTemplateSchema.array().parse(await this.workflow({ type: 'presets', payload: {} }));
+  }
+  async listWorkflows(): Promise<WorkflowRecord[]> {
+    return workflowRecordSchema.array().parse(await this.workflow({ type: 'list', payload: {} }));
+  }
+  async getWorkflow(workflowId: string): Promise<WorkflowRecord> {
+    return workflowRecordSchema.parse(await this.workflow({ type: 'get', payload: { workflowId } }));
+  }
+  async getPublishedWorkflow(workflowId: string, revision: number): Promise<import('@forge/contracts').PublishedWorkflow> {
+    return publishedWorkflowSchema.parse(await this.workflow({
+      type: 'getPublished', payload: { workflowId, revision },
+    }));
+  }
+  async workflowImpact(workflowId: string): Promise<WorkflowImpact> {
+    return workflowImpactSchema.parse(await this.workflow({ type: 'impact', payload: { workflowId } }));
+  }
+  async compileWorkflow(template: WorkflowTemplate, expectedRevision: number): Promise<WorkflowCompile> {
+    return workflowCompileSchema.parse(await this.workflow({
+      type: 'compileDraft', payload: { template, expectedRevision },
+    }));
+  }
+  async saveWorkflow(template: WorkflowTemplate, expectedRevision: number): Promise<{
+    record: WorkflowRecord; compiled: WorkflowCompile;
+  }> {
+    return workflowWriteResultSchema.parse(await this.workflow({
+      type: 'saveDraft', payload: { template, expectedRevision },
+    }));
+  }
+  async publishWorkflow(workflowId: string, expectedDraftRevision: number): Promise<{
+    record: WorkflowRecord; compiled: WorkflowCompile;
+  }> {
+    return workflowWriteResultSchema.parse(await this.workflow({
+      type: 'publish', payload: { workflowId, expectedDraftRevision },
+    }));
+  }
+
+  private async knowledge(command: KnowledgeCommand): Promise<unknown> {
+    if (!this.bridge) throw new Error('HOST_UNAVAILABLE');
+    return this.bridge.invokeKnowledge(knowledgeCommandSchema.parse(command));
+  }
+  async listKnowledge(projectId: string): Promise<KnowledgeSource[]> {
+    return knowledgeSourceSchema.array().parse(await this.knowledge({ type: 'list', payload: { projectId } }));
+  }
+  async importKnowledge(projectId: string, relativePath: string): Promise<KnowledgeSource> {
+    return knowledgeSourceSchema.parse(await this.knowledge({
+      type: 'import', payload: { projectId, relativePath },
+    }));
+  }
+  async knowledgeChunk(projectId: string, sourceId: string, version: number,
+    ordinal: number): Promise<KnowledgeChunk> {
+    return knowledgeChunkSchema.parse(await this.knowledge({
+      type: 'chunk', payload: { projectId, sourceId, version, ordinal },
+    }));
+  }
+  async revokeKnowledge(projectId: string, sourceId: string): Promise<KnowledgeSource> {
+    return knowledgeSourceSchema.parse(await this.knowledge({
+      type: 'revoke', payload: { projectId, sourceId },
+    }));
+  }
+  async searchKnowledge(projectId: string, environmentId: string, query: string): Promise<KnowledgeSearchResult> {
+    return knowledgeSearchResultSchema.parse(await this.knowledge({
+      type: 'search', payload: { projectId, environmentId, query },
+    }));
+  }
+
+  private async memory(command: MemoryCommand): Promise<unknown> {
+    if (!this.bridge) throw new Error('HOST_UNAVAILABLE');
+    return this.bridge.invokeMemory(memoryCommandSchema.parse(command));
+  }
+  async listMemories(projectId: string): Promise<ProjectMemory[]> {
+    return projectMemorySchema.array().parse(await this.memory({ type: 'list', payload: { projectId } }));
+  }
+  async retrieveMemory(projectId: string, environmentId: string, query: string): Promise<MemorySearchResult> {
+    return memorySearchResultSchema.parse(await this.memory({
+      type: 'retrieve', payload: { projectId, environmentId, query },
+    }));
+  }
+  async proposeMemory(payload: Extract<MemoryCommand, { type: 'propose' }>['payload']): Promise<ProjectMemory> {
+    return projectMemorySchema.parse(await this.memory({ type: 'propose', payload }));
+  }
+  async editMemory(payload: Extract<MemoryCommand, { type: 'edit' }>['payload']): Promise<ProjectMemory> {
+    return projectMemorySchema.parse(await this.memory({ type: 'edit', payload }));
+  }
+  async decideMemory(payload: Extract<MemoryCommand, { type: 'decide' }>['payload']): Promise<ProjectMemory> {
+    return projectMemorySchema.parse(await this.memory({ type: 'decide', payload }));
+  }
+
+  get canPairLocalDevice(): boolean { return typeof this.bridge?.invokeDevicePairing === 'function'; }
+  async devicePairing(command: DevicePairingCommand): Promise<unknown> {
+    if (!this.bridge?.invokeDevicePairing) throw new Error('LOCAL_PAIRING_UNAVAILABLE');
+    const checked = devicePairingCommandSchema.parse(command);
+    const raw: unknown = await this.bridge.invokeDevicePairing(checked);
+    switch (checked.type) {
+      case 'issue': return pairingIssuedSchema.parse(raw);
+      case 'inspect': return pairingInspectionSchema.parse(raw);
+      case 'decide': return pairingDecisionResultSchema.parse(raw);
+    }
   }
 
   async chooseProjectFolder(): Promise<string | null> {
