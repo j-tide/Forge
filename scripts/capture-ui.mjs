@@ -11,6 +11,29 @@ const desktopDirectory = fileURLToPath(new URL('../apps/desktop/', import.meta.u
 const screenshotDir = resolve('output/playwright');
 mkdirSync(screenshotDir, { recursive: true });
 const dataDir = mkdtempSync(join(tmpdir(), 'forge-ui-capture-'));
+function contrastRatio(foreground, background) {
+  const luminance = (value) => {
+    const [red, green, blue] = value.match(/[\d.]+/g).slice(0, 3).map((channel) => {
+      const scaled = Number(channel) / 255;
+      return scaled <= 0.04045 ? scaled / 12.92 : ((scaled + 0.055) / 1.055) ** 2.4;
+    });
+    return red * 0.2126 + green * 0.7152 + blue * 0.0722;
+  };
+  const a = luminance(foreground);
+  const b = luminance(background);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+async function checkReadingContrast(page, cardSelector) {
+  const colors = await page.locator(cardSelector).first().evaluate((card) => ({
+    background: getComputedStyle(card).backgroundColor,
+    title: getComputedStyle(card.querySelector('strong')).color,
+    detail: getComputedStyle(card.querySelector('p')).color,
+  }));
+  const title = contrastRatio(colors.title, colors.background);
+  const detail = contrastRatio(colors.detail, colors.background);
+  assert.ok(title >= 4.5 && detail >= 4.5, `reading contrast: ${JSON.stringify({ ...colors, title, detail })}`);
+  return { title, detail };
+}
 let electronApp;
 try {
   electronApp = await electron.launch({
@@ -25,6 +48,9 @@ try {
   for (const [width, height] of [[1440, 900], [1600, 1000]]) {
     await page.setViewportSize({ width, height });
     await page.getByRole('heading', { name: 'What do you want to build?' }).waitFor();
+    await page.locator('.compose-pane').evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished));
+    });
     const layout = await page.evaluate(() => ({
       width: document.documentElement.scrollWidth,
       height: document.documentElement.scrollHeight,
@@ -33,7 +59,8 @@ try {
     }));
     assert.ok(layout.width <= width, `horizontal overflow at ${width}: ${JSON.stringify(layout)}`);
     await page.screenshot({ path: join(screenshotDir, `p0-07-desktop-${width}x${height}.png`) });
-    console.log(JSON.stringify({ stage: 'desktop-ui', width, height, layout, hostStatus: health.data.status }));
+    console.log(JSON.stringify({ stage: 'desktop-ui', width, height, layout,
+      readingContrast: await checkReadingContrast(page, '.project-summary'), hostStatus: health.data.status }));
   }
   await page.setViewportSize({ width: 1280, height: 800 });
   const compact = await page.evaluate(() => {
@@ -55,11 +82,30 @@ try {
   assert.equal(compact.actionContained, true);
   assert.equal(compact.contentScrolls, true);
   await page.screenshot({ path: join(screenshotDir, 'p0-07-desktop-1280-css-zoom-125.png') });
-  await page.getByRole('button', { name: 'Agent runtime 尚未启用' }).scrollIntoViewIfNeeded();
-  assert.equal(await page.getByRole('button', { name: 'Agent runtime 尚未启用' }).isVisible(), true);
+  await page.getByRole('button', { name: '选择项目' }).first().scrollIntoViewIfNeeded();
+  assert.equal(await page.getByRole('button', { name: '选择项目' }).first().isVisible(), true);
   console.log(JSON.stringify({ stage: 'desktop-compact-css-zoom-125', compact }));
   await page.evaluate(() => { document.body.style.zoom = ''; });
   await page.getByRole('button', { name: '设置' }).click();
+  await page.getByLabel('界面主题').selectOption('dark');
+  assert.equal(await page.locator('.app-shell').getAttribute('data-theme'), 'dark');
+  await page.locator('.utility-view').evaluate(async (element) => {
+    await Promise.all(element.getAnimations().map((animation) => animation.finished));
+  });
+  await page.screenshot({ path: join(screenshotDir, 'p6-01-desktop-dark-settings-1440x900.png') });
+  console.log(JSON.stringify({ stage: 'desktop-dark-contrast',
+    readingContrast: await checkReadingContrast(page, '.settings-card') }));
+  await page.getByRole('button', { name: '返回工作台' }).click();
+  await page.locator('.compose-pane').evaluate(async (element) => {
+    await Promise.all(element.getAnimations().map((animation) => animation.finished));
+  });
+  await page.screenshot({ path: join(screenshotDir, 'p6-01-desktop-dark-home-1440x900.png') });
+  await page.getByRole('button', { name: '工作流' }).click();
+  await page.getByRole('heading', { name: '线性配置' }).waitFor();
+  await page.getByText('正在读取或校验 Workflow…').waitFor({ state: 'hidden', timeout: 15000 });
+  await page.screenshot({ path: join(screenshotDir, 'p6-01-desktop-dark-workflows-1440x900.png') });
+  await page.getByRole('button', { name: '设置' }).click();
+  await page.getByLabel('界面主题').selectOption('light');
   await page.getByRole('switch', { name: '减少透明度' }).click();
   await page.getByRole('switch', { name: '减少动效' }).click();
   await page.getByRole('button', { name: '返回工作台' }).click();

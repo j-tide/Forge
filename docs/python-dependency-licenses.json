@@ -1,5 +1,5 @@
 {
-  "verifiedOn": "2026-09-24",
+  "verifiedOn": "2026-09-25",
   "source": "Installed wheel License-Expression and https://pypi.org/pypi/<package>/<version>/json; platform-only httpx2-jsfetch and pywin32 from PyPI. Claude Agent SDK code is MIT; bundled CLI use is governed by Anthropic commercial terms.",
   "packages": {
     "annotated-types": {
@@ -36,7 +36,9 @@
     },
     "cryptography": {
       "version": "50.0.1",
-      "license": "Apache-2.0 OR BSD-3-Clause"
+      "license": "Apache-2.0 OR BSD-3-Clause",
+      "direct": true,
+      "role": "offline Ed25519 update manifest verification; no release trust root provisioned"
     },
     "h11": {
       "version": "0.16.0",
@@ -70,6 +72,11 @@
     "jsonschema": {
       "version": "4.26.0",
       "license": "MIT"
+    },
+    "types-jsonschema": {
+      "version": "4.26.0.20260518",
+      "license": "Apache-2.0",
+      "developmentOnly": true
     },
     "jsonschema-specifications": {
       "version": "2025.9.1",
