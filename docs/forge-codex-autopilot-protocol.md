@@ -14,6 +14,16 @@
 
 任务 ID、名称、依赖与 Phase Gate 固定来自 `forge_spec_v1.0/planning/tasks.json` 和 `planning/phases.json`；Playbook 只承载这些权威 Task 的实施说明。
 
+> **2026-09-24 单执行器开发依赖放行**：用户仅授权 `P4-05 → P4-06` 和将来满足前提的 `P4-10 → P5-01` 两条开发排期例外，详见 [ADR 0052](decisions/0052-claude-sdk-api-key-gate.md) 与 `docs/development-dependency-exceptions.json`。P4-05 保持 BLOCKED，P4-10 的第二真实执行器验收不得伪造或标 PASSED，P4 完整 Phase Gate 和多执行器发布不得宣称通过。只允许 Codex 和执行器无关的 P4-06～09 / 后续 P5 工作；不借用订阅登录、不请求新凭据、不自动批准工具。此例外不改变权威 Depends on，也不允许一般性跳过 BLOCKED。
+
+> **2026-09-25 P6 限定开发排期放行**：用户明确授权 `P6-06 → P6-07`，在同一内部 macOS arm64 DMG 已真实安装、包内 Python Host 与隔离数据通过后，先补该安装包的真实业务验收，再进行不依赖 Developer ID/公证的 Windows 准备。该安装版完整 Codex/取消/重启闭环已执行；P6-06 仍 `BLOCKED`，T111–T113 不得标通过。P6-07 的 Windows x64 内部 staging/测试入口已准备，但无 Windows 环境或签名，正式验收仍 `BLOCKED`；用户本次授权的精确 `P6-07 → P6-08` 只覆盖离线签名元数据校验、隔离数据库迁移预演，不覆盖安装更新。后续每一条 P6 权威依赖边须单独核查、记录证据与限制，才可继续 P6-09～P6-10 的独立部分。不能跳过进程取消、权限、数据完整性、更新完整性等失败；P6 完整 Gate 与公开发布继续阻塞。详见 [ADR 0073](decisions/0073-internal-macos-package-and-distribution-gate.md)、[ADR 0074](decisions/0074-windows-internal-staging-and-platform-gate.md) 和 `docs/development-dependency-exceptions.json`。
+
+> P6-08 离线 Ed25519/SQLite 预检在隔离 fixture 中通过，但尚无生产信任根与已安装签名版 cutover/回滚；正式验收仍 `BLOCKED`。精确 `P6-08 → P6-09` 仅允许对当前实现和平台运行真实适用验收，必须列出未执行 Test ID，不能把无签名更新、Windows 或 Claude 的用例标成通过。见 [ADR 0075](decisions/0075-offline-update-integrity-and-migration-rehearsal.md)。
+
+> P6-09 当前平台单 Codex/安装版适用验收有真实证据，但完整安全/平台/多执行器/评测用例仍 `BLOCKED`。精确 `P6-09 → P6-10` 只允许编写当前可用能力的内部安装、首次任务、恢复和限制说明，不允许宣布完整 v1.0、自动上传或发布；详见 `docs/p6-current-scope-acceptance.md`。
+
+> **2026-09-25 本地 Demo 先行与 P7/P8 开发放行**：用户新增精确 `P6-10 → P7-01` 开发排期例外，授权随后按权威顺序推进 P7/P8，但不使 P6-10/P6 Gate 通过。先交付由同一已验收 DMG 安装、使用独立项目/数据的常驻人工 Demo；桌面功能依用户给定 PDF 页清单逐项核对，缺口映射回权威 Task。P7/P8 默认关闭远程入口，只在 loopback 或明确授权私网验证；设备认证、项目隔离、审批版本、Origin/CSRF、撤销、离线不重放等失败不能以发布凭据例外跳过。手机真机需用户参与时先完成独立工程，再集中给操作清单。P9 不在本次授权范围；精确例外见 `docs/development-dependency-exceptions.json`。
+
 > **Python Core 迁移覆盖已完成**（用户于 2026-09-24 明确批准）：MIG-PY-01～09 已在 macOS arm64 的 Python-only Desktop 开发路径真实验证。P2-10 的 Python 纵向验收与 P2 Phase Gate 已通过当前阶段范围；Autopilot 回到权威产品任务图，继续 P3。旧 Node Host 只作历史对照，不是业务 fallback。此记录不更改权威 Task/Test ID、产品语义或安全规则。
 
 ---
@@ -88,6 +98,8 @@ git status --short
 - 不得假装完成；
 - 可以寻找与它无依赖关系、仍然可执行的其他任务；
 - 如果所有后续任务都被其依赖阻塞，则触发 Hard Stop。
+
+唯一例外：先核对 `docs/development-dependency-exceptions.json` 的精确依赖边、前置证据和开发限定范围，并运行 `pnpm validate:task-map`；只对获授权的下一任务解除**开发调度**阻塞。例外不使上游任务成为 DONE，不通过 Phase Gate，也不免除原 Test ID。第二执行器仍不可用时不反复询问相同 API Key；仅用户后来明确提供合法授权和测试预算时补验。与本次例外无关的新安全、数据破坏或付费问题继续 Hard Stop。
 
 ---
 

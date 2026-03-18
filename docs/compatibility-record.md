@@ -1,5 +1,121 @@
 # Forge 版本与兼容性记录
 
+## 2026-09-25 · bundled Codex local enablement control
+
+macOS arm64 当前源码上的 Electron 44.4.3 / Python 3.12.13 实测固定 Preload→Main→Host 停用通道、无活跃 Run 时 DisposableScope 清理、SQLite 偏好重启保存及重启装配。无新依赖、native 模块、外部凭据或模型费用。启用不热替换已绑定的调度器，必须退出并重开 Forge；原安装版 DMG 尚未包含该 UI/Host 改动，Windows/macOS Intel 未验证。`pnpm smoke:plugin-control` 的两张截图来自真实 Electron 开发构建而非原型。此修复不改变插件权限，也不使 Claude 可用。
+
+## 2026-09-25 · P7-04 remote session loopback probe
+
+macOS arm64 / Python 3.12.13 / SQLite 3.50.4 / Electron 44.4.3 / Vue 3.5.43；无新增 npm/PyPI 依赖、安装脚本、外部服务或付费调用。独立临时库从 schema31→32 真实迁移、online backup、数据保留和重启通过；Host 正常开发启动达 schema32，Renderer 安全桥不变。真实 127.0.0.1 HTTP 用例在 Host-owned SQLite event loop 上验证同源、Secure HttpOnly SameSite=Strict cookie、CSRF、rotation、revoke 和限速。该 HTTP 不代替**私网 HTTPS/真机浏览器**；已安装内部 Mac Demo 是先前 schema30 原 DMG，未重打包。Windows x64、macOS Intel、正式签名/升级、用户生产数据库迁移、代理证书和第二手机 **UNVERIFIED**。P6 公开发行与 Claude 第二执行器仍 BLOCKED。见 ADR 0078。
+
+## 2026-09-25 · P7-03 local pairing
+
+macOS arm64 / Python 3.12.13 / SQLite 3.50.4 / Electron 44.4.3 / Vue 3.5.43 当前开发路径；无新增 npm/PyPI 依赖、安装脚本、模型调用或网络监听。独立临时库 schema30→31 使用既有 WAL online backup 与事务 migration，保留旧 metadata、Project/Task/Run 数据模型，重启可读；真正用户生产目录升级 **UNVERIFIED**。当前已安装内部 DMG 的 bundled Host 仍是 schema30，SHA-256 和隔离 Demo 数据未变。真实 Python Host stdio、Electron arm64 smoke 和 185 Python pytest 通过。私网 HTTPS、手机、cookie session、CSRF、SSE、Windows x64、macOS Intel、签名、公证、正式升级仍 **UNVERIFIED**；Claude 在线验收继续 BLOCKED。见 ADR 0077。
+
+## 2026-09-25 · Windows staging and offline update preflight
+
+Windows x64 package/staged Host paths are implemented but have **not run on Windows**. The manual Windows QA workflow is not evidence until executed; there is no signed Windows installer, UAC/Chinese path/DPI/full-task or uninstall result. On macOS arm64, packaged Python path tests and an intentional Windows-builder platform rejection pass. Existing Electron 44.4.3/uv CPython 3.12.13 versions remain pinned. `cryptography==50.0.1` (Apache-2.0 OR BSD-3-Clause), already transitive in `python/uv.lock`, is now exact direct dependency for Ed25519 update preflight; [official PyPI metadata](https://pypi.org/project/cryptography/50.0.1/) lists Python 3.12 and Windows x64/macOS arm64 wheels, but Forge Windows use remains **UNVERIFIED**. Offline signed-fixture integrity and schema29→30 staged SQLite migration passed on current macOS; no production release public key, installed updater, Host-exclusive DB cutover, signed package or credential continuity has been tested. P6-07/P6-08 release acceptance remain BLOCKED; exact development exceptions do not pass P6 Gate.
+
+## 2026-09-25 · Internal installed-app product workflow
+
+The existing macOS arm64 `Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64.dmg` (SHA-256 `a3bc0a9816dbc03a44b249305a708e8d51f5ceaf124cd820d3c5acba1e3187d9`) was mounted and copied to a separate QA install location. Its packaged Electron 44.4.3 launched its bundled CPython 3.12.13 Host, SQLite schema30, production Web and plugin lock. A real Codex 0.155.1 run, independent Review, Verify, Owner acceptance, cancellation and restart durability passed against isolated data and a disposable Git repo. The installed app was launched with the current user's PATH and authorized ChatGPT login. With a clean Finder-like PATH and empty Codex home, the same package stayed healthy but reported Codex unavailable. Therefore Codex CLI/login/Git and any necessary approved proxy are external prerequisites; Finder PATH and fresh-user Codex discovery remain **UNVERIFIED**, not a self-contained claim. Full evidence and screenshots: `docs/demo/p6-internal-macos-package.md`. P6-06 signing/notarization/T111–T113 and Windows/macOS Intel remain **BLOCKED/UNVERIFIED**; the `P6-06 → P6-07` exception is development-only.
+
+## P6-06 · 内部 Mac 包与分发门禁 · 2026-09-25
+
+本机 macOS arm64、Electron 44.4.3、Node 22.22.0、pnpm 12.3.4、uv 0.11.14、uv-managed CPython 3.12.13、Python SQLite 3.50.4/schema30。`@electron/asar@4.3.0`（MIT，官方要求 Node >=22.12）精确锁定；其新增 `glob@13.0.6`、`minipass@7.1.3`、`path-scurry@2.0.2`、`lru-cache@11.5.3` 为 BlueOak-1.0.0，已列入许可证清单。依赖仅用于构建内部 `app.asar`，不开放安装脚本、权限或新网络端口。官方 [Electron 应用分发文档](https://www.electronjs.org/docs/latest/tutorial/application-distribution)、[签名文档](https://www.electronjs.org/docs/latest/tutorial/code-signing)、[@electron/asar 4.3.0 release](https://github.com/electron/asar/releases/tag/v4.3.0)、[uv managed Python](https://docs.astral.sh/uv/concepts/python-versions/) 于 2026-09-25 核验。
+
+真实 `pnpm package:mac:internal` 组装 ad-hoc 签名、未公证 `.app` 与经 `hdiutil verify` 的 DMG；`pnpm smoke:package:mac` 从挂载 DMG 拷贝到隔离 QA 安装目录，使用一次性用户数据根，Electron packaged 分支、Web UI、安全沙盒、包内 Python Host/SQLite schema30、退出归属 PID 清理和移除 app 后用户数据保留通过。`codesign --verify --deep --strict` 通过仅说明本机 ad-hoc 密封一致；`Signature=adhoc`、`TeamIdentifier=not set`，不能证明 Developer ID、公证或 Gatekeeper 分发。Keychain 当前只有 Apple Development 身份。macOS x64、真实新用户账号/系统 Gatekeeper、正式安装升级/回滚、凭据跨签名升级、Finder 启动 Codex、Windows 和 CI runner **UNVERIFIED**。P6-06 BLOCKED，完整 P4/Claude BLOCKED；见 ADR 0073。
+
+## P6-05 · macOS Desktop window/tray and owned Host lifecycle
+
+核验日期 2026-09-25。macOS arm64 / Electron 44.4.3 / Vue 3.5.43 / Python 3.12.13 的开发路径，未新增 npm/PyPI 依赖、数据库 schema、native addon、安装脚本或外部付费服务。真实 Codex app-server 长任务的关窗取消、托盘后台、第二实例复用原 Host、应用安全退出与归属 PID 消失已验证。损坏 SQLite 的 degraded Host 可提供零活跃工作摘要并正常关闭；crashed Host 退出需要明确确认。174 Python pytest/Ruff/mypy、TS test/lint/typecheck/build、真实 Desktop/诊断/生命周期 smoke 通过。macOS 实际系统休眠、正式签名包内托盘资源、Windows x64 托盘行为、macOS Intel、强制 Renderer 崩溃和物理 DPI **UNVERIFIED**；T003/T004/T005 仍递延，T002/T114 当前范围有真证据。P4-05/P4-10/full P4 Gate 继续 **BLOCKED**。见 [ADR 0072](decisions/0072-owned-host-window-and-tray-lifecycle.md)。
+
+## P6-04 · Diagnostic bundle and imported artifact retention
+
+核验日期 2026-09-25。macOS arm64 的 Electron 44.4.3 / Vue 3.5.43 / Python 3.12.13 / SQLite 3.50.4 开发路径上，Python-only Host 的增量 schema29→30 在独立临时数据库通过，旧 Artifact 在显式清理前仍可读取；清理仅使过期导入正文为空并保留墓碑，重启后不可读，较新记录不受影响。真实 Electron Settings 的预览/导出字节相同；含 token 日志和项目路径未入包。没有新 npm/PyPI 依赖、native module、安装脚本、网络端口或模型调用。`pnpm py:check` 173 测试/Ruff/严格 mypy、合约/任务图、TS lint/typecheck/test/build、真实 Desktop/诊断 smoke 均通过。Windows x64、macOS Intel、真实用户 DB 迁移、签名安装包与凭据跨升级 **UNVERIFIED**；T111～T114 及完整 T084 保留精确递延，P4-05/P4-10/full P4 Gate 仍 **BLOCKED**。见 [ADR 0071](decisions/0071-allowlisted-diagnostics-and-imported-artifact-retention.md)。
+
+## P6-03 · Isolated local preview and saved Run diff
+
+核验日期 2026-09-25。macOS arm64 / Electron 44.4.3 / Vue 3.5.43 / Python 3.12.13 / SQLite 3.50.4 版本不变；无新增 npm/PyPI 依赖、native artifact、数据库 migration 或安装脚本。真实 Electron 临时 localhost Preview `webContents` 在 ephemeral session 中没有 preload/Node/Forge bridge，sandbox/contextIsolation/webSecurity/disableDialogs 为 true；HTTP/WebSocket 跨 origin、`file:` 导航与新窗口被阻断。Playwright 1.63.0 对 `disableDialogs` 已压制的 alert 会发出失效 Dialog 事件，无法用该驱动宣称 JS/原生弹窗全项通过；T083 完整用例留 P6-09。T081 凭据引用与 T085 多层权限交集也留 P6-09；T084 导出预览留 P6-04。Windows、macOS Intel、安装包/签名、真实用户数据、原生文件选择/打印 **UNVERIFIED**。P4-05/P4-10/full P4 Gate 不变，Claude 未调用。见 [ADR 0070](decisions/0070-isolated-local-app-preview.md)。
+
+## P6-02 · Keyboard, long Chinese text and layout stress
+
+核验日期 2026-09-25。当前 macOS arm64 / Electron 44.4.3 / Vue 3.5.43 / Python 3.12.13 / SQLite 3.50.4 不变；无新依赖、native build、数据库 schema 或安装脚本。真实 Electron 离线 fixture 的 Ctrl/Cmd+K、嵌套焦点与 120 字中文 Task/长 Unicode Project 路径、Desktop 重启及抽屉焦点恢复通过。1280×800/1600×1000 的 CSS zoom 100/125/150% 只验证当前 Web 布局；媒体仿真的 reduced-motion 只验证 CSS 状态。Windows 150% 与 Mac Retina 物理 DPI **UNVERIFIED**，T108→P6-07；真实 Run/Workflow 减少动画全链 T110→P6-09。P4-05/P4-10/full P4 Gate 继续 BLOCKED，Claude 未调用。见 [ADR 0069](decisions/0069-keyboard-overlay-and-dpi-evidence.md)。
+
+## P6-01 · Light/dark production tokens and read-only Workflow history
+
+核验日期 2026-09-25。macOS arm64 / Electron 44.4.3 / Vue 3.5.43 / Python 3.12.13 / SQLite 3.50.4 的现有版本未变化；无新 npm/PyPI 依赖、native 构建、安装脚本或数据库 schema。真实 Electron 使用当前 Python Host 的 JSON-RPC stdio 和新增固定只读 `workflow.getPublished`，两端严校验，旧 RunConfig 不改变。浅/暗阅读卡实测正文对比 4.85:1 / 9.63:1，1280 CSS zoom 125% 非 Windows 系统 DPI 证明。Windows x64、macOS Intel、安装包/签名、真实用户 DB 升级仍 **UNVERIFIED**。T029 同一 fixture 的旧 Run/新发布版 UI 全链路仍归 P6-09，P4-05/P4-10/full P4 Gate **BLOCKED**；Claude 未调用。见 [ADR 0068](decisions/0068-p6-visual-theme-and-published-workflow-readback.md)。
+
+## P5-12 · Populated schema25→29 upgrade and DSL version diagnostics
+
+2026-09-25，在 macOS arm64/Python 3.12.13/SQLite 3.50.4/Electron 44.4.3/Vue 3.5.43 开发路径，含真实 P3 批准 Task、Run/RunConfig 与 P4 Profile 的独立 schema25 临时库升级到 schema29 并重复迁移后仍可读，`foreign_key_check` 无错误，备份存在。Python Host 与 Desktop 画布导入对未来 Workflow DSL schemaVersion 明确诊断；无自动降级或数据重写。171 Python pytest/Ruff/mypy、冻结安装、合同/任务图、TS lint/typecheck/test/build、真实 Desktop smoke 和 diff check 通过。没有新增依赖、安装脚本、网络端口或付费模型调用。生产参考 OpenAPI 仍仅描述未来远程 Gateway，本地 JSON-RPC stdio 继续使用 `forge-local-jsonrpc/v1`；不宣称 HTTP 可用。P5 Phase Gate 在共用 DSL 与已验证 quick 链的开发范围通过，Planner/strict 运行没有验收。实际用户数据、Windows x64、macOS Intel、安装包/签名、DPI **UNVERIFIED**；P4 full Gate 仍 BLOCKED。见 [P5 报告](p5-completion-report.md)。
+
+## P5-11 · Published linear Workflow / retrieval freeze
+
+2026-09-25，macOS arm64 的 Electron 44.4.3、Vue 3.5.43、Python 3.12.13 与 SQLite 3.50.4 开发路径：真实 Codex app-server 经 Python Host 在已发布 quick 同语义四阶段链上形成开发快照，独立 Verify/Review/人工最终验收完成；另一次知识 Run 的当前引用被撤销后，Desktop 历史上下文正确标记 revoked。实际本机 schema29，未新增 npm/PyPI 依赖、安装脚本、数据库迁移、网络端口或 Renderer Node/SQL 权限；没有 Claude/Anthropic 调用。自定义工作流运行只支持严格线性四节点，其他发布定义仍可编辑但执行时拒绝。全局 16 次尝试预算在真实 SQLite/Verifier fixture 中触发 blocked；默认旧 standard 路径仍为 20。`pnpm py:check` 169 测试及全量 TS/合约/任务图/Desktop smoke 结果见实施状态。P4-05/P4-10 与完整 P4 Gate 仍 BLOCKED；Windows x64、macOS Intel、安装包、真实用户库升级、非线性图及第二 Executor **UNVERIFIED/UNSUPPORTED**。见 ADR 0067。
+
+## P5-10 · Memory Center Desktop bridge and Vue UI
+
+2026-09-25，在 macOS arm64 的 Electron 44.4.3/Vue 3.5.43/TypeScript strict/Python 3.12.13/SQLite 3.50.4 开发路径，固定 `invokeMemory` 与 Pydantic/Zod 双侧封闭命令、候选编辑 CAS、人工确认/撤销、FTS 清理及实际窗口交互通过。截图 `output/playwright/p5-10-memory-desktop.png` 来自真实 Electron。未新增依赖、安装脚本、网络端口、Renderer Node/SQL 能力或付费模型调用。实际用户 DB、Windows x64、macOS Intel、安装包/不同 DPI **UNVERIFIED**；历史 Run 来源撤销显示留 P5-11，见 ADR 0066。P4-05/P4-10/full P4 Gate 不变。
+
+## P5-09 · Host-owned Project Memory / SQLite schema29
+
+2026-09-25 在 macOS arm64、Python 3.12.13、SQLite 3.50.4 上，独立临时库从既有迁移链增量到 schema29；真实 Python Host JSON-RPC 与 162 个 Python pytest、Ruff、严格 mypy、TS lint/typecheck/test/build 和 Electron Desktop smoke 通过。FTS5 trigram 仅索引经过确认的有效记忆；撤销清空正文和索引、保留审计事件。只读数据库也逐项校验过期和来源，避免失效事实进入结果。本轮无新 PyPI/npm 依赖、native addon、安装脚本、网络端口、Renderer DB/文件权限或付费模型调用。Windows x64、macOS Intel、安装包内 SQLite FTS5 和真实用户 DB 28→29 升级 **UNVERIFIED**。P4-05/P4-10 与完整 P4 Gate 仍 BLOCKED，见 ADR 0065。
+
+## P5-08 · Python Stage Context Builder
+
+核验日期：2026-09-25。macOS arm64、Python 3.12.13/SQLite 3.50.4、Electron 44.4.3/Vue 3.5.43 的现有依赖图上实现只读 Stage Context 预览；没有新增依赖、安装脚本、SQLite migration 或模型调用。真实 Host 测试及 Vue UI 测试通过；真实 Electron bridge 验证未知 Run 的明确错误，尚无成功预览的 Electron 截图。UTF-16 字符预算不代表 Codex/Claude 的实际 token 费用。Windows/Intel/安装包/真实用户 DB 升级 **UNVERIFIED**；P4-05/P4-10/full P4 Gate 不变。见 ADR 0064。
+
+## P5-07 · SQLite FTS5 / 中文字符索引
+
+核验日期：2026-09-25。macOS arm64、Python 3.12.13、SQLite 3.50.4 的真实 Python Host 和构建后 Electron Desktop 已运行 schema28 FTS5 trigram；Python/Host/真实 Desktop 的中文短词、`start_date`、跨项目范围和索引撤销测试通过。没有新增 npm/Python 依赖、安装脚本或模型调用。`pnpm smoke:desktop` 使用独立临时数据目录，不改真实用户数据库。Windows x64、macOS Intel、安装包内 SQLite FTS5 支持及真实用户库 schema27→28 升级 **UNVERIFIED**；P4-05/P4-10 与完整 P4 Gate 仍 BLOCKED。详见 ADR 0063。
+
+## P5-06 · Project document ingestion · 2026-09-24
+
+Python Host 在 macOS arm64/Python 3.12.13/SQLite 3.50.4 上以增量 schema27 真正读入受信 fixture 文档、保留 SHA-256/行号，并在撤销时保留无正文墓碑。Electron 44.4.3 + Vue 3.5.43 的实际 Desktop smoke 完成导入、定位、撤销；Node/Renderer 不能直接读取源码。未新增 pnpm/PyPI 依赖、native binary 或安装脚本。Windows x64、macOS Intel、真实用户数据迁移、安装包及高并发恶意文件替换 **UNVERIFIED**。P5-07 的 FTS/中文检索与缓存一致性尚未验证，不能将导入成功当作检索成功。
+
+## P5-05 · Workflow revision locks · 2026-09-24
+
+沿用 Python 3.12.13、SQLite 3.50.4、schema26 与 `forge-host-protocol/v5`；无新增依赖、native binary、安装脚本或数据库 migration。macOS arm64 的真实 SQLite/Host/RunConfig/RunService fixture 验证旧 Run 的 v1/hash 在发布 v2 时不变，新 Run 可明确冻结 v2/hash，重启后保留；Electron smoke 验证只读影响预览。自定义 Workflow 节点运行、Windows x64、macOS Intel、安装包/签名、真实用户数据库升级仍 **UNVERIFIED**。
+
+## P5-04 · Vue Flow canvas · 2026-09-24
+
+macOS arm64 上 `@vue-flow/core@1.48.2` 与 Vue 3.5.43、Vite 8.3.0、Electron 44.4.3 的实际构建和真实窗口 smoke 通过；画布节点、有限返工连线、Host 编译错误高亮和 JSON 往返均在真实 Vue 界面验证。`zod@4.6.4` 是既有精确锁定的工作区版本，现作为 Web 画布文档的直接依赖。Vue Flow 为 MIT、无本轮授权的安装脚本；参考 [官方文档](https://vueflow.dev/)与[仓库许可证](https://github.com/bcakmakoglu/vue-flow/blob/master/LICENSE)。Windows x64、macOS Intel、安装包和不同 DPI 尚未实测；本轮结论只适用于当前 macOS arm64 开发运行时。
+
+## P5-03 · Linear Workflow editor and SQLite schema26
+
+核验日期：2026-09-24；macOS arm64。无新增 pnpm/PyPI 依赖、native addon、安装脚本、网络端口或模型调用。Python SQLite 从 schema25 增量到26，增加 `workflow_drafts` 与对齐参考 SQL 字段的不可变 `workflow_revisions`；临时库迁移/重启/回滚通过，真实用户数据目录升级仍 **UNVERIFIED**。Electron Main/Preload 新增一个固定 `invokeWorkflow` 方法，按精确命令白名单和 TS/Python 双端 Schema 校验；Renderer 仍无 Node/DB/任意 Host 方法。真实 Electron/Python Host 成功保存并发布由本机已验证 Codex Profile 绑定的 quick 模板副本，同时拒绝缺绑定/循环草稿的发布。截图：`output/playwright/p5-03-workflow-desktop.png`。自定义 Workflow 执行、旧 Run 版本冻结、Windows x64、macOS Intel、安装包/签名仍 **UNVERIFIED**。完整 P4 Gate 继续 BLOCKED。见 ADR 0059。
+
+## P5-02 · Python Workflow compiler
+
+核验日期：2026-09-24；macOS arm64 开发路径。沿用 Python 3.12.13、Pydantic v2 与现有 pnpm/uv 锁；不新增依赖、安装脚本、native addon、SQLite migration、网络端口或 Renderer 桥。固定 Host 方法只读预检并在缺少实际 Planner/Verifier 绑定时返回不可运行。冻结安装、contracts/task-map、145 Python pytest/Ruff/严格 mypy、TS lint/typecheck/test/build、真实 Electron smoke 与 diff check 全部通过。三种完整 Workflow 的可执行性、发布版本冻结与运行时行为仍 **UNVERIFIED**；Windows x64、macOS Intel、安装包和签名仍 **UNVERIFIED**。P4-05/P4-10 与完整 P4 Gate 继续 BLOCKED。见 ADR 0058。
+
+## P5-01 · Bundled workflow presets
+
+核验日期：2026-09-24；macOS arm64 开发路径。Python Host 用随 wheel 打包的标准/快速/严格 JSON 定义和 Pydantic 严格类型，不依赖运行时参考目录，不新增 PyPI/npm 包、native addon、安装脚本、SQLite migration、端口或 Renderer 权限。`uv build` 的 wheel 含三份模板；参考 Workflow Schema 校验与本地静态拒绝测试通过，冻结安装、合同/任务图、TS lint/typecheck/test/build、Electron smoke 和 diff check 通过。完整 Workflow 编译器、Planner 运行、已安装绑定/能力匹配、模板发布/版本冻结和三模式端到端运行尚未验证；Windows x64、macOS Intel、发布安装包 **UNVERIFIED**。P4-05/P4-10/P4 Gate 仍 BLOCKED。见 ADR 0057。
+
+## P4-10 · Bounded plugin acceptance and single-Executor development gate
+
+核验日期：2026-09-24；macOS arm64 开发环境，现有 Codex 登录，无 Anthropic Key/在线请求。未新增依赖、native addon、安装脚本、SQLite migration 或 Renderer 权限。局部 Registry adapter 替换 fixture 和 134 Python pytest/Ruff/严格 mypy、TS lint/typecheck/test/build、合同/任务图、真实 Electron smoke 均通过。真实 Codex/Python Host Desktop 全链第一次 Review 无结构化结果而正确失败；一次有限重试通过开发、Verify、Review、人审和显式本地合并。不同的第二 Executor、Claude 在线认证失效、生产 Verifier 插件替换、正式 T116～T120 评测、Windows x64、macOS Intel、发布安装包与签名均 **UNVERIFIED**。P4-05/P4-10/P4 完整 Gate 继续 BLOCKED；P5 仅有开发排期例外。见 `docs/p4-development-scope-report.md`。
+
+## P4-09 · Plugin fault diagnostics
+
+核验日期：2026-09-24；macOS arm64 开发路径。沿用 Python 3.12.13、Electron 44.4.3、Vue 3.5.43、Node 22.22.0、SQLite schema25 与 Codex 0.155.1；无新增依赖、native addon、安装脚本、数据库 migration、任意 Renderer IPC 或外部网络服务。受信内置插件激活/运行/卸载异常只输出稳定安全 code、pluginId、时间和受影响 Run ID。真实 Host/SQLite 项目及 Board 读路径在插件激活失败后仍可用；133 Python pytest/Ruff/严格 mypy、TS lint/typecheck/test/build、真实 Electron smoke、合同/任务图与 diff check 通过。未知第三方插件进程崩溃、恶意同进程 Python 代码、Windows x64、macOS Intel 和发布安装包 **UNVERIFIED**。Claude 运行中凭据失效未在线执行；P4-05 BLOCKED。见 ADR 0056。
+
+## P4-08 · Controlled Tool/MCP contract
+
+核验日期：2026-09-24；macOS arm64 开发路径。`jsonschema==4.26.0`（MIT，Python ≥3.10）由既有传递依赖提升为精确直接依赖；`types-jsonschema==4.26.0.20260518`（Apache-2.0，Python ≥3.10）仅供严格 mypy。版本记录与 uv 锁已更新，没有新 native addon、安装脚本、外部 MCP 服务、数据库迁移或 Renderer 权限。实际运行 128 Python pytest/Ruff/严格 mypy、冻结安装、合同/任务图、TS lint/typecheck/test/build、Electron Desktop smoke 和 diff check，均通过。T076～T080 是本地工具契约和 MCP fixture；任意第三方 MCP 服务的认证、进程/网络所有权及安全隔离未启用/未验收。Windows x64、macOS Intel 与发布安装包 **UNVERIFIED**。见 ADR 0055。
+
+## P4-07 · Python ModelProvider and Codex app-server
+
+核验日期：2026-09-24。macOS arm64、Python 3.12.13、Codex CLI/app-server 0.155.1，现有本机 Codex 登录。锁定内置插件从 `0.0.1` 升为 `0.0.2`（manifest/entry/config 三文件内容 hash 重新计算）；没有新增 PyPI/npm 包、安装脚本或凭据。Python ModelProvider 的 Codex 实现与 Coding Executor 分离；真实 app-server 会话返回结构化 JSON、10 条文本增量及 `thread/tokenUsage/updated` 的 20,629 输入/15 输出 tokens。Usage 事件缺失时保持 `null`；没有从文本估算。官方 [Codex App Server 协议](https://learn.chatgpt.com/docs/app-server) 有 `model/list`、`item/agentMessage/delta`、`thread/tokenUsage/updated`；实际字段由本机 0.155.1 CLI 生成的 Schema 和实测确认。该协议未文档化 turn 级可执行 token 上限，Codex 收到非空 token 限额请求会拒绝，Forge 仅强制执行字节/时间边界。
+
+`pnpm test:python-refiner-live` 独立 Host 草稿与人工审批通过；`FORGE_MODEL_PROVIDER=disabled` 经 Desktop 环境白名单传给 Host，真实离线手工闭环和 TODO 重启恢复通过。普通 Web 不获得本地模型能力。P4-07 完整冻结安装、契约/任务图、121 Python pytest/Ruff/严格 mypy、TS lint/typecheck/test/build、Desktop smoke 与 diff check 通过。旧版插件 hash 冻结在原 RunConfig 中，不把运行中旧版本自动升级或静默续接。Claude/其他 Provider 认证、Windows x64、macOS Intel、安装包与签名仍 **UNVERIFIED**；P4-05 BLOCKED，完整 P4 Gate 未通过。见 ADR 0054。
+
+## P4-06 · Codex-only development dependency exception
+
+核验日期：2026-09-24。公共 Python Executor 契约、现有 Codex app-server 路径、P2/P3 真实闭环和既有只读/审批门禁可用于不依赖 Claude 执行的开发。用户授权的例外仅允许 P4-05→P4-06，及以后完成适用 P4 验收才可能启用的 P4-10→P5-01；权威依赖不变，P4-05 仍 BLOCKED。Claude 未配置 Key、未注册 Adapter、未运行模型，不能宣称可用。完整 P4 Gate 与多执行器发布验收未通过。P4-06 在 macOS arm64 的 Electron→Python Host→Codex 路径上实测 Developer Profile 编码与 Reviewer Profile 只读审查；schema v25 升级与重启保留已有数据的独立临时库测试通过。冻结 pnpm/uv 安装、contracts/task-map、115 Python pytest/Ruff/严格 mypy 46 源文件、TS lint/typecheck/test/build、Electron smoke、diff check 通过；没有新增依赖或许可证变动。Claude 仍不可选，T041 双真实执行器与 P4 完整 Gate 待验。macOS arm64 开发路径是当前证据；Windows x64、macOS Intel、安装包、签名、DPI、真实用户库升级与历史 Codex utilityProcess crash recovery 均 **UNVERIFIED**。见 ADR 0052。
+
 ## P4-05 · Claude Agent SDK offline compatibility gate
 
 核验日期：2026-09-24。官方 [Agent SDK 概览](https://code.claude.com/docs/en/agent-sdk/overview) 和 [Python SDK 参考](https://code.claude.com/docs/en/agent-sdk/python) 确认 Python SDK 可管理会话/工具/权限/流；第三方产品认证应走 API Key，不借用 claude.ai 订阅登录。官方 [v0.2.159 release](https://github.com/anthropics/claude-agent-sdk-python/releases/tag/v0.2.159) 对应本轮精确版本。`python/uv.lock` 固定 `claude-agent-sdk==0.2.159`；macOS arm64、Python 3.12.13、uv 0.11.14 的真实受控子进程加载随包 Claude Code CLI `2.1.281` 并只调用 `--version`。`pnpm probe:claude-offline` 返回 `apiKeyConfigured=false`、`liveVerified=false`；无 API 请求、Agent、模型、审批、续接、取消或打包验证。当前本机 `claude` 用户 CLI 2.1.159 不是 Forge SDK 随包 CLI，也未用于 Forge 认证。
@@ -357,3 +473,13 @@ P0-01 当时 `docs/dependency-licenses.json` 有 96 项；该清单现已随 P0-
 | macOS Intel、Windows x64 | 无本轮实机结果 | 后续平台验证 |
 
 参考矩阵在 `forge_spec_v1.0/docs/compatibility-record.md`；它仍保持原样。本记录不把本机 Node ABI 当作未来 Electron ABI。
+# 2026-09-25 · P7-05 loopback HTTP command adapter checkpoint
+
+Current macOS arm64 Python Host/SQLite and optional 127.0.0.1 HTTP gateway passed authenticated Project-scoped Project, Board and real approved Task Contract reads and explicit denial of all remote writes; it was not tested over TLS, on a phone, or on Windows/macOS Intel. The current installed internal Demo is listener-free on normal startup; the added Task-detail read postdates its build. Reference OpenAPI `TaskSummary.state` omits production `blocked`, so the adapter returns 409 for that board instead of emitting a nonconforming or false state. Remote write-method names/payloads differ from the current Host API and require an explicit mapping plus operation grants and idempotency/CAS tests. See ADR 0079. No remote execution support claim yet.
+# 2026-09-25 · Current internal Mac Demo package integrity
+
+The original installed ad-hoc app produced five additional `.pyc` files under its signed bundled Python package after runtime imports; `codesign --verify --deep --strict` then failed. The original DMG/checksum and all existing Demo data remain untouched. A separate `0.0.1` arm64 internal DMG (SHA-256 `91595c5cbf5278ecc68227a3eb5a92ded84d26408b227d28371832e6de283eb6`) was built from current sources with `PYTHONDONTWRITEBYTECODE=1` in the packaged Host environment. A read-only DMG install, clean-path Host startup, schema32, bundle Python loading, exit and subsequent ad-hoc signature verification passed. The exact new DMG also passed a real Codex task/Verify/Review/acceptance/cancel/restart cycle with retained isolated fixture/data. This verifies only macOS arm64 internal ad-hoc packaging; Developer ID, notarization, Gatekeeper on a fresh account, Windows/macOS Intel, signed updates and Finder PATH/proxy remain unverified. The Python system interpreter used by the optional local `.command` launcher is separate from the bundled Host runtime.
+
+An additional installed-app UI probe used a SQLite backup, not the retained Demo DB: the first quick-template publish correctly failed because no Agent Profiles were installed; after saving real Developer/Reviewer Profiles through the app, binding them and editing a node, Host preflight, draft save, publish v1 and published-definition readback succeeded. This verifies the package's editor/publish route without a model call. A new installed-app Run bound to that published version remains unverified.
+
+A separate live invocation of the **same DMG** used an isolated fixture to publish quick v1 and start a real Codex Run. The Run succeeded, changed only isolated `math.js`/`test.js`, and its SQLite RunConfig plus Host readback matched the published Workflow/Profile IDs and content hash. The overall command exited 1 on a harness-only final assertion that wrongly expected Done after development alone; actual Task state was Active because Review/Verify/human acceptance had not run. The assertion has been corrected, but the paid scenario was not repeated merely to turn the exit code green. Its custom-Workflow restart readback therefore remains UNVERIFIED; no formal P6/P7 release gate changes.

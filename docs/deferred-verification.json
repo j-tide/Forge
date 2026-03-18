@@ -2,6 +2,41 @@
   "schemaVersion": "1.0",
   "entries": [
     {
+      "testId": "T041",
+      "sourceTaskId": "P4-05",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-10",
+      "reason": "当前只有已真实验证的 Codex；Claude SDK/CLI 离线加载不是第二执行器。用户提供合法 API Key 并明确授权有界费用后，先补 P4-05 在线适配，再在 P4-10 让两个不同真实执行器完成同一批准 TODO；开发可继续，完整 P4/多执行器发布不可通过。"
+    },
+    {
+      "testId": "T042",
+      "sourceTaskId": "P4-05",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-06",
+      "reason": "P4-06 用真实 Codex 能力验证 Profile 保存与不支持模型拒绝；Claude 的模型能力仍需 P4-05 恢复后补验，不能用 Codex 结果替代。"
+    },
+    {
+      "testId": "T043",
+      "sourceTaskId": "P4-05",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-10",
+      "reason": "Codex 已有取消/续接证据，但 Claude 取消、恢复及声明需合法凭据和在线 Run，P4-10 汇总前补验；不影响单执行器开发。"
+    },
+    {
+      "testId": "T044",
+      "sourceTaskId": "P4-05",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-10",
+      "reason": "公共事件门禁可离线测试；Claude 伪成功输出与真实结果归一需在线适配后补验，不能由本地 fixture 冒充。"
+    },
+    {
+      "testId": "T045",
+      "sourceTaskId": "P4-05",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P4-10",
+      "reason": "P4-09 已显示无凭据/未验证且本地验证插件故障隔离；Claude 运行中认证失效仍需先获合法 API Key 和测试预算、完成 P4-05 在线适配，再在 P4-10 补验，不能声称此子项通过。"
+    },
+    {
       "testId": "T024",
       "sourceTaskId": "P1-10",
       "status": "DEFERRED_VERIFICATION",
@@ -100,41 +135,6 @@
       "reason": "P2-08 验证取消/超时/隔离，但未注入真实运行途中认证失效；插件故障隔离与诊断首次在 P4-09 验证配置提示与凭据边界。"
     },
     {
-      "testId": "T071",
-      "sourceTaskId": "P2-06",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P5-09",
-      "reason": "P2-06 仅有当前 Run 的结构化 checkpoint，无项目记忆 candidate/validated 状态；P5-09 首次验证候选不能成为验收权威。"
-    },
-    {
-      "testId": "T072",
-      "sourceTaskId": "P2-06",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P5-09",
-      "reason": "P2-06 不检索持久项目记忆；P5-09 首次提供 expiresAt 与 stale 生命周期。"
-    },
-    {
-      "testId": "T073",
-      "sourceTaskId": "P2-06",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P5-09",
-      "reason": "P2-06 ContextBundle 与 checkpoint 已按项目隔离；跨项目经验共享默认关闭的正式记忆查询需 P5-09。"
-    },
-    {
-      "testId": "T074",
-      "sourceTaskId": "P2-06",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P5-09",
-      "reason": "P2-06 无项目接口路径记忆；P5-09 实现实时观察与旧记忆冲突候选。"
-    },
-    {
-      "testId": "T075",
-      "sourceTaskId": "P2-06",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P5-10",
-      "reason": "P2-06 不建立检索索引/项目记忆撤回 UI；P5-10 首次能由用户撤销并校验缓存/索引及墓碑。"
-    },
-    {
       "testId": "T116",
       "sourceTaskId": "P2-10",
       "status": "DEFERRED_VERIFICATION",
@@ -205,41 +205,6 @@
       "reason": "P3 已验证取消/中断不写成 Task Done；但在正式评测汇总中将 cancelled/interrupted 单列且不计 pass 要等 P6-09。"
     },
     {
-      "testId": "T040",
-      "sourceTaskId": "P4-01",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P4-09",
-      "reason": "插件运行或进程崩溃后的 Task 影响与 Host 可用性需要 P4-09 故障隔离；P4-01 只保证无效 Manifest 无加载副作用。"
-    },
-    {
-      "testId": "T040",
-      "sourceTaskId": "P4-02",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P4-09",
-      "reason": "P4-02 验证部分激活失败的逆序清理；插件运行/进程崩溃的 Task 影响和 UI/只读可用性属于 P4-09。"
-    },
-    {
-      "testId": "T040",
-      "sourceTaskId": "P4-03",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P4-09",
-      "reason": "P4-03 验证内置版本锁、Run 绑定和 draining，但插件运行/子进程崩溃后 Task 影响、UI 与其余只读数据可用性由 P4-09 故障隔离验收。"
-    },
-    {
-      "testId": "T106",
-      "sourceTaskId": "P4-04",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P6-02",
-      "reason": "通用 Dialog/Drawer 的焦点单测已存在；本任务配置表单无需弹层。完整 Tab/ShiftTab/Esc/焦点回位 E2E 由 P6-02 全局键盘验收负责。"
-    },
-    {
-      "testId": "T107",
-      "sourceTaskId": "P4-04",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P6-01",
-      "reason": "正式 glass token 的亮色阅读面对比已有静态测试；权威测试要求亮暗双主题，全页面暗主题和状态对比在 P6-01 首次具备。"
-    },
-    {
       "testId": "T108",
       "sourceTaskId": "P4-04",
       "status": "DEFERRED_VERIFICATION",
@@ -247,18 +212,312 @@
       "reason": "当前 macOS arm64 Desktop 可渲染；Windows 150% DPI 与安装环境需 P6-07 实机，不能以 macOS 截图冒充。"
     },
     {
-      "testId": "T109",
-      "sourceTaskId": "P4-04",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P6-02",
-      "reason": "本轮配置字段有换行与可访问标签；权威测试的 120 字任务卡标题和长路径跨页面验收由 P6-02 全局中文排版/DPI 负责。"
-    },
-    {
       "testId": "T110",
       "sourceTaskId": "P4-04",
       "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P6-02",
-      "reason": "P0 token 层已有 prefers-reduced-motion 和窗口设置回退；权威测试的运行状态/流程全局无强制循环动效由 P6-02 完整验收。"
+      "ownerTaskId": "P6-09",
+      "reason": "P6-02 已在真实 Electron 的系统 reduced-motion 仿真下确认页面动画为 0、文字状态仍可见，@forge/ui/应用 CSS 静态门禁通过；尚未在真实 Codex Run/Workflow 状态切换中检查无强制循环动效。T110 运行态全链路留 P6-09，不以视觉仿真冒充 PASSED。"
+    },
+    {
+      "testId": "T116",
+      "sourceTaskId": "P4-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "同一任务、全角色预算的公平单 Agent/流程对照依赖 P6-09 评测体系；P4-10 当前单执行器开发无法建立多执行器公平基线。"
+    },
+    {
+      "testId": "T117",
+      "sourceTaskId": "P4-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "隐藏 holdout 答案的上下文隔离与泄漏发布门禁在 P6-09 评测中首次完整具备。"
+    },
+    {
+      "testId": "T118",
+      "sourceTaskId": "P4-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P9-06",
+      "reason": "Prompt 候选的离线评测、灰度与按原 hash 回滚属于 P9-06；当前锁定旧 Run，但没有该推广系统。"
+    },
+    {
+      "testId": "T119",
+      "sourceTaskId": "P4-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "当前有单 Run 时间/尝试门限，跨角色 tool/turn/time/token 总消耗的统一预算和人类升级需 P6-09。"
+    },
+    {
+      "testId": "T120",
+      "sourceTaskId": "P4-10",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "当前 Run 取消/中断不计 Task Done；正式评测汇总将 cancelled/interrupted 单列且不计 pass 需 P6-09。"
+    },
+    {
+      "testId": "T029",
+      "sourceTaskId": "P5-01",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P6-01 已在真实 Desktop 经只读 Host getPublished 显示两份不可变发布定义的逐字段差异，P5-05/11 已分别验证旧 RunConfig 锁仍指向旧版本；尚未在同一个端到端 fixture 中把已有 Run 与新发布版差异同时打开核对。完整 T029 留 P6-09 全功能 E2E，不把分段证据冒充整项 PASSED。"
+    },
+    {
+      "testId": "T029",
+      "sourceTaskId": "P5-02",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P6-01 已在真实 Desktop 经只读 Host getPublished 显示两份不可变发布定义的逐字段差异，P5-05/11 已分别验证旧 RunConfig 锁仍指向旧版本；尚未在同一个端到端 fixture 中把已有 Run 与新发布版差异同时打开核对。完整 T029 留 P6-09 全功能 E2E，不把分段证据冒充整项 PASSED。"
+    },
+    {
+      "testId": "T029",
+      "sourceTaskId": "P5-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P6-01 已在真实 Desktop 经只读 Host getPublished 显示两份不可变发布定义的逐字段差异，P5-05/11 已分别验证旧 RunConfig 锁仍指向旧版本；尚未在同一个端到端 fixture 中把已有 Run 与新发布版差异同时打开核对。完整 T029 留 P6-09 全功能 E2E，不把分段证据冒充整项 PASSED。"
+    },
+    {
+      "testId": "T029",
+      "sourceTaskId": "P5-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P6-01 已在真实 Desktop 经只读 Host getPublished 显示两份不可变发布定义的逐字段差异，P5-05/11 已分别验证旧 RunConfig 锁仍指向旧版本；尚未在同一个端到端 fixture 中把已有 Run 与新发布版差异同时打开核对。完整 T029 留 P6-09 全功能 E2E，不把分段证据冒充整项 PASSED。"
+    },
+    {
+      "testId": "T081",
+      "sourceTaskId": "P6-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P6-03 实测隔离预览没有 preload/Host bridge/Node，伪造 Main sender 被拒；但当前没有实际多 CredentialRef 授权/读取服务，无法构造角色仅获 ref A 却请求 ref B 明文的完整 T081。P6-09 安全 Gate 前须实现或明确阻断该能力并真实测试；不借用 Claude 凭据。"
+    },
+    {
+      "testId": "T111",
+      "sourceTaskId": "P6-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-06",
+      "reason": "P6-06 已真实挂载 ad-hoc/未公证 Mac 内部 DMG，复制 app 到隔离 QA 安装目录并在隔离用户数据根启动，移除 app 后数据库保留；这只是 T111 的局部证据。没有 Developer ID、公证、真实新用户 Gatekeeper 安装和公开卸载体验，T111 不标 PASSED。Windows 分支另归 P6-07，完整平台发布 Gate 仍保留。"
+    },
+    {
+      "testId": "T112",
+      "sourceTaskId": "P6-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-08",
+      "reason": "升级/中断/回滚 T112 需要 P6-06 的正式 Developer ID/公证包和 P6-08 的安全更新链路。P6-06 只有同版本 ad-hoc 内部包安装证据；P6-04 只在独立临时 SQLite 中完成 v29→30 增量迁移及回读，不宣称安装升级通过。"
+    },
+    {
+      "testId": "T113",
+      "sourceTaskId": "P6-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-08",
+      "reason": "凭据跨签名升级 T113 需要 P6-06 正式 Developer ID/公证包、P6-08 签名一致的更新链路、经过授权的凭据存储和明确测试凭据；当前用户未提供 Claude API Key，也未授权新的 Anthropic 付费调用。ad-hoc 内部包和离线 fixture 均不构成验收。"
+    },
+    {
+      "testId": "T003",
+      "sourceTaskId": "P6-05",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P6-05 真实活跃 Codex Run 下关窗入托盘、第二实例重开保持同一 Host/Run；尚未强制杀死单独 Renderer 并重载后验证不重启 Run。完整 T003 留 P6-09 E2E。"
+    },
+    {
+      "testId": "T004",
+      "sourceTaskId": "P6-05",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-07",
+      "reason": "当前仅 macOS arm64 开发版验证 Cmd 快速导航；T004 要求 Mac/Windows 正式包的新任务/命令面板/关闭窗口快捷键矩阵，Windows 安装与签名归 P6-07，不冒充跨平台通过。"
+    },
+    {
+      "testId": "T005",
+      "sourceTaskId": "P6-05",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-07",
+      "reason": "P6-02 已在 macOS Electron 模拟 CSS zoom 100/125/150% 与长文本；T005 的 Windows 正式包系统 DPI/看板滚动完整用例依赖 P6-07 实机验收。"
+    },
+    {
+      "testId": "T083",
+      "sourceTaskId": "P6-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "真实 Electron 预览已阻断 file: 导航、window.open、跨 origin HTTP/WebSocket，并读取 disableDialogs=true；但 Playwright 对已自动压制的 JS alert 发出失效 dialog 事件，原生文件选择/打印等系统弹窗未完整自动化验收。P6-09 安全 Gate 保留完整 T083，当前只报告已测子路径。"
+    },
+    {
+      "testId": "T084",
+      "sourceTaskId": "P6-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P6-03 已用真实 SQLite ArtifactStore 拒绝含 OPENSSH PRIVATE KEY 的文本导入并脱敏 Run Diff；P6-04 真实 Electron 诊断导出采用白名单、预览与写入内容一致，含 token 日志/项目路径未进入导出。未来独立 Artifact 导出与更多敏感输出路径尚未实现，完整 T084 留 P6-09 安全 Gate，不把当前子路径当整项 PASSED。"
+    },
+    {
+      "testId": "T091",
+      "sourceTaskId": "P7-05",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-07",
+      "reason": "P7-05 真实回环入口已拒绝客户端 actor/scopes 伪造，但计划写入因设备操作 grant 未存在而全部 403。须先完成权威写命令到 Python Host 的安全映射，并在 P7-07 用真实允许的敏感写请求证明 session actor 注入和伪造拒绝双路径。"
+    },
+    {
+      "testId": "T092",
+      "sourceTaskId": "P7-05",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-07",
+      "reason": "当前远端无获授权写入，无法真实验证同一幂等 key 不同 payload 返回 409 且原操作不变。P7-07 操作授权和 P7-05 生产写映射接通后补验。"
+    },
+    {
+      "testId": "T093",
+      "sourceTaskId": "P7-05",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-07",
+      "reason": "当前远端无获授权写入，无法真实验证并发相同 revision 只有一次提交。P7-07 操作授权与 CommandBus CAS 生产写映射接通后补验，不以全部拒绝代替冲突保护。"
+    },
+    {
+      "testId": "T094",
+      "sourceTaskId": "P7-05",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-06",
+      "reason": "T094 是过期事件游标重连与 resync_required；P7-05 没有 SSE 订阅。P7-06 建立事件流后用真实保留期游标补验。"
+    },
+    {
+      "testId": "T085",
+      "sourceTaskId": "P6-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P6-09",
+      "reason": "P4 ToolRegistry 已测试插件全局授权、单 Run grant 和未知工具拒绝；尚无完整 Project+Profile+node 权限交集的同一启动 fixture。P6-09 安全 Gate 前补全，不能由 Agent 自批准。"
+    },
+    {
+      "testId": "T096",
+      "sourceTaskId": "P7-01",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-10",
+      "reason": "P7-01 只建立已由 P6-05 实测的无窗口 Host 常驻；单次配对 nonce 的生成/消费直到 P7-03 设备配对才存在，不能把托盘运行当作重放拒绝通过。 P7-03/04 已有本机服务级与真实 loopback HTTP 拒绝证据；完整另一设备经私网 HTTPS 的同源/重放验收须在 P7-10 远程安全闸门补验，当前不标 PASSED。"
+    },
+    {
+      "testId": "T097",
+      "sourceTaskId": "P7-01",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-06",
+      "reason": "设备撤销后在线 SSE 关闭与继续写 403 依赖 P7-03 设备记录、P7-04 session 与 P7-06 事件订阅；P7-01 无网络入口时无法执行。"
+    },
+    {
+      "testId": "T098",
+      "sourceTaskId": "P7-01",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-10",
+      "reason": "跨站 Origin/CSRF 拒绝依赖 P7-04 同源安全会话；P7-01 不开放 HTTP，当前没有浏览器写请求可验证。 P7-03/04 已有本机服务级与真实 loopback HTTP 拒绝证据；完整另一设备经私网 HTTPS 的同源/重放验收须在 P7-10 远程安全闸门补验，当前不标 PASSED。"
+    },
+    {
+      "testId": "T099",
+      "sourceTaskId": "P7-01",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-07",
+      "reason": "设备移除 Project scope 后旧缓存不能授予权限，首次依赖 P7-07 的每请求权限重新校验；P7-01 只管本地 Host 生命周期。"
+    },
+    {
+      "testId": "T100",
+      "sourceTaskId": "P7-01",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-09",
+      "reason": "P6-05 已实测 Mac 开发版活跃 Run 无窗口托盘延续、第二实例重开及安全退出；完整 T100 要求远端连接在真实 sleep/Host 退出后显示离线和最后时间，不会假完成，需 P7-09 端到端。"
+    },
+    {
+      "testId": "T096",
+      "sourceTaskId": "P7-02",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-10",
+      "reason": "P7-02 仅显式 loopback 静态入口且所有 /v1 访问拒绝；单次配对 nonce 到 P7-03 才产生，不能把无配对功能当重放防御验收。 P7-03/04 已有本机服务级与真实 loopback HTTP 拒绝证据；完整另一设备经私网 HTTPS 的同源/重放验收须在 P7-10 远程安全闸门补验，当前不标 PASSED。"
+    },
+    {
+      "testId": "T097",
+      "sourceTaskId": "P7-02",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-06",
+      "reason": "P7-02 没有设备会话或 SSE；撤销在线设备关闭流并拒写需 P7-03/04/06 的真实链路。"
+    },
+    {
+      "testId": "T098",
+      "sourceTaskId": "P7-02",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-10",
+      "reason": "P7-02 所有写请求均拒绝；同源 cookie session、Origin 和 CSRF 的真实通过/拒绝路径需 P7-04，不能只凭禁用全部写宣称 T098 完整通过。 P7-03/04 已有本机服务级与真实 loopback HTTP 拒绝证据；完整另一设备经私网 HTTPS 的同源/重放验收须在 P7-10 远程安全闸门补验，当前不标 PASSED。"
+    },
+    {
+      "testId": "T099",
+      "sourceTaskId": "P7-02",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-07",
+      "reason": "P7-02 不暴露 Project 数据；设备 scope 缩小后的缓存拒绝要在 P7-07 每次请求重新校验时验证。"
+    },
+    {
+      "testId": "T100",
+      "sourceTaskId": "P7-02",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-09",
+      "reason": "P7-02 静态页面无 Host 状态；真实手机网络断开、Host 睡眠/退出后显示离线和最后更新时间由 P7-09 弱网/崩溃链路验证。"
+    },
+    {
+      "testId": "T096",
+      "sourceTaskId": "P7-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-10",
+      "reason": "P7-03 真实 SQLite/Host 服务已拒绝单次 nonce 重放、过期和第五次错误猜测；第二设备经 HTTPS claim 的完整 T096 尚需 P7-04 的同源、限速和认证网关，不能把服务级测试写成手机端到端通过。 P7-03/04 已有本机服务级与真实 loopback HTTP 拒绝证据；完整另一设备经私网 HTTPS 的同源/重放验收须在 P7-10 远程安全闸门补验，当前不标 PASSED。"
+    },
+    {
+      "testId": "T097",
+      "sourceTaskId": "P7-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-06",
+      "reason": "P7-03 只保存经本机批准的设备记录，尚无会话/SSE；在线撤销后流关闭及写入 403 要在 P7-06 具备事件流时验证。"
+    },
+    {
+      "testId": "T098",
+      "sourceTaskId": "P7-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-10",
+      "reason": "P7-03 所有远程 HTTP API 继续 401/403；有真实 cookie session 后，P7-04 才能执行跨站 Origin/CSRF 的允许和拒绝双路径。 P7-03/04 已有本机服务级与真实 loopback HTTP 拒绝证据；完整另一设备经私网 HTTPS 的同源/重放验收须在 P7-10 远程安全闸门补验，当前不标 PASSED。"
+    },
+    {
+      "testId": "T099",
+      "sourceTaskId": "P7-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-07",
+      "reason": "P7-03 已做本机批准时 Project ID 白名单；设备 scope 缩小后对旧 Project 的命令拒绝需要 P7-07 的远端逐请求授权。"
+    },
+    {
+      "testId": "T100",
+      "sourceTaskId": "P7-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-09",
+      "reason": "P7-03 没有远端会话/手机；Host 睡眠退出后的客户端离线与最后更新时间仍需 P7-09 真机弱网链路。"
+    },
+    {
+      "testId": "T081",
+      "sourceTaskId": "P7-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-05",
+      "reason": "本机 Renderer 凭据边界已有 P6 安全证据；P7-04 尚无远端业务命令。远端凭据引用伪造必须由 P7-05 Command HTTP 白名单与后续完整安全门禁验证。"
+    },
+    {
+      "testId": "T082",
+      "sourceTaskId": "P7-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-10",
+      "reason": "P6 已有预览 webContents 伪造管理 IPC 拒绝证据；P7-04 仅回环认证 fixture，没有真实私网/手机页面。远端跨界面身份需在 P7-10 总闸门复核。"
+    },
+    {
+      "testId": "T083",
+      "sourceTaskId": "P7-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-10",
+      "reason": "P6-03 预览 file:/新窗口部分已有实测，系统弹窗全项未通过；P7-04 会话代码不新增预览权限，完整不可信页面越界在 P7-10 安全回归补验。"
+    },
+    {
+      "testId": "T084",
+      "sourceTaskId": "P7-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-10",
+      "reason": "P6-04 诊断导出隐私有局部证据，P7-04 只交换高熵短会话且不提供 Artifact API；远端源码/输出含 secret 的分享边界需 P7-10 安全回归。"
+    },
+    {
+      "testId": "T085",
+      "sourceTaskId": "P7-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P7-07",
+      "reason": "P7-04 会话承载经本机批准的 Project IDs，不授权业务操作；远端逐请求 scope 与节点权限交集到 P7-07 才能验证，不能将会话建立当作权限批准。"
     }
   ]
 }
