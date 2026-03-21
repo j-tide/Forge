@@ -34,8 +34,8 @@ export const forgeProjectSchema = z.strictObject({
   repositoryType: z.enum(['git', 'none']),
   gitRoot: z.string().max(4096).nullable(),
   defaultBranch: z.string().max(240).nullable(),
-  trusted: z.literal(true),
-  trustVersion: z.literal(projectTrustVersion),
+  trusted: z.boolean(),
+  trustVersion: z.enum([projectTrustVersion, 'project-trust/restored-pending']),
   trustApprovedAt: timestamp,
   environmentSummaryHash: z.string().regex(/^[a-f0-9]{64}$/),
   createdAt: timestamp,
@@ -44,6 +44,8 @@ export const forgeProjectSchema = z.strictObject({
   revision: z.int().positive(),
   archivedAt: timestamp.nullable(),
   probe: projectProbeSchema,
+}).refine((project) => project.trusted === (project.trustVersion === projectTrustVersion), {
+  message: 'Project trust state and version must agree', path: ['trusted'],
 });
 
 export const environmentConfigSchema = z.strictObject({
@@ -75,6 +77,7 @@ const base = { schemaVersion: z.literal('1.0'), commandId: z.uuid(), createdAt: 
 const expectedRevision = z.int().nonnegative();
 export const projectCommandEnvelopeSchema = z.discriminatedUnion('type', [
   z.strictObject({ ...base, type: z.literal('project.probe'), payload: z.strictObject({ rootPath: z.string().min(1).max(4096) }) }),
+  z.strictObject({ ...base, type: z.literal('project.reprobe'), payload: z.strictObject({ projectId: z.uuid() }) }),
   z.strictObject({ ...base, type: z.literal('project.create'), payload: z.strictObject({ rootPath: z.string().min(1).max(4096), fingerprint: z.string().regex(/^[a-f0-9]{64}$/), trustVersion: z.literal(projectTrustVersion), approved: z.literal(true), expectedRevision }) }),
   z.strictObject({ ...base, type: z.literal('project.list'), payload: z.strictObject({}) }),
   z.strictObject({ ...base, type: z.literal('project.get'), payload: z.strictObject({ projectId: z.uuid() }) }),
