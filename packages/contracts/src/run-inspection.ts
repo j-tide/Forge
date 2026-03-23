@@ -28,6 +28,15 @@ export const runDiffPreviewSchema = z.strictObject({
   files: z.array(runFileChangeSchema).max(200), text: z.string().max(65536),
   truncated: z.boolean(), capturedAt: z.iso.datetime(),
 });
+export const runRecoveryPreviewSchema = z.strictObject({
+  runId: id, workspaceId: id, basis: z.literal('live-worktree-unverified'),
+  diff: runDiffPreviewSchema,
+});
+export const runRecoveryStatusSchema = z.strictObject({
+  runId: id, state: z.enum(['unavailable', 'awaiting_reboot', 'eligible', 'resolved']),
+  runRevision: z.int().positive(), workspaceId: id,
+  observedAt: z.iso.datetime().nullable(), resolvedAt: z.iso.datetime().nullable(),
+});
 export const runInspectionSchema = z.strictObject({
   run: runViewSchema, observations: z.array(runObservationSchema).max(100),
   nextCursor: z.int().nonnegative(), hasMore: z.boolean(),
@@ -36,6 +45,9 @@ export const runInspectionSchema = z.strictObject({
   usage: z.strictObject({ inputTokens: z.int().nonnegative(), outputTokens: z.int().nonnegative(),
     cachedInputTokens: z.int().nonnegative().nullable(), cost: z.number().nonnegative().nullable(),
     currency: z.string().nullable() }).nullable(),
+  budgetFailure: z.enum(['RUN_TOKEN_BUDGET_EXCEEDED', 'RUN_OUTPUT_BUDGET_EXCEEDED',
+    'RUN_TOOL_BUDGET_EXCEEDED']).nullable().optional(),
+  planFailure: z.enum(['PLAN_RESULT_INVALID', 'PLAN_WORKSPACE_CHANGED']).nullable().optional(),
 });
 export const contextSourceStatusSchema = z.strictObject({
   sourceRef: z.string().min(1).max(256),
@@ -51,8 +63,25 @@ export const runConfigurationSourceSchema = z.strictObject({
   projectId: id, runId: id, taskId: id, taskRevision: z.int().positive(),
   configHash: z.string().regex(/^[a-f0-9]{64}$/),
   workflow: versionLockSchema, developerProfile: profileLockSchema,
+  maxDurationMs: z.int().min(1_000).max(86_400_000).optional(),
+  maxTokens: z.int().min(1).max(100_000_000).optional(),
+  maxToolCalls: z.int().min(1).max(100_000).optional(),
+  maxOutputTokens: z.int().min(1).max(100_000).nullable().optional(),
   stageProfiles: z.array(profileLockSchema).max(8),
+  stageProfileDetails: z.array(z.strictObject({
+    id: z.string().min(1).max(128), version: z.string().min(1).max(80),
+    name: z.string().min(1).max(160),
+    role: z.enum(['refiner', 'planner', 'developer', 'reviewer']),
+    modelId: z.string().min(1).max(128).nullable(),
+    policyProfile: z.enum(['workspace-write', 'read-only', 'read-only-no-network',
+      'approval-required']),
+  })).max(8).optional(),
   environmentId: id, environmentRevision: z.int().positive(),
+  commandPresetIds: z.array(id).max(64).optional(),
+  commandPresetLocks: z.array(z.strictObject({
+    presetId: id, revision: z.int().positive(),
+    approvalHash: z.string().regex(/^[a-f0-9]{64}$/).nullable(),
+  })).max(64).optional(),
   actualNodeId: z.string().min(1).max(128),
 });
 export const runLaunchCapabilitiesSchema = z.strictObject({
@@ -60,7 +89,47 @@ export const runLaunchCapabilitiesSchema = z.strictObject({
   adapterVersion: z.string().min(1), upstreamVersion: z.string().min(1),
   modelIds: z.array(z.string().min(1)).max(100),
   workspaceControl: z.boolean(), streaming: z.boolean(), interrupt: z.boolean(),
+  workflowBinding: z.strictObject({
+    workflowId: z.string().min(1).max(128), workflowRevision: z.int().positive(),
+    profileId: z.string().min(1).max(128), profileRevision: z.int().positive(),
+    modelId: z.string().min(1).max(128),
+    entryNode: z.enum(['plan', 'develop']).optional(),
+  }).nullable().optional(),
   warnings: z.array(z.string()).max(32),
+});
+const planStepSchema = z.strictObject({
+  id: z.string().min(1).max(128), description: z.string().min(1).max(1000),
+  paths: z.array(z.string().min(1)).max(16),
+  dependsOn: z.array(z.string().min(1)).max(10),
+  checks: z.array(z.string().min(1)).max(12),
+});
+export const planArtifactSchema = z.strictObject({
+  artifactId: id, projectId: id, taskId: id, runId: id, attemptId: id,
+  taskRevision: z.int().positive(),
+  taskContractHash: z.string().regex(/^[a-f0-9]{64}$/),
+  profileId: z.string().min(1).max(128), profileRevision: z.int().positive(),
+  profileHash: z.string().regex(/^[a-f0-9]{64}$/),
+  baseRevision: z.string().regex(/^[0-9a-f]{40,64}$/),
+  result: z.strictObject({
+    schemaVersion: z.literal('1.0'), runId: z.string().min(1),
+    attemptId: z.string().min(1), nodeId: z.literal('plan'),
+    contractRevision: z.int().positive(), snapshotId: z.null(),
+    outcome: z.literal('ready'), artifactIds: z.array(z.string()),
+    unresolved: z.array(z.string()),
+    acceptanceResults: z.array(z.strictObject({
+      criterionId: z.string().min(1),
+      status: z.enum(['unverified', 'not_applicable']),
+      evidenceIds: z.array(z.string()), reason: z.string().min(1),
+    })),
+    summary: z.string().min(1).max(2000), plan: z.array(planStepSchema).min(1).max(10),
+  }),
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/), createdAt: z.iso.datetime(),
+});
+export const planGateSchema = z.strictObject({
+  artifact: planArtifactSchema, requiresApproval: z.boolean(),
+  decision: z.enum(['pending', 'automatic', 'approved', 'rejected']),
+  developmentRunId: id.nullable(), decidedAt: z.iso.datetime().nullable(),
+  reason: z.string().nullable(),
 });
 export const runCommandEnvelopeSchema = z.discriminatedUnion('type', [
   z.strictObject({ ...envelope, type: z.literal('context.sources'), payload: z.strictObject({
@@ -68,6 +137,17 @@ export const runCommandEnvelopeSchema = z.discriminatedUnion('type', [
   }) }),
   z.strictObject({ ...envelope, type: z.literal('run.config'), payload: z.strictObject({
     projectId: id, runId: id,
+  }) }),
+  z.strictObject({ ...envelope, type: z.literal('run.planGet'), payload: z.strictObject({
+    projectId: id, taskId: id, runId: id,
+  }) }),
+  z.strictObject({ ...envelope, type: z.literal('run.planAct'), payload: z.strictObject({
+    projectId: id, taskId: id, runId: id,
+    expectedArtifactHash: z.string().regex(/^[a-f0-9]{64}$/),
+    expectedTaskRevision: z.int().positive(),
+    action: z.enum(['approve', 'reject', 'continue']),
+    reason: z.string().min(12).max(2000).nullable().optional(),
+    confirmed: z.literal(true),
   }) }),
   z.strictObject({ ...envelope, type: z.literal('context.preview'), payload: z.strictObject({
     projectId: id, runId: id, query: z.string().min(1).max(160),
@@ -129,12 +209,23 @@ export const runCommandEnvelopeSchema = z.discriminatedUnion('type', [
   z.strictObject({ ...envelope, type: z.literal('run.inspect'), payload: z.strictObject({
     projectId: id, runId: id, afterCursor: z.int().nonnegative(), limit: z.int().min(1).max(100),
   }) }),
+  z.strictObject({ ...envelope, type: z.literal('run.recoveryPreview'), payload: z.strictObject({
+    projectId: id, runId: id,
+  }) }),
+  z.strictObject({ ...envelope, type: z.literal('run.recoveryStatus'), payload: z.strictObject({
+    projectId: id, runId: id,
+  }) }),
+  z.strictObject({ ...envelope, type: z.literal('run.recoveryResolve'), payload: z.strictObject({
+    projectId: id, runId: id, expectedRunRevision: z.int().positive(),
+    expectedWorkspaceId: id, confirmed: z.literal(true),
+  }) }),
   z.strictObject({ ...envelope, type: z.literal('run.capabilities'), payload: z.strictObject({
     projectId: id, taskId: id,
   }) }),
   z.strictObject({ ...envelope, type: z.literal('run.start'), payload: z.strictObject({
     projectId: id, taskId: id, expectedTaskRevision: z.int().positive(),
     modelId: z.string().min(1).max(128), idempotencyKey: id,
+    maxTokens: z.union([z.literal(50_000), z.literal(100_000), z.literal(200_000)]).optional(),
     profileId: z.string().min(1).max(128).optional(),
     profileRevision: z.int().positive().optional(),
     contextQuery: z.string().min(1).max(160).optional(),
@@ -191,8 +282,10 @@ export const runCommandEnvelopeSchema = z.discriminatedUnion('type', [
 ]);
 export const runCommandResultSchema = z.union([
   z.strictObject({ commandId: id, ok: z.literal(true), data: z.union([
-    z.array(runViewSchema), runInspectionSchema, runViewSchema,
-    runLaunchCapabilitiesSchema, developmentHandoffSchema.nullable(),
+    z.array(runViewSchema), runInspectionSchema, runRecoveryPreviewSchema,
+    runRecoveryStatusSchema, runViewSchema,
+    runLaunchCapabilitiesSchema, planGateSchema, planGateSchema.nullable(),
+    developmentHandoffSchema.nullable(),
     z.array(reviewReportSchema).max(50), z.array(reviewIssueOccurrenceSchema).max(1000),
     z.array(reviewJobSchema).max(50), reviewJobSchema,
     z.array(verifyJobSchema).max(50), verifyJobSchema, verifyReportSchema.nullable(),
@@ -210,9 +303,12 @@ export const runCommandResultSchema = z.union([
 ]);
 export type RunObservation = z.infer<typeof runObservationSchema>;
 export type RunDiffPreview = z.infer<typeof runDiffPreviewSchema>;
+export type RunRecoveryPreview = z.infer<typeof runRecoveryPreviewSchema>;
+export type RunRecoveryStatus = z.infer<typeof runRecoveryStatusSchema>;
 export type RunInspection = z.infer<typeof runInspectionSchema>;
 export type ContextSourceStatus = z.infer<typeof contextSourceStatusSchema>;
 export type RunConfigurationSource = z.infer<typeof runConfigurationSourceSchema>;
 export type RunLaunchCapabilities = z.infer<typeof runLaunchCapabilitiesSchema>;
+export type PlanGate = z.infer<typeof planGateSchema>;
 export type RunCommandEnvelope = z.infer<typeof runCommandEnvelopeSchema>;
 export type RunCommandResult = z.infer<typeof runCommandResultSchema>;

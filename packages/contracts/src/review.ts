@@ -39,6 +39,7 @@ export const reviewReportSchema = z.strictObject({
   snapshotId: id, reviewCopyId: id, reviewAttemptId: id,
   status: z.enum(['approved', 'changes_requested', 'inconclusive']),
   result: reviewResultSchema.nullable(), issues: z.array(reviewIssueSchema).max(200),
+  diagnosticCode: z.enum(['REVIEW_RESULT_MISSING', 'REVIEW_RESULT_INVALID']).nullable().optional(),
   reworkHandoff: reworkHandoffSchema.nullable(), createdAt: z.iso.datetime(),
 });
 export const reviewJobSchema = z.strictObject({
