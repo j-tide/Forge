@@ -32,6 +32,7 @@ export const agentProfileCatalogSchema = z.strictObject({
   executors: z.array(z.strictObject({
     executorId: z.string(), available: z.boolean(), modelIds: z.array(z.string()),
     readOnlyEnforced: z.boolean(), networkPolicyEnforced: z.boolean(),
+    structuredOutput: z.boolean().optional(),
     approval: z.boolean(), reason: z.string().nullable(),
   })),
   modelProviders: z.array(z.strictObject({
