@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from forge.conversations import timestamp
-from forge.persistence import ForgePersistence
+from forge.persistence import ForgePersistence, PersistenceSession
 
 
 class DraftError(Exception):
@@ -187,6 +187,8 @@ def prepare_revision(before: TaskDraft, request: DraftReviseInput) -> list[str]:
     ):
         raise DraftError("DRAFT_SCOPE_CONFIRMATION_REQUIRED")
     changed = changed_fields(previous, candidate)
+    if removed and not any(field not in ("openQuestions", "sourceRefs") for field in changed):
+        raise DraftError("DRAFT_CLARIFICATION_NOT_APPLIED")
     if not changed:
         raise DraftError("DRAFT_INVALID_REVISION")
     return changed
@@ -232,6 +234,22 @@ class DraftService:
             (project_id, conversation_id, project_id),
         ).fetchall()
         return [self._draft(row) for row in rows]
+
+    def page_drafts(
+        self, project_id: str, conversation_id: str, before_rowid: int | None,
+        limit: int,
+    ) -> list[tuple[int, TaskDraft]]:
+        rows = self.storage.session().execute(
+            "SELECT d.*,d.rowid AS draft_position FROM task_drafts d "
+            "JOIN conversations c ON c.conversation_id=d.conversation_id "
+            "JOIN projects p ON p.project_id=d.project_id "
+            "WHERE d.project_id=? AND d.conversation_id=? AND c.project_id=? "
+            "AND c.archived_at IS NULL AND p.archived_at IS NULL "
+            "AND (? IS NULL OR d.rowid < ?) ORDER BY d.rowid DESC LIMIT ?",
+            (project_id, conversation_id, project_id, before_rowid,
+             before_rowid, limit + 1),
+        ).fetchall()
+        return [(int(row["draft_position"]), self._draft(row)) for row in rows]
 
     def history(self, project_id: str, draft_id: str) -> list[DraftRevision]:
         if self.get(project_id, draft_id) is None:
@@ -328,6 +346,62 @@ class DraftService:
     def manual(self, request: DraftRequest) -> TaskDraft:
         return self.begin(request, "manual", None)
 
+    def create_contract_in_transaction(
+        self, db: PersistenceSession, project_id: UUID, contract: TaskContract,
+        source_message_id: UUID, decision_id: UUID, idempotency_key: str,
+    ) -> TaskDraft:
+        """Create a source-bound human-supplied contract in the caller's receipt transaction.
+
+        The public create command contains no conversation field. Its one
+        message source is resolved from Host-owned rows, never client identity.
+        """
+        project = str(project_id)
+        source = str(source_message_id)
+        if contract.projectId != project or contract.revision != 1 or contract.taskId == source:
+            raise DraftError("DRAFT_INVALID_REVISION")
+        source_ref = f"message:{source}"
+        decision_ref = f"decision:{decision_id}"
+        if contract.sourceRefs != [source_ref, decision_ref] or any(
+            decision_ref not in item.sourceRefs or
+            any(ref not in (source_ref, decision_ref) for ref in item.sourceRefs)
+            for item in contract.acceptance
+        ):
+            raise DraftError("DRAFT_SOURCE_NOT_FOUND")
+        row = db.execute(
+            "SELECT m.content_json,m.conversation_id FROM messages m "
+            "JOIN conversations c ON c.conversation_id=m.conversation_id "
+            "JOIN projects p ON p.project_id=c.project_id "
+            "WHERE m.message_id=? AND m.role='user' AND m.status='completed' "
+            "AND c.project_id=? AND c.archived_at IS NULL AND p.archived_at IS NULL",
+            (source, project),
+        ).fetchone()
+        if row is None:
+            raise DraftError("DRAFT_SOURCE_NOT_FOUND")
+        if db.execute(
+            "SELECT 1 FROM task_drafts WHERE draft_id=? OR "
+            "(conversation_id=? AND source_message_id=?)",
+            (contract.taskId, row["conversation_id"], source),
+        ).fetchone():
+            raise DraftError("DRAFT_ALREADY_EXISTS")
+        text = json.loads(row["content_json"])["text"]
+        now = timestamp()
+        status = "needs_clarification" if contract.openQuestions else "proposed"
+        db.execute(
+            "INSERT INTO task_drafts(draft_id,project_id,conversation_id,source_message_id,"
+            "idempotency_key,revision,intent,status,contract_json,editable_text,error_code,"
+            "model_provider,created_at,updated_at) "
+            "VALUES(?,?,?,?,?,1,'new_task',?,?,?,NULL,NULL,?,?)",
+            (contract.taskId, project, row["conversation_id"], source,
+             idempotency_key, status, contract.model_dump_json(), text, now, now),
+        )
+        draft = self.get(project, contract.taskId)
+        assert draft is not None
+        # The command is the explicit user creation decision. Its UUID is
+        # durable in both the receipt and revision source, and the user-authored
+        # title is a bounded, honest summary rather than invented reasoning.
+        self._snapshot(draft, ["contract"], str(decision_id), contract.title)
+        return draft
+
     def finish(
         self,
         project_id: str,
@@ -372,6 +446,10 @@ class DraftService:
             "SELECT 1 FROM task_approvals WHERE draft_id=? AND status='approved'", (draft_id,)
         ).fetchone() is not None
 
+    def can_revise(self, draft: TaskDraft) -> bool:
+        return (draft.contract is not None and draft.status != "generating"
+                and not self._approved(str(draft.draftId)))
+
     def update_text(
         self, project_id: str, draft_id: str, expected_revision: int, text: str
     ) -> TaskDraft:
@@ -396,27 +474,32 @@ class DraftService:
             self._snapshot(updated, ["editableText"])
             return updated
 
-    def revise(self, request: DraftReviseInput) -> TaskDraft:
+    def revise_in_transaction(
+        self, db: PersistenceSession, request: DraftReviseInput,
+    ) -> TaskDraft:
         project_id, draft_id = str(request.projectId), str(request.draftId)
+        before = self.get(project_id, draft_id)
+        if before is None:
+            raise DraftError("DRAFT_NOT_FOUND")
+        if self._approved(draft_id):
+            raise DraftError("DRAFT_APPROVED")
+        changed = prepare_revision(before, request)
+        now = timestamp()
+        status = "needs_clarification" if request.contract.openQuestions else "proposed"
+        db.execute(
+            "UPDATE task_drafts SET contract_json=?,revision=revision+1,status=?,"
+            "error_code=NULL,updated_at=? WHERE draft_id=? AND project_id=? AND revision=?",
+            (request.contract.model_dump_json(), status, now, draft_id,
+             project_id, request.expectedRevision),
+        )
+        updated = self.get(project_id, draft_id)
+        assert updated is not None
+        self._snapshot(
+            updated, changed, str(request.decisionId), request.decisionSummary,
+            request.resolvedQuestions,
+        )
+        return updated
+
+    def revise(self, request: DraftReviseInput) -> TaskDraft:
         with self.storage.transaction() as db:
-            before = self.get(project_id, draft_id)
-            if before is None:
-                raise DraftError("DRAFT_NOT_FOUND")
-            if self._approved(draft_id):
-                raise DraftError("DRAFT_APPROVED")
-            changed = prepare_revision(before, request)
-            now = timestamp()
-            status = "needs_clarification" if request.contract.openQuestions else "proposed"
-            db.execute(
-                "UPDATE task_drafts SET contract_json=?,revision=revision+1,status=?,"
-                "error_code=NULL,updated_at=? WHERE draft_id=? AND project_id=? AND revision=?",
-                (request.contract.model_dump_json(), status, now, draft_id,
-                 project_id, request.expectedRevision),
-            )
-            updated = self.get(project_id, draft_id)
-            assert updated is not None
-            self._snapshot(
-                updated, changed, str(request.decisionId), request.decisionSummary,
-                request.resolvedQuestions,
-            )
-            return updated
+            return self.revise_in_transaction(db, request)

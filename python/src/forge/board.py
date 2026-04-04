@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from forge.conversations import timestamp
 from forge.drafts import TaskContract
 from forge.persistence import ForgePersistence
+from forge.rework import gate_recovered
 
 if TYPE_CHECKING:
     from forge.final_acceptance import FinalAcceptanceService
@@ -114,26 +115,52 @@ class BoardService:
             (project_id,),
         ).fetchall()
         has_review = self.storage.schema_version() >= 17
+        recovery_projection = (
+            "r.recovery_resolved_at IS NOT NULL"
+            if self.storage.schema_version() >= 36 else "0"
+        )
         tasks: list[BoardTask] = []
         for row in rows:
             contract = TaskContract.model_validate_json(row["contract_json"])
             run = db.execute(
-                "SELECT r.run_id,r.state,a.executor_id FROM runs r "
+                "SELECT r.run_id,r.state,a.executor_id,a.node_id," + recovery_projection +
+                " AS recovery_resolved FROM runs r "
                 "JOIN run_attempts a ON a.run_id=r.run_id "
                 "WHERE r.project_id=? AND r.task_id=? "
                 "ORDER BY r.created_at DESC,r.rowid DESC LIMIT 1",
                 (project_id, row["task_id"]),
             ).fetchone()
-            developing = run is not None and run["state"] not in ("failed", "cancelled")
+            developing = (run is not None and run["state"] not in ("failed", "cancelled")
+                          and not (run["state"] == "interrupted" and run["recovery_resolved"]))
             in_flight = run is not None and run["state"] not in (
                 "succeeded", "failed", "cancelled", "interrupted"
             )
             reason = {
                 "succeeded": "开发快照已生成；Review 与 Verify 尚未运行",
-                "interrupted": "运行中断；进程状态需要对账",
+                "interrupted": ("旧运行仍为中断；重启证据已核对，可明确启动新 Run"
+                                if run["recovery_resolved"] else
+                                "运行中断；进程状态需要对账"),
                 "failed": "上次开发运行失败；查看 Run 详情",
                 "cancelled": "上次开发运行已取消；查看 Run 详情",
             }.get(run["state"]) if run else None
+            if run is not None and run["node_id"] == "plan":
+                reason = {
+                    "succeeded": "只读计划已保存；Developer 尚未形成代码快照",
+                    "failed": "实施计划失败；未启动 Developer",
+                    "cancelled": "实施计划已取消；未启动 Developer",
+                    "interrupted": "实施计划中断；旧工作区需要核对",
+                }.get(run["state"], "只读 Planner 正在运行；尚未形成代码快照")
+                if run["state"] == "succeeded" and self.storage.schema_version() >= 37:
+                    decision = db.execute(
+                        "SELECT c.state FROM plan_continuations c WHERE c.plan_run_id=?",
+                        (run["run_id"],),
+                    ).fetchone()
+                    if decision is None:
+                        reason = "计划已生成；等待 Strict 人工确认或 Standard 自动交接"
+                    elif decision["state"] == "rejected":
+                        reason = "实施计划已被拒绝；未启动 Developer"
+                    else:
+                        reason = "计划已确认；Developer 交接结果待核对"
             if run is not None and run["state"] == "succeeded" and has_review:
                 review = db.execute(
                     "SELECT j.state,j.error_code,r.outcome FROM review_jobs j "
@@ -155,7 +182,7 @@ class BoardService:
             accepted = False
             if self.storage.schema_version() >= 20:
                 cycle = db.execute(
-                    "SELECT c.state,c.reason_code,c.source_snapshot_id,c.next_run_id "
+                    "SELECT c.* "
                     "FROM rework_cycles c WHERE c.project_id=? AND c.task_id=? "
                     "ORDER BY c.rowid DESC LIMIT 1", (project_id, row["task_id"]),
                 ).fetchone()
@@ -167,9 +194,11 @@ class BoardService:
                 blocked = bool(cycle and cycle["state"] == "blocked" and newest and (
                     cycle["source_snapshot_id"] == newest["snapshot_id"] or
                     cycle["next_run_id"] == newest["run_id"]
-                ))
-                if blocked:
-                    reason = "返工次数或总尝试次数达到上限；需要人工处理"
+                ) and not gate_recovered(db, cycle))
+                if blocked and cycle is not None:
+                    reason = ("返工次数或总尝试次数达到上限；需要人工处理"
+                              if cycle["reason_code"] == "REWORK_LIMIT_REACHED"
+                              else "返工后的 Review 或 Verify 无法启动；查看返工记录并人工处理")
             if self.storage.schema_version() >= 21:
                 final = db.execute(
                     "SELECT d.decision,d.snapshot_id,d.contract_revision "
@@ -187,6 +216,9 @@ class BoardService:
                 if accepted and self.final_acceptance is not None:
                     current = self.final_acceptance.get(UUID(project_id), UUID(row["task_id"]))
                     accepted = current.status == "accepted" and current.decision is not None
+                    if "ACCEPTANCE_BASIS_CHANGED" in current.blockers:
+                        blocked = True
+                        reason = "已接受交付的证据发生变化；暂停新运行并检查数据完整性"
                 if accepted:
                     assert newest is not None
                     reason = "当前快照已经由本地 Owner 最终验收；尚未合并或部署"

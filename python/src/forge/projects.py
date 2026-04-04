@@ -14,11 +14,22 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from forge.persistence import ForgePersistence
+from forge.persistence import ForgePersistence, PersistenceSession
 
 TRUST_VERSION: Literal["project-trust/v1"] = "project-trust/v1"
 SCRIPT_NAMES = ("dev", "build", "test", "lint", "typecheck")
 MANIFEST_LIMIT = 1_048_576
+
+
+def active_trusted_project_in(db: PersistenceSession, project_id: UUID) -> bool:
+    """Recheck the current trust boundary inside a writer's final transaction."""
+    return db.execute(
+        "SELECT 1 FROM projects AS p JOIN runtime_metadata AS m "
+        "ON m.key='project.active_id' AND m.value=p.project_id "
+        "WHERE p.project_id=? AND p.archived_at IS NULL AND p.trust_version=? "
+        "LIMIT 1",
+        (str(project_id), TRUST_VERSION),
+    ).fetchone() is not None
 
 
 def timestamp() -> str:
@@ -89,8 +100,8 @@ class Project(BaseModel):
     repositoryType: Literal["git", "none"]
     gitRoot: str | None
     defaultBranch: str | None
-    trusted: Literal[True]
-    trustVersion: Literal["project-trust/v1"]
+    trusted: bool
+    trustVersion: Literal["project-trust/v1", "project-trust/restored-pending"]
     trustApprovedAt: str
     environmentSummaryHash: str
     createdAt: str
@@ -291,6 +302,18 @@ class ProjectService:
     def get(self, project_id: str) -> Project | None:
         return self.storage.get_project(project_id)
 
+    def reprobe(self, project_id: str) -> ProjectProbe:
+        """Inspect only the persisted root of an explicitly trusted Project."""
+        project = self.get(project_id)
+        if project is None or project.archivedAt is not None:
+            raise ProjectError("PROJECT_NOT_FOUND", "Project is not active in Forge")
+        if not project.trusted or project.trustVersion != TRUST_VERSION:
+            raise ProjectError("PROJECT_TRUST_REQUIRED", "Project trust must be renewed")
+        fresh = self.probe(project.rootPath)
+        if fresh.rootPath != project.rootPath or fresh.gitRoot != project.gitRoot:
+            raise ProjectError("PROJECT_PROBE_STALE", "Project root identity has changed")
+        return fresh
+
     def active(self) -> Project | None:
         return self.storage.active_project()
 
@@ -353,6 +376,10 @@ class ProjectService:
                 )
             if previous.archivedAt:
                 return self.storage.restore_project(
+                    str(previous.projectId), expected_revision, fresh
+                )
+            if not previous.trusted:
+                return self.storage.renew_project_trust(
                     str(previous.projectId), expected_revision, fresh
                 )
             return previous

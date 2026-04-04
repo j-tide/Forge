@@ -7,16 +7,29 @@ import json
 import os
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
 from test_delivery import accepted_fixture
+from test_review_issues import capabilities
 from test_verifier_project import git
 
-from forge.acceptance_matrix import AcceptanceMatrixService
+from forge.acceptance_matrix import (
+    AcceptanceDecisionInput,
+    AcceptanceMatrixError,
+    AcceptanceMatrixService,
+)
 from forge.board import BoardService
+from forge.conversations import timestamp
+from forge.development import DevelopmentError, HostDevelopmentService
 from forge.environments import EnvironmentService
-from forge.final_acceptance import FinalAcceptanceService
+from forge.final_acceptance import (
+    AdvisoryWaiverInput,
+    FinalAcceptanceError,
+    FinalAcceptanceInput,
+    FinalAcceptanceService,
+)
 from forge.handoffs import HandoffService
 from forge.processes import ProcessController
 from forge.projects import ProjectService
@@ -24,9 +37,14 @@ from forge.protocol import HOST_PROTOCOL_VERSION, TRANSPORT_VERSION
 from forge.review_copies import ReviewCopyManager
 from forge.review_issues import ReviewIssueService
 from forge.review_runtime import HostReviewService, ReviewRuntimeError, ReviewStartInput
-from forge.run_config import RunConfigService
+from forge.run_config import (
+    RunConfigError,
+    RunConfigSelection,
+    RunConfigService,
+    RunConfigSnapshot,
+)
 from forge.run_inspection import RunInspectionService
-from forge.runs import RunService
+from forge.runs import RunError, RunService, RunStartIntent
 from forge.task_changes import (
     TaskChangeApply,
     TaskChangeDecision,
@@ -73,6 +91,275 @@ def request(storage, project_id: UUID, task_id: UUID,
     )
 
 
+def accept_current(final: FinalAcceptanceService, project_id: UUID,
+                   task_id: UUID, snapshot_id: UUID) -> None:
+    view = final.get(project_id, task_id)
+    assert view.status == "ready"
+    accepted = final.decide(FinalAcceptanceInput(
+        projectId=project_id, taskId=task_id, expectedSnapshotId=snapshot_id,
+        expectedContractRevision=view.contractRevision, expectedBasisHash=view.basisHash,
+        decision="accept", reason="Owner checked the fixed snapshot and all reports.",
+        idempotencyKey=uuid4(),
+    ))
+    assert accepted.status == "accepted"
+
+
+def next_run_selection(config: RunConfigSnapshot, run_id: UUID,
+                       revision: int) -> RunConfigSelection:
+    return RunConfigSelection(
+        runId=run_id, projectId=config.projectId, taskId=config.taskId,
+        expectedTaskRevision=revision, workflow=config.workflow,
+        profile=config.profile, stageProfiles=config.stageProfiles,
+        plugins=config.plugins, budget=config.budget,
+        environmentId=config.environment.environmentId,
+        expectedEnvironmentRevision=config.environment.revision,
+    )
+
+
+@pytest.mark.asyncio
+async def test_accepted_revision_cannot_refreeze_or_queue_even_if_done_projection_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, head, storage, project_id, task_id, snapshot_id = await accepted_fixture(
+        tmp_path, accept=False,
+    )
+    _, configs, matrix, final = services(storage, tmp_path)
+    old = storage.session().execute(
+        "SELECT run_id FROM runs WHERE task_id=?", (str(task_id),),
+    ).fetchone()
+    assert old is not None
+    previous_config = configs.get(project_id, UUID(old["run_id"]))
+    assert previous_config is not None
+    run_id = uuid4()
+    prepared = configs.create(next_run_selection(previous_config, run_id, 2))
+    assert prepared.runId == run_id
+    accept_current(final, project_id, task_id, snapshot_id)
+    with pytest.raises(RunConfigError, match="RUN_CONFIG_STALE"):
+        configs.create(next_run_selection(previous_config, uuid4(), 2))
+    # Simulate an external evidence edit that withdraws Board's Done
+    # projection. The persisted Owner decision must still fence the version.
+    with storage.transaction() as db:
+        db.execute(
+            "INSERT INTO acceptance_decisions(decision_id,idempotency_key,project_id,"
+            "task_id,snapshot_id,contract_revision,criterion_id,status,report_id,"
+            "reason,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+            (str(uuid4()), str(uuid4()), str(project_id), str(task_id),
+             str(snapshot_id), 2, "AC-02", "risk_accepted", None,
+             "Fixture-only evidence altered after Owner acceptance.", timestamp()),
+        )
+    board = BoardService(storage)
+    board.final_acceptance = final
+    projected = board.detail(str(project_id), str(task_id))
+    assert projected.detail.task.state == "blocked"
+    assert "证据发生变化" in (projected.detail.task.blockReason or "")
+    # Even if a future projection maps an invalidated delivery back to TODO,
+    # the immutable Owner decision remains the write authority.
+    monkeypatch.setattr(board, "detail", lambda *_: projected.model_copy(update={
+        "detail": projected.detail.model_copy(update={
+            "task": projected.detail.task.model_copy(update={"state": "todo"}),
+        }),
+    }))
+    # The first gate runs before any provider call or new workspace creation.
+    development = object.__new__(HostDevelopmentService)
+    development.board = board
+    development.storage = storage
+    with pytest.raises(DevelopmentError, match="RUN_CONFLICT"):
+        development._task(project_id, task_id, 2)
+    before = storage.session().execute(
+        "SELECT COUNT(*) FROM runs WHERE task_id=?", (str(task_id),),
+    ).fetchone()[0]
+    with pytest.raises(RunError, match="RUN_CONFLICT"):
+        RunService(storage, configs).begin(RunStartIntent(
+            runId=run_id, projectId=project_id, taskId=task_id,
+            attemptId=uuid4(), workspaceId=uuid4(), workspaceLeaseId=uuid4(),
+            leaseEpoch=1, baseRevision=head, nodeId="develop",
+            executorId=prepared.profile.executorPluginId,
+            configHash=prepared.snapshotHash, createdAt=timestamp(),
+        ))
+    assert storage.session().execute(
+        "SELECT COUNT(*) FROM runs WHERE task_id=?", (str(task_id),),
+    ).fetchone()[0] == before
+    assert git(source, "status", "--porcelain") == ""
+    storage.close()
+
+
+@pytest.mark.asyncio
+async def test_owner_accepted_snapshot_rejects_new_review_and_verify(
+    tmp_path: Path,
+) -> None:
+    source, head, storage, project_id, task_id, snapshot_id = await accepted_fixture(tmp_path)
+    _, configs, matrix, final = services(storage, tmp_path)
+    assert final.get(project_id, task_id).status == "accepted"
+    prior = storage.session().execute(
+        "SELECT run_id FROM runs WHERE task_id=?", (str(task_id),),
+    ).fetchone()
+    assert prior is not None
+    run_id = UUID(prior["run_id"])
+    projects = ProjectService(storage)
+    handoffs = HandoffService(storage)
+    inspections = RunInspectionService(storage, RunService(storage, configs))
+    copies = ReviewCopyManager(tmp_path / "accepted-review", uuid4(), lambda _run: False)
+    issues = ReviewIssueService(storage, handoffs, configs, inspections, copies)
+    reviewer = HostReviewService(storage, projects, handoffs, configs,
+                                 inspections, copies, issues, adapter=None)  # type: ignore[arg-type]
+    verifier = matrix.verifier
+    before_review = storage.session().execute(
+        "SELECT COUNT(*) FROM review_jobs WHERE task_id=?", (str(task_id),),
+    ).fetchone()[0]
+    before_verify = storage.session().execute(
+        "SELECT COUNT(*) FROM verifier_jobs WHERE task_id=?", (str(task_id),),
+    ).fetchone()[0]
+    before_decisions = storage.session().execute(
+        "SELECT COUNT(*) FROM acceptance_decisions WHERE task_id=?", (str(task_id),),
+    ).fetchone()[0]
+    before_waivers = storage.session().execute(
+        "SELECT COUNT(*) FROM review_advisory_waivers WHERE task_id=?", (str(task_id),),
+    ).fetchone()[0]
+    existing_decision = storage.session().execute(
+        "SELECT * FROM acceptance_decisions WHERE task_id=? AND criterion_id='AC-01' "
+        "ORDER BY rowid DESC LIMIT 1", (str(task_id),),
+    ).fetchone()
+    assert existing_decision is not None
+    assert matrix.decide(AcceptanceDecisionInput(
+        projectId=project_id, taskId=task_id, expectedSnapshotId=snapshot_id,
+        expectedContractRevision=2, criterionId="AC-01", status="verified",
+        reportId=UUID(existing_decision["report_id"]),
+        reason=existing_decision["reason"],
+        idempotencyKey=UUID(existing_decision["idempotency_key"]),
+    )).snapshotId == snapshot_id
+    with pytest.raises(ReviewRuntimeError, match="REVIEW_RESULT_STALE"):
+        await reviewer.start(ReviewStartInput(
+            projectId=project_id, taskId=task_id, developmentRunId=run_id,
+            expectedSnapshotId=snapshot_id, modelId="fixture-model",
+            idempotencyKey=uuid4(),
+        ))
+    with pytest.raises(VerifierError, match="VERIFY_SOURCE_STALE"):
+        await verifier.start(VerifyStartInput(
+            projectId=project_id, taskId=task_id, developmentRunId=run_id,
+            expectedSnapshotId=snapshot_id, kind="test", presetId=None,
+            idempotencyKey=uuid4(),
+        ))
+    with pytest.raises(AcceptanceMatrixError, match="ACCEPTANCE_SOURCE_STALE"):
+        matrix.decide(AcceptanceDecisionInput(
+            projectId=project_id, taskId=task_id, expectedSnapshotId=snapshot_id,
+            expectedContractRevision=2, criterionId="AC-02", status="risk_accepted",
+            reportId=None, reason="Owner changed criterion after final acceptance.",
+            idempotencyKey=uuid4(),
+        ))
+    accepted_view = final.get(project_id, task_id)
+    assert accepted_view.reviewReportId is not None
+    with pytest.raises(FinalAcceptanceError, match="ACCEPTANCE_SOURCE_STALE"):
+        final.waive_advisory(AdvisoryWaiverInput(
+            projectId=project_id, taskId=task_id, issueId=uuid4(),
+            expectedSnapshotId=snapshot_id, expectedReviewId=accepted_view.reviewReportId,
+            expectedIssueRevision=1, nonSecurityConfirmed=True,
+            reason="Owner attempted to waive after final acceptance.",
+            idempotencyKey=uuid4(),
+        ))
+    assert storage.session().execute(
+        "SELECT COUNT(*) FROM review_jobs WHERE task_id=?", (str(task_id),),
+    ).fetchone()[0] == before_review
+    assert storage.session().execute(
+        "SELECT COUNT(*) FROM verifier_jobs WHERE task_id=?", (str(task_id),),
+    ).fetchone()[0] == before_verify
+    assert storage.session().execute(
+        "SELECT COUNT(*) FROM acceptance_decisions WHERE task_id=?", (str(task_id),),
+    ).fetchone()[0] == before_decisions
+    assert storage.session().execute(
+        "SELECT COUNT(*) FROM review_advisory_waivers WHERE task_id=?", (str(task_id),),
+    ).fetchone()[0] == before_waivers
+    assert final.get(project_id, task_id).status == "accepted"
+    assert git(source, "rev-parse", "HEAD") == head
+    assert git(source, "status", "--porcelain") == ""
+    storage.close()
+
+
+@pytest.mark.asyncio
+async def test_review_preparation_cannot_race_owner_acceptance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, head, storage, project_id, task_id, snapshot_id = await accepted_fixture(
+        tmp_path, accept=False,
+    )
+    _, configs, _, final = services(storage, tmp_path)
+    run_row = storage.session().execute(
+        "SELECT run_id FROM runs WHERE task_id=?", (str(task_id),),
+    ).fetchone()
+    assert run_row is not None
+    handoffs = HandoffService(storage)
+    inspections = RunInspectionService(storage, RunService(storage, configs))
+    copies = ReviewCopyManager(tmp_path / "racing-review", uuid4(), lambda _run: False)
+    await copies.open()
+    issues = ReviewIssueService(storage, handoffs, configs, inspections, copies)
+    adapter = AsyncMock()
+    adapter.probe.return_value = capabilities()
+    reviewer = HostReviewService(storage, ProjectService(storage), handoffs, configs,
+                                 inspections, copies, issues, adapter=adapter)
+    original_create = copies.create
+
+    async def create_then_accept(*args):
+        copy = await original_create(*args)
+        accept_current(final, project_id, task_id, snapshot_id)
+        return copy
+
+    monkeypatch.setattr(copies, "create", create_then_accept)
+    with pytest.raises(ReviewRuntimeError, match="REVIEW_RESULT_STALE"):
+        await reviewer.start(ReviewStartInput(
+            projectId=project_id, taskId=task_id,
+            developmentRunId=UUID(run_row["run_id"]),
+            expectedSnapshotId=snapshot_id, modelId="fixture-model",
+            idempotencyKey=uuid4(),
+        ))
+    assert not reviewer.list_for_task(project_id, task_id)
+    assert all(item.status == "released" for item in copies.records.values())
+    assert git(source, "rev-parse", "HEAD") == head
+    assert git(source, "status", "--porcelain") == ""
+    storage.close()
+
+
+@pytest.mark.asyncio
+async def test_verify_workspace_preparation_cannot_race_owner_acceptance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, head, storage, project_id, task_id, snapshot_id = await accepted_fixture(
+        tmp_path, accept=False,
+    )
+    _, _, matrix, final = services(storage, tmp_path)
+    verifier = matrix.verifier
+    await verifier.open()
+    run_row = storage.session().execute(
+        "SELECT run_id FROM runs WHERE task_id=?", (str(task_id),),
+    ).fetchone()
+    preset_row = storage.session().execute(
+        "SELECT preset_id FROM command_presets WHERE project_id=? "
+        "AND approval_hash IS NOT NULL ORDER BY revision DESC LIMIT 1",
+        (str(project_id),),
+    ).fetchone()
+    assert run_row is not None and preset_row is not None
+    original_create = verifier.workspaces.create
+
+    async def create_then_accept(*args, **kwargs):
+        workspace = await original_create(*args, **kwargs)
+        accept_current(final, project_id, task_id, snapshot_id)
+        return workspace
+
+    monkeypatch.setattr(verifier.workspaces, "create", create_then_accept)
+    before = len(verifier.list_for_task(project_id, task_id))
+    with pytest.raises(VerifierError, match="VERIFY_SOURCE_STALE"):
+        await verifier.start(VerifyStartInput(
+            projectId=project_id, taskId=task_id,
+            developmentRunId=UUID(run_row["run_id"]),
+            expectedSnapshotId=snapshot_id, kind="test",
+            presetId=UUID(preset_row["preset_id"]), idempotencyKey=uuid4(),
+        ))
+    assert len(verifier.list_for_task(project_id, task_id)) == before
+    assert all(item.status == "released" for item in verifier.workspaces.records.values())
+    assert git(source, "rev-parse", "HEAD") == head
+    assert git(source, "status", "--porcelain") == ""
+    await verifier.shutdown()
+    storage.close()
+
+
 @pytest.mark.asyncio
 async def test_revision_keeps_old_run_and_stales_current_evidence(tmp_path: Path) -> None:
     source, head, storage, project_id, task_id, snapshot_id = await accepted_fixture(tmp_path)
@@ -104,6 +391,8 @@ async def test_revision_keeps_old_run_and_stales_current_evidence(tmp_path: Path
     assert matrix.get(project_id, task_id).snapshotId is None
     assert final.get(project_id, task_id).status != "accepted"
     assert configs.get(project_id, UUID(prior["run_id"])) == old_config
+    revised_config = configs.create(next_run_selection(old_config, uuid4(), 3))
+    assert revised_config.taskRevision == 3
     projects = ProjectService(storage)
     handoffs = HandoffService(storage)
     inspections = RunInspectionService(storage, RunService(storage, configs))

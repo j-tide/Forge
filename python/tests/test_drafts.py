@@ -21,10 +21,56 @@ from forge.drafts import (
     DraftRequest,
     DraftReviseInput,
     DraftService,
+    ResolvedQuestion,
     TaskContract,
+    TaskDraft,
+    prepare_revision,
 )
 from forge.persistence import ForgePersistence
 from forge.projects import TRUST_VERSION, ProjectService
+
+
+def test_clarification_must_change_the_contract_used_by_future_runs() -> None:
+    project_id, draft_id, conversation_id, message_id = (
+        uuid4(), uuid4(), uuid4(), uuid4()
+    )
+    question = "Should whitespace-only email also be rejected?"
+    original = TaskContract(
+        schemaVersion="1.0", taskId=str(draft_id), projectId=str(project_id),
+        revision=1, title="Validate email", type="bug", goal="Reject empty email",
+        acceptance=[AcceptanceCriterion(
+            id="AC-1", statement="Empty email fails", method="automated",
+            required=True, sourceRefs=[f"message:{message_id}"],
+        )], constraints=[], scope=[], outOfScope=[], dependencies=[],
+        openQuestions=[question], assumptions=[],
+        sourceRefs=[f"message:{message_id}"], workflowRef="standard", priority="normal",
+    )
+    before = TaskDraft(
+        draftId=draft_id, projectId=project_id, conversationId=conversation_id,
+        sourceMessageId=message_id, revision=1, createdAt="2026-09-26T00:00:00Z",
+        updatedAt="2026-09-26T00:00:00Z", intent="new_task",
+        status="needs_clarification", contract=original, editableText="Validate email",
+        errorCode=None, modelProvider="codex",
+    )
+    decision_id = uuid4()
+    candidate = original.model_copy(update={
+        "revision": 2, "openQuestions": [],
+        "sourceRefs": [*original.sourceRefs, f"decision:{decision_id}"],
+    })
+    request = DraftReviseInput(
+        projectId=project_id, draftId=draft_id, expectedRevision=1,
+        contract=candidate, decisionId=decision_id,
+        decisionSummary="Whitespace-only input is invalid",
+        resolvedQuestions=[ResolvedQuestion(question=question, answer="Yes")],
+        removedAcceptanceIds=[], confirmScopeChange=False,
+    )
+    with pytest.raises(DraftError, match="DRAFT_CLARIFICATION_NOT_APPLIED"):
+        prepare_revision(before, request)
+    applied = candidate.model_copy(update={
+        "goal": "Reject empty and whitespace-only email",
+    })
+    changed = prepare_revision(before, request.model_copy(update={"contract": applied}))
+    assert "goal" in changed and "openQuestions" in changed
 
 
 def test_task_contract_rejects_untrusted_text_and_invalid_dependency() -> None:

@@ -60,7 +60,18 @@ def test_git_probe_trust_duplicate_restart_and_metadata_only_remove(tmp_path: Pa
     reopened.open()
     assert reopened.schema_version() == 15
     assert reopened.active_project() and reopened.active_project().projectId == saved.projectId
+    trusted_probe = ProjectService(reopened).reprobe(str(saved.projectId))
+    assert trusted_probe.rootPath == saved.rootPath
+    assert trusted_probe.workingTree == "dirty"
+    (source / "package.json").write_text(
+        '{"name":"fixture","scripts":{"test":"node --test","build":"node build.js"}}'
+    )
+    assert ProjectService(reopened).reprobe(str(saved.projectId)).scriptsHash != (
+        trusted_probe.scriptsHash
+    )
     assert reopened.remove_project(str(saved.projectId), saved.revision, timestamp())
+    with pytest.raises(ProjectError, match="Project is not active"):
+        ProjectService(reopened).reprobe(str(saved.projectId))
     assert reopened.list_projects() == []
     reopened.close()
     assert (source / "dirty.txt").read_text() == "user data"

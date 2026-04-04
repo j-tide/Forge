@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from forge.persistence import ForgePersistence
+from forge.persistence import ForgePersistence, PersistenceSession
 
 
 def timestamp() -> str:
@@ -174,6 +174,20 @@ class ConversationService:
         ).fetchall()
         return [self._message(row) for row in rows]
 
+    def page_visible_messages(
+        self, project_id: str, conversation_id: str,
+        before_sequence: int | None, limit: int,
+    ) -> list[ConversationMessage]:
+        """Bounded mobile history; internal system/tool content is never returned."""
+        if self.get(project_id, conversation_id) is None:
+            raise ConversationError("CONVERSATION_NOT_FOUND")
+        rows = self.storage.session().execute(
+            "SELECT * FROM messages WHERE conversation_id=? AND role IN ('user','assistant') "
+            "AND (? IS NULL OR sequence<?) ORDER BY sequence DESC LIMIT ?",
+            (conversation_id, before_sequence, before_sequence, limit + 1),
+        ).fetchall()
+        return [self._message(row) for row in rows]
+
     def propose(self, project_id: str, conversation_id: str, message_id: str) -> ControlProposal:
         message = next(
             (item for item in self.messages(project_id, conversation_id)
@@ -226,48 +240,58 @@ class ConversationService:
         )
 
     def send(self, data: ConversationSend) -> dict[str, object]:
+        with self.storage.transaction() as db:
+            return self.send_in_transaction(db, data)
+
+    def send_in_transaction(
+        self, db: PersistenceSession, data: ConversationSend,
+        *, expected_revision: int | None = None,
+    ) -> dict[str, object]:
+        """Share the message write with a remote receipt in one SQLite transaction."""
         project_id, conversation_id = str(data.projectId), str(data.conversationId)
         content_hash = hashlib.sha256(
             json.dumps(
                 [data.text, [str(item) for item in data.attachmentIds]], separators=(",", ":")
             ).encode()
         ).hexdigest()
-        with self.storage.transaction() as db:
-            if self.get(project_id, conversation_id) is None:
-                raise ConversationError("CONVERSATION_NOT_FOUND")
-            existing = db.execute(
+        current = self.get(project_id, conversation_id)
+        if current is None:
+            raise ConversationError("CONVERSATION_NOT_FOUND")
+        existing = db.execute(
                 "SELECT content_hash,user_message_id,status FROM conversation_requests "
                 "WHERE conversation_id=? AND idempotency_key=?",
                 (conversation_id, data.idempotencyKey),
             ).fetchone()
-            if existing is not None:
-                if existing["content_hash"] != content_hash:
-                    raise ConversationError("IDEMPOTENCY_CONFLICT")
-                row = db.execute(
+        if existing is not None:
+            if existing["content_hash"] != content_hash:
+                raise ConversationError("IDEMPOTENCY_CONFLICT")
+            row = db.execute(
                     "SELECT * FROM messages WHERE message_id=?", (existing["user_message_id"],)
                 ).fetchone()
-                if row is None:
-                    raise ConversationError("MESSAGE_NOT_FOUND")
-                return {
-                    "message": self._message(row), "replay": True,
-                    "replyStatus": "completed" if existing["status"] == "completed"
-                    else "unavailable",
-                }
-            now = timestamp()
-            message_id = str(uuid4())
-            request_id = str(uuid4())
-            sequence_row = db.execute(
+            if row is None:
+                raise ConversationError("MESSAGE_NOT_FOUND")
+            return {
+                "message": self._message(row), "replay": True,
+                "replyStatus": "completed" if existing["status"] == "completed"
+                else "unavailable",
+            }
+        if expected_revision is not None and current.revision != expected_revision:
+            raise ConversationError("REVISION_CONFLICT")
+        now = timestamp()
+        message_id = str(uuid4())
+        request_id = str(uuid4())
+        sequence_row = db.execute(
                 "SELECT COALESCE(MAX(sequence),0)+1 FROM messages WHERE conversation_id=?",
                 (conversation_id,),
             ).fetchone()
-            assert sequence_row is not None
-            sequence = sequence_row[0]
-            db.execute(
+        assert sequence_row is not None
+        sequence = sequence_row[0]
+        db.execute(
                 "INSERT INTO messages(message_id,conversation_id,sequence,role,content_json,status,"
                 "created_at,updated_at) VALUES(?,?,?,'user',?,'completed',?,?)",
                 (message_id, conversation_id, sequence, json.dumps({"text": data.text}), now, now),
             )
-            db.execute(
+        db.execute(
                 "INSERT INTO conversation_requests(request_id,conversation_id,idempotency_key,"
                 "content_hash,user_message_id,status,created_at,updated_at) "
                 "VALUES(?,?,?,?,?,'failed',?,?)",
@@ -281,13 +305,16 @@ class ConversationService:
                     now,
                 ),
             )
-            db.execute(
-                "UPDATE conversations SET updated_at=?,revision=revision+1 WHERE conversation_id=?",
-                (now, conversation_id),
-            )
-            row = db.execute("SELECT * FROM messages WHERE message_id=?", (message_id,)).fetchone()
-            assert row is not None
-            return {"message": self._message(row), "replay": False, "replyStatus": "unavailable"}
+        changed = db.execute(
+            "UPDATE conversations SET updated_at=?,revision=revision+1 "
+            "WHERE project_id=? AND conversation_id=? AND revision=? AND archived_at IS NULL",
+            (now, project_id, conversation_id, current.revision),
+        )
+        if changed.rowcount != 1:
+            raise ConversationError("REVISION_CONFLICT")
+        row = db.execute("SELECT * FROM messages WHERE message_id=?", (message_id,)).fetchone()
+        assert row is not None
+        return {"message": self._message(row), "replay": False, "replyStatus": "unavailable"}
 
     def archive(self, project_id: str, conversation_id: str, revision: int) -> Conversation:
         with self.storage.transaction() as db:

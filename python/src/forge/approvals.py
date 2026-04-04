@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from contextlib import AbstractContextManager, nullcontext
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 from uuid import UUID, uuid4
@@ -12,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from forge.conversations import timestamp
 from forge.drafts import DraftService, TaskContract, TaskDraft
-from forge.persistence import ForgePersistence
+from forge.persistence import ForgePersistence, PersistenceSession
 
 
 class ApprovalError(Exception):
@@ -196,11 +197,15 @@ class ApprovalService:
             assert result is not None
             return result
 
-    def decide(self, value: ApprovalDecideInput) -> TaskApproval:
+    def decide(self, value: ApprovalDecideInput,
+               session: PersistenceSession | None = None) -> TaskApproval:
         project_id, decision = str(value.projectId), value.decision
         error: str | None = None
         outcome: TaskApproval | None = None
-        with self.storage.transaction() as db:
+        context: AbstractContextManager[PersistenceSession] = (
+            self.storage.transaction() if session is None else nullcontext(session)
+        )
+        with context as db:
             row = db.execute(
                 "SELECT * FROM task_approvals WHERE project_id=? AND approval_id=?",
                 (project_id, str(decision.approvalId)),
