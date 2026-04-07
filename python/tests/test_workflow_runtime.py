@@ -19,7 +19,11 @@ from forge.workflow_drafts import (
     WorkflowPublishInput,
     WorkflowSaveInput,
 )
-from forge.workflow_runtime import WorkflowRuntimeError, admit_linear_workflow
+from forge.workflow_runtime import (
+    WorkflowRuntimeError,
+    admit_linear_workflow,
+    admit_planned_workflow,
+)
 from forge.workflow_templates import load_template
 
 
@@ -56,4 +60,17 @@ def test_published_quick_chain_admitted_but_planner_graph_is_not(tmp_path: Path)
             workflowId=standard.id, revision=1, definition=standard,
             contentHash=compile_workflow(standard).contentHash, createdAt=timestamp(),
         ), catalog())
+    for name, approval in (("standard", False), ("strict", True)):
+        planned = load_template(name).model_copy(update={
+            "id": f"workflow.{name}.fixture",
+        })
+        publication = PublishedWorkflow(
+            workflowId=planned.id, revision=1, definition=planned,
+            contentHash=compile_workflow(planned).contentHash,
+            createdAt=timestamp(),
+        )
+        admitted = admit_planned_workflow(publication, catalog(planner=True))
+        assert admitted.planner_binding == "profile.planner"
+        assert admitted.developer_binding == "profile.developer"
+        assert admitted.requires_plan_approval is approval
     storage.close()

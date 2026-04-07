@@ -63,7 +63,7 @@ class ContextItem(ContextEntry):
     kind: Literal[
         "goal", "acceptance", "constraint", "scope", "out_of_scope",
         "checkpoint_action", "checkpoint_issue", "rework_feedback",
-        "retrieved_knowledge", "validated_memory",
+        "retrieved_knowledge", "validated_memory", "plan",
     ]
     authority: Literal["approved_task", "run_observation", "review_evidence",
                        "verify_evidence", "human_decision", "untrusted_project",
@@ -120,6 +120,7 @@ def build_context_bundle(
     created_at: str | None = None,
     rework_feedback: list[ContextItem] | None = None,
     retrieval_items: list[ContextItem] | None = None,
+    plan_items: list[ContextItem] | None = None,
 ) -> ContextBundle:
     config = verify_snapshot(raw_config)
     if not 1000 <= max_chars <= 32_000:
@@ -163,6 +164,13 @@ def build_context_bundle(
                 for item in rework_feedback):
             raise ContextError("CONTEXT_INVALID")
         required.extend(rework_feedback)
+    if plan_items:
+        if len(plan_items) > 12 or any(
+            item.kind != "plan" or item.authority != "run_observation"
+            or not item.sourceRef.startswith("plan:") for item in plan_items
+        ):
+            raise ContextError("CONTEXT_INVALID")
+        required.extend(plan_items)
     if retrieval_items:
         if len(retrieval_items) > 40 or any(
             (item.kind, item.authority) not in (
@@ -237,6 +245,21 @@ class ContextService:
             (str(project_id), str(bundle_id)),
         ).fetchone()
         return verify_context_bundle(json.loads(row["bundle_json"])) if row else None
+
+    def run_bundle(self, project_id: UUID, run_id: UUID) -> ContextBundle | None:
+        row = self.storage.session().execute(
+            "SELECT bundle_json FROM context_bundles WHERE project_id=? AND run_id=? "
+            "ORDER BY created_at DESC,bundle_id DESC LIMIT 1",
+            (str(project_id), str(run_id)),
+        ).fetchone()
+        if row is None:
+            return None
+        bundle = verify_context_bundle(json.loads(row["bundle_json"]))
+        config = self.configs.get(project_id, run_id)
+        if (config is None or bundle.runId != run_id or bundle.taskId != config.taskId
+                or bundle.configHash != config.snapshotHash):
+            raise ContextError("CONTEXT_CONFLICT")
+        return bundle
 
     def _memory_sources_current(self, project_id: UUID, memory: Row) -> bool:
         source_json = memory["source_json"]
@@ -350,7 +373,8 @@ class ContextService:
 
     def save_bundle(self, value: ContextBundle,
                     rework_feedback: list[ContextItem] | None = None,
-                    retrieval_items: list[ContextItem] | None = None) -> ContextBundle:
+                    retrieval_items: list[ContextItem] | None = None,
+                    plan_items: list[ContextItem] | None = None) -> ContextBundle:
         bundle = verify_context_bundle(value)
         with self.storage.transaction() as db:
             config = self.configs.get(bundle.projectId, bundle.runId)
@@ -369,7 +393,7 @@ class ContextService:
                 raise ContextError("CONTEXT_CONFLICT")
             derived = build_context_bundle(
                 config, checkpoint, bundle.maxChars, bundle.bundleId, bundle.createdAt,
-                rework_feedback, retrieval_items,
+                rework_feedback, retrieval_items, plan_items,
             )
             if derived.contentHash != bundle.contentHash:
                 raise ContextError("CONTEXT_CONFLICT")

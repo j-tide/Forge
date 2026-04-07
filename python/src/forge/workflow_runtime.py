@@ -7,6 +7,8 @@ published definitions remain editable/published but cannot claim execution.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from forge.workflow_compiler import WorkflowCatalog, compile_workflow
 from forge.workflow_drafts import PublishedWorkflow
 from forge.workflow_templates import load_template
@@ -16,6 +18,58 @@ class WorkflowRuntimeError(Exception):
     def __init__(self, code: str) -> None:
         super().__init__(code)
         self.code = code
+
+
+@dataclass(frozen=True)
+class PlannedWorkflow:
+    planner_binding: str
+    developer_binding: str
+    reviewer_binding: str
+    requires_plan_approval: bool
+
+
+def _matches_shape(publication: PublishedWorkflow, reference_id: str) -> bool:
+    template = publication.definition
+    reference = load_template(reference_id)
+    if template.start != reference.start or {node.id for node in template.nodes} != {
+        node.id for node in reference.nodes
+    }:
+        return False
+    actual_nodes = {node.id: node for node in template.nodes}
+    for expected in reference.nodes:
+        actual = actual_nodes[expected.id]
+        if actual.model_dump(exclude={"binding", "label"}) != expected.model_dump(
+            exclude={"binding", "label"}
+        ):
+            return False
+        if expected.kind in ("approval", "verifier") and actual.binding != expected.binding:
+            return False
+    return (
+        [edge.model_dump(by_alias=True) for edge in template.edges] ==
+        [edge.model_dump(by_alias=True) for edge in reference.edges]
+        and [edge.model_dump(by_alias=True) for edge in template.rework] ==
+        [edge.model_dump(by_alias=True) for edge in reference.rework]
+        and template.maxTotalAttempts == reference.maxTotalAttempts
+        and template.onUnmatched == reference.onUnmatched
+        and template.finalAcceptance == reference.finalAcceptance
+    )
+
+
+def admit_planned_workflow(publication: PublishedWorkflow,
+                           catalog: WorkflowCatalog) -> PlannedWorkflow:
+    compiled = compile_workflow(publication.definition, catalog=catalog)
+    if not compiled.launchable or compiled.contentHash != publication.contentHash:
+        raise WorkflowRuntimeError("WORKFLOW_RUNTIME_UNAVAILABLE")
+    strict = _matches_shape(publication, "strict")
+    if not strict and not _matches_shape(publication, "standard"):
+        raise WorkflowRuntimeError("WORKFLOW_RUNTIME_UNSUPPORTED")
+    nodes = {node.id: node for node in publication.definition.nodes}
+    return PlannedWorkflow(
+        planner_binding=nodes["plan"].binding,
+        developer_binding=nodes["develop"].binding,
+        reviewer_binding=nodes["review"].binding,
+        requires_plan_approval=strict,
+    )
 
 
 def admit_linear_workflow(publication: PublishedWorkflow,

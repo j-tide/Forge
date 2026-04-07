@@ -94,7 +94,23 @@ def test_real_source_is_optional_bounded_and_revocation_does_not_rewrite_run(
     assert knowledge.search(KnowledgeSearchInput(  # current retrieval authority is gone
         projectId=project.projectId, environmentId=env.environmentId,
         query="start_date")).results == []
+    future_preview = StageContextBuilder(
+        storage, configs, knowledge, ProjectMemoryService(storage, ProjectService(storage)),
+    ).preview(StageContextInput(projectId=project.projectId, runId=config.runId,
+                                query="start_date"))
+    assert future_preview.status == "insufficient_sources"
+    assert not any(item.kind == "retrieved_knowledge" for item in future_preview.items)
     storage.close()
+    reopened = ForgePersistence(tmp_path / "data")
+    reopened.open()
+    reopened.migrate(29)
+    restored = ContextService(
+        reopened, RunConfigService(reopened, EnvironmentService(reopened)))
+    assert restored.run_sources(project.projectId, config.runId)[0].status == "revoked"
+    persisted = restored.get_bundle(project.projectId, bundle.bundleId)
+    assert persisted is not None and persisted.contentHash == bundle.contentHash
+    assert persisted.items[-1].sourceRef == document.sourceRef
+    reopened.close()
 
 
 def test_historical_run_marks_validated_memory_revoked_without_erasing_frozen_input(
@@ -166,8 +182,22 @@ def test_historical_run_marks_validated_memory_revoked_without_erasing_frozen_in
         projectId=project.projectId, environmentId=env.environmentId,
         query="start_date",
     )).items == []
+    future_preview = StageContextBuilder(storage, configs, knowledge, memories).preview(
+        StageContextInput(projectId=project.projectId, runId=config.runId,
+                          query="start_date"))
+    assert not any(item.kind == "validated_memory" for item in future_preview.items)
+    assert any(item.kind == "retrieved_knowledge" for item in future_preview.items)
     saved = contexts.get_bundle(project.projectId, bundle.bundleId)
     assert saved is not None and saved.contentHash == bundle.contentHash
     assert saved.items[-1] == frozen_item
     assert (root / "docs" / "convention.md").read_text() == original
     storage.close()
+    reopened = ForgePersistence(tmp_path / "memory-data")
+    reopened.open()
+    reopened.migrate(29)
+    restored = ContextService(
+        reopened, RunConfigService(reopened, EnvironmentService(reopened)))
+    assert restored.run_sources(project.projectId, config.runId)[0].status == "revoked"
+    persisted = restored.get_bundle(project.projectId, bundle.bundleId)
+    assert persisted is not None and persisted.items[-1] == frozen_item
+    reopened.close()

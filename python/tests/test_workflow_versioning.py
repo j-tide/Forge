@@ -187,6 +187,12 @@ def test_published_revisions_freeze_old_and_new_run_configs(tmp_path: Path) -> N
     restored = RunConfigService(reopened, EnvironmentService(reopened))
     assert restored.get(project.projectId, old.runId).workflow == lock_one
     assert restored.get(project.projectId, new.runId).workflow == lock_two
+    assert RunService(reopened, restored).get(project.projectId, new.runId).state == "queued"
+    # Publishing a different graph and reserving a Run must not project the
+    # Task as Done before its actual review, verification and owner decision.
+    board = BoardService(reopened).snapshot(str(project.projectId))
+    assert len(board.tasks) == 1
+    assert board.tasks[0].state != "done"
     reopened.close()
 
 

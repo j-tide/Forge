@@ -44,10 +44,14 @@ def capabilities(**changes: object) -> ExecutorCapabilities:
     return ExecutorCapabilities.model_validate({**values, **changes})
 
 
-def catalog(*, verifier: bool = True, read_only: bool = True) -> WorkflowCatalog:
+def catalog(*, verifier: bool = True, read_only: bool = True,
+            planner: bool = False) -> WorkflowCatalog:
+    profiles = {"profile.developer": profile("developer", "workspace-write"),
+                "profile.reviewer": profile("reviewer", "read-only")}
+    if planner:
+        profiles["profile.planner"] = profile("planner", "read-only")
     return WorkflowCatalog(
-        profiles={"profile.developer": profile("developer", "workspace-write"),
-                  "profile.reviewer": profile("reviewer", "read-only")},
+        profiles=profiles,
         executors={"fixture.codex": capabilities(readOnlyEnforced=read_only)},
         verifiers=frozenset(("verifier.project-checks",)) if verifier else frozenset(),
     )
@@ -68,6 +72,20 @@ def test_all_presets_compile_structurally_but_only_installed_bindings_can_launch
     missing_planner = compile_workflow(load_template("standard"), catalog=catalog())
     assert not missing_planner.launchable
     assert "WORKFLOW_PROFILE_UNAVAILABLE" in codes(missing_planner)
+
+
+def test_planner_role_uses_node_output_not_board_column_and_checks_capability() -> None:
+    # Both authoritative presets put Plan in the development column. A
+    # correctly bound Planner must not be misdiagnosed as a Developer.
+    for name in ("standard", "strict"):
+        result = compile_workflow(load_template(name), catalog=catalog(planner=True))
+        assert "WORKFLOW_PROFILE_ROLE_MISMATCH" not in codes(result)
+        assert result.launchable and result.issues == []
+        unsafe = compile_workflow(load_template(name), catalog=catalog(
+            planner=True, read_only=False,
+        ))
+        assert not unsafe.launchable
+        assert "READ_ONLY_UNENFORCED" in codes(unsafe)
 
 
 def test_missing_verifier_and_read_only_capability_fail_before_any_execution() -> None:

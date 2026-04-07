@@ -192,9 +192,13 @@ def compile_workflow(
                 issue("WORKFLOW_PROFILE_UNAVAILABLE", f"{path}.binding",
                       f"Agent Profile {node.binding} is not installed")
                 continue
-            expected_role = {
-                "todo": "planner", "development": "developer", "review": "reviewer",
-            }.get(node.boardColumn)
+            # Planning is a read-only Agent stage in the development column of
+            # the authoritative standard/strict presets. The board column is
+            # presentation state, not the Agent's role.
+            expected_role = (
+                "planner" if node.outputSchema == "plan-result" else
+                {"development": "developer", "review": "reviewer"}.get(node.boardColumn)
+            )
             if expected_role is None or profile.role != expected_role:
                 issue("WORKFLOW_PROFILE_ROLE_MISMATCH", f"{path}.binding",
                       "Agent Profile role does not match the Workflow stage")
