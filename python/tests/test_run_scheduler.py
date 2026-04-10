@@ -1,15 +1,17 @@
 """Real process fixture exercises Python Host scheduler without claiming Codex parity."""
 
 import asyncio
+import hashlib
 import json
 import os
 import platform
 import subprocess
 import sys
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
+from pydantic import ValidationError
 
 from forge.agent_profiles import AgentProfile, AgentProfileService, ProfileSave
 from forge.approvals import (
@@ -17,11 +19,13 @@ from forge.approvals import (
     ApprovalDecision,
     ApprovalRequestInput,
     ApprovalService,
+    canonical_json,
 )
 from forge.board import BoardService
 from forge.context import ContextService, build_context_bundle, executor_context
 from forge.conversations import ConversationSend, ConversationService, timestamp
 from forge.development import DevelopmentError, HostDevelopmentService, RunLaunchInput
+from forge.device_pairing import PairingDecisionInput
 from forge.drafts import (
     AcceptanceCriterion,
     DraftRequest,
@@ -31,6 +35,7 @@ from forge.drafts import (
 )
 from forge.environments import EnvironmentService
 from forge.executor_contracts import (
+    CommandStarted,
     ExecutorCapabilities,
     ExecutorStartError,
     RunCancelled,
@@ -38,12 +43,15 @@ from forge.executor_contracts import (
     RunFailed,
     RunStarted,
     ScheduledExecutorRequest,
+    UsageUpdated,
 )
 from forge.handoffs import HostSnapshotService
+from forge.host import HostRuntime
 from forge.persistence import LATEST_SCHEMA, ForgePersistence
 from forge.processes import ProcessController
 from forge.projects import TRUST_VERSION, ProjectService
 from forge.protocol import encode_frame
+from forge.remote_commands import RemoteCommandError, read_remote_diff_page
 from forge.run_config import (
     ProfileLock,
     RunBudget,
@@ -51,7 +59,7 @@ from forge.run_config import (
     RunConfigService,
     VersionLock,
 )
-from forge.run_inspection import RunInspectionService, redact
+from forge.run_inspection import RunInspectionService, redact, safe_diff_path
 from forge.run_scheduler import HostRunScheduler, SchedulerError, retry_429_delay
 from forge.runs import RunService, RunStartIntent
 from forge.workspaces import WorkspaceManager
@@ -68,6 +76,16 @@ if mode == 'long':
         (root / 'heartbeat').write_text(str(time.monotonic()))
         time.sleep(.05)
 """
+
+
+def test_explicit_observed_run_token_choice_is_bounded() -> None:
+    payload = {"projectId": uuid4(), "taskId": uuid4(),
+               "expectedTaskRevision": 2, "modelId": "fixture-model",
+               "idempotencyKey": uuid4()}
+    assert RunLaunchInput(**payload).maxTokens is None
+    assert RunLaunchInput(**payload, maxTokens=200_000).maxTokens == 200_000
+    with pytest.raises(ValidationError):
+        RunLaunchInput(**payload, maxTokens=250_000)
 
 
 def test_rate_limit_retry_requires_explicit_no_side_effect_evidence() -> None:
@@ -169,6 +187,54 @@ class FixtureAdapter:
         return None
 
 
+class BudgetFixtureHandle(FixtureHandle):
+    def __init__(self, request, callback, session, processes, kind: str) -> None:
+        super().__init__(request, callback, session, processes, "long")
+        self.kind = kind
+        self.budget_emitted = False
+
+    async def wait(self):
+        if not self.budget_emitted:
+            self.budget_emitted = True
+            await asyncio.sleep(.05)
+            if self.kind == "tool":
+                self.callback(CommandStarted(
+                    runId=self.run_id, sequence=2, timestamp=timestamp(),
+                    type="command.started", commandId="fixture-command-1", command="hidden",
+                ))
+                self.callback(CommandStarted(
+                    runId=self.run_id, sequence=3, timestamp=timestamp(),
+                    type="command.started", commandId="fixture-command-2", command="hidden",
+                ))
+            else:
+                self.callback(UsageUpdated(
+                    runId=self.run_id, sequence=2, timestamp=timestamp(),
+                    type="usage.updated", inputTokens=4000, outputTokens=1500,
+                    cachedInputTokens=None, cost=None, currency=None,
+                ))
+        code = await self.session.wait()
+        if not self.emitted:
+            self.emitted = True
+            self.callback(RunCancelled(
+                runId=self.run_id, sequence=4 if self.kind == "tool" else 3,
+                timestamp=timestamp(), type="run.cancelled",
+            ))
+        return "cancelled" if code != 0 else "completed"
+
+
+class BudgetFixtureAdapter(FixtureAdapter):
+    def __init__(self, processes: ProcessController, script: Path, kind: str) -> None:
+        super().__init__(processes, script, "long")
+        self.kind = kind
+
+    async def start(self, request, on_event):
+        session = await self.processes.spawn(
+            request.runId, sys.executable,
+            [str(self.script), request.workspace, "long"], Path(request.workspace),
+        )
+        return BudgetFixtureHandle(request, on_event, session, self.processes, self.kind)
+
+
 def git(source: Path, *args: str) -> str:
     return subprocess.run(
         ["git", "-C", str(source), *args], check=True, capture_output=True,
@@ -185,7 +251,9 @@ async def wait_for(path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_scheduler_real_process_success_then_durable_cancel(tmp_path: Path) -> None:
+async def test_scheduler_real_process_success_then_durable_cancel(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     source = tmp_path / "source repo 空格"
     source.mkdir()
     git(source, "init", "-b", "main")
@@ -254,20 +322,27 @@ async def test_scheduler_real_process_success_then_durable_cancel(tmp_path: Path
     )
     await workspaces.open()
 
-    async def schedule(mode: str):
+    async def schedule(mode: str, *, max_tokens: int = 5000,
+                       max_tool_calls: int = 10, profile: AgentProfile | None = None):
         run_id = uuid4()
         lock = "a" * 64
+        profile_lock = ProfileLock(
+            id=profile.id if profile else "developer",
+            version=str(profile.revision) if profile else "1",
+            contentHash=hashlib.sha256(canonical_json(
+                profile.model_dump(mode="json")
+            ).encode()).hexdigest() if profile else lock,
+            executorPluginId="fixture.executor",
+        )
         selection = RunConfigSelection(
             runId=run_id, projectId=project.projectId, taskId=draft.draftId,
             expectedTaskRevision=2,
             workflow=VersionLock(id="standard", version="1", contentHash=lock),
-            profile=ProfileLock(
-                id="developer", version="1", contentHash=lock,
-                executorPluginId="fixture.executor",
-            ),
+            profile=profile_lock,
             plugins=[VersionLock(id="fixture.executor", version="1", contentHash=lock)],
             budget=RunBudget(
-                maxDurationMs=30_000, maxTurns=3, maxTokens=5000, maxToolCalls=10
+                maxDurationMs=30_000, maxTurns=3,
+                maxTokens=max_tokens, maxToolCalls=max_tool_calls,
             ),
             environmentId=environment.environmentId, expectedEnvironmentRevision=1,
         )
@@ -287,8 +362,10 @@ async def test_scheduler_real_process_success_then_durable_cancel(tmp_path: Path
         )
         request = ScheduledExecutorRequest(
             runId=str(run_id), taskId=str(draft.draftId), workspace=leased.rootPath,
-            goal=context.goal, context=executor_context(context),
-            permission="workspace-write", approval="never", model=None,
+            goal=f"{profile.promptTemplate}\n\n{context.goal}" if profile else context.goal,
+            context=executor_context(context),
+            permission="workspace-write", approval="never",
+            model=profile.modelId if profile else None,
             maxDurationMs=30_000,
             attempt={
                 "attemptId": str(attempt_id), "leaseEpoch": leased.leaseEpoch,
@@ -299,7 +376,8 @@ async def test_scheduler_real_process_success_then_durable_cancel(tmp_path: Path
         )
         scheduler = HostRunScheduler(
             runs, configs, contexts, workspaces, processes,
-            FixtureAdapter(processes, script, mode),
+            BudgetFixtureAdapter(processes, script, mode.removeprefix("budget-"))
+            if mode.startswith("budget-") else FixtureAdapter(processes, script, mode),
         )
         return scheduler, intent, leased, request
 
@@ -313,6 +391,66 @@ async def test_scheduler_real_process_success_then_durable_cancel(tmp_path: Path
     assert inspection.diff is not None
     assert any(item.path == "result.txt" for item in inspection.diff.files)
     assert "real process wrote this" in inspection.diff.text
+    first_remote_diff = read_remote_diff_page(
+        storage, str(intent.projectId), intent.taskId, None, 12,
+    )
+    assert first_remote_diff["available"] is True
+    assert first_remote_diff["files"] == [{"path": "result.txt", "status": "added"}]
+    assert first_remote_diff["nextCursor"] is not None
+    chunks = [first_remote_diff["textChunk"]]
+    cursor = first_remote_diff["nextCursor"]
+    while cursor is not None:
+        part = read_remote_diff_page(storage, str(intent.projectId), intent.taskId,
+                                     cursor, 12)
+        chunks.append(part["textChunk"])
+        cursor = part["nextCursor"]
+    assert "real process wrote this" in "".join(chunks)
+    with pytest.raises(RemoteCommandError, match="REMOTE_CURSOR_STALE"):
+        read_remote_diff_page(storage, str(intent.projectId), intent.taskId,
+                              "d:0000000000000000:12", 12)
+    assert not safe_diff_path(".env")
+    assert not safe_diff_path(".github/private/credentials.json")
+    assert not safe_diff_path("config/secrets.yaml")
+    assert not safe_diff_path("../parent.txt")
+    assert not safe_diff_path("C:\\private\\key.pem")
+    # The same persisted real-process Diff is read through a separately
+    # initialized Python Host with a current paired-device Project grant.
+    monkeypatch.setenv("FORGE_HOST_DATA_DIR", str(tmp_path / "data"))
+    remote_host = HostRuntime()
+    try:
+        assert remote_host.storage_health()["status"] == "ready"
+        issued = remote_host.device_pairing.issue()
+        claim = remote_host.device_pairing.claim_from_nonce(
+            issued["nonce"], device_name="Fixture phone", address_summary="loopback",
+            fingerprint_summary="fixture-phone",
+        )
+        remote_host.device_pairing.decide(PairingDecisionInput(
+            pairingId=UUID(issued["pairingId"]), approve=True,
+            projectIds=[project.projectId], scopes=[],
+        ))
+        session = remote_host.remote_sessions.pairing_status(claim["claimSecret"])
+        remote_page = await remote_host.dispatch_remote("query", {
+            "sessionToken": session["sessionToken"], "method": "task.diff",
+            "payload": {"taskId": str(intent.taskId), "limit": 4096, "cursor": None},
+        })
+        assert remote_page["available"] is True
+        assert remote_page["files"] == [{"path": "result.txt", "status": "added"}]
+        assert "real process wrote this" in remote_page["textChunk"]
+        remote_activity = await remote_host.dispatch_remote("query", {
+            "sessionToken": session["sessionToken"], "method": "task.activity",
+            "payload": {"taskId": str(intent.taskId), "limit": 1, "cursor": None},
+        })
+        assert len(remote_activity["items"]) == 1
+        assert remote_activity["page"]["hasMore"] is True
+        older_activity = await remote_host.dispatch_remote("query", {
+            "sessionToken": session["sessionToken"], "method": "task.activity",
+            "payload": {"taskId": str(intent.taskId), "limit": 1,
+                        "cursor": remote_activity["page"]["cursor"]},
+        })
+        assert len(older_activity["items"]) == 1
+        assert older_activity["items"][0]["cursor"] < remote_activity["items"][0]["cursor"]
+    finally:
+        await remote_host.shutdown()
     checkpoint = contexts.latest_checkpoint(project.projectId, intent.runId)
     assert checkpoint is not None and checkpoint.sequence == 1
     assert checkpoint.objective.text == "Write result file"
@@ -349,6 +487,13 @@ async def test_scheduler_real_process_success_then_durable_cancel(tmp_path: Path
             "projectId": str(project.projectId), "taskId": str(draft.draftId),
         })
         assert listed["result"]["data"][0]["runId"] == str(intent.runId)
+        public_config = await host_call("run.config", {
+            "projectId": str(project.projectId), "runId": str(intent.runId),
+        })
+        assert public_config["result"]["data"]["maxDurationMs"] == 30_000
+        assert public_config["result"]["data"]["maxTokens"] == 5000
+        assert public_config["result"]["data"]["maxToolCalls"] == 10
+        assert public_config["result"]["data"]["maxOutputTokens"] is None
         inspected = await host_call("run.inspect", {
             "projectId": str(project.projectId), "runId": str(intent.runId),
             "afterCursor": 0, "limit": 100,
@@ -377,6 +522,41 @@ async def test_scheduler_real_process_success_then_durable_cancel(tmp_path: Path
         if host.returncode is None:
             host.kill()
             await host.wait()
+
+    limited_profile = AgentProfile(
+        schemaVersion="1.0", id="profile.fixture.budget", revision=1,
+        name="Budgeted Developer", role="developer", executorId="fixture.executor",
+        modelId="fixture-model", promptTemplate="Work inside the isolated fixture.",
+        contextProviders=["task-contract"], policyProfile="workspace-write",
+        limits={"maxTurns": 10, "maxSeconds": 420, "maxOutputTokens": 1000},
+    )
+    AgentProfileService(storage).save(ProfileSave(
+        profile=limited_profile, expectedRevision=0,
+    ))
+    for mode, options, expected_code in (
+        ("budget-usage", {"max_tokens": 5000}, "RUN_TOKEN_BUDGET_EXCEEDED"),
+        ("budget-tool", {"max_tool_calls": 1}, "RUN_TOOL_BUDGET_EXCEEDED"),
+        ("budget-usage", {"max_tokens": 6000, "profile": limited_profile},
+         "RUN_OUTPUT_BUDGET_EXCEEDED"),
+    ):
+        budgeted, budget_intent, budget_workspace, budget_request = await schedule(
+            mode, **options,
+        )
+        ended = await asyncio.wait_for(
+            budgeted.execute(budget_intent, budget_workspace, budget_request), 8,
+        )
+        assert ended.state == "failed" and not processes.has_active(str(budget_intent.runId))
+        assert workspaces.inspect(budget_workspace.workspaceId).status == "ready"
+        result = RunInspectionService(storage, runs).inspect(project.projectId,
+                                                              budget_intent.runId)
+        assert result.budgetFailure == expected_code
+        assert storage.session().execute(
+            "SELECT reason FROM run_cancel_intents WHERE run_id=?",
+            (str(budget_intent.runId),),
+        ).fetchone() is None
+        if mode == "budget-usage":
+            assert result.usage is not None and result.usage["outputTokens"] == 1500
+        assert git(source, "status", "--porcelain") == ""
 
     failed, failed_intent, failed_workspace, failed_request = await schedule("fail")
     assert (await failed.execute(failed_intent, failed_workspace, failed_request)).state == "failed"
@@ -422,7 +602,7 @@ async def test_scheduler_real_process_success_then_durable_cancel(tmp_path: Path
             name="Fixture Developer", role="developer", executorId="fixture.executor",
             modelId="fixture-model", promptTemplate="Work inside the isolated fixture.",
             contextProviders=["task-contract"], policyProfile="workspace-write",
-            limits={"maxTurns": 10, "maxSeconds": 180, "maxOutputTokens": 12000},
+            limits={"maxTurns": 10, "maxSeconds": 420, "maxOutputTokens": 12000},
         )
         profiles.save(ProfileSave(profile=selected_profile, expectedRevision=0))
         development = HostDevelopmentService(
@@ -438,14 +618,31 @@ async def test_scheduler_real_process_success_then_durable_cancel(tmp_path: Path
                 idempotencyKey=uuid4(), profileId=selected_profile.id,
                 profileRevision=selected_profile.revision,
             ))
+        rejected_context_run = uuid4()
+        with pytest.raises(DevelopmentError, match="PROFILE_CONTEXT_UNSUPPORTED"):
+            await development.start(RunLaunchInput(
+                projectId=project.projectId, taskId=draft.draftId,
+                expectedTaskRevision=2, modelId="fixture-model",
+                idempotencyKey=rejected_context_run,
+                profileId=selected_profile.id,
+                profileRevision=selected_profile.revision,
+                contextQuery="fixture knowledge",
+            ))
+        assert configs.get(project.projectId, rejected_context_run) is None
+        assert runs.get(project.projectId, rejected_context_run) is None
         run_key = uuid4()
         launched = await development.start(RunLaunchInput(
             projectId=project.projectId, taskId=draft.draftId,
             expectedTaskRevision=2, modelId="fixture-model",
-            idempotencyKey=run_key,
+            idempotencyKey=run_key, maxTokens=200_000,
             profileId=selected_profile.id, profileRevision=selected_profile.revision,
         ))
         assert launched.runId == run_key and launched.state in ("queued", "running", "succeeded")
+        frozen = configs.get(project.projectId, run_key)
+        assert frozen is not None
+        assert frozen.budget.maxDurationMs == 420_000
+        assert frozen.budget.maxTokens == 200_000
+        assert frozen.profile.version == str(selected_profile.revision)
         for _ in range(100):
             if not development.running:
                 break
@@ -457,8 +654,66 @@ async def test_scheduler_real_process_success_then_durable_cancel(tmp_path: Path
         assert (await development.start(RunLaunchInput(
             projectId=project.projectId, taskId=draft.draftId,
             expectedTaskRevision=2, modelId="fixture-model", idempotencyKey=run_key,
+            maxTokens=200_000,
             profileId=selected_profile.id, profileRevision=selected_profile.revision,
         ))).runId == run_key
+        revised_profile = selected_profile.model_copy(update={
+            "revision": 2,
+            "limits": selected_profile.limits.model_copy(update={"maxSeconds": 60}),
+        })
+        profiles.save(ProfileSave(profile=revised_profile, expectedRevision=1))
+        next_message = conv.send(ConversationSend(
+            projectId=project.projectId, conversationId=conversation.conversationId,
+            idempotencyKey="scheduler-fixture-message-02", text="Update another source",
+            attachmentIds=[],
+        ))["message"]
+        next_draft = drafts.manual(DraftRequest(
+            projectId=project.projectId, conversationId=conversation.conversationId,
+            sourceMessageId=next_message.messageId,
+            idempotencyKey="scheduler-fixture-draft-02",
+        ))
+        next_decision = uuid4()
+        next_contract = contract.model_copy(update={
+            "taskId": str(next_draft.draftId),
+            "sourceRefs": [f"message:{next_message.messageId}",
+                           f"decision:{next_decision}"],
+            "acceptance": [contract.acceptance[0].model_copy(update={
+                "sourceRefs": [f"decision:{next_decision}"],
+            })],
+        })
+        drafts.revise(DraftReviseInput(
+            projectId=project.projectId, draftId=next_draft.draftId,
+            expectedRevision=1, contract=next_contract, decisionId=next_decision,
+            decisionSummary="Second fixture scope", resolvedQuestions=[],
+            removedAcceptanceIds=[], confirmScopeChange=True,
+        ))
+        next_pending = approvals.request(ApprovalRequestInput(
+            projectId=project.projectId, draftId=next_draft.draftId, expectedRevision=2,
+        ))
+        approvals.decide(ApprovalDecideInput(
+            projectId=project.projectId, decision=ApprovalDecision(
+                schemaVersion="1.0", approvalId=next_pending.request.approvalId,
+                decision="approve", expectedRevision=2,
+                scopeHash=next_pending.request.scopeHash, reason="Second fixture approved",
+            ),
+        ))
+        next_key = uuid4()
+        await development.start(RunLaunchInput(
+            projectId=project.projectId, taskId=next_draft.draftId,
+            expectedTaskRevision=2, modelId="fixture-model", idempotencyKey=next_key,
+            profileId=revised_profile.id, profileRevision=revised_profile.revision,
+        ))
+        for _ in range(100):
+            if not development.running:
+                break
+            await asyncio.sleep(.05)
+        old_config = configs.get(project.projectId, run_key)
+        next_config = configs.get(project.projectId, next_key)
+        assert old_config is not None and old_config.budget.maxDurationMs == 420_000
+        assert next_config is not None and next_config.budget.maxDurationMs == 60_000
+        assert old_config.budget.maxTokens == 200_000
+        assert next_config.budget.maxTokens == 50_000
+        assert old_config.profile.version == "1" and next_config.profile.version == "2"
         await development.shutdown()
 
         bad, bad_intent, bad_workspace, bad_request = await schedule("bad")

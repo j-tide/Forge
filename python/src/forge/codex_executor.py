@@ -75,6 +75,8 @@ class CodexRun:
         self.finished = False
         self.structured_output: Any = None
         self.has_structured_output = False
+        self.usage_baseline: tuple[int, int, int] | None = None
+        self.last_run_usage: tuple[int, int, int] | None = None
         self.pending_approvals: dict[str, tuple[int, asyncio.Task[None]]] = {}
         self.completion: asyncio.Future[Literal["completed", "cancelled"]] = (
             asyncio.get_running_loop().create_future()
@@ -140,19 +142,49 @@ class CodexRun:
                 self._emit({"type": "assistant.message", "text": delta})
             return
         if method == "thread/tokenUsage/updated":
+            if params.get("turnId") != self.turn_id:
+                self._invalid()
+                return
             usage = _object(params.get("tokenUsage"))
             total = _object(usage.get("total")) if usage else None
-            if total is None or any(type(total.get(key)) is not int or total[key] < 0
-                                    for key in ("inputTokens", "outputTokens")):
+            last = _object(usage.get("last")) if usage else None
+            keys = ("inputTokens", "outputTokens", "cachedInputTokens")
+            if total is None or last is None or any(
+                type(record.get(key)) is not int or record[key] < 0
+                for record in (total, last) for key in keys
+            ):
                 self._invalid()
                 return
-            cached = total.get("cachedInputTokens")
-            if cached is not None and (type(cached) is not int or cached < 0):
+            totals = tuple(total[key] for key in keys)
+            previous = tuple(last[key] for key in keys)
+            if any(current < recent for current, recent in zip(totals, previous, strict=True)):
                 self._invalid()
                 return
+            if self.usage_baseline is None:
+                # The thread may contain earlier Forge Runs. The first update for
+                # this turn includes one response's usage, so remove that from
+                # the thread total to establish this Run's baseline.
+                self.usage_baseline = tuple(
+                    current - recent for current, recent in zip(totals, previous, strict=True)
+                )
+            run_usage = tuple(
+                current - baseline for current, baseline in zip(
+                    totals, self.usage_baseline, strict=True
+                )
+            )
+            if any(value < 0 for value in run_usage) or (
+                self.last_run_usage is not None and any(
+                    value < prior for value, prior in zip(
+                        run_usage, self.last_run_usage, strict=True
+                    )
+                )
+            ):
+                self._invalid()
+                return
+            self.last_run_usage = run_usage
             self._emit({
-                "type": "usage.updated", "inputTokens": total["inputTokens"],
-                "outputTokens": total["outputTokens"], "cachedInputTokens": cached,
+                "type": "usage.updated", "inputTokens": run_usage[0],
+                "outputTokens": run_usage[1], "cachedInputTokens": run_usage[2],
                 "cost": None, "currency": None,
             })
             return
@@ -320,9 +352,13 @@ class CodexRun:
 class CodexExecutorAdapter:
     id = "executor.codex"
 
-    def __init__(self, controller: ProcessController, executable: str | None = None) -> None:
+    def __init__(self, controller: ProcessController, executable: str | None = None,
+                 *, initialization_timeout_seconds: int = 15) -> None:
+        if not 1 <= initialization_timeout_seconds <= 60:
+            raise ValueError("Invalid app-server initialization timeout")
         self.controller = controller
         self.executable = executable or shutil.which("codex")
+        self.initialization_timeout_seconds = initialization_timeout_seconds
         self.active: set[CodexRun] = set()
 
     async def _cli(self, args: list[str]) -> str:
@@ -353,7 +389,8 @@ class CodexExecutorAdapter:
         if self.executable is None:
             raise CodexExecutorError("EXECUTOR_START_FAILED")
         connection = CodexConnection(
-            self.controller, f"codex-models-{uuid4()}", self.executable, cwd
+            self.controller, f"codex-models-{uuid4()}", self.executable, cwd,
+            initialization_timeout_seconds=self.initialization_timeout_seconds,
         )
         try:
             await connection.connect()
@@ -370,15 +407,24 @@ class CodexExecutorAdapter:
         version = "unavailable"
         auth = False
         models: list[str] = []
+        diagnostic = "CODEX_CLI_UNAVAILABLE"
         try:
             version = (await self._cli(["--version"])).strip()
             if version != CODEX_VERSION:
+                diagnostic = "CODEX_VERSION_MISMATCH"
                 raise CodexExecutorError("EXECUTOR_UNSUPPORTED_CAPABILITY")
+            diagnostic = "CODEX_NOT_AUTHENTICATED"
             auth = "Logged in" in await self._cli(["login", "status"])
             if auth:
+                diagnostic = "CODEX_PROBE_FAILED"
                 models = await self._models(Path.cwd())
-        except (CodexExecutorError, CodexProtocolError, OSError):
-            pass
+                diagnostic = "CODEX_MODELS_UNAVAILABLE" if not models else ""
+        except (CodexExecutorError, CodexProtocolError, OSError) as error:
+            if (diagnostic == "CODEX_NOT_AUTHENTICATED" and not (
+                isinstance(error, CodexExecutorError)
+                and error.code == "EXECUTOR_AUTH_FAILED"
+            )):
+                diagnostic = "CODEX_PROBE_FAILED"
         platform_id = f"{platform.system().lower()}/{platform.machine().lower()}"
         checks: dict[str, bool] = {}
         try:
@@ -405,9 +451,9 @@ class CodexExecutorAdapter:
             networkPolicyEnforced=checks.get("networkPolicyEnforced", False),
             enforcement="native-sandbox" if checks.get("readOnlyEnforced") else "unavailable",
             modelIds=models if auth else [], authModes=["chatgpt-session"] if auth else [],
-            warnings=[] if checks else [
-                "Python adapter capabilities require version-matched live evidence"
-            ],
+            warnings=([diagnostic] if diagnostic else []) + ([] if checks else [
+                "CODEX_CAPABILITY_EVIDENCE_MISSING"
+            ]),
         )
 
     async def start(
@@ -424,7 +470,10 @@ class CodexExecutorAdapter:
             raise CodexExecutorError("EXECUTOR_WORKSPACE_ERROR")
         if "Logged in" not in await self._cli(["login", "status"]):
             raise CodexExecutorError("EXECUTOR_AUTH_FAILED")
-        connection = CodexConnection(self.controller, request.runId, self.executable, cwd)
+        connection = CodexConnection(
+            self.controller, request.runId, self.executable, cwd,
+            initialization_timeout_seconds=self.initialization_timeout_seconds,
+        )
         try:
             await connection.connect()
             if request.model:

@@ -25,13 +25,15 @@ from forge.executor_contracts import (
     ExecutorEventGate,
     ExecutorRunHandle,
     ExecutorStartError,
+    RunCompleted,
     RunFailed,
     ScheduledExecutorRequest,
 )
+from forge.planner import PlanArtifactService, PlannerError, PlanResult, plan_request_goal
 from forge.processes import ProcessController
 from forge.run_config import RunConfigService
 from forge.run_inspection import RunDiffPreview, RunInspectionService, capture_run_diff
-from forge.runs import RunAttemptResult, RunService, RunStartIntent, RunView
+from forge.runs import BudgetFailureCode, RunAttemptResult, RunService, RunStartIntent, RunView
 from forge.workspaces import WorkspaceDescriptor, WorkspaceManager
 
 
@@ -71,8 +73,13 @@ class _ActiveRun:
     open_issues: list[ContextEntry] = field(default_factory=list)
     observed_tokens: int | None = None
     observed_tool_starts: int = 0
+    max_tokens: int = 0
+    max_output_tokens: int | None = None
+    max_tool_calls: int = 0
+    budget_failure: BudgetFailureCode | None = None
     checkpoint_sequence: int = 0
     safe_start_no_effect: bool = False
+    structured_output: object | None = None
 
 
 class HostRunScheduler:
@@ -88,6 +95,7 @@ class HostRunScheduler:
         self.processes = processes
         self.adapter = adapter
         self.inspections = RunInspectionService(configs.storage, runs)
+        self.plan_artifacts = PlanArtifactService(configs.storage)
         self.active: dict[UUID, _ActiveRun] = {}
         self.accepting = True
         self.lock = asyncio.Lock()
@@ -95,7 +103,7 @@ class HostRunScheduler:
     def _validate(
         self, intent: RunStartIntent, workspace: WorkspaceDescriptor,
         request: ScheduledExecutorRequest,
-    ) -> int:
+    ) -> tuple[int, int, int, int | None]:
         config = self.configs.get(intent.projectId, intent.runId)
         try:
             bundle_id = UUID(request.attempt.contextBundleId)
@@ -104,12 +112,14 @@ class HostRunScheduler:
         bundle = self.contexts.get_bundle(intent.projectId, bundle_id)
         current = self.workspaces.inspect(workspace.workspaceId)
         expected_goal = bundle.goal if bundle else None
-        if (config is not None and bundle is not None
-                and config.profile.id.startswith("profile.")
-                and config.profile.version.isdecimal()):
+        max_output_tokens: int | None = None
+        profile_lock = config.profile if config is not None else None
+        if (config is not None and bundle is not None and profile_lock is not None
+                and profile_lock.id.startswith("profile.")
+                and profile_lock.version.isdecimal()):
             try:
                 profile = AgentProfileService(self.configs.storage).get(
-                    config.profile.id, int(config.profile.version)
+                    profile_lock.id, int(profile_lock.version)
                 )
             except AgentProfileError as error:
                 raise SchedulerError("RUN_SNAPSHOT_MISMATCH") from error
@@ -119,17 +129,34 @@ class HostRunScheduler:
                 canonical_json(profile.model_dump(mode="json")).encode()
             ).hexdigest()
             if (
-                digest != config.profile.contentHash
-                or profile.executorId != config.profile.executorPluginId
+                digest != profile_lock.contentHash
+                or profile.executorId != profile_lock.executorPluginId
                 or profile.modelId != request.model
                 or profile.revision != request.attempt.profileRevision
-                or profile.role != "developer"
+                or profile.role != ("planner" if intent.nodeId == "plan" else "developer")
                 or request.approval != (
                     "on-request" if profile.policyProfile == "approval-required" else "never"
                 )
+                or request.permission != (
+                    "read-only" if intent.nodeId == "plan" else "workspace-write"
+                )
             ):
                 raise SchedulerError("RUN_SNAPSHOT_MISMATCH")
-            expected_goal = f"{profile.promptTemplate}\n\n{bundle.goal}"
+            expected_goal = (
+                plan_request_goal(profile.promptTemplate, config, intent.attemptId)
+                if intent.nodeId == "plan"
+                else f"{profile.promptTemplate}\n\n{bundle.goal}"
+            )
+            max_output_tokens = profile.limits.maxOutputTokens
+        if intent.nodeId not in ("plan", "develop") or (
+            intent.nodeId == "plan" and (
+                profile_lock is None or not profile_lock.version.isdecimal()
+                or request.attempt.outputSchemaId != "plan-result/v1"
+                or request.outputSchema != PlanResult.model_json_schema()
+                or request.approval != "never"
+            )
+        ):
+            raise SchedulerError("RUN_SNAPSHOT_MISMATCH")
         if (
             config is None or config.snapshotHash != intent.configHash
             or request.runId != str(intent.runId) or request.taskId != str(intent.taskId)
@@ -155,8 +182,11 @@ class HostRunScheduler:
             raise SchedulerError("RUN_SNAPSHOT_MISMATCH")
         try:
             deadline = datetime.fromisoformat(intent.createdAt.replace("Z", "+00:00"))
-            return max(0, int((deadline - datetime.now(UTC)).total_seconds() * 1000)
-                       + config.budget.maxDurationMs)
+            return (
+                max(0, int((deadline - datetime.now(UTC)).total_seconds() * 1000)
+                    + config.budget.maxDurationMs),
+                config.budget.maxTokens, config.budget.maxToolCalls, max_output_tokens,
+            )
         except ValueError as error:
             raise SchedulerError("RUN_INVALID_TIME") from error
 
@@ -168,11 +198,26 @@ class HostRunScheduler:
             )
             if isinstance(checked, RunFailed):
                 active.provider_failed = True
+            if isinstance(checked, RunCompleted):
+                active.structured_output = checked.structuredOutput
             source = f"executor-event:{checked.sequence}"
             if checked.type in ("command.started", "tool.started"):
                 active.observed_tool_starts += 1
             if checked.type == "usage.updated":
                 active.observed_tokens = checked.inputTokens + checked.outputTokens
+            if (not active.cancel_requested and not active.provider_failed
+                    and not active.gate.terminal and active.budget_failure is None):
+                if (checked.type == "usage.updated" and active.max_output_tokens is not None
+                        and checked.outputTokens >= active.max_output_tokens):
+                    active.budget_failure = "RUN_OUTPUT_BUDGET_EXCEEDED"
+                elif (checked.type == "usage.updated"
+                      and active.observed_tokens is not None
+                      and active.observed_tokens >= active.max_tokens):
+                    active.budget_failure = "RUN_TOKEN_BUDGET_EXCEEDED"
+                elif active.observed_tool_starts > active.max_tool_calls:
+                    active.budget_failure = "RUN_TOOL_BUDGET_EXCEEDED"
+                if active.budget_failure is not None and active.handle is not None:
+                    active.cancel_signal.set()
             if checked.type == "command.completed":
                 exit_label = checked.exitCode if checked.exitCode is not None else "unknown"
                 active.completed_actions.append(ContextEntry(
@@ -328,7 +373,9 @@ class HostRunScheduler:
     ) -> RunView:
         if not self.accepting:
             raise SchedulerError("RUN_SCHEDULER_STOPPING")
-        remaining_ms = self._validate(intent, workspace, request)
+        remaining_ms, max_tokens, max_tool_calls, max_output_tokens = self._validate(
+            intent, workspace, request,
+        )
         if remaining_ms <= 0:
             raise SchedulerError("RUN_EXPIRED")
         capabilities = await self.adapter.probe()
@@ -337,6 +384,9 @@ class HostRunScheduler:
             or not capabilities.streaming
             or request.model is not None and request.model not in capabilities.modelIds
             or request.approval == "on-request" and not capabilities.approval
+            or intent.nodeId == "plan" and (
+                not capabilities.readOnlyEnforced or not capabilities.structuredOutput
+            )
         ):
             raise SchedulerError("EXECUTOR_UNSUPPORTED_CAPABILITY")
         async with self.lock:
@@ -345,6 +395,8 @@ class HostRunScheduler:
             active = _ActiveRun(
                 intent=intent, gate=ExecutorEventGate(str(intent.runId)),
                 done=asyncio.get_running_loop().create_future(),
+                max_tokens=max_tokens, max_tool_calls=max_tool_calls,
+                max_output_tokens=max_output_tokens,
             )
             self.active[intent.runId] = active
         timer: asyncio.Task[None] | None = None
@@ -381,6 +433,8 @@ class HostRunScheduler:
             self.runs.mark_launched(
                 intent.projectId, intent.runId, intent.attemptId, handle.provider_session_id
             )
+            if active.budget_failure is not None:
+                active.cancel_signal.set()
             wait_task = asyncio.create_task(handle.wait())
             signal_task = asyncio.create_task(active.cancel_signal.wait())
             try:
@@ -390,16 +444,22 @@ class HostRunScheduler:
             finally:
                 signal_task.cancel()
                 await asyncio.gather(signal_task, return_exceptions=True)
-            if active.cancel_requested or active.protocol_failed:
-                if not active.cancel_requested:
+            if active.cancel_requested or active.protocol_failed or active.budget_failure:
+                if not active.cancel_requested and not active.budget_failure:
                     self._request_cancel(active, "shutdown")
-                cancel_task = asyncio.create_task(self._cancel_owned(active))
-                confirmed = await cancel_task
+                confirmed = bool(wait_task.done() and not self.processes.has_active(
+                    str(intent.runId)
+                ))
+                if not confirmed:
+                    cancel_task = asyncio.create_task(self._cancel_owned(active))
+                    confirmed = await cancel_task
                 if not confirmed:
                     raise SchedulerError("RUN_PROCESS_UNCONFIRMED")
                 if active.protocol_failed:
                     raise SchedulerError("EXECUTOR_PROTOCOL_ERROR")
-                outcome: Literal["completed", "failed", "cancelled"] = "cancelled"
+                outcome: Literal["completed", "failed", "cancelled"] = (
+                    "cancelled" if active.cancel_requested else "failed"
+                )
             else:
                 provider_outcome = await wait_task
                 if self.processes.has_active(str(intent.runId)):
@@ -410,16 +470,6 @@ class HostRunScheduler:
                     "failed" if active.provider_failed
                     else "completed" if provider_outcome == "completed" else "cancelled"
                 )
-            result = RunAttemptResult(
-                runId=intent.runId, attemptId=intent.attemptId,
-                workspaceLeaseId=intent.workspaceLeaseId, leaseEpoch=intent.leaseEpoch,
-                contractRevision=request.attempt.contractRevision,
-                configHash=intent.configHash, outcome=outcome,
-                providerSessionRef=handle.provider_session_id,
-                lastEventSequence=active.gate.sequence, timestamp=datetime.now(UTC).isoformat(
-                    timespec="milliseconds"
-                ).replace("+00:00", "Z"),
-            )
             self._save_checkpoint(active)
             try:
                 preview = await capture_run_diff(workspace)
@@ -430,9 +480,39 @@ class HostRunScheduler:
                         timespec="milliseconds"
                     ).replace("+00:00", "Z"),
                 )
+            plan_failure: Literal["PLAN_RESULT_INVALID", "PLAN_WORKSPACE_CHANGED"] | None = None
+            if intent.nodeId == "plan" and outcome == "completed":
+                if preview.files or preview.truncated:
+                    plan_failure = "PLAN_WORKSPACE_CHANGED"
+                else:
+                    try:
+                        self.plan_artifacts.save(
+                            config=config, attempt_id=intent.attemptId,
+                            profile_id=config.profile.id,
+                            profile_revision=int(config.profile.version),
+                            profile_hash=config.profile.contentHash,
+                            base_revision=workspace.baseRevision,
+                            value=active.structured_output,
+                        )
+                    except PlannerError:
+                        plan_failure = "PLAN_RESULT_INVALID"
+                if plan_failure is not None:
+                    outcome = "failed"
+            result = RunAttemptResult(
+                runId=intent.runId, attemptId=intent.attemptId,
+                workspaceLeaseId=intent.workspaceLeaseId, leaseEpoch=intent.leaseEpoch,
+                contractRevision=request.attempt.contractRevision,
+                configHash=intent.configHash, outcome=outcome,
+                providerSessionRef=handle.provider_session_id,
+                lastEventSequence=active.gate.sequence, timestamp=datetime.now(UTC).isoformat(
+                    timespec="milliseconds"
+                ).replace("+00:00", "Z"),
+            )
             self.inspections.save_diff(intent.projectId, intent.runId, preview)
             disposition, terminal = self.runs.complete(
-                intent.projectId, intent.runId, result, verified_stopped=True
+                intent.projectId, intent.runId, result, verified_stopped=True,
+                budget_failure=active.budget_failure if outcome == "failed" else None,
+                plan_failure=plan_failure,
             )
             if disposition != "APPLIED":
                 raise SchedulerError("RUN_RESULT_NOT_APPLIED")
@@ -538,8 +618,9 @@ class HostRunScheduler:
             if timer:
                 timer.cancel()
                 await asyncio.gather(timer, return_exceptions=True)
-            if wait_task and not wait_task.done():
-                wait_task.cancel()
+            if wait_task:
+                if not wait_task.done():
+                    wait_task.cancel()
                 await asyncio.gather(wait_task, return_exceptions=True)
             if cancel_task and not cancel_task.done():
                 cancel_task.cancel()

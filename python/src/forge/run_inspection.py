@@ -7,7 +7,7 @@ import json
 import os
 import re
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Literal
 from uuid import UUID
 
@@ -15,8 +15,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from forge.executor_contracts import ExecutorEvent, UsageUpdated
 from forge.persistence import ForgePersistence
-from forge.runs import RunService, RunView
-from forge.workspaces import WorkspaceDescriptor
+from forge.runs import BudgetFailureCode, RunService, RunView
+from forge.workspaces import WorkspaceDescriptor, WorkspaceError, WorkspaceManager
 
 
 class InspectionError(Exception):
@@ -54,6 +54,17 @@ class RunDiffPreview(BaseModel):
     capturedAt: str
 
 
+class RunRecoveryPreview(BaseModel):
+    """A transient view of a quarantined tree, never a CodeSnapshot."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    runId: UUID
+    workspaceId: UUID
+    basis: Literal["live-worktree-unverified"] = "live-worktree-unverified"
+    diff: RunDiffPreview
+
+
 class RunInspection(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -64,6 +75,8 @@ class RunInspection(BaseModel):
     diff: RunDiffPreview | None
     contextSources: list[dict[str, str]] = Field(max_length=128)
     usage: dict[str, Any] | None
+    budgetFailure: BudgetFailureCode | None = None
+    planFailure: Literal["PLAN_RESULT_INVALID", "PLAN_WORKSPACE_CHANGED"] | None = None
 
 
 _SECRETS = re.compile(
@@ -77,6 +90,20 @@ _PRIVATE_KEY = re.compile(
     r"(?:^[+ -]*-----END [A-Z0-9 ]*PRIVATE KEY-----|\Z)"
 )
 _SENSITIVE_PATH = re.compile(r"(^|/)(\.env(?:\.|$)|[^/]+\.(?:pem|key|p12|pfx)$)", re.I)
+_PRIVATE_FILENAME = re.compile(
+    r"(?i)(?:^|[-_.])(?:credentials?|secrets?|tokens?|private|id_rsa|id_ed25519)"
+    r"(?:[-_.]|$)"
+)
+
+
+def safe_diff_path(name: str) -> bool:
+    """Reject private or escaping names before persisting or exporting a diff."""
+    return bool(name and len(name) <= 512 and not _SENSITIVE_PATH.search(name)
+                and not any(part.startswith(".") or _PRIVATE_FILENAME.search(part)
+                            for part in name.split("/"))
+                and not Path(name).is_absolute() and not PureWindowsPath(name).drive
+                and "\\" not in name
+                and all(part not in ("", ".", "..") for part in name.split("/")))
 
 
 def redact(text: str) -> str:
@@ -208,6 +235,18 @@ class RunInspectionService:
         usage_row = db.execute(
             "SELECT usage_json FROM run_usage_snapshots WHERE run_id=?", (str(run_id),)
         ).fetchone()
+        budget_row = db.execute(
+            "SELECT detail_json FROM run_events WHERE run_id=? AND type='run.failed' "
+            "ORDER BY seq DESC LIMIT 1", (str(run_id),)
+        ).fetchone()
+        reason = json.loads(budget_row["detail_json"]).get("reason") if budget_row else None
+        budget_code = reason if reason in (
+            "RUN_TOKEN_BUDGET_EXCEEDED", "RUN_OUTPUT_BUDGET_EXCEEDED",
+            "RUN_TOOL_BUDGET_EXCEEDED",
+        ) else None
+        plan_code = reason if reason in (
+            "PLAN_RESULT_INVALID", "PLAN_WORKSPACE_CHANGED",
+        ) else None
         return RunInspection(
             run=run, observations=observations,
             nextCursor=observations[-1].cursor if observations else after_cursor,
@@ -218,7 +257,52 @@ class RunInspectionService:
                 "sourceKind": f"{item['authority']}/{item['kind']}",
             } for item in items[:128]],
             usage=json.loads(usage_row["usage_json"]) if usage_row else None,
+            budgetFailure=budget_code,
+            planFailure=plan_code,
         )
+
+    async def recovery_preview(
+        self, project_id: UUID, run_id: UUID, workspaces: WorkspaceManager,
+    ) -> RunRecoveryPreview:
+        """Read a quarantined worktree only after matching durable identities.
+
+        Its contents may still be changing. No preview is persisted or accepted
+        as a snapshot, and no historical process is signalled or adopted.
+        """
+        run = self.runs.get(project_id, run_id)
+        if run is None:
+            raise InspectionError("RUN_NOT_FOUND")
+        if run.state != "interrupted":
+            raise InspectionError("RUN_CONFLICT")
+        released = (
+            " OR (lease.state='released' AND EXISTS("
+            "SELECT 1 FROM run_recovery_observations o WHERE o.run_id=lease.run_id "
+            "AND o.resolved_at IS NOT NULL))"
+            if self.storage.schema_version() >= 36 else ""
+        )
+        rows = self.storage.session().execute(
+            "SELECT lease.workspace_id,lease.lease_id,lease.epoch,"
+            "project.canonical_path FROM run_workspace_leases lease "
+            "JOIN runs ON runs.run_id=lease.run_id "
+            "JOIN projects project ON project.project_id=runs.project_id "
+            "WHERE lease.run_id=? AND lease.attempt_id=? AND runs.project_id=? "
+            "AND (lease.state='quarantined'" + released + ")",
+            (str(run_id), str(run.attempt.attemptId), str(project_id)),
+        ).fetchall()
+        if (len(rows) != 1 or rows[0]["lease_id"] != str(run.attempt.workspaceLeaseId)
+                or rows[0]["epoch"] != run.attempt.leaseEpoch):
+            raise InspectionError("RUN_RECOVERY_EVIDENCE_INVALID")
+        row = rows[0]
+        try:
+            workspace = await workspaces.verify_historical_readonly(
+                UUID(row["workspace_id"]), str(run_id),
+                run.attempt.workspaceLeaseId, run.attempt.leaseEpoch,
+                row["canonical_path"],
+            )
+            diff = await capture_run_diff(workspace)
+        except (ValueError, OSError, WorkspaceError, InspectionError) as error:
+            raise InspectionError("RUN_RECOVERY_EVIDENCE_INVALID") from error
+        return RunRecoveryPreview(runId=run_id, workspaceId=workspace.workspaceId, diff=diff)
 
 
 async def _git(root: Path, *args: str) -> bytes:
@@ -226,6 +310,7 @@ async def _git(root: Path, *args: str) -> bytes:
         child = await asyncio.create_subprocess_exec(
             "git", "-c", "core.fsmonitor=false", "-C", str(root), *args,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0", "GIT_TERMINAL_PROMPT": "0"},
         )
         output, _ = await asyncio.wait_for(child.communicate(), timeout=10)
         if child.returncode != 0 or len(output) > 1024 * 1024:
@@ -254,12 +339,8 @@ async def capture_run_diff(workspace: WorkspaceDescriptor) -> RunDiffPreview:
         if "R" in flag or "C" in flag:
             index += 1
         path = Path(name)
-        if (
-            not name or len(name) > 512 or _SENSITIVE_PATH.search(name)
-            or path.is_absolute() or "\\" in name or any(
-                segment in ("", ".", "..") for segment in name.split("/")
-            ) or (root / path).resolve().is_relative_to(root) is False
-        ):
+        if (not safe_diff_path(name)
+                or (root / path).resolve().is_relative_to(root) is False):
             truncated = True
             continue
         status: Literal["added", "modified", "deleted", "renamed"] = (

@@ -2,13 +2,21 @@
 
 import asyncio
 from pathlib import Path
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
 
 from forge.codex_app_server import codex_environment
-from forge.codex_executor import CodexRun, _mapped_error
+from forge.codex_executor import (
+    CODEX_VERSION,
+    CodexExecutorAdapter,
+    CodexExecutorError,
+    CodexRun,
+    _mapped_error,
+)
 from forge.executor_contracts import AttemptRequest, ScheduledExecutorRequest
+from forge.processes import ProcessController
 
 
 class WireFixture:
@@ -57,6 +65,36 @@ def test_codex_environment_filters_credentials(monkeypatch: pytest.MonkeyPatch) 
 
 
 @pytest.mark.asyncio
+async def test_codex_probe_reports_specific_local_prerequisite_without_running_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    adapter = CodexExecutorAdapter(ProcessController(uuid4()), executable="/fixture/codex")
+    missing = AsyncMock(side_effect=CodexExecutorError("EXECUTOR_START_FAILED"))
+    monkeypatch.setattr(adapter, "_cli", missing)
+    assert "CODEX_CLI_UNAVAILABLE" in (await adapter.probe()).warnings
+
+    mismatch = AsyncMock(return_value="codex-cli 9.9.9")
+    monkeypatch.setattr(adapter, "_cli", mismatch)
+    assert "CODEX_VERSION_MISMATCH" in (await adapter.probe()).warnings
+    mismatch.assert_awaited_once_with(["--version"])
+
+    not_logged_in = AsyncMock(side_effect=[CODEX_VERSION, "Not logged in"])
+    monkeypatch.setattr(adapter, "_cli", not_logged_in)
+    assert "CODEX_NOT_AUTHENTICATED" in (await adapter.probe()).warnings
+
+    # The real CLI exits 1 for an isolated CODEX_HOME with no login.
+    login_exit_one = AsyncMock(side_effect=[
+        CODEX_VERSION, CodexExecutorError("EXECUTOR_AUTH_FAILED"),
+    ])
+    monkeypatch.setattr(adapter, "_cli", login_exit_one)
+    assert "CODEX_NOT_AUTHENTICATED" in (await adapter.probe()).warnings
+
+    probe_failed = AsyncMock(side_effect=[CODEX_VERSION, CodexExecutorError("EXECUTOR_TIMEOUT")])
+    monkeypatch.setattr(adapter, "_cli", probe_failed)
+    assert "CODEX_PROBE_FAILED" in (await adapter.probe()).warnings
+
+
+@pytest.mark.asyncio
 async def test_codex_event_sequence_approval_and_terminal(tmp_path: Path) -> None:
     wire = WireFixture()
     request = run_request(tmp_path)
@@ -82,6 +120,41 @@ async def test_codex_event_sequence_approval_and_terminal(tmp_path: Path) -> Non
     assert [event.sequence for event in events] == list(range(1, len(events) + 1))
     assert events[-1].type == "run.completed"
     assert events[-1].providerSessionId == "thread-1"
+
+
+@pytest.mark.asyncio
+async def test_codex_usage_is_scoped_to_run_when_resuming_a_thread(tmp_path: Path) -> None:
+    wire = WireFixture()
+    events = []
+    request = run_request(tmp_path)
+    request.attempt.nativeSessionRef = "thread-1"
+    run = CodexRun(wire, request, "thread-1", "turn-2", events.append)  # type: ignore[arg-type]
+    assert wire.listener is not None
+
+    def usage(total_input: int, total_output: int, recent_input: int,
+              recent_output: int) -> None:
+        assert wire.listener is not None
+        wire.listener({"method": "thread/tokenUsage/updated", "params": {
+            "threadId": "thread-1", "turnId": "turn-2", "tokenUsage": {
+                "total": {"inputTokens": total_input, "outputTokens": total_output,
+                          "cachedInputTokens": 0},
+                "last": {"inputTokens": recent_input, "outputTokens": recent_output,
+                         "cachedInputTokens": 0},
+            },
+        }})
+
+    # 100,000 tokens belong to earlier turns in the same resumed thread.
+    usage(100_020, 5_002, 20, 2)
+    usage(100_050, 5_005, 30, 3)
+    usage(100_050, 5_005, 30, 3)  # A replay must not double count usage.
+    observed = [event for event in events if event.type == "usage.updated"]
+    assert [(event.inputTokens, event.outputTokens) for event in observed] == [
+        (20, 2), (50, 5), (50, 5),
+    ]
+    usage(90_000, 4_000, 1, 1)  # A reset makes the prior baseline invalid.
+    assert await asyncio.wait_for(run.wait(), 2) == "completed"
+    assert events[-1].type == "run.failed"
+    assert events[-1].code == "EXECUTOR_PROTOCOL_ERROR"
 
 
 @pytest.mark.asyncio

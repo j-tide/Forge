@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from forge.approvals import canonical_json
 from forge.conversations import timestamp
 from forge.persistence import ForgePersistence
+from forge.projects import active_trusted_project_in
 from forge.run_config import RunConfigService
 
 
@@ -29,6 +30,10 @@ RunState = Literal[
 AttemptState = Literal[
     "pending", "running", "waiting_approval", "succeeded", "failed", "cancelled",
     "interrupted",
+]
+BudgetFailureCode = Literal[
+    "RUN_TOKEN_BUDGET_EXCEEDED", "RUN_OUTPUT_BUDGET_EXCEEDED",
+    "RUN_TOOL_BUDGET_EXCEEDED",
 ]
 
 
@@ -174,6 +179,8 @@ class RunService:
                 ):
                     return prior
                 raise RunError("RUN_CONFLICT")
+            if not active_trusted_project_in(db, intent.projectId):
+                raise RunError("PROJECT_TRUST_REQUIRED")
             config = self.configs.get(intent.projectId, intent.runId)
             if config is None:
                 raise RunError("RUN_NOT_FOUND")
@@ -189,9 +196,22 @@ class RunService:
             ).fetchone()
             if task is None or task["state"] != "todo":
                 raise RunError("RUN_CONFLICT")
+            if self.storage.schema_version() >= 21 and db.execute(
+                "SELECT 1 FROM final_acceptance_decisions WHERE project_id=? AND task_id=? "
+                "AND contract_revision=? AND decision='accept' LIMIT 1",
+                (str(intent.projectId), str(intent.taskId), config.taskRevision),
+            ).fetchone():
+                # Owner acceptance may race workspace preparation after config
+                # freezing. The final durable Run intent must check again.
+                raise RunError("RUN_CONFLICT")
+            resolved = (
+                "AND r.recovery_resolved_at IS NULL"
+                if self.storage.schema_version() >= 36 else ""
+            )
             if db.execute(
-                "SELECT 1 FROM runs WHERE project_id=? AND state IN "
-                "('queued','running','waiting_input','pausing','paused','canceling','interrupted')",
+                "SELECT 1 FROM runs r WHERE r.project_id=? AND (r.state IN "
+                "('queued','running','waiting_input','pausing','paused','canceling') "
+                "OR (r.state='interrupted' " + resolved + "))",
                 (str(intent.projectId),),
             ).fetchone() or db.execute(
                 "SELECT 1 FROM run_workspace_leases WHERE workspace_id=? "
@@ -289,8 +309,11 @@ class RunService:
 
     def complete(
         self, project_id: UUID, run_id: UUID, result: RunAttemptResult,
-        *, verified_stopped: bool,
+        *, verified_stopped: bool, budget_failure: BudgetFailureCode | None = None,
+        plan_failure: Literal["PLAN_RESULT_INVALID", "PLAN_WORKSPACE_CHANGED"] | None = None,
     ) -> tuple[Literal["APPLIED", "DUPLICATE_RESULT", "STALE_RESULT"], RunView]:
+        if (budget_failure is not None or plan_failure is not None) and result.outcome != "failed":
+            raise RunError("RUN_CONFLICT")
         with self.storage.transaction() as db:
             run = self._required(project_id, run_id)
             config = self.configs.get(project_id, run_id)
@@ -355,6 +378,14 @@ class RunService:
             self._event(db, run_id, result.attemptId, "attempt.result", {
                 "outcome": result.outcome, "resultHash": result_hash,
             }, result.timestamp)
+            if budget_failure is not None:
+                self._event(db, run_id, result.attemptId, "run.failed", {
+                    "reason": budget_failure,
+                }, result.timestamp)
+            if plan_failure is not None:
+                self._event(db, run_id, result.attemptId, "run.failed", {
+                    "reason": plan_failure,
+                }, result.timestamp)
             return "APPLIED", self._required(project_id, run_id)
 
     def interrupt_uncertain(

@@ -43,11 +43,15 @@ def codex_environment() -> dict[str, str]:
 class CodexConnection:
     def __init__(
         self, controller: ProcessController, run_id: str, executable: str, cwd: Path,
+        *, initialization_timeout_seconds: int = 15,
     ) -> None:
+        if not 1 <= initialization_timeout_seconds <= 60:
+            raise ValueError("Invalid app-server initialization timeout")
         self.controller = controller
         self.run_id = run_id
         self.executable = executable
         self.cwd = cwd
+        self.initialization_timeout_seconds = initialization_timeout_seconds
         self.session: ProcessSession | None = None
         self.reader: asyncio.Task[None] | None = None
         self.stderr_reader: asyncio.Task[None] | None = None
@@ -73,7 +77,7 @@ class CodexConnection:
         try:
             await self.request("initialize", {"clientInfo": {
                 "name": "forge_python_executor", "title": "Forge Executor", "version": "0.0.1",
-            }}, 15)
+            }}, self.initialization_timeout_seconds)
             await self.notify("initialized", {})
         except BaseException:
             await self.dispose()

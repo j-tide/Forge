@@ -36,6 +36,14 @@ class ProfileLock(VersionLock):
     executorPluginId: str = Field(min_length=1, max_length=128)
 
 
+class CommandPresetLock(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    presetId: UUID
+    revision: int = Field(ge=1)
+    approvalHash: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+
+
 class RunBudget(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -77,6 +85,7 @@ class RunConfigSnapshot(BaseModel):
     plugins: list[VersionLock] = Field(max_length=32)
     budget: RunBudget
     environment: ProjectEnvironment
+    commandPresets: list[CommandPresetLock] = Field(default_factory=list, max_length=64)
     createdAt: str
     snapshotHash: str = Field(pattern=r"^[a-f0-9]{64}$")
 
@@ -94,6 +103,8 @@ def verify_snapshot(value: object) -> RunConfigSnapshot:
         excluded = {"snapshotHash"}
         if "stageProfiles" not in snapshot.model_fields_set:
             excluded.add("stageProfiles")
+        if "commandPresets" not in snapshot.model_fields_set:
+            excluded.add("commandPresets")
         body = snapshot.model_dump(mode="json", exclude=excluded)
         if (
             _digest(body) != snapshot.snapshotHash
@@ -170,6 +181,12 @@ class RunConfigService:
                 raise RunConfigError("RUN_CONFIG_STALE")
             if row["current_revision"] != selection.expectedTaskRevision:
                 raise RunConfigError("RUN_CONFIG_STALE")
+            if self.storage.schema_version() >= 21 and db.execute(
+                "SELECT 1 FROM final_acceptance_decisions WHERE project_id=? AND task_id=? "
+                "AND contract_revision=? AND decision='accept' LIMIT 1",
+                (str(selection.projectId), str(selection.taskId), row["current_revision"]),
+            ).fetchone():
+                raise RunConfigError("RUN_CONFIG_STALE")
             try:
                 contract = TaskContract.model_validate_json(row["contract_json"])
             except ValidationError as error:
@@ -183,6 +200,17 @@ class RunConfigService:
                 raise RunConfigError("RUN_CONFIG_NOT_FOUND")
             if environment.revision != selection.expectedEnvironmentRevision:
                 raise RunConfigError("RUN_CONFIG_STALE")
+            preset_locks: list[dict[str, object]] = []
+            for preset_id in environment.config.commandPresetIds:
+                preset = self.environments.get_preset(
+                    str(selection.projectId), str(preset_id)
+                )
+                if preset is None or preset.environmentId != environment.environmentId:
+                    raise RunConfigError("RUN_CONFIG_STALE")
+                preset_locks.append(CommandPresetLock(
+                    presetId=preset.presetId, revision=preset.revision,
+                    approvalHash=preset.approvalHash,
+                ).model_dump(mode="json"))
             if (
                 contract.projectId != str(selection.projectId)
                 or contract.taskId != str(selection.taskId)
@@ -233,6 +261,7 @@ class RunConfigService:
                 )],
                 "budget": selection.budget.model_dump(mode="json"),
                 "environment": environment.model_dump(mode="json"),
+                "commandPresets": preset_locks,
                 "createdAt": timestamp(),
             }
             if "stageProfiles" in selection.model_fields_set:
