@@ -209,6 +209,11 @@ async def test_issue_history_dedup_rework_and_restart(
             structuredOutput=payload,
         )
 
+    with pytest.raises(ReviewIssueError, match="REVIEW_RESULT_STALE"):
+        await service.record(
+            project.projectId, run_id, copy.reviewCopyId, uuid4(),
+            completion(raw), expected_profile_revision=2,
+        )
     first_attempt = uuid4()
     first = await service.record(project.projectId, run_id, copy.reviewCopyId,
                                  first_attempt, completion(raw))
@@ -230,6 +235,27 @@ async def test_issue_history_dedup_rework_and_restart(
     assert len(history) == 2 and history[0].snapshotId == snapshot.snapshotId
     assert history[0].reviewAttemptId != history[1].reviewAttemptId
     assert len(service.list_for_task(project.projectId, draft.draftId)) == 2
+    missing = await service.record(project.projectId, run_id, copy.reviewCopyId,
+                                   uuid4(), completion(None, 3))
+    assert missing.status == "inconclusive" and missing.result is None
+    assert missing.diagnosticCode == "REVIEW_RESULT_MISSING"
+    with storage.transaction() as db:
+        db.execute(
+            "INSERT INTO review_jobs(review_run_id,idempotency_key,project_id,task_id,"
+            "development_run_id,snapshot_id,review_copy_id,review_attempt_id,model_id,"
+            "state,report_id,error_code,created_at,updated_at) "
+            "VALUES(?,?,?,?,?,?,?,?,?,'completed',?,?,?,?)",
+            (str(uuid4()), str(uuid4()), str(project.projectId), str(draft.draftId),
+             str(run_id), str(snapshot.snapshotId), str(copy.reviewCopyId),
+             str(missing.reviewAttemptId), "fixture-model", str(missing.reviewId),
+             missing.diagnosticCode, now, now),
+        )
+    assert service.get(missing.reviewId).diagnosticCode == "REVIEW_RESULT_MISSING"
+    invalid = await service.record(project.projectId, run_id, copy.reviewCopyId,
+                                   uuid4(), completion({"untrusted": "provider output"}, 4))
+    assert invalid.status == "inconclusive" and invalid.result is None
+    assert invalid.diagnosticCode == "REVIEW_RESULT_INVALID"
+    assert service.get(invalid.reviewId).diagnosticCode is None  # No owning job yet.
     next_run_id, next_attempt_id = uuid4(), uuid4()
     next_work = await developer.create(source, str(next_run_id))
     (Path(next_work.rootPath) / "math.js").write_text(
@@ -306,6 +332,22 @@ async def test_issue_history_dedup_rework_and_restart(
     with pytest.raises(ReviewIssueError, match="REVIEW_SOURCE_STALE"):
         await service.record(project.projectId, run_id, copy.reviewCopyId,
                              uuid4(), completion(raw).model_copy(update={"runId": str(uuid4())}))
+    custom_revision_report = await service.record(
+        project.projectId, next_run_id, next_copy.reviewCopyId, uuid4(),
+        RunCompleted(
+            runId=str(next_copy.ownerReviewRunId), sequence=3, timestamp=timestamp(),
+            type="run.completed", providerSessionId="fixture-custom-reviewer",
+            structuredOutput={**next_raw, "profileRevision": 2,
+                              "outcome": "approved", "blockingIssues": [],
+                              "summary": "Custom Reviewer revision checked"},
+        ),
+        expected_profile_revision=2,
+    )
+    assert custom_revision_report.status == "approved"
+    assert storage.session().execute(
+        "SELECT profile_revision FROM review_reports WHERE review_id=?",
+        (str(custom_revision_report.reviewId),),
+    ).fetchone()["profile_revision"] == 2
     storage.close()
     host = await asyncio.create_subprocess_exec(
         sys.executable, "-m", "forge.host", stdin=asyncio.subprocess.PIPE,
@@ -332,9 +374,10 @@ async def test_issue_history_dedup_rework_and_restart(
         assert "result" in hello
         query = {"projectId": str(project.projectId), "taskId": str(draft.draftId)}
         reports = await call("run.reviewReports", query)
-        assert len(reports["result"]["data"]) == 4
+        assert len(reports["result"]["data"]) == 7
         assert reports["result"]["data"][0]["status"] == "approved"
-        assert reports["result"]["data"][1]["issues"][0]["issueId"] == str(
+        assert reports["result"]["data"][0]["result"]["profileRevision"] == 2
+        assert reports["result"]["data"][2]["issues"][0]["issueId"] == str(
             first.issues[0].issueId)
         history_result = await call("run.issueHistory", query)
         assert len(history_result["result"]["data"]) == 3

@@ -176,7 +176,7 @@ class ReviewEvaluation(BaseModel):
 
 
 def evaluate_review_result(
-    raw: Any, context: ReviewContext, profile: ReviewerProfile,
+    raw: Any, context: ReviewContext, expected_profile_revision: int,
 ) -> ReviewEvaluation:
     if raw is None:
         return ReviewEvaluation(status="inconclusive", result=None,
@@ -189,7 +189,7 @@ def evaluate_review_result(
     if (
         result.snapshotId != context.snapshotId or result.taskId != context.taskId
         or result.contractRevision != context.contractRevision
-        or result.profileRevision != profile.revision
+        or result.profileRevision != expected_profile_revision
     ):
         return ReviewEvaluation(status="stale", result=None, code="REVIEW_RESULT_STALE")
     acceptance_ids = {item["id"] for item in context.acceptance}

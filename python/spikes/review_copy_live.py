@@ -121,7 +121,7 @@ async def main() -> None:
         completed = [item for item in review_events if item.type == "run.completed"]
         assert len(completed) == 1
         evaluation = evaluate_review_result(
-            completed[0].structuredOutput, context, profile
+            completed[0].structuredOutput, context, profile.revision
         )
         assert evaluation.result is not None, evaluation.code
         await reviews.verify(copy.reviewCopyId)

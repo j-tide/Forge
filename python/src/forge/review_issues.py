@@ -87,6 +87,7 @@ class ReviewReport(BaseModel):
     reviewAttemptId: UUID
     status: Literal["approved", "changes_requested", "inconclusive"]
     result: ReviewResult | None
+    diagnosticCode: Literal["REVIEW_RESULT_MISSING", "REVIEW_RESULT_INVALID"] | None = None
     issues: list[ReviewIssue]
     reworkHandoff: ReworkHandoff | None
     createdAt: str
@@ -143,6 +144,7 @@ class ReviewIssueService:
     async def record(
         self, project_id: UUID, development_run_id: UUID,
         review_copy_id: UUID, review_attempt_id: UUID, completed: RunCompleted,
+        *, expected_profile_revision: int | None = None,
     ) -> ReviewReport:
         copy = await self.copies.verify(review_copy_id)
         if (copy.projectId != project_id or copy.developmentRunId != development_run_id
@@ -152,7 +154,13 @@ class ReviewIssueService:
         if copy.snapshotId != context.snapshotId:
             raise ReviewIssueError("REVIEW_SOURCE_STALE")
         profile, _ = load_reviewer_profile()
-        evaluation = evaluate_review_result(completed.structuredOutput, context, profile)
+        revision = (
+            expected_profile_revision
+            if expected_profile_revision is not None else profile.revision
+        )
+        if revision < 1:
+            raise ReviewIssueError("REVIEW_RESULT_INVALID")
+        evaluation = evaluate_review_result(completed.structuredOutput, context, revision)
         if evaluation.status == "stale":
             raise ReviewIssueError("REVIEW_RESULT_STALE")
         result = _safe_result(evaluation.result) if evaluation.result else None
@@ -187,7 +195,7 @@ class ReviewIssueService:
                 "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (str(review_id), str(project_id), str(context.taskId),
                  str(development_run_id), str(context.snapshotId), str(review_copy_id),
-                 str(review_attempt_id), context.contractRevision, profile.revision,
+                 str(review_attempt_id), context.contractRevision, revision,
                  evaluation.status, result_json, digest, now),
             )
             issue_ids: list[UUID] = []
@@ -263,7 +271,13 @@ class ReviewIssueService:
                     (str(handoff.handoffId), str(review_id), str(development_run_id),
                      str(context.snapshotId), handoff.model_dump_json(), now),
                 )
-        return self.get(review_id)
+        # The report is immutable. The owning job persists the bounded reason
+        # after record() returns, so a restart can explain an inconclusive
+        # result without retaining the provider's raw response.
+        diagnostic_code = (evaluation.code if evaluation.code in (
+            "REVIEW_RESULT_MISSING", "REVIEW_RESULT_INVALID"
+        ) else None)
+        return self.get(review_id).model_copy(update={"diagnosticCode": diagnostic_code})
 
     def get(self, review_id: UUID) -> ReviewReport:
         row = self.storage.session().execute(
@@ -281,6 +295,13 @@ class ReviewIssueService:
             "SELECT bundle_json FROM review_rework_handoffs WHERE review_id=?",
             (str(review_id),),
         ).fetchone()
+        diagnostic = self.storage.session().execute(
+            "SELECT error_code FROM review_jobs WHERE report_id=?",
+            (str(review_id),),
+        ).fetchone()
+        diagnostic_code = (diagnostic["error_code"] if diagnostic is not None else None)
+        if diagnostic_code not in ("REVIEW_RESULT_MISSING", "REVIEW_RESULT_INVALID"):
+            diagnostic_code = None
         return ReviewReport(
             reviewId=UUID(row["review_id"]), projectId=UUID(row["project_id"]),
             taskId=UUID(row["task_id"]), developmentRunId=UUID(row["development_run_id"]),
@@ -288,6 +309,7 @@ class ReviewIssueService:
             reviewAttemptId=UUID(row["review_attempt_id"]), status=row["outcome"],
             result=(ReviewResult.model_validate_json(row["result_json"])
                     if row["result_json"] != "null" else None),
+            diagnosticCode=diagnostic_code,
             issues=[ReviewIssue(
                 issueId=UUID(item["issue_id"]), projectId=UUID(item["project_id"]),
                 taskId=UUID(item["task_id"]), severity=item["severity"],

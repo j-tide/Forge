@@ -212,6 +212,14 @@ class AcceptanceMatrixService:
             if report is None or report.status == "passed":
                 raise AcceptanceMatrixError("ACCEPTANCE_EVIDENCE_REQUIRED")
         with self.storage.transaction() as transaction:
+            if transaction.execute(
+                "SELECT 1 FROM final_acceptance_decisions WHERE project_id=? "
+                "AND task_id=? AND snapshot_id=? AND contract_revision=? "
+                "AND decision='accept' LIMIT 1",
+                (str(value.projectId), str(value.taskId),
+                 str(value.expectedSnapshotId), value.expectedContractRevision),
+            ).fetchone() is not None:
+                raise AcceptanceMatrixError("ACCEPTANCE_SOURCE_STALE")
             transaction.execute(
                 "INSERT INTO acceptance_decisions(decision_id,idempotency_key,project_id,"
                 "task_id,snapshot_id,contract_revision,criterion_id,status,report_id,reason,"

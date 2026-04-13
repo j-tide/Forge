@@ -26,7 +26,12 @@ from forge.executor_contracts import (
 )
 from forge.handoffs import HandoffService
 from forge.persistence import ForgePersistence
-from forge.projects import TRUST_VERSION, ProjectError, ProjectService
+from forge.projects import (
+    TRUST_VERSION,
+    ProjectError,
+    ProjectService,
+    active_trusted_project_in,
+)
 from forge.review import (
     ReviewContext,
     ReviewError,
@@ -218,6 +223,15 @@ class HostReviewService:
             if (current_revision is None
                     or current_revision["current_revision"] != config.taskRevision):
                 raise ReviewRuntimeError("REVIEW_RESULT_STALE")
+            accepted = self.storage.session().execute(
+                "SELECT 1 FROM final_acceptance_decisions WHERE project_id=? "
+                "AND task_id=? AND snapshot_id=? AND contract_revision=? "
+                "AND decision='accept' LIMIT 1",
+                (str(value.projectId), str(value.taskId),
+                 str(value.expectedSnapshotId), config.taskRevision),
+            ).fetchone()
+            if accepted is not None:
+                raise ReviewRuntimeError("REVIEW_RESULT_STALE")
             if self.storage.schema_version() >= 23 and self.storage.session().execute(
                 "SELECT 1 FROM task_change_requests WHERE task_id=? "
                 "AND state='awaiting_safe_point' LIMIT 1", (str(value.taskId),),
@@ -268,12 +282,17 @@ class HostReviewService:
                 if not decision.runnable:
                     raise ReviewRuntimeError(decision.reason or "PROFILE_UNAVAILABLE")
                 prompt = selected.promptTemplate
+            reviewer_revision = selected.revision if selected else profile.revision
             copy = await self.copies.create(Path(project.rootPath), handoff.snapshot, caps)
             attempt_id = uuid4()
             request = ScheduledExecutorRequest(
                 runId=str(copy.ownerReviewRunId), taskId=str(value.taskId),
                 workspace=copy.rootPath,
                 goal=(f"{prompt}\nReviewContext JSON:\n{context.model_dump_json()}\n"
+                      f"The ReviewResult must use profileRevision={reviewer_revision}, "
+                      f"contractRevision={context.contractRevision}, "
+                      f"snapshotId={context.snapshotId}, and taskId={context.taskId}. "
+                      "These are separate frozen values; do not infer one revision from another. "
                       "Inspect the fixed review copy. Return a ReviewResult JSON object. "
                       "If evidence is insufficient, return inconclusive. Do not modify files."),
                 context=[], permission="read-only", approval="never", model=value.modelId,
@@ -287,7 +306,7 @@ class HostReviewService:
                     contractRevision=context.contractRevision,
                     workspaceLeaseId=str(copy.ownershipId),
                     contextBundleId=str(handoff.bundle.contextBundleId),
-                    profileRevision=selected.revision if selected else profile.revision,
+                    profileRevision=reviewer_revision,
                     outputSchemaId="review-result/v1",
                 ),
             )
@@ -295,6 +314,16 @@ class HostReviewService:
                 await self.copies.assert_request(copy.reviewCopyId, request)
                 now = timestamp()
                 with self.storage.transaction() as db:
+                    if not active_trusted_project_in(db, value.projectId):
+                        raise ReviewRuntimeError("PROJECT_TRUST_REQUIRED")
+                    if db.execute(
+                        "SELECT 1 FROM final_acceptance_decisions WHERE project_id=? "
+                        "AND task_id=? AND snapshot_id=? AND contract_revision=? "
+                        "AND decision='accept' LIMIT 1",
+                        (str(value.projectId), str(value.taskId),
+                         str(value.expectedSnapshotId), config.taskRevision),
+                    ).fetchone() is not None:
+                        raise ReviewRuntimeError("REVIEW_RESULT_STALE")
                     db.execute(
                         "INSERT INTO review_jobs(review_run_id,idempotency_key,project_id,"
                         "task_id,development_run_id,snapshot_id,review_copy_id,"
@@ -344,13 +373,16 @@ class HostReviewService:
             report = await self.issues.record(
                 job.projectId, job.developmentRunId, job.reviewCopyId,
                 job.reviewAttemptId, completed,
+                expected_profile_revision=request.attempt.profileRevision,
             )
             await self.copies.release(job.reviewCopyId)
             with self.storage.transaction() as db:
                 db.execute(
-                    "UPDATE review_jobs SET state='completed',report_id=?,updated_at=? "
+                    "UPDATE review_jobs SET state='completed',report_id=?,"
+                    "error_code=?,updated_at=? "
                     "WHERE review_run_id=? AND state='running'",
-                    (str(report.reviewId), timestamp(), str(review_run_id)),
+                    (str(report.reviewId), report.diagnosticCode,
+                     timestamp(), str(review_run_id)),
                 )
             if report.status == "changes_requested" and self.on_rework is not None:
                 try:

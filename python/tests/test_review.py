@@ -77,7 +77,7 @@ def test_profile_and_independent_context_are_bounded() -> None:
     assert context.changedFiles == ["math.js"]
     assert "secretvalue" not in context.diffText and "[REDACTED]" in context.diffText
     assert context.unavailable == ["plan", "self-check", "project-rules"]
-    assert evaluate_review_result(result(context), context, profile).status == "approved"
+    assert evaluate_review_result(result(context), context, profile.revision).status == "approved"
     with pytest.raises(ReviewError, match="REVIEW_CONTEXT_STALE"):
         build_review_context(handoff, config.model_copy(update={"taskRevision": 3}), diff)
     with pytest.raises(ReviewError, match="REVIEW_CONTEXT_STALE"):
@@ -91,14 +91,17 @@ def test_review_result_cannot_approve_when_missing_invalid_or_stale() -> None:
     handoff, config, diff = fixture()
     context = build_review_context(handoff, config, diff)
     valid = result(context)
-    assert evaluate_review_result(None, context, profile).code == "REVIEW_RESULT_MISSING"
-    assert evaluate_review_result({"outcome": "approved"}, context, profile).status == (
+    assert evaluate_review_result(None, context, profile.revision).code == "REVIEW_RESULT_MISSING"
+    assert evaluate_review_result({"outcome": "approved"}, context, profile.revision).status == (
         "inconclusive"
     )
-    stale = evaluate_review_result({**valid, "snapshotId": str(uuid4())}, context, profile)
+    stale = evaluate_review_result({**valid, "snapshotId": str(uuid4())}, context, profile.revision)
     assert stale.status == "stale" and stale.result is None
     assert evaluate_review_result({**valid, "profileRevision": 2},
-                                  context, profile).status == "stale"
+                                  context, profile.revision).status == "stale"
+    assert evaluate_review_result({**valid, "profileRevision": 2},
+                                  context, 2).status == "approved"
+    assert evaluate_review_result(valid, context, 2).status == "stale"
 
     finding = {
         "anchor": {"path": "math.js", "lineStart": 2, "lineEnd": 2},
@@ -106,15 +109,15 @@ def test_review_result_cannot_approve_when_missing_invalid_or_stale() -> None:
         "reason": "Invalid input still reaches addition", "impact": "AC-01 fails",
     }
     assert evaluate_review_result({**valid, "blockingIssues": [finding]},
-                                  context, profile).code == "REVIEW_RESULT_INVALID"
+                                  context, profile.revision).code == "REVIEW_RESULT_INVALID"
     assert evaluate_review_result({**valid, "outcome": "changes_requested",
                                    "blockingIssues": [finding]},
-                                  context, profile).status == "changes_requested"
+                                  context, profile.revision).status == "changes_requested"
     assert evaluate_review_result({**valid, "outcome": "changes_requested"},
-                                  context, profile).status == "inconclusive"
+                                  context, profile.revision).status == "inconclusive"
     assert evaluate_review_result({**valid, "unknowns": [
         {"question": "Is the API public?", "impact": "Unclear compatibility"},
-    ]}, context, profile).status == "inconclusive"
+    ]}, context, profile.revision).status == "inconclusive"
     for broken in (
         {**finding, "anchor": None},
         {**finding, "anchor": {"path": "../escape", "lineStart": 1, "lineEnd": 1}},
@@ -123,5 +126,5 @@ def test_review_result_cannot_approve_when_missing_invalid_or_stale() -> None:
         {**finding, "basis": None},
     ):
         invalid = evaluate_review_result({**valid, "outcome": "changes_requested",
-                                          "blockingIssues": [broken]}, context, profile)
+                                          "blockingIssues": [broken]}, context, profile.revision)
         assert invalid.status == "inconclusive" and invalid.result is None
