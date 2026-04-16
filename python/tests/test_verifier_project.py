@@ -43,10 +43,11 @@ from forge.environments import (
     PresetSaveInput,
 )
 from forge.handoffs import HandoffService, build_development_handoff
-from forge.persistence import LATEST_SCHEMA, ForgePersistence
+from forge.host import HostRuntime
+from forge.persistence import LATEST_SCHEMA, ForgePersistence, PersistenceError
 from forge.processes import ProcessController
 from forge.projects import TRUST_VERSION, ProjectService
-from forge.protocol import HOST_PROTOCOL_VERSION, TRANSPORT_VERSION
+from forge.protocol import HOST_PROTOCOL_VERSION, TRANSPORT_VERSION, RpcRequest
 from forge.run_config import (
     ProfileLock,
     RunBudget,
@@ -79,12 +80,17 @@ async def fixture(tmp_path: Path, *, mode: str = "pass", configured: bool = True
     git(source, "config", "user.name", "Forge fixture")
     git(source, "config", "user.email", "forge-fixture@example.invalid")
     (source / "result.txt").write_text("base\n")
-    action = "time.sleep(5)" if mode == "timeout" else (
-        "sys.exit(7)" if mode == "fail" else (
-            "sys.exit(0 if Path('result.txt').read_text() == "
-            "'real process wrote this' else 7)" if mode == "repair" else "sys.exit(0)"
-        )
-    )
+    if mode == "hold":
+        action = "time.sleep(20)"
+    elif mode == "timeout":
+        action = "time.sleep(5)"
+    elif mode == "fail":
+        action = "sys.exit(7)"
+    elif mode == "repair":
+        action = ("sys.exit(0 if Path('result.txt').read_text() == "
+                  "'real process wrote this' else 7)")
+    else:
+        action = "sys.exit(0)"
     script = (
         "from pathlib import Path\nimport sys, time\n"
         "Path('dist').mkdir(exist_ok=True)\n"
@@ -179,7 +185,7 @@ async def fixture(tmp_path: Path, *, mode: str = "pass", configured: bool = True
             projectId=project.projectId, expectedRevision=0,
             environmentId=environment.environmentId, name="test",
             executable=sys.executable, argv=["check.py"], cwdRelative=".",
-            envRefs=[], timeoutSeconds=1 if mode == "timeout" else 10,
+            envRefs=[], timeoutSeconds=1 if mode == "timeout" else 30 if mode == "hold" else 10,
             scriptsHash=probe.scriptsHash,
         ))
         preset = environments.approve_preset(
@@ -431,6 +437,159 @@ async def test_real_check_exit_evidence_and_isolation(
             db.execute("UPDATE verifier_reports SET status='passed' WHERE report_id=?",
                        (str(report.reportId),))
     reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_active_check_blocks_project_archive_until_owned_process_exits(
+    tmp_path: Path,
+) -> None:
+    source, head, storage, project_id, task_id, run_id, snapshot_id, preset, verifier, processes = (
+        await fixture(tmp_path, mode="hold")
+    )
+    assert preset is not None
+    job = await verifier.start(request(project_id, task_id, run_id, snapshot_id,
+                                       preset.presetId))
+    for _ in range(100):
+        if processes.has_active(str(job.verificationId)):
+            break
+        await asyncio.sleep(0.02)
+    assert processes.has_active(str(job.verificationId))
+    project = ProjectService(storage).get(str(project_id))
+    assert project is not None
+    with pytest.raises(PersistenceError, match="PROJECT_BUSY"):
+        storage.remove_project(str(project_id), project.revision, timestamp())
+    assert ProjectService(storage).active() is not None
+    assert git(source, "rev-parse", "HEAD") == head
+    assert git(source, "status", "--porcelain") == ""
+    await verifier.shutdown()
+    assert not processes.has_active(str(job.verificationId))
+    storage.close()
+
+
+@pytest.mark.parametrize("job_kind", ["review", "verify"])
+@pytest.mark.asyncio
+async def test_interrupted_review_or_verify_blocks_project_archive(
+    tmp_path: Path, job_kind: str, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, head, storage, project_id, task_id, run_id, snapshot_id, _, verifier, _ = (
+        await fixture(tmp_path)
+    )
+    now = timestamp()
+    with storage.transaction() as db:
+        if job_kind == "review":
+            db.execute(
+                "INSERT INTO review_jobs(review_run_id,idempotency_key,project_id,"
+                "task_id,development_run_id,snapshot_id,review_copy_id,review_attempt_id,"
+                "model_id,state,created_at,updated_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,'interrupted',?,?)",
+                (str(uuid4()), str(uuid4()), str(project_id), str(task_id), str(run_id),
+                 str(snapshot_id), str(uuid4()), str(uuid4()), "fixture-model", now, now),
+            )
+        else:
+            db.execute(
+                "INSERT INTO verifier_jobs(verification_id,idempotency_key,project_id,"
+                "task_id,development_run_id,snapshot_id,kind,state,created_at,updated_at) "
+                "VALUES(?,?,?,?,?,?,'test','interrupted',?,?)",
+                (str(uuid4()), str(uuid4()), str(project_id), str(task_id), str(run_id),
+                 str(snapshot_id), now, now),
+            )
+    project = ProjectService(storage).get(str(project_id))
+    assert project is not None
+    with pytest.raises(PersistenceError, match="RUN_RECOVERY_REQUIRED"):
+        storage.remove_project(str(project_id), project.revision, timestamp())
+    assert ProjectService(storage).get(str(project_id)).revision == project.revision
+    assert ProjectService(storage).active() is not None
+    assert git(source, "rev-parse", "HEAD") == head
+    assert git(source, "status", "--porcelain") == ""
+    await verifier.shutdown()
+    storage.close()
+    monkeypatch.setenv("FORGE_HOST_DATA_DIR", str(tmp_path / "data"))
+    restarted = HostRuntime()
+    try:
+        assert restarted.storage_health()["status"] == "ready"
+        safety = restarted.dispatch(RpcRequest(
+            jsonrpc="2.0", id=str(uuid4()), method="system.profileSwitchSafety",
+            params={}, transportVersion=TRANSPORT_VERSION,
+        ))
+        assert safety["safe"] is False
+        key = "interruptedReviewJobs" if job_kind == "review" else "interruptedVerifyJobs"
+        assert safety["fences"][key] == 1
+    finally:
+        restarted.storage.close()
+
+
+@pytest.mark.asyncio
+async def test_archive_during_verifier_workspace_creation_rejects_launch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, head, storage, project_id, task_id, run_id, snapshot_id, preset, verifier, processes = (
+        await fixture(tmp_path)
+    )
+    assert preset is not None
+    created = asyncio.Event()
+    proceed = asyncio.Event()
+    original_create = verifier.workspaces.create
+
+    async def pause_after_create(*args: object, **kwargs: object):
+        workspace = await original_create(*args, **kwargs)
+        created.set()
+        await proceed.wait()
+        return workspace
+
+    monkeypatch.setattr(verifier.workspaces, "create", pause_after_create)
+    launch = asyncio.create_task(verifier.start(
+        request(project_id, task_id, run_id, snapshot_id, preset.presetId)
+    ))
+    try:
+        await asyncio.wait_for(created.wait(), 5)
+        project = ProjectService(storage).get(str(project_id))
+        assert project is not None
+        assert storage.remove_project(str(project_id), project.revision, timestamp())
+    finally:
+        proceed.set()
+    with pytest.raises(VerifierError, match="PROJECT_TRUST_REQUIRED"):
+        await launch
+    assert verifier.list_for_task(project_id, task_id) == []
+    assert not processes.has_active(str(run_id))
+    assert all(item.status == "released" for item in verifier.workspaces.records.values())
+    assert git(source, "rev-parse", "HEAD") == head
+    assert git(source, "status", "--porcelain") == ""
+    await verifier.shutdown()
+    storage.close()
+
+
+@pytest.mark.asyncio
+async def test_edited_preset_cannot_change_a_frozen_run(tmp_path: Path) -> None:
+    _, _, storage, project_id, task_id, run_id, snapshot_id, preset, verifier, processes = (
+        await fixture(tmp_path)
+    )
+    assert preset is not None and preset.approvalHash
+    environments = EnvironmentService(storage)
+    frozen = RunConfigService(storage, environments).get(project_id, run_id)
+    assert frozen is not None
+    assert [(item.presetId, item.revision, item.approvalHash)
+            for item in frozen.commandPresets] == [
+        (preset.presetId, preset.revision, preset.approvalHash)
+    ]
+    edited = environments.save_preset(PresetSaveInput(
+        projectId=project_id, presetId=preset.presetId,
+        expectedRevision=preset.revision, environmentId=preset.environmentId,
+        name="test", executable=sys.executable, argv=["check.py", "--changed"],
+        cwdRelative=".", envRefs=[], timeoutSeconds=10,
+        scriptsHash=preset.scriptsHash,
+    ))
+    approved = environments.approve_preset(
+        str(project_id), str(preset.presetId), edited.revision, preset.scriptsHash
+    )
+    assert approved.approvalHash != preset.approvalHash
+    assert RunConfigService(storage, environments).get(project_id, run_id) == frozen
+    with pytest.raises(VerifierError, match="VERIFY_PRESET_STALE"):
+        await verifier.start(request(project_id, task_id, run_id, snapshot_id,
+                                     preset.presetId))
+    assert not processes.has_active(str(run_id))
+    assert verifier.list_for_task(project_id, task_id) == []
+    await verifier.shutdown()
+    storage.close()
 
 
 @pytest.mark.asyncio

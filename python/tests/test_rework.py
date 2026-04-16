@@ -17,7 +17,9 @@ from forge.development import DevelopmentError, RunLaunchInput
 from forge.executor_contracts import RunCompleted
 from forge.host import HostRuntime
 from forge.persistence import LATEST_SCHEMA
+from forge.review_runtime import ReviewJob, ReviewRuntimeError, ReviewStartInput
 from forge.rework import MAX_REWORK_CYCLES, MAX_TOTAL_ATTEMPTS
+from forge.verifier_project import VerifierError, VerifyJob, VerifyStartInput
 
 
 async def _wait_for_handoff(host: HostRuntime, project_id, run_id) -> None:
@@ -97,6 +99,75 @@ async def test_failed_check_auto_reworks_from_snapshot_then_passes(
 
 
 @pytest.mark.asyncio
+async def test_failed_rework_gate_can_recover_only_with_real_matching_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, head, storage, project_id, task_id, original_run, snapshot_id, preset, \
+        verifier, processes = await fixture(tmp_path, mode="repair", rework_ready=True)
+    assert preset is not None
+    await verifier.shutdown()
+    await processes.dispose()
+    storage.close()
+    script = tmp_path / "repair_process.py"
+    script.write_text(SCRIPT)
+    monkeypatch.setenv("FORGE_HOST_DATA_DIR", str(tmp_path / "data"))
+    host = HostRuntime()
+    host.storage_health()
+    await host.verifier.open()
+    host.verifier_ready = True
+    await host.attach_executor(FixtureAdapter(host.processes, script, "short"))
+    start = host.verifier.start
+    starts = 0
+
+    async def fail_second_start(value: VerifyStartInput) -> VerifyJob:
+        nonlocal starts
+        starts += 1
+        if starts == 2:
+            raise VerifierError("VERIFY_WORKSPACE_UNAVAILABLE")
+        return await start(value)
+
+    monkeypatch.setattr(host.verifier, "start", fail_second_start)
+    try:
+        first = await host.verifier.start(request(
+            project_id, task_id, original_run, snapshot_id, preset.presetId,
+        ))
+        await asyncio.wait_for(asyncio.gather(*host.verifier.running.values()), 15)
+        failed = host.verifier.report(project_id, first.verificationId)
+        assert failed is not None and failed.status == "failed"
+        cycles = host.rework.list_for_task(project_id, task_id)
+        assert len(cycles) == 1 and cycles[0].nextRunId is not None
+        await _wait_for_handoff(host, project_id, cycles[0].nextRunId)
+        blocked = host.rework.list_for_task(project_id, task_id)[0]
+        assert blocked.state == "blocked"
+        assert blocked.reasonCode == "VERIFY_WORKSPACE_UNAVAILABLE"
+        assert host.board.snapshot(str(project_id)).tasks[0].state == "blocked"
+        assert "REWORK_UNRESOLVED" in host.final_acceptance.get(
+            project_id, task_id,
+        ).blockers
+        handoff = host.handoffs.get(project_id, blocked.nextRunId)
+        assert handoff is not None
+        monkeypatch.setattr(host.verifier, "start", start)
+        manual = await host.verifier.start(request(
+            project_id, task_id, blocked.nextRunId,
+            handoff.snapshot.snapshotId, preset.presetId,
+        ))
+        await asyncio.wait_for(asyncio.gather(*host.verifier.running.values()), 15)
+        passed = host.verifier.report(project_id, manual.verificationId)
+        assert passed is not None and passed.status == "passed"
+        recovered = host.rework.list_for_task(project_id, task_id)[0]
+        assert recovered.state == "succeeded"
+        assert recovered.reasonCode == "VERIFY_WORKSPACE_UNAVAILABLE"
+        assert host.board.snapshot(str(project_id)).tasks[0].state != "blocked"
+        after = host.final_acceptance.get(project_id, task_id)
+        assert "REWORK_UNRESOLVED" not in after.blockers
+        assert "REVIEW_NOT_APPROVED" in after.blockers
+        assert git(source, "rev-parse", "HEAD") == head
+        assert git(source, "status", "--porcelain") == ""
+    finally:
+        await host.shutdown()
+
+
+@pytest.mark.asyncio
 async def test_review_blocker_uses_persisted_handoff_for_new_attempt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -159,8 +230,40 @@ async def test_review_blocker_uses_persisted_handoff_for_new_attempt(
         # Reviewer adapter. The next gate must fail closed instead of forging approval.
         after = host.rework.list_for_task(project_id, task_id)[0]
         assert after.state == "blocked" and after.reasonCode == "REWORK_GATE_UNAVAILABLE"
+        board_task = host.board.snapshot(str(project_id)).tasks[0]
+        assert board_task.state == "blocked"
+        assert board_task.blockReason is not None
+        assert "无法启动" in board_task.blockReason
+        assert "达到上限" not in board_task.blockReason
         next_handoff = host.handoffs.get(project_id, cycles[0].nextRunId)
         assert next_handoff is not None
+        # Seed only the persisted source-job metadata to test forwarding of its
+        # frozen reviewer identity; this fixture has no read-only provider.
+        with host.storage.transaction() as db:
+            db.execute(
+                "INSERT INTO review_jobs(review_run_id,idempotency_key,project_id,task_id,"
+                "development_run_id,snapshot_id,review_copy_id,review_attempt_id,"
+                "model_id,state,report_id,created_at,updated_at,profile_id,"
+                "profile_revision,profile_hash) VALUES(?,?,?,?,?,?,?,?,?,'completed',?,?,?,?,?,?)",
+                (str(copy.ownerReviewRunId), str(uuid4()), str(project_id), str(task_id),
+                 str(run_id), str(handoff.snapshot.snapshotId), str(copy.reviewCopyId),
+                 str(report.reviewAttemptId), "fixture-model", str(report.reviewId),
+                 timestamp(), timestamp(), "profile.fixture.reviewer", 2, "a" * 64),
+            )
+        assert host.review_runtime is not None
+        received: list[ReviewStartInput] = []
+
+        async def unavailable_review(value: ReviewStartInput) -> ReviewJob:
+            received.append(value)
+            raise ReviewRuntimeError("REVIEW_READ_ONLY_UNAVAILABLE")
+
+        monkeypatch.setattr(host.review_runtime, "start", unavailable_review)
+        await host._advance_rework(next_handoff)
+        assert len(received) == 1
+        assert received[0].modelId == "fixture-model"
+        assert received[0].profileId == "profile.fixture.reviewer"
+        assert received[0].profileRevision == 2
+        assert received[0].expectedSnapshotId == next_handoff.snapshot.snapshotId
         await host.verifier.start(request(
             project_id, task_id, cycles[0].nextRunId,
             next_handoff.snapshot.snapshotId, preset.presetId,
@@ -172,6 +275,7 @@ async def test_review_blocker_uses_persisted_handoff_for_new_attempt(
             await asyncio.sleep(.04)
         second = next(item for item in mixed if item.cycleNo == 2)
         assert second.triggerKind == "verify" and second.totalAttempts > cycles[0].totalAttempts
+        assert next(item for item in mixed if item.cycleNo == 1).state == "blocked"
         assert git(source, "status", "--porcelain") == ""
     finally:
         await host.shutdown()

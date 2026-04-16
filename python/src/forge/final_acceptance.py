@@ -15,7 +15,7 @@ from forge.conversations import timestamp
 from forge.persistence import ForgePersistence
 from forge.projects import TRUST_VERSION, ProjectService
 from forge.review import ReviewFinding
-from forge.rework import ReworkError, frozen_attempt_limit
+from forge.rework import ReworkError, frozen_attempt_limit, gate_recovered
 from forge.run_inspection import redact
 
 
@@ -181,7 +181,7 @@ class FinalAcceptanceService:
             (str(project_id), str(task_id), str(matrix.snapshotId)),
         ).fetchone() if matrix.snapshotId else None
         latest_cycle = db.execute(
-            "SELECT state,next_run_id FROM rework_cycles WHERE project_id=? AND task_id=? "
+            "SELECT * FROM rework_cycles WHERE project_id=? AND task_id=? "
             "ORDER BY rowid DESC LIMIT 1", (str(project_id), str(task_id)),
         ).fetchone()
         prior = db.execute(
@@ -209,10 +209,15 @@ class FinalAcceptanceService:
         ).encode()).hexdigest()
         # A later report, issue decision or AC decision invalidates the old
         # human signature even when the CodeSnapshot itself is unchanged.
-        if (current_decision is not None and current_decision.decision == "accept"
-                and current_decision.basisHash != basis_hash):
+        accepted_basis_changed = bool(
+            current_decision is not None and current_decision.decision == "accept"
+            and current_decision.basisHash != basis_hash
+        )
+        if accepted_basis_changed:
             current_decision = None
         blockers: list[str] = []
+        if accepted_basis_changed:
+            blockers.append("ACCEPTANCE_BASIS_CHANGED")
         if matrix.snapshotId is None or snapshot is None:
             blockers.append("CODE_SNAPSHOT_MISSING")
         if (latest_run is None or latest_run["state"] != "succeeded"
@@ -238,7 +243,7 @@ class FinalAcceptanceService:
                     (latest_cycle["next_run_id"],),
                 ).fetchone()
                 rework_unresolved = rework_run is None or rework_run["state"] != "succeeded"
-            if rework_unresolved:
+            if rework_unresolved and not gate_recovered(db, latest_cycle):
                 blockers.append("REWORK_UNRESOLVED")
         if current_decision and current_decision.decision == "return":
             next_run = db.execute(
@@ -290,6 +295,8 @@ class FinalAcceptanceService:
                         or prior["reason"] != value.reason):
                     raise FinalAcceptanceError("ACCEPTANCE_CONFLICT")
                 return view
+            if "ACCEPTANCE_BASIS_CHANGED" in view.blockers:
+                raise FinalAcceptanceError("ACCEPTANCE_SOURCE_STALE")
             if view.decision is not None:
                 raise FinalAcceptanceError("ACCEPTANCE_CONFLICT")
             if value.decision == "accept" and view.status != "ready":
@@ -367,6 +374,14 @@ class FinalAcceptanceService:
                         or prior["reason"] != value.reason):
                     raise FinalAcceptanceError("ACCEPTANCE_CONFLICT")
                 return view
+            if db.execute(
+                "SELECT 1 FROM final_acceptance_decisions WHERE project_id=? "
+                "AND task_id=? AND snapshot_id=? AND contract_revision=? "
+                "AND decision='accept' LIMIT 1",
+                (str(value.projectId), str(value.taskId),
+                 str(value.expectedSnapshotId), view.contractRevision),
+            ).fetchone() is not None:
+                raise FinalAcceptanceError("ACCEPTANCE_SOURCE_STALE")
             issue = next((item for item in view.advisoryIssues
                           if item.issueId == value.issueId), None)
             if (issue is None or issue.severity != "advisory" or issue.status != "open"

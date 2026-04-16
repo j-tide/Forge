@@ -24,7 +24,13 @@ from forge.environments import (
 from forge.handoffs import HandoffService
 from forge.persistence import ForgePersistence
 from forge.processes import ProcessController, ProcessError, minimal_environment
-from forge.projects import TRUST_VERSION, ProjectError, ProjectService, probe_project
+from forge.projects import (
+    TRUST_VERSION,
+    ProjectError,
+    ProjectService,
+    active_trusted_project_in,
+    probe_project,
+)
 from forge.run_config import RunConfigService
 from forge.run_inspection import redact
 from forge.workflow_drafts import WorkflowDraftError, WorkflowDraftService
@@ -313,6 +319,15 @@ class ProjectCommandVerifier:
             if (current_revision is None
                     or current_revision["current_revision"] != config.taskRevision):
                 raise VerifierError("VERIFY_SOURCE_STALE")
+            accepted = self.storage.session().execute(
+                "SELECT 1 FROM final_acceptance_decisions WHERE project_id=? "
+                "AND task_id=? AND snapshot_id=? AND contract_revision=? "
+                "AND decision='accept' LIMIT 1",
+                (str(value.projectId), str(value.taskId),
+                 str(value.expectedSnapshotId), config.taskRevision),
+            ).fetchone()
+            if accepted is not None:
+                raise VerifierError("VERIFY_SOURCE_STALE")
             if self.storage.schema_version() >= 23 and self.storage.session().execute(
                 "SELECT 1 FROM task_change_requests WHERE task_id=? "
                 "AND state='awaiting_safe_point' LIMIT 1", (str(value.taskId),),
@@ -331,6 +346,14 @@ class ProjectCommandVerifier:
                     raise VerifierError("VERIFY_PRESET_REQUIRED")
             else:
                 preset = self.environments.get_preset(str(value.projectId), str(value.presetId))
+                lock = next((item for item in config.commandPresets
+                             if item.presetId == value.presetId), None)
+                if (lock is None and value.presetId not in
+                        config.environment.config.commandPresetIds):
+                    raise VerifierError("VERIFY_PRESET_UNAPPROVED")
+                if (lock is None or preset is None or preset.revision != lock.revision
+                        or preset.approvalHash != lock.approvalHash):
+                    raise VerifierError("VERIFY_PRESET_STALE")
                 if (preset is None or preset.environmentId != config.environment.environmentId
                         or value.presetId not in config.environment.config.commandPresetIds
                         or preset.name != value.kind or not preset.approvalHash
@@ -384,6 +407,16 @@ class ProjectCommandVerifier:
             now = timestamp()
             try:
                 with self.storage.transaction() as db:
+                    if not active_trusted_project_in(db, value.projectId):
+                        raise VerifierError("PROJECT_TRUST_REQUIRED")
+                    if db.execute(
+                        "SELECT 1 FROM final_acceptance_decisions WHERE project_id=? "
+                        "AND task_id=? AND snapshot_id=? AND contract_revision=? "
+                        "AND decision='accept' LIMIT 1",
+                        (str(value.projectId), str(value.taskId),
+                         str(value.expectedSnapshotId), config.taskRevision),
+                    ).fetchone() is not None:
+                        raise VerifierError("VERIFY_SOURCE_STALE")
                     db.execute(
                         "INSERT INTO verifier_jobs(verification_id,idempotency_key,project_id,"
                         "task_id,development_run_id,snapshot_id,kind,preset_id,state,"

@@ -23,7 +23,11 @@ from forge.delivery import DeliveryError, DeliveryService, MergeRequest
 from forge.drafts import DraftRequest, DraftReviseInput, DraftService
 from forge.environments import EnvironmentService
 from forge.executor_contracts import RunCompleted
-from forge.final_acceptance import FinalAcceptanceInput, FinalAcceptanceService
+from forge.final_acceptance import (
+    FinalAcceptanceError,
+    FinalAcceptanceInput,
+    FinalAcceptanceService,
+)
 from forge.handoffs import HandoffService
 from forge.host import HostRuntime
 from forge.persistence import LATEST_SCHEMA, ForgePersistence
@@ -51,7 +55,7 @@ def delivery_service(storage: ForgePersistence, tmp_path: Path) -> DeliveryServi
     return DeliveryService(storage, projects, FinalAcceptanceService(storage, projects, matrix))
 
 
-async def accepted_fixture(tmp_path: Path):
+async def accepted_fixture(tmp_path: Path, *, accept: bool = True):
     source, head, storage, project_id, task_id, run_id, snapshot_id, preset, \
         verifier, processes = await fixture(tmp_path)
     assert preset is not None
@@ -95,13 +99,14 @@ async def accepted_fixture(tmp_path: Path):
         ))
     preview = final.get(project_id, task_id)
     assert preview.status == "ready"
-    accepted = final.decide(FinalAcceptanceInput(
-        projectId=project_id, taskId=task_id, expectedSnapshotId=snapshot_id,
-        expectedContractRevision=2, expectedBasisHash=preview.basisHash,
-        decision="accept", reason="Owner checked the current report and snapshot.",
-        idempotencyKey=uuid4(),
-    ))
-    assert accepted.status == "accepted"
+    if accept:
+        accepted = final.decide(FinalAcceptanceInput(
+            projectId=project_id, taskId=task_id, expectedSnapshotId=snapshot_id,
+            expectedContractRevision=2, expectedBasisHash=preview.basisHash,
+            decision="accept", reason="Owner checked the current report and snapshot.",
+            idempotencyKey=uuid4(),
+        ))
+        assert accepted.status == "accepted"
     await verifier.shutdown()
     await processes.dispose()
     await copies.release(copy.reviewCopyId)
@@ -252,16 +257,32 @@ async def test_delivery_refuses_evidence_changed_after_owner_acceptance(tmp_path
         (str(task_id),),
     ).fetchone()
     assert report is not None
-    service.final.matrix.decide(AcceptanceDecisionInput(
-        projectId=project_id, taskId=task_id, expectedSnapshotId=snapshot_id,
-        expectedContractRevision=2, criterionId="AC-01", status="verified",
-        reportId=UUID(report["report_id"]), reason="Owner reconsidered this exact criterion.",
-        idempotencyKey=uuid4(),
-    ))
-    assert service.final.get(project_id, task_id).status == "ready"
+    # Simulate a corrupted or externally edited database. The public acceptance
+    # API now rejects any new criterion decision after Owner acceptance.
+    with storage.transaction() as db:
+        db.execute(
+            "INSERT INTO acceptance_decisions(decision_id,idempotency_key,project_id,"
+            "task_id,snapshot_id,contract_revision,criterion_id,status,report_id,"
+            "reason,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+            (str(uuid4()), str(uuid4()), str(project_id), str(task_id),
+             str(snapshot_id), 2, "AC-01", "verified", report["report_id"],
+             "Tampered evidence after Owner accepted the delivery.", timestamp()),
+        )
+    tampered = service.final.get(project_id, task_id)
+    assert tampered.status == "unavailable"
+    assert "ACCEPTANCE_BASIS_CHANGED" in tampered.blockers
+    with pytest.raises(FinalAcceptanceError, match="ACCEPTANCE_SOURCE_STALE"):
+        service.final.decide(FinalAcceptanceInput(
+            projectId=project_id, taskId=task_id, expectedSnapshotId=snapshot_id,
+            expectedContractRevision=2, expectedBasisHash=tampered.basisHash,
+            decision="accept", reason="Owner cannot sign altered evidence again.",
+            idempotencyKey=uuid4(),
+        ))
     board = BoardService(storage)
     board.final_acceptance = service.final
-    assert board.detail(str(project_id), str(task_id)).detail.task.state != "done"
+    projected = board.detail(str(project_id), str(task_id)).detail.task
+    assert projected.state == "blocked"
+    assert "证据发生变化" in (projected.blockReason or "")
     with pytest.raises(DeliveryError, match="DELIVERY_NOT_ACCEPTED"):
         service.get(project_id, task_id)
     assert git(source, "rev-parse", "HEAD") == base

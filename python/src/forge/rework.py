@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from forge.context import ContextItem
 from forge.conversations import timestamp
 from forge.handoffs import HandoffService
-from forge.persistence import ForgePersistence
+from forge.persistence import ForgePersistence, PersistenceSession
 from forge.projects import TRUST_VERSION, ProjectService
 from forge.review_issues import ReviewIssueService, ReviewReport
 from forge.run_config import RunConfigService, RunConfigSnapshot
@@ -37,6 +37,29 @@ def frozen_attempt_limit(storage: ForgePersistence, config: RunConfigSnapshot) -
     if publication.contentHash != config.workflow.contentHash:
         raise ReworkError("WORKFLOW_RUNTIME_UNAVAILABLE")
     return min(MAX_TOTAL_ATTEMPTS, publication.definition.maxTotalAttempts)
+
+
+def frozen_rework_limit(
+    storage: ForgePersistence, config: RunConfigSnapshot,
+    kind: Literal["review", "verify"],
+) -> int:
+    """Use the published route frozen by the Run, never the global quick limit."""
+    if not config.workflow.id.startswith("workflow."):
+        return MAX_REWORK_CYCLES
+    try:
+        publication = WorkflowDraftService(storage).published(
+            config.workflow.id, int(config.workflow.version),
+        )
+    except (WorkflowDraftError, ValueError) as error:
+        raise ReworkError("WORKFLOW_RUNTIME_UNAVAILABLE") from error
+    if publication.contentHash != config.workflow.contentHash:
+        raise ReworkError("WORKFLOW_RUNTIME_UNAVAILABLE")
+    routes = [route for route in publication.definition.rework
+              if route.source == kind and route.target == "develop"
+              and route.event == ("needs_changes" if kind == "review" else "failed")]
+    if len(routes) > 1:
+        raise ReworkError("WORKFLOW_RUNTIME_UNAVAILABLE")
+    return min(MAX_REWORK_CYCLES, routes[0].maxCycles) if routes else 0
 
 
 class ReworkError(Exception):
@@ -65,6 +88,76 @@ class ReworkCycle(BaseModel):
     updatedAt: str
 
 
+def gate_recovered(db: PersistenceSession, cycle: sqlite3.Row) -> bool:
+    """A later real report for the same rework snapshot can supersede a failed gate launch.
+
+    The stored failure remains available for diagnostics. Limit and interrupted
+    cycles never become successful through a report for another Run or gate.
+    """
+    if (cycle["state"] != "blocked" or cycle["reason_code"] == "REWORK_LIMIT_REACHED"
+            or not cycle["next_run_id"]):
+        return False
+    run = db.execute(
+        "SELECT state FROM runs WHERE project_id=? AND task_id=? AND run_id=?",
+        (cycle["project_id"], cycle["task_id"], cycle["next_run_id"]),
+    ).fetchone()
+    if run is None or run["state"] != "succeeded":
+        return False
+    snapshot = db.execute(
+        "SELECT snapshot_id FROM code_snapshots WHERE run_id=? ORDER BY rowid DESC LIMIT 1",
+        (cycle["next_run_id"],),
+    ).fetchone()
+    if snapshot is None:
+        return False
+    owner = (cycle["project_id"], cycle["task_id"], cycle["next_run_id"],
+             snapshot["snapshot_id"])
+    if cycle["trigger_kind"] == "review":
+        source = db.execute(
+            "SELECT j.model_id,j.profile_id,j.profile_revision,j.profile_hash "
+            "FROM review_jobs j JOIN review_reports r "
+            "ON r.review_id=j.report_id WHERE r.review_id=? AND r.outcome='changes_requested' "
+            "AND j.project_id=? AND j.task_id=? AND j.development_run_id=? "
+            "AND j.snapshot_id=? AND j.state='completed'",
+            (cycle["trigger_report_id"], cycle["project_id"], cycle["task_id"],
+             cycle["source_run_id"], cycle["source_snapshot_id"]),
+        ).fetchone()
+        if source is None:
+            return False
+        report = db.execute(
+            "SELECT r.outcome FROM review_reports r JOIN review_jobs j "
+            "ON j.report_id=r.review_id WHERE j.project_id=? AND j.task_id=? "
+            "AND j.development_run_id=? AND j.snapshot_id=? AND j.state='completed' "
+            "AND j.model_id=? AND j.profile_id IS ? "
+            "AND j.profile_revision IS ? AND j.profile_hash IS ? "
+            "AND r.project_id=j.project_id AND r.task_id=j.task_id "
+            "AND r.development_run_id=j.development_run_id "
+            "AND r.snapshot_id=j.snapshot_id ORDER BY r.rowid DESC LIMIT 1",
+            (*owner, source["model_id"], source["profile_id"],
+             source["profile_revision"], source["profile_hash"]),
+        ).fetchone()
+        return report is not None and report["outcome"] == "approved"
+    source = db.execute(
+        "SELECT j.kind,j.preset_id FROM verifier_reports r JOIN verifier_jobs j "
+        "ON j.verification_id=r.verification_id WHERE r.report_id=? "
+        "AND r.status='failed' AND j.state='completed' "
+        "AND j.project_id=? AND j.task_id=? AND j.development_run_id=? "
+        "AND j.snapshot_id=?",
+        (cycle["trigger_report_id"], cycle["project_id"], cycle["task_id"],
+         cycle["source_run_id"], cycle["source_snapshot_id"]),
+    ).fetchone()
+    if source is None:
+        return False
+    report = db.execute(
+        "SELECT r.status FROM verifier_reports r JOIN verifier_jobs j "
+        "ON j.verification_id=r.verification_id WHERE j.project_id=? AND j.task_id=? "
+        "AND j.development_run_id=? AND j.snapshot_id=? AND j.state='completed' "
+        "AND j.kind=? AND j.preset_id IS ? AND r.project_id=j.project_id "
+        "AND r.snapshot_id=j.snapshot_id ORDER BY r.rowid DESC LIMIT 1",
+        (*owner, source["kind"], source["preset_id"]),
+    ).fetchone()
+    return report is not None and report["status"] == "passed"
+
+
 class ReworkService:
     def __init__(self, storage: ForgePersistence, projects: ProjectService,
                  configs: RunConfigService, handoffs: HandoffService,
@@ -84,10 +177,16 @@ class ReworkService:
     def _attempt_limit(self, config: RunConfigSnapshot) -> int:
         return frozen_attempt_limit(self.storage, config)
 
+    def _cycle_limit(self, config: RunConfigSnapshot,
+                     kind: Literal["review", "verify"]) -> int:
+        return frozen_rework_limit(self.storage, config, kind)
+
     def _view(self, row: sqlite3.Row) -> ReworkCycle:
         next_run = UUID(row["next_run_id"]) if row["next_run_id"] else None
         state = row["state"]
-        if next_run is not None and state not in ("blocked", "interrupted"):
+        if state == "blocked" and gate_recovered(self.storage.session(), row):
+            state = "succeeded"
+        elif next_run is not None and state not in ("blocked", "interrupted"):
             run = self.runs.get(UUID(row["project_id"]), next_run)
             if run is not None:
                 state = run.state if run.state in ("succeeded", "failed", "cancelled") else (
@@ -169,6 +268,7 @@ class ReworkService:
         if config is None:
             raise ReworkError("REWORK_SOURCE_STALE")
         attempt_limit = self._attempt_limit(config)
+        cycle_limit = self._cycle_limit(config, cycle.triggerKind)
         authority: Literal["review_evidence", "verify_evidence"] = (
             "review_evidence" if cycle.triggerKind == "review" else "verify_evidence"
         )
@@ -180,7 +280,7 @@ class ReworkService:
                     report.reworkHandoff is None):
                 raise ReworkError("REWORK_TRIGGER_INVALID")
             handoff = report.reworkHandoff
-            parts = [f"Rework cycle {cycle.cycleNo}/{MAX_REWORK_CYCLES}; "
+            parts = [f"Rework cycle {cycle.cycleNo}/{cycle_limit}; "
                      f"total attempts {cycle.totalAttempts}/{attempt_limit}.",
                      handoff.summary]
             parts.extend(
@@ -198,7 +298,7 @@ class ReworkService:
             if (verify_report is None or verify_report.snapshotId != cycle.sourceSnapshotId
                     or verify_report.status != "failed"):
                 raise ReworkError("REWORK_TRIGGER_INVALID")
-            parts = [f"Rework cycle {cycle.cycleNo}/{MAX_REWORK_CYCLES}; "
+            parts = [f"Rework cycle {cycle.cycleNo}/{cycle_limit}; "
                      f"total attempts {cycle.totalAttempts}/{attempt_limit}.",
                      f"{verify_report.kind} check failed with exit code "
                      f"{verify_report.exitCode}."]
@@ -262,7 +362,8 @@ class ReworkService:
             assert prior is not None
             cycle_no = prior["n"] + 1
             total = self._attempt_count(project_id, task_id)
-            blocked = cycle_no > MAX_REWORK_CYCLES or total >= self._attempt_limit(config)
+            blocked = (cycle_no > self._cycle_limit(config, kind)
+                       or total >= self._attempt_limit(config))
             now = timestamp()
             cycle_id = uuid4()
             with self.storage.transaction() as db:

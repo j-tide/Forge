@@ -27,6 +27,7 @@ from forge.host import HostRuntime
 from forge.persistence import LATEST_SCHEMA, ForgePersistence
 from forge.projects import ProjectService
 from forge.protocol import TRANSPORT_VERSION, RpcRequest
+from forge.remote_commands import read_remote_task_evidence
 from forge.review_copies import ReviewCopyManager
 from forge.review_issues import ReviewIssueService
 from forge.run_config import RunConfigService
@@ -140,6 +141,13 @@ async def test_final_acceptance_rechecks_reports_and_never_merges_source(
     }))
     assert accepted.status == "accepted"
     assert accepted.decision is not None and accepted.decision.actor == "local-owner"
+    remote_evidence = read_remote_task_evidence(storage, str(project_id), task_id)
+    assert {(item["kind"], item["status"]) for item in remote_evidence} >= {
+        ("review", "approved"), ("verify", "passed"), ("owner", "accept"),
+    }
+    assert all(item["snapshotId"] == str(snapshot_id) for item in remote_evidence)
+    assert read_remote_task_evidence(storage, str(uuid4()), task_id) == []
+    assert str(source) not in str(remote_evidence)
     assert service.decide(stale.model_copy(update={
         "expectedBasisHash": fresh.basisHash,
     })).decision == accepted.decision
