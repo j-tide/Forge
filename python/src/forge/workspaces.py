@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+import stat
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -222,6 +223,44 @@ class WorkspaceManager:
 
     async def verify_identity(self, workspace_id: UUID) -> WorkspaceDescriptor:
         record = self._owned(workspace_id)
+        await self._assert_tree(record)
+        return record.model_copy(deep=True)
+
+    async def verify_historical_readonly(
+        self, workspace_id: UUID, run_id: str, lease_id: UUID,
+        lease_epoch: int, source_repo: str,
+    ) -> WorkspaceDescriptor:
+        """Verify a prior runtime's retained worktree without adopting it.
+
+        A historical record is never added to this runtime's owned records and
+        this method cannot release its lease or signal its old process IDs.
+        """
+        if self.root is None:
+            await self.open()
+        _, records_dir, _ = self._paths()
+        record_path = records_dir / f"{workspace_id}.json"
+        try:
+            if record_path.is_symlink() or not record_path.is_file():
+                raise WorkspaceError("WORKSPACE_IDENTITY_MISMATCH")
+            descriptor = os.open(record_path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+            try:
+                info = os.fstat(descriptor)
+                if not stat.S_ISREG(info.st_mode) or info.st_size > 65_536:
+                    raise WorkspaceError("WORKSPACE_IDENTITY_MISMATCH")
+                raw = os.read(descriptor, 65_537)
+            finally:
+                os.close(descriptor)
+            if len(raw) > 65_536:
+                raise WorkspaceError("WORKSPACE_IDENTITY_MISMATCH")
+            record = WorkspaceDescriptor.model_validate_json(raw)
+        except (OSError, ValueError) as error:
+            raise WorkspaceError("WORKSPACE_IDENTITY_MISMATCH") from error
+        if (
+            record.workspaceId != workspace_id or record.ownerRunId != run_id
+            or record.activeLeaseId != lease_id or record.leaseEpoch != lease_epoch
+            or record.sourceRepo != source_repo or record.status not in ("busy", "failed")
+        ):
+            raise WorkspaceError("WORKSPACE_IDENTITY_MISMATCH")
         await self._assert_tree(record)
         return record.model_copy(deep=True)
 

@@ -284,6 +284,54 @@ class ProcessController:
                 continue
         return result
 
+    def uncertain_journal_entries(self) -> int:
+        """Count records whose ownership cannot be proved after a Host restart.
+
+        A crashed write can leave a .tmp file. Ignoring it, a malformed JSON
+        record or a symlink would incorrectly make data-profile switching look
+        safe. This method never adopts or signals a historical process.
+        """
+        if self.journal_dir is None:
+            return 0
+        try:
+            if self.journal_dir.is_symlink():
+                return 1
+            if not self.journal_dir.exists():
+                return 0
+            if not self.journal_dir.is_dir():
+                return 1
+            entries = list(self.journal_dir.iterdir())
+        except OSError:
+            return 1
+        uncertain = 0
+        for path in entries:
+            try:
+                if path.is_symlink() or not path.is_file() or path.suffix != ".json":
+                    uncertain += 1
+                    continue
+                record = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(record, dict):
+                    uncertain += 1
+                    continue
+                process_id = str(UUID(str(record.get("processId"))))
+                UUID(str(record.get("runtimeId")))
+                parent_id = record.get("parentProcessId")
+                if parent_id is not None:
+                    UUID(str(parent_id))
+                run_id = record.get("runId")
+                pid = record.get("pid")
+                if (path.name != f"{process_id}.json"
+                        or not isinstance(run_id, str) or not RUN_ID.fullmatch(run_id)
+                        or not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0
+                        or not isinstance(record.get("startedAt"), str)
+                        or record.get("status") not in (
+                            "running", "cancelling", "exited", "cancelled", "quarantined",
+                        )):
+                    uncertain += 1
+            except (OSError, UnicodeError, ValueError, TypeError):
+                uncertain += 1
+        return uncertain
+
     async def dispose(self) -> list[CancellationReport]:
         self.accepting = False
         run_ids = {item.session.descriptor.runId for item in self.records.values()}

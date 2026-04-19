@@ -539,6 +539,158 @@ CREATE TABLE device_sessions(
   revoked_at TEXT
 );
 CREATE INDEX device_sessions_device ON device_sessions(device_id,revoked_at,expires_at);"""
+_REMOTE_EVENT_MIGRATION_SQL = """CREATE TABLE remote_event_log(
+  seq INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL REFERENCES projects(project_id),
+  task_id TEXT,
+  kind TEXT NOT NULL CHECK(kind IN (
+    'board.changed','run.changed','approval.changed','review.changed',
+    'verify.changed','acceptance.changed','conversation.changed','draft.changed')),
+  entity_id TEXT NOT NULL,
+  occurred_at TEXT NOT NULL
+);
+CREATE INDEX ix_remote_event_project_seq ON remote_event_log(project_id,seq);
+CREATE TRIGGER remote_board_insert AFTER INSERT ON board_events BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    VALUES(NEW.project_id,NEW.task_id,'board.changed',NEW.event_id,NEW.created_at);
+END;
+CREATE TRIGGER remote_run_insert AFTER INSERT ON runs BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    VALUES(NEW.project_id,NEW.task_id,'run.changed',NEW.run_id,NEW.created_at);
+END;
+CREATE TRIGGER remote_run_update AFTER UPDATE OF state,revision ON runs
+WHEN NEW.state!=OLD.state OR NEW.revision!=OLD.revision BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    VALUES(NEW.project_id,NEW.task_id,'run.changed',NEW.run_id,
+           COALESCE(NEW.finished_at,datetime('now')));
+END;
+CREATE TRIGGER remote_run_event_insert AFTER INSERT ON run_events BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    SELECT r.project_id,r.task_id,'run.changed',NEW.run_id,NEW.created_at
+    FROM runs r WHERE r.run_id=NEW.run_id;
+END;
+CREATE TRIGGER remote_run_observation_insert AFTER INSERT ON run_observations BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    SELECT r.project_id,r.task_id,'run.changed',NEW.run_id,NEW.created_at
+    FROM runs r WHERE r.run_id=NEW.run_id;
+END;
+CREATE TRIGGER remote_task_approval_insert AFTER INSERT ON task_approvals BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    VALUES(NEW.project_id,NEW.task_id,'approval.changed',NEW.approval_id,NEW.created_at);
+END;
+CREATE TRIGGER remote_task_approval_update AFTER UPDATE OF status ON task_approvals
+WHEN NEW.status!=OLD.status BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    VALUES(NEW.project_id,NEW.task_id,'approval.changed',NEW.approval_id,
+           COALESCE(NEW.decided_at,datetime('now')));
+END;
+CREATE TRIGGER remote_review_insert AFTER INSERT ON review_reports BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    VALUES(NEW.project_id,NEW.task_id,'review.changed',NEW.review_id,NEW.created_at);
+END;
+CREATE TRIGGER remote_verify_insert AFTER INSERT ON verifier_reports BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    SELECT NEW.project_id,j.task_id,'verify.changed',NEW.report_id,NEW.created_at
+    FROM verifier_jobs j WHERE j.verification_id=NEW.verification_id;
+END;
+CREATE TRIGGER remote_acceptance_insert AFTER INSERT ON final_acceptance_decisions BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    VALUES(NEW.project_id,NEW.task_id,'acceptance.changed',NEW.decision_id,NEW.created_at);
+END;
+CREATE TRIGGER remote_conversation_insert AFTER INSERT ON conversations BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    VALUES(NEW.project_id,NULL,'conversation.changed',NEW.conversation_id,NEW.created_at);
+END;
+CREATE TRIGGER remote_message_insert AFTER INSERT ON messages BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    SELECT c.project_id,NULL,'conversation.changed',NEW.message_id,NEW.created_at
+    FROM conversations c WHERE c.conversation_id=NEW.conversation_id;
+END;
+CREATE TRIGGER remote_draft_insert AFTER INSERT ON task_drafts BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    VALUES(NEW.project_id,NULL,'draft.changed',NEW.draft_id,NEW.created_at);
+END;
+CREATE TRIGGER remote_draft_update AFTER UPDATE OF revision,status ON task_drafts
+WHEN NEW.revision!=OLD.revision OR NEW.status!=OLD.status BEGIN
+  INSERT INTO remote_event_log(project_id,task_id,kind,entity_id,occurred_at)
+    VALUES(NEW.project_id,NULL,'draft.changed',NEW.draft_id,NEW.updated_at);
+END;"""
+_REMOTE_POLICY_MIGRATION_SQL = """ALTER TABLE paired_devices
+  ADD COLUMN operation_scopes_json TEXT NOT NULL DEFAULT '[]'
+  CHECK(json_valid(operation_scopes_json));
+ALTER TABLE paired_devices
+  ADD COLUMN policy_revision INTEGER NOT NULL DEFAULT 1 CHECK(policy_revision>=1);
+CREATE TABLE device_policy_events(
+  event_id TEXT PRIMARY KEY,
+  device_id TEXT NOT NULL REFERENCES paired_devices(device_id),
+  old_revision INTEGER NOT NULL CHECK(old_revision>=1),
+  new_revision INTEGER NOT NULL CHECK(new_revision=old_revision+1),
+  old_project_ids_json TEXT NOT NULL CHECK(json_valid(old_project_ids_json)),
+  new_project_ids_json TEXT NOT NULL CHECK(json_valid(new_project_ids_json)),
+  old_scopes_json TEXT NOT NULL CHECK(json_valid(old_scopes_json)),
+  new_scopes_json TEXT NOT NULL CHECK(json_valid(new_scopes_json)),
+  kind TEXT NOT NULL CHECK(kind IN ('narrow','revoke')),
+  decided_at TEXT NOT NULL
+);
+CREATE INDEX ix_device_policy_device ON device_policy_events(device_id,new_revision);"""
+_REMOTE_RECEIPT_MIGRATION_SQL = """CREATE TABLE remote_command_receipts(
+  command_id TEXT PRIMARY KEY,
+  device_id TEXT NOT NULL REFERENCES paired_devices(device_id),
+  project_id TEXT NOT NULL REFERENCES projects(project_id),
+  method TEXT NOT NULL,
+  idempotency_key TEXT NOT NULL,
+  request_hash TEXT NOT NULL,
+  receipt_json TEXT NOT NULL CHECK(json_valid(receipt_json)),
+  created_at TEXT NOT NULL,
+  UNIQUE(device_id,idempotency_key)
+);
+CREATE INDEX ix_remote_receipt_project ON remote_command_receipts(project_id,created_at);"""
+_RUN_RECOVERY_MIGRATION_SQL = """CREATE TABLE run_recovery_observations(
+  run_id TEXT PRIMARY KEY REFERENCES runs(run_id),
+  attempt_id TEXT NOT NULL REFERENCES run_attempts(attempt_id),
+  lease_id TEXT NOT NULL REFERENCES run_workspace_leases(lease_id),
+  workspace_id TEXT NOT NULL,
+  observed_boot_id TEXT NOT NULL CHECK(length(observed_boot_id)=36),
+  observed_at TEXT NOT NULL,
+  resolved_boot_id TEXT CHECK(resolved_boot_id IS NULL OR length(resolved_boot_id)=36),
+  resolved_at TEXT,
+  CHECK((resolved_boot_id IS NULL)=(resolved_at IS NULL))
+);
+ALTER TABLE runs ADD COLUMN recovery_resolved_at TEXT;
+DROP INDEX ux_runs_project_active;
+CREATE UNIQUE INDEX ux_runs_project_active ON runs(project_id)
+  WHERE state IN ('queued','running','waiting_input','pausing','paused','canceling')
+     OR (state='interrupted' AND recovery_resolved_at IS NULL);
+CREATE TRIGGER run_recovery_resolution_guard
+BEFORE UPDATE OF recovery_resolved_at ON runs
+WHEN NEW.recovery_resolved_at IS NOT NULL AND OLD.recovery_resolved_at IS NULL
+BEGIN
+  SELECT CASE WHEN NOT EXISTS(
+    SELECT 1 FROM run_recovery_observations o
+    WHERE o.run_id=NEW.run_id AND o.resolved_at=NEW.recovery_resolved_at
+  ) THEN RAISE(ABORT,'recovery evidence required') END;
+END;"""
+_PLAN_ARTIFACT_MIGRATION_SQL = """CREATE TABLE plan_artifacts(
+  artifact_id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(project_id),
+  task_id TEXT NOT NULL REFERENCES tasks(task_id),
+  run_id TEXT NOT NULL UNIQUE REFERENCES runs(run_id),
+  attempt_id TEXT NOT NULL UNIQUE REFERENCES run_attempts(attempt_id),
+  content_hash TEXT NOT NULL CHECK(length(content_hash)=64),
+  artifact_json TEXT NOT NULL CHECK(json_valid(artifact_json)),
+  created_at TEXT NOT NULL
+);
+CREATE INDEX ix_plan_artifacts_task ON plan_artifacts(project_id,task_id,created_at);
+CREATE TABLE plan_continuations(
+  plan_run_id TEXT PRIMARY KEY REFERENCES plan_artifacts(run_id),
+  development_run_id TEXT UNIQUE,
+  state TEXT NOT NULL CHECK(state IN ('automatic','approved','rejected')),
+  artifact_hash TEXT NOT NULL CHECK(length(artifact_hash)=64),
+  decided_at TEXT NOT NULL,
+  decided_by TEXT NOT NULL CHECK(decided_by IN ('host','local-user')),
+  reason TEXT,
+  CHECK((state='rejected')=(development_run_id IS NULL))
+);"""
 MIGRATIONS = (
     *_legacy_migrations(),
     Migration(
@@ -579,6 +731,16 @@ MIGRATIONS = (
               hashlib.sha256(_PAIRING_MIGRATION_SQL.encode()).hexdigest()),
     Migration(32, _REMOTE_SESSION_MIGRATION_SQL,
               hashlib.sha256(_REMOTE_SESSION_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(33, _REMOTE_EVENT_MIGRATION_SQL,
+              hashlib.sha256(_REMOTE_EVENT_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(34, _REMOTE_POLICY_MIGRATION_SQL,
+              hashlib.sha256(_REMOTE_POLICY_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(35, _REMOTE_RECEIPT_MIGRATION_SQL,
+              hashlib.sha256(_REMOTE_RECEIPT_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(36, _RUN_RECOVERY_MIGRATION_SQL,
+              hashlib.sha256(_RUN_RECOVERY_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(37, _PLAN_ARTIFACT_MIGRATION_SQL,
+              hashlib.sha256(_PLAN_ARTIFACT_MIGRATION_SQL.encode()).hexdigest()),
 )
 CURRENT_COMPATIBLE_SCHEMA = 15
 LATEST_SCHEMA = MIGRATIONS[-1].version
@@ -874,6 +1036,7 @@ class ForgePersistence:
             journal = str(db.execute("PRAGMA journal_mode").fetchone()[0])
             return {
                 "status": "ready",
+                "readOnly": self.read_only,
                 "schemaVersion": version,
                 "sqliteVersion": str(db.execute("SELECT sqlite_version()").fetchone()[0]),
                 "journalMode": "wal" if journal == "wal" else "unknown",
@@ -883,6 +1046,7 @@ class ForgePersistence:
             mapped = _map_error(error, "DATABASE_OPEN_FAILED")
             return {
                 "status": "unavailable",
+                "readOnly": self.read_only,
                 "schemaVersion": None,
                 "sqliteVersion": None,
                 "journalMode": "unknown",
@@ -917,7 +1081,7 @@ class ForgePersistence:
                     "repositoryType": row["repository_type"],
                     "gitRoot": row["git_root"],
                     "defaultBranch": row["default_branch"],
-                    "trusted": True,
+                    "trusted": row["trust_version"] == "project-trust/v1",
                     "trustVersion": row["trust_version"],
                     "trustApprovedAt": row["trust_approved_at"],
                     "environmentSummaryHash": row["environment_summary_hash"],
@@ -1078,6 +1242,63 @@ class ForgePersistence:
                 if self.get_project(project_id) is None:
                     return False
                 raise PersistenceError("REVISION_CONFLICT")
+            # Keep project trust and the active context in place until every
+            # owned writer reaches a known terminal state. These checks share
+            # the archive transaction, so a concurrent Host writer cannot race
+            # a successful metadata removal on the single SQLite owner.
+            version = self.schema_version()
+            resolved = (
+                "AND r.recovery_resolved_at IS NULL "
+                if version >= 36 else ""
+            )
+            uncertain_queries = [
+                "SELECT 1 FROM runs r WHERE r.project_id=? AND r.state='interrupted' "
+                + resolved + "LIMIT 1",
+                "SELECT 1 FROM run_workspace_leases AS lease "
+                "JOIN runs AS run ON run.run_id=lease.run_id "
+                "WHERE run.project_id=? AND lease.state='quarantined' LIMIT 1",
+            ]
+            if version >= 17:
+                uncertain_queries.append(
+                    "SELECT 1 FROM review_jobs WHERE project_id=? "
+                    "AND state='interrupted' LIMIT 1"
+                )
+            if version >= 18:
+                uncertain_queries.append(
+                    "SELECT 1 FROM verifier_jobs WHERE project_id=? "
+                    "AND state='interrupted' LIMIT 1"
+                )
+            if any(db.execute(query, (project_id,)).fetchone() is not None
+                   for query in uncertain_queries):
+                raise PersistenceError("RUN_RECOVERY_REQUIRED")
+            active_queries = [
+                ("SELECT 1 FROM runs WHERE project_id=? AND state IN "
+                 "('queued','running','waiting_input','pausing','paused','canceling') LIMIT 1"),
+                "SELECT 1 FROM run_workspace_leases AS lease "
+                "JOIN runs AS run ON run.run_id=lease.run_id "
+                "WHERE run.project_id=? AND lease.state='active' LIMIT 1",
+            ]
+            if version >= 17:
+                active_queries.append(
+                    "SELECT 1 FROM review_jobs WHERE project_id=? AND state='running' LIMIT 1"
+                )
+            if version >= 18:
+                active_queries.append(
+                    "SELECT 1 FROM verifier_jobs WHERE project_id=? AND state='running' LIMIT 1"
+                )
+            if version >= 20:
+                active_queries.append(
+                    "SELECT 1 FROM rework_cycles WHERE project_id=? "
+                    "AND state IN ('pending','launching','running') LIMIT 1"
+                )
+            if version >= 22:
+                active_queries.append(
+                    "SELECT 1 FROM merge_operations WHERE project_id=? "
+                    "AND state IN ('intent','unknown') LIMIT 1"
+                )
+            if any(db.execute(query, (project_id,)).fetchone() is not None
+                   for query in active_queries):
+                raise PersistenceError("PROJECT_BUSY")
             db.execute(
                 "DELETE FROM runtime_metadata WHERE key='project.active_id' AND value=?",
                 (project_id,),
@@ -1093,7 +1314,8 @@ class ForgePersistence:
         with self.transaction() as db:
             changed = db.execute(
                 "UPDATE projects SET archived_at=NULL,revision=revision+1,"
-                "trust_approved_at=?,environment_summary_hash=?,probe_json=?,"
+                "trust_version='project-trust/v1',trust_approved_at=?,"
+                "environment_summary_hash=?,probe_json=?,"
                 "updated_at=?,last_opened_at=? "
                 "WHERE project_id=? AND revision=? AND archived_at IS NOT NULL",
                 (
@@ -1109,11 +1331,41 @@ class ForgePersistence:
             if not changed:
                 raise PersistenceError("REVISION_CONFLICT")
             db.execute(
-                "UPDATE project_trust_decisions SET approved_at=?,environment_summary_hash=? "
+                "UPDATE project_trust_decisions SET trust_version='project-trust/v1',"
+                "approved_at=?,environment_summary_hash=? "
                 "WHERE project_id=?",
                 (now, probe.fingerprint, project_id),
             )
             self._set_metadata(db, "project.active_id", project_id)
+        saved = self.get_project(project_id)
+        if saved is None:
+            raise PersistenceError("PROJECT_NOT_FOUND")
+        return saved
+
+    def renew_project_trust(
+        self, project_id: str, expected_revision: int, probe: ProjectProbe
+    ) -> Project:
+        """After backup import, require an explicit fresh picker/probe/trust decision."""
+        from forge.projects import timestamp
+
+        now = timestamp()
+        with self.transaction() as db:
+            changed = db.execute(
+                "UPDATE projects SET trust_version='project-trust/v1',"
+                "trust_approved_at=?,environment_summary_hash=?,probe_json=?,"
+                "updated_at=?,revision=revision+1 "
+                "WHERE project_id=? AND revision=? AND archived_at IS NULL "
+                "AND trust_version='project-trust/restored-pending'",
+                (now, probe.fingerprint, probe.model_dump_json(), now,
+                 project_id, expected_revision),
+            ).rowcount
+            if not changed:
+                raise PersistenceError("REVISION_CONFLICT")
+            db.execute(
+                "UPDATE project_trust_decisions SET trust_version='project-trust/v1',"
+                "approved_at=?,environment_summary_hash=? WHERE project_id=?",
+                (now, probe.fingerprint, project_id),
+            )
         saved = self.get_project(project_id)
         if saved is None:
             raise PersistenceError("PROJECT_NOT_FOUND")

@@ -141,7 +141,8 @@ def test_future_schema_or_unsafe_stage_is_rejected(tmp_path: Path) -> None:
     storage = ForgePersistence(tmp_path / "forge-data")
     storage.open()
     storage.migrate(29)
-    raw, signature, public, artifact = signed_fixture(tmp_path, schema_to=33)
+    raw, signature, public, artifact = signed_fixture(
+        tmp_path, schema_to=persistence_module.LATEST_SCHEMA + 1)
     future = verify_release(raw, signature, public, artifact,
                             current_version="0.0.1", platform="darwin", arch="arm64")
     with pytest.raises(UpdateError, match="UPDATE_SCHEMA_UNSUPPORTED"):

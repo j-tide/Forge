@@ -75,6 +75,34 @@ def test_acceptance_schema_upgrades_additively_to_rework(tmp_path: Path) -> None
     upgraded.close()
 
 
+def test_schema35_upgrades_to_boot_recovery_without_rewriting_existing_data(
+    tmp_path: Path,
+) -> None:
+    db = ForgePersistence(tmp_path)
+    db.open()
+    assert db.migrate(35) == 35
+    db.set_metadata("pre-recovery", "preserved")
+    db.close()
+
+    upgraded = ForgePersistence(tmp_path)
+    upgraded.open()
+    assert upgraded.migrate(LATEST_SCHEMA) == LATEST_SCHEMA
+    assert upgraded.migrate(LATEST_SCHEMA) == LATEST_SCHEMA
+    assert upgraded.get_metadata("pre-recovery") == "preserved"
+    assert upgraded.session().execute(
+        "SELECT name FROM sqlite_master WHERE type='table' "
+        "AND name='run_recovery_observations'",
+    ).fetchone() is not None
+    assert upgraded.session().execute(
+        "SELECT name FROM sqlite_master WHERE type='trigger' "
+        "AND name='run_recovery_resolution_guard'",
+    ).fetchone() is not None
+    columns = upgraded.session().execute("PRAGMA table_info(runs)").fetchall()
+    assert "recovery_resolved_at" in {row["name"] for row in columns}
+    assert upgraded.session().execute("PRAGMA foreign_key_check").fetchone() is None
+    upgraded.close()
+
+
 def test_delivery_schema_upgrades_from_final_acceptance_without_data_reset(
     tmp_path: Path,
 ) -> None:
