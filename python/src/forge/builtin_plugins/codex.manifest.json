@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "id": "forge.executor.codex",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "forgeApiRange": "^1.0.0",
   "entry": "codex.py",
   "execution": "bundled-trusted",

@@ -213,7 +213,7 @@ async def test_plugin_context_stages_tool_and_rejects_undeclared_grant(tmp_path:
     raw["requestedPermissions"] = ["workspace.read"]
     manifest = PluginManifest.model_validate(raw)
     registry = PluginRegistry(granted_permissions=frozenset(("workspace.read",)))
-    context = _ActivationContext(registry, manifest)
+    context = _ActivationContext(registry, manifest, {})
 
     async def handler(_value: Any) -> Any:
         return {"text": "ok"}

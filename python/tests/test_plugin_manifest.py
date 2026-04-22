@@ -69,7 +69,7 @@ def test_builtin_manifest_preflight_is_read_only_and_compatible() -> None:
     report = registry.inspect_builtin(_ID)
     assert report.valid == (_platform_id() == "darwin-arm64")
     assert report.manifest is not None
-    assert report.manifest.version == "0.0.2"
+    assert report.manifest.version == "0.0.3"
     assert registry.manifests == {} and registry.activated == {}
 
 
@@ -80,12 +80,25 @@ def test_bundled_inspection_returns_only_locked_schema_and_actual_state() -> Non
     assert result["pluginId"] == _ID
     assert result["active"] is False
     assert result["compatible"] == (_platform_id() == "darwin-arm64")
+    assert result["activeRunRefs"] == []
+    assert result["draining"] is False
     if result["compatible"]:
         assert result["configSchema"] == json.loads(
             (_SOURCE / "codex.config.schema.json").read_text()
         )
+        manifest = result["manifest"]
+        assert manifest["source"] == "bundled-trusted"
+        assert manifest["contributes"]["executors"] == ["executor.codex"]
+        assert manifest["contributes"]["modelProviders"] == ["model.codex"]
+        assert manifest["contributes"]["tools"] == []
+        assert manifest["requestedPermissions"] == [
+            "workspace.read", "workspace.write", "process.spawn",
+        ]
+        assert set(manifest["grantedPermissions"]) == _GRANTS
+        assert len(manifest["contentHash"]) == 64
     else:
         assert result["configSchema"] is None
+        assert result["manifest"] is None
     assert registry.manifests == {}
 
 

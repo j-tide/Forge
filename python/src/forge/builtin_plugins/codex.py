@@ -16,7 +16,10 @@ class CodexPlugin:
         service = context.require_service("process.v1")
         if not isinstance(service, ProcessController):
             raise PluginError("PLUGIN_SERVICE_UNAVAILABLE")
-        adapter = CodexExecutorAdapter(service)
+        timeout = context.configuration.get("appServerInitializationTimeoutSeconds", 15)
+        if type(timeout) is not int or not 1 <= timeout <= 60:
+            raise PluginError("PLUGIN_CONFIG_INVALID")
+        adapter = CodexExecutorAdapter(service, initialization_timeout_seconds=timeout)
         context.register_executor(adapter)
         context.register_model_provider(CodexModelProvider())
         self.adapter = adapter

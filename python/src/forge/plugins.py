@@ -10,6 +10,7 @@ import sys
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, cast
 
 from forge.executor_contracts import ExecutorAdapter, ExecutorCapabilities
@@ -43,9 +44,11 @@ def _platform_id() -> str:
 
 
 class _ActivationContext(PluginContext):
-    def __init__(self, registry: PluginRegistry, manifest: PluginManifest) -> None:
+    def __init__(self, registry: PluginRegistry, manifest: PluginManifest,
+                 configuration: dict[str, object]) -> None:
         self.registry = registry
         self.manifest = manifest
+        self.configuration = MappingProxyType(configuration.copy())
         self.executors: dict[str, ExecutorAdapter] = {}
         self.model_providers: dict[str, ModelProvider] = {}
         self.tools: dict[str, tuple[ToolDefinition, Callable[[Any], Awaitable[Any]]]] = {}
@@ -234,32 +237,82 @@ class PluginRegistry:
         report = self.inspect_builtin(plugin_id)
         manifest = report.manifest
         schema: dict[str, object] | None = None
+        declaration: dict[str, object] | None = None
         if report.valid and manifest is not None:
             # inspect_builtin already checked the package lock and the closed schema.
-            raw = json.loads((_BUNDLE / "codex.config.schema.json").read_text(encoding="utf-8"))
-            if isinstance(raw, dict):
-                schema = raw
+            # Check the content lock again before exposing any declaration. A
+            # changed package cannot look like an installed, usable plugin.
+            try:
+                locked = verify_builtin_lock(_BUNDLE, _BUILTINS[plugin_id][0], manifest)
+                raw = json.loads((_BUNDLE / manifest.configSchema).read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    schema = raw
+                    declaration = {
+                        "source": "bundled-trusted",
+                        "contentHash": locked.contentHash,
+                        "contributes": manifest.contributes.model_dump(),
+                        "requires": manifest.requires,
+                        "requestedPermissions": manifest.requestedPermissions,
+                        "grantedPermissions": sorted(
+                            self.granted_permissions.intersection(manifest.requestedPermissions)
+                        ),
+                        "supportedPlatforms": manifest.supportedPlatforms,
+                    }
+            except (PluginError, OSError, ValueError):
+                pass
         return {
             "pluginId": plugin_id,
             "version": manifest.version if manifest else None,
             "forgeApiRange": manifest.forgeApiRange if manifest else None,
-            "compatible": report.valid,
+            "compatible": report.valid and declaration is not None,
             "active": plugin_id in self.activated,
-            "issues": [issue.__dict__ for issue in report.issues],
+            "issues": [issue.__dict__ for issue in report.issues] + (
+                [] if not report.valid or declaration is not None else [{
+                    "code": "PLUGIN_LOCK_MISMATCH", "path": "lock",
+                    "message": "Bundled plugin content changed during inspection",
+                }]
+            ),
             "configSchema": schema,
+            "manifest": declaration,
+            "activeRunRefs": sorted(self.run_leases.get(plugin_id, set())),
+            "draining": plugin_id in self.draining,
             "faults": [fault.copy() for fault in self.faults if fault["pluginId"] == plugin_id],
         }
 
-    async def activate(self, plugin_id: str) -> None:
+    def validate_builtin_configuration(self, plugin_id: str,
+                                       configuration: dict[str, object]) -> PluginPackageLock:
+        """Check current bundled schema and content lock before saving settings."""
+        builtin = _BUILTINS.get(plugin_id)
+        if builtin is None:
+            raise PluginError("PLUGIN_NOT_BUNDLED")
+        report = inspect_manifest(
+            _BUNDLE, builtin[0], expected_id=plugin_id, expected_entry="codex.py",
+            host_api_version=PLUGIN_API_VERSION, platform_id=_platform_id(),
+            granted_permissions=self.granted_permissions,
+            available_services=frozenset(self.services), config=configuration,
+        )
+        if not report.valid or report.manifest is None:
+            raise PluginError(report.issues[0].code)
+        lock = verify_builtin_lock(_BUNDLE, builtin[0], report.manifest)
+        schema = json.loads((_BUNDLE / report.manifest.configSchema).read_text(encoding="utf-8"))
+        for key in configuration:
+            if schema["properties"][key].get("format") == "forge-credential-ref":
+                # A reference must resolve through a trusted credential broker,
+                # which is not yet part of the installed plugin runtime.
+                raise PluginError("PLUGIN_CREDENTIAL_UNAVAILABLE")
+        return lock
+
+    async def activate(self, plugin_id: str,
+                       configuration: dict[str, object] | None = None) -> None:
         try:
-            await self._activate(plugin_id)
+            await self._activate(plugin_id, configuration or {})
         except Exception as error:
             self.record_fault(plugin_id, "activation",
                               error.code if isinstance(error, PluginError)
                               else "PLUGIN_ACTIVATION_FAILED")
             raise
 
-    async def _activate(self, plugin_id: str) -> None:
+    async def _activate(self, plugin_id: str, configuration: dict[str, object]) -> None:
         manifest = self.manifests.get(plugin_id)
         builtin = _BUILTINS.get(plugin_id)
         if manifest is None or builtin is None:
@@ -271,6 +324,7 @@ class PluginRegistry:
             host_api_version=PLUGIN_API_VERSION, platform_id=_platform_id(),
             granted_permissions=self.granted_permissions,
             available_services=frozenset(self.services), manifest_override=manifest,
+            config=configuration,
         )
         if not report.valid:
             raise PluginError(report.issues[0].code)
@@ -289,7 +343,7 @@ class PluginRegistry:
         if not callable(factory):
             raise PluginError("PLUGIN_ENTRY_INVALID")
         plugin = cast(ForgePlugin, factory())
-        context = _ActivationContext(self, manifest)
+        context = _ActivationContext(self, manifest, configuration)
         try:
             returned = await plugin.activate(context)
             if returned is not None:

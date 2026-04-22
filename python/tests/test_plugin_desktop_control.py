@@ -75,6 +75,17 @@ async def test_bundled_plugin_disable_survives_restart_and_blocks_new_runs(
     try:
         disabled = (await second_call("plugin.inspectBundled"))["result"]["data"]  # type: ignore[operator,index]
         assert not disabled["enabled"] and not disabled["active"]  # type: ignore[index]
+        missing_project = str(uuid4())
+        unavailable = await second_call("run.capabilities", {  # type: ignore[operator]
+            "projectId": missing_project, "taskId": str(uuid4()),
+        })
+        assert unavailable["error"]["code"] == "RUN_PLUGIN_UNAVAILABLE"  # type: ignore[index]
+        refused = await second_call("run.start", {  # type: ignore[operator]
+            "projectId": missing_project, "taskId": str(uuid4()),
+            "expectedTaskRevision": 1, "modelId": "gpt-6-sol",
+            "idempotencyKey": str(uuid4()),
+        })
+        assert refused["error"]["code"] == "RUN_PLUGIN_UNAVAILABLE"  # type: ignore[index]
         enable_response = await second_call(  # type: ignore[operator]
             "plugin.setBundledEnabled", {"enabled": True}
         )

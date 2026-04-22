@@ -27,15 +27,15 @@ def test_manifest_scoped_storage_never_exposes_sql_or_other_plugin_data(tmp_path
     manifest = PluginManifest.model_validate(manifest_data())
     alpha = manifest.model_copy(update={"requires": [*manifest.requires, "storage.v1"]})
     beta = alpha.model_copy(update={"id": "forge.other.plugin"})
-    first = _ActivationContext(registry, alpha).require_service("storage.v1")
-    second = _ActivationContext(registry, beta).require_service("storage.v1")
+    first = _ActivationContext(registry, alpha, {}).require_service("storage.v1")
+    second = _ActivationContext(registry, beta, {}).require_service("storage.v1")
     assert isinstance(first, PluginStorage) and isinstance(second, PluginStorage)
     first.put("state", {"one": True})
     assert first.get("state") == {"one": True}
     assert second.get("state") is None
     assert not hasattr(first, "execute") and not hasattr(first, "session")
     with pytest.raises(PluginError, match="PLUGIN_SERVICE_UNAVAILABLE"):
-        _ActivationContext(registry, manifest).require_service("storage.v1")
+        _ActivationContext(registry, manifest, {}).require_service("storage.v1")
     storage.close()
 
 

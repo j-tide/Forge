@@ -6,8 +6,9 @@ import hashlib
 import json
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from forge.approvals import canonical_json
 from forge.conversations import timestamp
 from forge.executor_contracts import ExecutorCapabilities
 from forge.persistence import ForgePersistence
@@ -89,11 +90,13 @@ def availability(profile: AgentProfile, caps: ExecutorCapabilities | None) -> Pr
         reason = "NETWORK_POLICY_UNENFORCED"
     elif policy[2] and not caps.approval:
         reason = "APPROVAL_UNSUPPORTED"
-    elif profile.role == "reviewer" and not caps.structuredOutput:
+    elif profile.role in ("reviewer", "planner") and not caps.structuredOutput:
         reason = "STRUCTURED_OUTPUT_UNSUPPORTED"
+    elif profile.role == "planner" and not caps.workspaceControl:
+        reason = "WORKSPACE_UNSUPPORTED"
     elif profile.role == "developer" and not caps.workspaceControl:
         reason = "WORKSPACE_UNSUPPORTED"
-    elif profile.role not in ("developer", "reviewer"):
+    elif profile.role not in ("developer", "reviewer", "planner"):
         reason = "ROLE_UNSUPPORTED"
     return ProfileAvailability(
         profileId=profile.id, revision=profile.revision,
@@ -124,6 +127,19 @@ class AgentProfileService:
             raise AgentProfileError("PROFILE_CORRUPT")
         return AgentProfile.model_validate_json(raw)
 
+    def get_locked(self, profile_id: str, version: str, content_hash: str,
+                   executor_id: str) -> AgentProfile | None:
+        """Resolve an immutable Run lock without substituting a newer Profile revision."""
+        if not version.isdecimal():
+            return None
+        profile = self.get(profile_id, int(version))
+        if profile is None or profile.executorId != executor_id:
+            return None
+        digest = hashlib.sha256(
+            canonical_json(profile.model_dump(mode="json")).encode()
+        ).hexdigest()
+        return profile if digest == content_hash else None
+
     def list(self) -> list[AgentProfile]:
         rows = self.storage.session().execute(
             "SELECT profile_id,MAX(revision) AS revision FROM agent_profiles "
@@ -147,6 +163,10 @@ class AgentProfileService:
             raise AgentProfileError("PROFILE_POLICY_UNSUPPORTED")
         if profile.role == "developer" and profile.policyProfile.startswith("read-only"):
             raise AgentProfileError("PROFILE_POLICY_UNSUPPORTED")
+        if profile.role in ("planner", "refiner") and not profile.policyProfile.startswith(
+            "read-only"
+        ):
+            raise AgentProfileError("PROFILE_POLICY_UNSUPPORTED")
         if profile.role == "reviewer" and set(profile.contextProviders) != {
             "task-contract", "snapshot-diff"
         }:
@@ -155,18 +175,33 @@ class AgentProfileService:
             "task-contract", "project-context"
         }):
             raise AgentProfileError("PROFILE_CONTEXT_UNSUPPORTED")
+        if profile.role == "planner" and profile.contextProviders not in (
+            ["task-contract"], ["task-contract", "project-context"]
+        ):
+            raise AgentProfileError("PROFILE_CONTEXT_UNSUPPORTED")
         if not all(item and len(item) <= 128 for item in profile.contextProviders):
             raise AgentProfileError("PROFILE_INVALID")
         raw = profile.model_dump_json()
         digest = hashlib.sha256(raw.encode()).hexdigest()
         with self.storage.transaction() as db:
             row = db.execute(
-                "SELECT MAX(revision) AS revision FROM agent_profiles WHERE profile_id=?",
+                "SELECT revision,profile_json,content_hash FROM agent_profiles "
+                "WHERE profile_id=? ORDER BY revision DESC LIMIT 1",
                 (profile.id,),
             ).fetchone()
             current = row["revision"] if row is not None else None
             if (current or 0) != value.expectedRevision:
                 raise AgentProfileError("PROFILE_STALE")
+            if row is not None:
+                previous_raw = row["profile_json"]
+                if hashlib.sha256(previous_raw.encode()).hexdigest() != row["content_hash"]:
+                    raise AgentProfileError("PROFILE_CORRUPT")
+                try:
+                    previous = AgentProfile.model_validate_json(previous_raw)
+                except ValidationError as error:
+                    raise AgentProfileError("PROFILE_CORRUPT") from error
+                if previous.role != profile.role:
+                    raise AgentProfileError("PROFILE_ROLE_MISMATCH")
             db.execute(
                 "INSERT INTO agent_profiles"
                 "(profile_id,revision,profile_json,content_hash,created_at) "

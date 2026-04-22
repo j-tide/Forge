@@ -18,7 +18,7 @@ _MAX_SCHEMA_BYTES = 256 * 1024
 _VERSION = re.compile(r"^(\^)?(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})$")
 _SCALAR_TYPES = frozenset(("string", "integer", "number", "boolean"))
 _PERMISSIONS = frozenset(("workspace.read", "workspace.write", "process.spawn"))
-_FIELD_KEYS = frozenset(("type", "title", "description", "format"))
+_FIELD_KEYS = frozenset(("type", "title", "description", "format", "minimum", "maximum"))
 _CREDENTIAL_REF = re.compile(r"^credential:[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 
@@ -107,7 +107,20 @@ def _config_schema(raw: object) -> dict[str, Any] | None:
                 or ("description" in schema and (not isinstance(schema["description"], str)
                     or len(schema["description"]) > 500))
                 or ("format" in schema and (schema["format"] != "forge-credential-ref"
-                    or schema["type"] != "string"))):
+                    or schema["type"] != "string"))
+                or (set(schema).intersection(("minimum", "maximum"))
+                    and schema["type"] not in ("integer", "number"))):
+            return None
+        minimum = schema.get("minimum")
+        maximum = schema.get("maximum")
+        for bound in (minimum, maximum):
+            if bound is not None and (
+                isinstance(bound, bool) or not isinstance(bound, (int, float))
+                or not math.isfinite(bound)
+                or (schema["type"] == "integer" and not isinstance(bound, int))
+            ):
+                return None
+        if minimum is not None and maximum is not None and minimum > maximum:
             return None
     return raw
 
@@ -192,6 +205,11 @@ def inspect_manifest(
             elif (properties[key].get("format") == "forge-credential-ref"
                   and (not isinstance(value, str) or _CREDENTIAL_REF.fullmatch(value) is None)):
                 add("PLUGIN_CONFIG_INVALID", f"config.{key}", "Expected a credential reference")
+            elif valid and (kind in ("integer", "number") and (
+                ("minimum" in properties[key] and value < properties[key]["minimum"])
+                or ("maximum" in properties[key] and value > properties[key]["maximum"])
+            )):
+                add("PLUGIN_CONFIG_INVALID", f"config.{key}", "Config value is out of range")
     if _VERSION.fullmatch(manifest.forgeApiRange) is None:
         add("PLUGIN_API_RANGE_INVALID", "forgeApiRange", "Unsupported API range syntax")
     elif not api_range_contains(manifest.forgeApiRange, host_api_version):

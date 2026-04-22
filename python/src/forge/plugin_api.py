@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
@@ -84,6 +84,8 @@ class PluginManifest(BaseModel):
 
 
 class PluginContext(Protocol):
+    configuration: Mapping[str, object]
+
     def require_service(self, service_id: str) -> object: ...
 
     def register_executor(self, adapter: ExecutorAdapter) -> Disposable: ...
