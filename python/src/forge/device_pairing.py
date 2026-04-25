@@ -14,6 +14,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from forge.persistence import ForgePersistence
+from forge.remote_policy import RemoteScope
 
 PAIRING_LIFETIME = timedelta(minutes=10)
 MAX_CLAIM_ATTEMPTS = 5
@@ -34,9 +35,15 @@ class PairingIdInput(BaseModel):
     pairingId: UUID
 
 
+class DeviceIdInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    deviceId: UUID
+
+
 class PairingDecisionInput(PairingIdInput):
     approve: bool
     projectIds: list[UUID] = Field(max_length=32)
+    scopes: list[RemoteScope] = Field(default_factory=list, max_length=6)
 
 
 def _now() -> datetime:
@@ -58,6 +65,26 @@ def _safe_label(value: str) -> bool:
 class DevicePairingService:
     def __init__(self, storage: ForgePersistence) -> None:
         self.storage = storage
+
+    def list_local(self) -> list[dict[str, Any]]:
+        """Local management view; valid sessions are not an online presence claim."""
+        rows = self.storage.session().execute(
+            "SELECT d.device_id,d.name,d.address_summary,d.fingerprint_summary,"
+            "d.project_ids_json,d.operation_scopes_json,d.policy_revision,d.status,"
+            "d.approved_at,d.revoked_at,"
+            "(SELECT COUNT(*) FROM device_sessions s WHERE s.device_id=d.device_id "
+            "AND s.revoked_at IS NULL AND s.expires_at>?) AS valid_sessions "
+            "FROM paired_devices d ORDER BY d.approved_at DESC,d.device_id LIMIT 100",
+            (_stamp(_now()),),
+        ).fetchall()
+        return [{"deviceId": row["device_id"], "name": row["name"],
+                 "addressSummary": row["address_summary"],
+                 "fingerprintSummary": row["fingerprint_summary"],
+                 "projectIds": json.loads(row["project_ids_json"]),
+                 "scopes": json.loads(row["operation_scopes_json"]),
+                 "revision": row["policy_revision"], "status": row["status"],
+                 "approvedAt": row["approved_at"], "revokedAt": row["revoked_at"],
+                 "validSessionCount": row["valid_sessions"]} for row in rows]
 
     def issue(self) -> dict[str, Any]:
         now = _now()
@@ -91,6 +118,14 @@ class DevicePairingService:
                     (str(pairing_id),),
                 )
             status = "expired"
+        scopes: list[str] = []
+        if self.storage.schema_version() >= 34 and status == "approved":
+            grant = self.storage.session().execute(
+                "SELECT operation_scopes_json FROM paired_devices WHERE pairing_id=?",
+                (str(pairing_id),),
+            ).fetchone()
+            if grant is not None:
+                scopes = json.loads(grant["operation_scopes_json"])
         return {
             "pairingId": row["pairing_id"],
             "status": status,
@@ -103,6 +138,7 @@ class DevicePairingService:
             "decidedAt": row["decided_at"],
             "projectIds": json.loads(row["granted_project_ids_json"])
             if row["granted_project_ids_json"] else [],
+            "scopes": scopes,
         }
 
     def claim(
@@ -170,12 +206,16 @@ class DevicePairingService:
     def decide(self, decision: PairingDecisionInput) -> dict[str, Any]:
         now = _now()
         project_ids = [str(project_id) for project_id in decision.projectIds]
-        if len(project_ids) != len(set(project_ids)):
+        scopes = list(decision.scopes)
+        if (len(project_ids) != len(set(project_ids))
+                or len(scopes) != len(set(scopes))):
             raise PairingError("PAIRING_INVALID_SCOPE")
         if decision.approve and not project_ids:
             raise PairingError("PAIRING_INVALID_SCOPE")
-        if not decision.approve and project_ids:
+        if not decision.approve and (project_ids or scopes):
             raise PairingError("PAIRING_INVALID_SCOPE")
+        if scopes and self.storage.schema_version() < 34:
+            raise PairingError("PAIRING_SCOPE_UNSUPPORTED")
         with self.storage.transaction() as session:
             row = session.execute(
                 "SELECT status,expires_at,device_name,address_summary,fingerprint_summary "
@@ -195,14 +235,24 @@ class DevicePairingService:
                     if project is None:
                         raise PairingError("PAIRING_INVALID_SCOPE")
                 device_id = str(uuid4())
-                session.execute(
-                    "INSERT INTO paired_devices(device_id,pairing_id,name,address_summary,"
-                    "fingerprint_summary,project_ids_json,status,approved_at) "
-                    "VALUES(?,?,?,?,?,?,'approved',?)",
-                    (device_id, str(decision.pairingId), row["device_name"],
-                     row["address_summary"], row["fingerprint_summary"],
-                     json.dumps(project_ids), _stamp(now)),
-                )
+                if self.storage.schema_version() >= 34:
+                    session.execute(
+                        "INSERT INTO paired_devices(device_id,pairing_id,name,address_summary,"
+                        "fingerprint_summary,project_ids_json,operation_scopes_json,"
+                        "status,approved_at) VALUES(?,?,?,?,?,?,?,'approved',?)",
+                        (device_id, str(decision.pairingId), row["device_name"],
+                         row["address_summary"], row["fingerprint_summary"],
+                         json.dumps(project_ids), json.dumps(scopes), _stamp(now)),
+                    )
+                else:
+                    session.execute(
+                        "INSERT INTO paired_devices(device_id,pairing_id,name,address_summary,"
+                        "fingerprint_summary,project_ids_json,status,approved_at) "
+                        "VALUES(?,?,?,?,?,?,'approved',?)",
+                        (device_id, str(decision.pairingId), row["device_name"],
+                         row["address_summary"], row["fingerprint_summary"],
+                         json.dumps(project_ids), _stamp(now)),
+                    )
                 status = "approved"
             else:
                 device_id = None
@@ -213,4 +263,4 @@ class DevicePairingService:
                 (status, _stamp(now), json.dumps(project_ids), str(decision.pairingId)),
             )
         return {"pairingId": str(decision.pairingId), "status": status,
-                "deviceId": device_id, "projectIds": project_ids}
+                "deviceId": device_id, "projectIds": project_ids, "scopes": scopes}

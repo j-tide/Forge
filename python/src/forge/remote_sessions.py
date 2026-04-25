@@ -97,16 +97,20 @@ class RemoteSessionService:
             raise RemoteSessionError("REMOTE_AUTH_REJECTED")
         row = self.storage.session().execute(
             "SELECT s.session_id,s.device_id,s.expires_at,s.refresh_expires_at,"
-            "s.revoked_at,d.status AS device_status,d.project_ids_json "
+            "s.revoked_at,d.status AS device_status,d.project_ids_json,"
+            "d.policy_revision "
             "FROM device_sessions s JOIN paired_devices d ON d.device_id=s.device_id "
             "WHERE s.token_hash=?", (_hash(token),),
         ).fetchone()
-        if row is None or row["revoked_at"] is not None or row["device_status"] != "approved":
+        if row is None:
             raise RemoteSessionError("REMOTE_AUTH_REJECTED")
+        if row["revoked_at"] is not None or row["device_status"] != "approved":
+            raise RemoteSessionError("REMOTE_AUTH_REVOKED")
         if _now() >= _time(row["expires_at"]):
             raise RemoteSessionError("REMOTE_AUTH_EXPIRED")
         return {"sessionId": row["session_id"], "deviceId": row["device_id"],
                 "projectIds": json.loads(row["project_ids_json"]),
+                "policyRevision": row["policy_revision"],
                 "expiresAt": row["expires_at"]}
 
     def require_csrf(self, token: str, csrf: str) -> dict[str, Any]:

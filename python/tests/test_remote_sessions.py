@@ -17,7 +17,7 @@ from forge.remote_sessions import RemoteSessionError, RemoteSessionService
 def prepared(tmp_path: Path) -> tuple[ForgePersistence, str, str, str]:
     db = ForgePersistence(tmp_path / "data")
     db.open()
-    assert db.migrate(LATEST_SCHEMA) == 32
+    assert db.migrate(LATEST_SCHEMA) == LATEST_SCHEMA
     source = tmp_path / "project"
     source.mkdir()
     project_service = ProjectService(db)
@@ -85,17 +85,17 @@ def test_session_issued_once_after_approval_rotates_and_revoke_is_durable(
         sessions.require_csrf(token, csrf)
     rotated = sessions.refresh(token, bootstrapped["csrfToken"])
     assert rotated["sessionToken"] != token
-    with pytest.raises(RemoteSessionError, match="REMOTE_AUTH_REJECTED"):
+    with pytest.raises(RemoteSessionError, match="REMOTE_AUTH_REVOKED"):
         sessions.authenticate(token)
     assert sessions.authenticate(rotated["sessionToken"])["projectIds"] == [project_id]
     sessions.revoke(rotated["sessionToken"], rotated["csrfToken"])
-    with pytest.raises(RemoteSessionError, match="REMOTE_AUTH_REJECTED"):
+    with pytest.raises(RemoteSessionError, match="REMOTE_AUTH_REVOKED"):
         sessions.authenticate(rotated["sessionToken"])
     db.close()
     restored = ForgePersistence(tmp_path / "data")
     restored.open()
-    assert restored.migrate(LATEST_SCHEMA) == 32
-    with pytest.raises(RemoteSessionError, match="REMOTE_AUTH_REJECTED"):
+    assert restored.migrate(LATEST_SCHEMA) == LATEST_SCHEMA
+    with pytest.raises(RemoteSessionError, match="REMOTE_AUTH_REVOKED"):
         RemoteSessionService(restored).authenticate(rotated["sessionToken"])
     restored.close()
 
