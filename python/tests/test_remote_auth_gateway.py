@@ -45,7 +45,7 @@ async def test_real_http_claim_cookie_origin_csrf_rotation_and_revoke(tmp_path: 
     (web / "index.html").write_text("<h1>Forge</h1>")
     db = ForgePersistence(tmp_path / "data")
     db.open()
-    assert db.migrate(LATEST_SCHEMA) == 32
+    assert db.migrate(LATEST_SCHEMA) == LATEST_SCHEMA
     project_root = tmp_path / "project"
     project_root.mkdir()
     projects = ProjectService(db)
@@ -121,15 +121,16 @@ async def test_real_http_claim_cookie_origin_csrf_rotation_and_revoke(tmp_path: 
         assert refreshed[0] == 200 and refreshed[2]["Set-Cookie"] != cookie
         new_cookie = refreshed[2]["Set-Cookie"].split(";", 1)[0]
         assert (await call("/v1/session/current", method="GET", headers={
-            "Cookie": cookie_pair, "X-Forge-Session": "1"}))[0] == 401
+            "Cookie": cookie_pair, "X-Forge-Session": "1"}))[0] == 403
         assert (await call("/v1/commands/anything", body={}, headers={
             **headers, "Cookie": new_cookie}))[0] == 403
         revoked = await call("/v1/session/revoke", headers={
             **headers, "Cookie": new_cookie,
             "X-CSRF-Token": refreshed[1]["csrfToken"]})
         assert revoked[0] == 200 and "Max-Age=0" in revoked[2]["Set-Cookie"]
+        assert revoked[1] == {"revoked": True}
         assert (await call("/v1/session/current", method="GET", headers={
-            "Cookie": new_cookie, "X-Forge-Session": "1"}))[0] == 401
+            "Cookie": new_cookie, "X-Forge-Session": "1"}))[0] == 403
         invalid = await call("/v1/pair/claim", body={**claim, "actor": "owner"},
                              headers=headers)
         assert invalid[0] == 400

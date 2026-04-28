@@ -25,6 +25,9 @@ def request(url: str, *, method: str = "GET", host: str | None = None) -> tuple[
 def test_explicit_loopback_static_origin_never_accepts_commands(tmp_path: Path) -> None:
     (tmp_path / "index.html").write_text("<h1>Forge real Web build fixture</h1>")
     (tmp_path / "favicon.svg").write_text("<svg></svg>")
+    (tmp_path / "manifest.webmanifest").write_text('{"name":"Forge"}')
+    (tmp_path / "sw.js").write_text("self.addEventListener('fetch', () => {});")
+    (tmp_path / "forge-192.png").write_bytes(b"\x89PNG\r\n\x1a\n")
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets" / "app.js").write_text("export const forge = true;")
     server = create_loopback_gateway(tmp_path)
@@ -35,6 +38,9 @@ def test_explicit_loopback_static_origin_never_accepts_commands(tmp_path: Path) 
         origin = f"http://127.0.0.1:{server.server_port}"
         assert request(origin + "/") == (200, b"<h1>Forge real Web build fixture</h1>")
         assert request(origin + "/assets/app.js")[0] == 200
+        assert request(origin + "/manifest.webmanifest") == (200, b'{"name":"Forge"}')
+        assert request(origin + "/sw.js")[0] == 200
+        assert request(origin + "/forge-192.png")[0] == 200
         assert request(origin + "/v1/health") == (
             401, b'{"code":"REMOTE_AUTH_UNAVAILABLE"}')
         assert request(origin + "/v1/commands", method="POST") == (
@@ -42,6 +48,7 @@ def test_explicit_loopback_static_origin_never_accepts_commands(tmp_path: Path) 
         assert request(origin + "/index.html", host=f"example.com:{server.server_port}")[0] == 403
         assert request(origin + "/%2e%2e/secret.txt")[0] == 404
         assert request(origin + "/project/README.md")[0] == 404
+        assert request(origin + "/private.json")[0] == 404
         outside = tmp_path.parent / "outside-secret.txt"
         outside.write_text("do not serve")
         (tmp_path / "assets" / "escape.js").symlink_to(outside)

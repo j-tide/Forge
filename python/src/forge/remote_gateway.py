@@ -9,18 +9,21 @@ from __future__ import annotations
 import argparse
 import json
 import mimetypes
+import select
 import sys
 import time
 from collections import deque
 from collections.abc import Callable
+from concurrent.futures import CancelledError
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from threading import Lock
+from threading import BoundedSemaphore, Event, Lock
 from typing import Any, ClassVar, cast
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from forge.device_pairing import PairingError
+from forge.persistence import PersistenceError
 from forge.remote_commands import RemoteCommandError
 from forge.remote_sessions import RemoteSessionError
 
@@ -72,7 +75,10 @@ class StaticGatewayHandler(BaseHTTPRequestHandler):
         if "\\" in decoded or "//" in decoded:
             return None
         name = decoded.lstrip("/") or "index.html"
-        if name not in ("index.html", "favicon.svg") and not (
+        if name not in (
+            "index.html", "favicon.svg", "manifest.webmanifest", "sw.js",
+            "forge-192.png", "forge-512.png",
+        ) and not (
             name.startswith("assets/") and len(name.split("/")) == 2
         ):
             return None
@@ -140,12 +146,107 @@ class _AuthServer(_LoopbackServer):
         dispatch: Callable[[str, dict[str, Any]], dict[str, Any]],
     ) -> None:
         self.auth_dispatch = dispatch
-        self.auth_rate = _BoundedRate()
+        self.auth_write_rate = _BoundedRate()
+        self.auth_read_rate = _BoundedRate(limit=120)
+        self.auth_stream_slots = BoundedSemaphore(8)
+        self.auth_stopping = Event()
         super().__init__(address, handler)
+
+    def shutdown(self) -> None:
+        self.auth_stopping.set()
+        super().shutdown()
 
 
 class AuthGatewayHandler(StaticGatewayHandler):
     """Optional Host-loop-backed auth; never configured by the static CLI."""
+
+    def _events(self, parsed: Any) -> None:
+        if not self._origin_allowed(require_origin=False) or (
+            self.headers.get("X-Forge-Session") != "1"
+        ):
+            self._json(403, {"code": "REMOTE_ORIGIN_REJECTED"})
+            return
+        server = cast(_AuthServer, self.server)
+        if not server.auth_read_rate.allow():
+            self._json(429, {"code": "REMOTE_RATE_LIMITED"})
+            return
+        if not server.auth_stream_slots.acquire(blocking=False):
+            self._json(429, {"code": "REMOTE_STREAM_LIMITED"})
+            return
+        try:
+            self._stream_events(parsed)
+        finally:
+            server.auth_stream_slots.release()
+
+    def _stream_events(self, parsed: Any) -> None:
+        query = parse_qs(parsed.query, keep_blank_values=True)
+        cursor_headers = self.headers.get_all("Last-Event-ID", [])
+        revision_headers = self.headers.get_all("X-Forge-Policy-Revision", [])
+        if set(query) != {"projectId"} or len(query["projectId"]) != 1 or (
+            len(cursor_headers) > 1 or len(revision_headers) > 1
+        ):
+            self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+            return
+        revision: int | None = None
+        if revision_headers:
+            raw = revision_headers[0]
+            if not raw.isascii() or not raw.isdecimal() or len(raw) > 10 or int(raw) < 1:
+                self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+                return
+            revision = int(raw)
+        request = {"sessionToken": self._token(), "projectId": query["projectId"][0],
+                   "cursor": cursor_headers[0] if cursor_headers else None,
+                   "policyRevision": revision}
+        page = self._dispatch("events", request)
+        if page is None:
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+        self.connection.settimeout(3)
+        deadline = time.monotonic() + 30
+        last_heartbeat = 0.0
+        try:
+            while time.monotonic() < deadline and not cast(
+                _AuthServer, self.server
+            ).auth_stopping.is_set():
+                if page["resyncRequired"]:
+                    body = json.dumps({"cursor": page["cursor"]}, separators=(",", ":"))
+                    # Do not advance EventSource's cursor until the client has
+                    # actually loaded a fresh authoritative snapshot.
+                    self.wfile.write((f"event: resync_required\ndata: {body}\n\n").encode())
+                    self.wfile.flush()
+                    return
+                for item in page["events"]:
+                    body = json.dumps(item, separators=(",", ":"), ensure_ascii=False)
+                    if len(body) > 4096:
+                        return
+                    self.wfile.write((f"event: {item['type']}\nid: {item['id']}\n"
+                                      f"data: {body}\n\n").encode())
+                    request["cursor"] = item["id"]
+                now = time.monotonic()
+                if page["events"] or now - last_heartbeat >= 5:
+                    self.wfile.write(b": heartbeat\n\n")
+                    self.wfile.flush()
+                    last_heartbeat = now
+                # A browser may replace its EventSource before the next
+                # heartbeat. A readable GET socket means EOF or unexpected
+                # client input; either way this stream must relinquish its
+                # bounded worker slot instead of lingering for 30 seconds.
+                if select.select([self.connection], [], [], 0)[0]:
+                    return
+                time.sleep(0.5)
+                # Authentication and the current persisted Project allowlist are
+                # rechecked on every poll. A revoked or narrowed session closes.
+                page = cast(_AuthServer, self.server).auth_dispatch("events", request)
+        except (BrokenPipeError, ConnectionResetError, TimeoutError, OSError,
+                CancelledError,
+                PairingError, RemoteSessionError, RemoteCommandError,
+                PersistenceError, RuntimeError):
+            return
 
     def _origin_allowed(self, *, require_origin: bool) -> bool:
         if len(self.headers.get_all("Host", [])) != 1 or not self._trusted_host():
@@ -209,7 +310,8 @@ class AuthGatewayHandler(StaticGatewayHandler):
         try:
             return cast(_AuthServer, self.server).auth_dispatch(method, payload)
         except (PairingError, RemoteSessionError) as error:
-            self._json(401 if error.code.startswith("REMOTE_AUTH") else 403,
+            self._json(401 if error.code.startswith("REMOTE_AUTH")
+                       and error.code != "REMOTE_AUTH_REVOKED" else 403,
                        {"code": error.code})
         except RemoteCommandError as error:
             self._json(error.status, {"code": error.code})
@@ -222,15 +324,68 @@ class AuthGatewayHandler(StaticGatewayHandler):
     def do_GET(self) -> None:
         parsed = urlsplit(self.path)
         path = parsed.path
-        if path == "/v1/projects" or (
-            path.startswith("/v1/projects/") and path.endswith("/board")
-        ) or path.startswith("/v1/tasks/"):
+        if path == "/v1/events":
+            self._events(parsed)
+            return
+        if path.startswith("/v1/commands/"):
+            parts = path.split("/")
+            if len(parts) != 4 or not parts[3] or parsed.query:
+                self._json(404, {"code": "REMOTE_QUERY_NOT_FOUND"})
+                return
             if not self._origin_allowed(require_origin=False) or (
                 self.headers.get("X-Forge-Session") != "1"
             ):
                 self._json(403, {"code": "REMOTE_ORIGIN_REJECTED"})
                 return
-            if not cast(_AuthServer, self.server).auth_rate.allow():
+            if not cast(_AuthServer, self.server).auth_read_rate.allow():
+                self._json(429, {"code": "REMOTE_RATE_LIMITED"})
+                return
+            receipt = self._dispatch("receipt", {
+                "sessionToken": self._token(), "commandId": parts[3],
+            })
+            if receipt is not None:
+                self._json(200, receipt)
+            return
+        if path == "/v1/approvals":
+            if not self._origin_allowed(require_origin=False) or (
+                self.headers.get("X-Forge-Session") != "1"
+            ):
+                self._json(403, {"code": "REMOTE_ORIGIN_REJECTED"})
+                return
+            if not cast(_AuthServer, self.server).auth_read_rate.allow():
+                self._json(429, {"code": "REMOTE_RATE_LIMITED"})
+                return
+            query = parse_qs(parsed.query, keep_blank_values=True)
+            if set(query) - {"cursor", "limit"} or any(
+                len(item) != 1 for item in query.values()
+            ):
+                self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+                return
+            try:
+                limit = int(query.get("limit", ["50"])[0])
+            except ValueError:
+                self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+                return
+            data = self._dispatch("approvals", {
+                "sessionToken": self._token(), "cursor": query.get("cursor", [None])[0],
+                "limit": limit,
+            })
+            if data is not None:
+                self._json(200, data)
+            return
+        if path == "/v1/projects" or (
+            path.startswith("/v1/projects/") and (
+                path.endswith("/board") or path.endswith("/tasks")
+                or path.endswith("/conversations") or path.endswith("/notifications")
+                or path.endswith("/drafts") or path.endswith("/messages")
+            )
+        ) or path.startswith("/v1/tasks/") or path.startswith("/v1/approvals/"):
+            if not self._origin_allowed(require_origin=False) or (
+                self.headers.get("X-Forge-Session") != "1"
+            ):
+                self._json(403, {"code": "REMOTE_ORIGIN_REJECTED"})
+                return
+            if not cast(_AuthServer, self.server).auth_read_rate.allow():
                 self._json(429, {"code": "REMOTE_RATE_LIMITED"})
                 return
             if path == "/v1/projects":
@@ -249,20 +404,111 @@ class AuthGatewayHandler(StaticGatewayHandler):
                     "limit": limit, "cursor": query.get("cursor", [None])[0],
                 }
                 method = "project.list"
-            elif path.startswith("/v1/projects/"):
+            elif path.startswith("/v1/projects/") and (
+                path.endswith("/drafts") or path.endswith("/messages")
+            ):
                 parts = path.split("/")
-                if len(parts) != 5 or parts[4] != "board" or parsed.query:
+                if (len(parts) != 7 or parts[4] != "conversations"
+                        or not parts[3] or not parts[5]):
                     self._json(404, {"code": "REMOTE_QUERY_NOT_FOUND"})
                     return
-                payload = {"projectId": parts[3]}
-                method = "board.snapshot"
-            else:
+                query = parse_qs(parsed.query, keep_blank_values=True)
+                if set(query) - {"limit", "cursor"} or any(
+                    len(item) != 1 for item in query.values()
+                ):
+                    self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+                    return
+                try:
+                    limit = int(query.get("limit", ["20"])[0])
+                except ValueError:
+                    self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+                    return
+                payload = {"projectId": parts[3], "conversationId": parts[5],
+                           "limit": limit, "cursor": query.get("cursor", [None])[0]}
+                method = "draft.page" if parts[6] == "drafts" else "message.page"
+            elif path.startswith("/v1/projects/"):
+                parts = path.split("/")
+                if len(parts) != 5 or parts[4] not in (
+                    "board", "tasks", "conversations", "notifications"
+                ):
+                    self._json(404, {"code": "REMOTE_QUERY_NOT_FOUND"})
+                    return
+                if parts[4] == "notifications":
+                    query = parse_qs(parsed.query, keep_blank_values=True)
+                    if set(query) - {"limit"} or any(
+                        len(item) != 1 for item in query.values()
+                    ):
+                        self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+                        return
+                    try:
+                        limit = int(query.get("limit", ["20"])[0])
+                    except ValueError:
+                        self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+                        return
+                    data = self._dispatch("notifications", {
+                        "sessionToken": self._token(), "projectId": parts[3],
+                        "limit": limit,
+                    })
+                    if data is not None:
+                        self._json(200, data)
+                    return
+                if parts[4] == "board":
+                    if parsed.query:
+                        self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+                        return
+                    payload = {"projectId": parts[3]}
+                    method = "board.snapshot"
+                else:
+                    query = parse_qs(parsed.query, keep_blank_values=True)
+                    if set(query) - {"limit", "cursor"} or any(
+                        len(item) != 1 for item in query.values()
+                    ):
+                        self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+                        return
+                    try:
+                        limit = int(query.get("limit", ["50"])[0])
+                    except ValueError:
+                        self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+                        return
+                    payload = {"projectId": parts[3], "limit": limit,
+                               "cursor": query.get("cursor", [None])[0]}
+                    method = "conversation.page" if parts[4] == "conversations" else "task.page"
+            elif path.startswith("/v1/approvals/"):
                 parts = path.split("/")
                 if len(parts) != 4 or not parts[3] or parsed.query:
                     self._json(404, {"code": "REMOTE_QUERY_NOT_FOUND"})
                     return
-                payload = {"taskId": parts[3]}
-                method = "task.detail"
+                payload = {"approvalId": parts[3]}
+                method = "approval.detail"
+            else:
+                parts = path.split("/")
+                if len(parts) not in (4, 5) or not parts[3] or (
+                    len(parts) == 5 and parts[4] not in ("activity", "diff")
+                ):
+                    self._json(404, {"code": "REMOTE_QUERY_NOT_FOUND"})
+                    return
+                if len(parts) == 4:
+                    if parsed.query:
+                        self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+                        return
+                    payload = {"taskId": parts[3]}
+                    method = "task.detail"
+                else:
+                    query = parse_qs(parsed.query, keep_blank_values=True)
+                    if set(query) - {"limit", "cursor"} or any(
+                        len(item) != 1 for item in query.values()
+                    ):
+                        self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+                        return
+                    try:
+                        limit = int(query.get("limit", ["20" if parts[4] == "activity"
+                                                   else "4096"])[0])
+                    except ValueError:
+                        self._json(400, {"code": "REMOTE_INVALID_REQUEST"})
+                        return
+                    payload = {"taskId": parts[3], "limit": limit,
+                               "cursor": query.get("cursor", [None])[0]}
+                    method = "task.activity" if parts[4] == "activity" else "task.diff"
             data = self._dispatch("query", {
                 "sessionToken": self._token(), "method": method, "payload": payload,
             })
@@ -301,7 +547,7 @@ class AuthGatewayHandler(StaticGatewayHandler):
         if not self._origin_allowed(require_origin=True):
             self._json(403, {"code": "REMOTE_ORIGIN_REJECTED"})
             return
-        if not cast(_AuthServer, self.server).auth_rate.allow():
+        if not cast(_AuthServer, self.server).auth_write_rate.allow():
             self._json(429, {"code": "REMOTE_RATE_LIMITED"})
             return
         if path == "/v1/commands":
@@ -373,7 +619,7 @@ def create_loopback_gateway(web_root: Path, port: int = 0) -> ThreadingHTTPServe
 def create_auth_loopback_gateway(
     web_root: Path, dispatch: Callable[[str, dict[str, Any]], dict[str, Any]],
     port: int = 0,
-) -> ThreadingHTTPServer:
+) -> _AuthServer:
     """Explicit development adapter. Dispatch must marshal onto the Host DB loop."""
     root = _validated_root(web_root, port)
 
