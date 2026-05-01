@@ -12,6 +12,9 @@ import sys
 import time
 from datetime import UTC, datetime
 from functools import partial
+from http.server import ThreadingHTTPServer
+from pathlib import Path
+from threading import Thread
 from typing import Any, Literal
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
@@ -38,8 +41,16 @@ from forge.context import ContextError, ContextService
 from forge.context_builder import StageContextBuilder, StageContextInput
 from forge.conversations import ConversationError, ConversationSend, ConversationService
 from forge.delivery import DeliveryError, DeliveryService, MergeRequest
-from forge.development import DevelopmentError, HostDevelopmentService, RunLaunchInput
+from forge.dependencies import inspect_dependencies
+from forge.development import (
+    DevelopmentError,
+    HostDevelopmentService,
+    PlanActionInput,
+    PlanReadInput,
+    RunLaunchInput,
+)
 from forge.device_pairing import (
+    DeviceIdInput,
     DevicePairingService,
     PairingDecisionInput,
     PairingError,
@@ -73,7 +84,9 @@ from forge.knowledge_ingestion import (
 )
 from forge.model_provider import ModelCapabilities
 from forge.persistence import LATEST_SCHEMA, ForgePersistence, PersistenceError, resolve_data_dir
+from forge.planner import PlanArtifactService, PlannerError
 from forge.plugin_api import PluginError
+from forge.plugin_configuration import BundledPluginConfiguration
 from forge.plugin_storage import PluginStorageBroker
 from forge.plugins import PluginRegistry
 from forge.processes import ProcessController
@@ -97,9 +110,17 @@ from forge.protocol import (
     encode_frame,
     parse_frame,
 )
-from forge.recovery import RecoveryService
+from forge.recovery import RecoveryError, RecoveryService
 from forge.remote_auth import RemoteAuthDispatcher
 from forge.remote_commands import RemoteCommandDispatcher
+from forge.remote_events import RemoteEventFeed
+from forge.remote_gateway import GatewayError, create_auth_loopback_gateway
+from forge.remote_policy import (
+    DevicePolicyNarrow,
+    DevicePolicyRevoke,
+    RemotePolicyError,
+    RemotePolicyService,
+)
 from forge.remote_sessions import RemoteSessionService
 from forge.review_copies import ReviewCopyError, ReviewCopyManager
 from forge.review_issues import ReviewIssueService, ReviewReport
@@ -136,6 +157,35 @@ from forge.workspaces import WorkspaceManager
 
 LOGGER = logging.getLogger("forge.host")
 
+# A historical QA data profile is opened with SQLite mode=ro. Keep the RPC
+# boundary read-only as well: a future command must be added here deliberately
+# before it can run against that profile. This is not a general user permission.
+_READ_ONLY_METHODS = frozenset({
+    "system.handshake", "system.ping", "system.info", "system.health",
+    "system.activity", "system.profileSwitchSafety", "system.shutdown",
+    "system.dependencies",
+    "diagnostics.prepare", "plugin.inspectBundled", "agent.profileCatalog",
+    "project.probe", "project.reprobe", "project.list", "project.get",
+    "project.active", "environment.list", "environment.get",
+    "commandPreset.list", "commandPreset.get", "conversation.list",
+    "conversation.get", "conversation.messages", "intent.propose",
+    "draft.list", "draft.get", "draft.history", "approval.forDraft",
+    "board.snapshot", "task.detail", "context.preview", "context.sources",
+    "knowledge.list", "knowledge.chunk", "knowledge.search", "memory.get",
+    "memory.list", "memory.retrieve", "workflow.presets", "workflow.list",
+    "workflow.get", "workflow.getPublished", "workflow.impact",
+    "workflow.compileDraft", "workflow.compilePreset", "run.recoveryPreview",
+    "run.recoveryStatus",
+    "run.capabilities", "run.list", "run.inspect", "run.config", "run.handoff",
+    "run.planGet",
+    "run.reviewReports", "run.issueHistory", "run.reviewJobs",
+    "run.reviewJob", "run.verifyJobs", "run.verifyJob", "run.verifyReport",
+    "run.verifyArtifact", "run.acceptanceMatrix", "run.finalAcceptance",
+    "run.reworkCycles", "deliveries.get", "deliveries.preview",
+    "task.change.get", "devices.pair.inspect", "devices.pair.list",
+    "devices.pair.audit", "remote.loopbackInspect",
+})
+
 
 def timestamp() -> str:
     return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
@@ -154,6 +204,16 @@ class DiagnosticsCleanupInput(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     previewId: UUID
+    confirmed: Literal[True]
+
+
+class RecoveryResolveInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    projectId: UUID
+    runId: UUID
+    expectedRunRevision: int = Field(ge=1)
+    expectedWorkspaceId: UUID
     confirmed: Literal[True]
 
 
@@ -276,6 +336,13 @@ class BundledPluginEnabledInput(BaseModel):
     enabled: bool
 
 
+class BundledPluginConfigInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    expectedRevision: int = Field(ge=0)
+    config: dict[str, Any]
+
+
 class ReviewJobInput(ConversationProjectInput):
     reviewRunId: UUID
 
@@ -313,12 +380,20 @@ class HostRuntime:
         self.device_pairing = DevicePairingService(self.storage)
         self.remote_sessions = RemoteSessionService(self.storage)
         self.remote_auth = RemoteAuthDispatcher(self.device_pairing, self.remote_sessions)
-        self.remote_commands = RemoteCommandDispatcher(self.remote_sessions, self.dispatch_async)
+        self.remote_loopback_server: ThreadingHTTPServer | None = None
+        self.remote_loopback_thread: Thread | None = None
+        self.remote_loopback_root = os.environ.get("FORGE_REMOTE_LOOPBACK_WEB_ROOT")
+        self.remote_events = RemoteEventFeed(self.storage, self.remote_sessions, self.host_id)
         self.knowledge = KnowledgeIngestionService(self.storage, self.projects)
         self.memories = ProjectMemoryService(self.storage, self.projects)
         self.conversations = ConversationService(self.storage)
         self.drafts = DraftService(self.storage)
+        self.remote_policy = RemotePolicyService(self.storage, self.drafts)
         self.approvals = ApprovalService(self.storage, self.drafts)
+        self.remote_commands = RemoteCommandDispatcher(
+            self.remote_sessions, self.dispatch_async,
+            self.remote_events.snapshot_cursor, self.remote_policy,
+            self.storage, self.conversations, self.approvals, self.drafts)
         self.board = BoardService(self.storage)
         self.environments = EnvironmentService(self.storage)
         self.configs = RunConfigService(self.storage, self.environments)
@@ -336,6 +411,8 @@ class HostRuntime:
         )), model_provider_enabled=self.model_provider_id != "disabled")
         self.plugins.register_service("process.v1", self.processes)
         self.plugins.register_service("storage.v1", PluginStorageBroker(self.storage))
+        self.plugin_configuration = BundledPluginConfiguration(self.storage, self.plugins)
+        self.applied_plugin_config_revision: int | None = None
         self.workspaces = WorkspaceManager(
             data_dir / "workspaces", self.processes.runtime_id, self.processes.has_active
         )
@@ -393,6 +470,7 @@ class HostRuntime:
             self.storage_error = error.code
             health = {
                 "status": "unavailable",
+                "readOnly": self.storage.read_only,
                 "schemaVersion": None,
                 "sqliteVersion": None,
                 "journalMode": "unknown",
@@ -434,22 +512,102 @@ class HostRuntime:
             "storage": storage,
         }
 
+    def require_read_only_method(self, method: str) -> None:
+        if self.storage.read_only and method not in _READ_ONLY_METHODS:
+            raise ProtocolError("DATABASE_READ_ONLY", "Historical data is read-only")
+
     def inspect_bundled_plugin(self) -> dict[str, object]:
         inspection = self.plugins.inspect_builtin_config()
+        configured = self.plugin_configuration.read()
         enabled = self.storage.get_metadata("plugin.forge.executor.codex.enabled") != "0"
         inspection["enabled"] = enabled
-        inspection["restartRequired"] = enabled and not inspection["active"]
+        inspection["configRevision"] = configured.revision
+        inspection["configValues"] = configured.values
+        inspection["configApplied"] = (
+            bool(inspection["active"])
+            and configured.error is None
+            and self.applied_plugin_config_revision == configured.revision
+        )
+        inspection["restartRequired"] = enabled and not inspection["configApplied"]
+        if configured.error is not None:
+            inspection["compatible"] = False
+            issues = inspection["issues"]
+            assert isinstance(issues, list)
+            issues.append({"code": configured.error, "path": "config",
+                           "message": "Saved plugin configuration needs attention"})
         return inspection
+
+    def plugin_configuration_pending(self) -> bool:
+        state = self.plugin_configuration.read()
+        return (self.applied_plugin_config_revision is not None
+                and (state.error is not None
+                     or state.revision != self.applied_plugin_config_revision))
+
+    def remote_loopback_state(self) -> dict[str, Any]:
+        server = self.remote_loopback_server
+        return {"running": server is not None, "origin":
+                f"http://127.0.0.1:{server.server_port}" if server else None,
+                "hostId": self.host_id}
+
+    async def start_remote_loopback(self) -> dict[str, Any]:
+        """Explicit local-browser pilot on this exact Host; never binds a LAN interface."""
+        if self.remote_loopback_server is not None:
+            return self.remote_loopback_state()
+        if not self.remote_loopback_root:
+            raise ProtocolError("HOST_UNAVAILABLE", "Loopback web assets are unavailable")
+        loop = asyncio.get_running_loop()
+
+        def dispatch(method: str, payload: dict[str, Any]) -> dict[str, Any]:
+            return asyncio.run_coroutine_threadsafe(
+                self.dispatch_remote(method, payload), loop,
+            ).result(timeout=3)
+
+        try:
+            server = create_auth_loopback_gateway(Path(self.remote_loopback_root), dispatch)
+            thread = Thread(target=server.serve_forever, kwargs={"poll_interval": 0.1},
+                            name="forge-loopback-gateway", daemon=True)
+            thread.start()
+        except (GatewayError, OSError, RuntimeError) as error:
+            raise ProtocolError("HOST_UNAVAILABLE", "Local gateway could not start") from error
+        self.remote_loopback_server = server
+        self.remote_loopback_thread = thread
+        LOGGER.info(json.dumps({"event": "remote_loopback_started", "hostId": self.host_id}))
+        return self.remote_loopback_state()
+
+    async def stop_remote_loopback(self) -> dict[str, Any]:
+        server = self.remote_loopback_server
+        if server is None:
+            return self.remote_loopback_state()
+        # Stop accepting before closing SQLite; outstanding authenticated requests
+        # are marshalled back to this Host event loop and are never handled by Main.
+        await asyncio.to_thread(server.shutdown)
+        await asyncio.to_thread(server.server_close)
+        thread = self.remote_loopback_thread
+        if thread is not None:
+            await asyncio.to_thread(thread.join, 2)
+        self.remote_loopback_server = None
+        self.remote_loopback_thread = None
+        LOGGER.info(json.dumps({"event": "remote_loopback_stopped", "hostId": self.host_id}))
+        return self.remote_loopback_state()
 
     async def dispatch_remote(self, method: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Only the optional authenticated gateway may call this on the Host loop."""
+        if method == "events":
+            return self.remote_events.read_page(payload)
+        if method == "notifications":
+            return self.remote_events.read_notifications(payload)
         if method == "command":
             return self.remote_commands.handle_command(payload)
+        if method == "receipt":
+            return self.remote_commands.handle_receipt(payload)
+        if method == "approvals":
+            return self.remote_commands.handle_approvals(payload)
         if method == "query":
             return await self.remote_commands.handle_query(payload)
         return self.remote_auth.handle(method, payload)
 
     def dispatch(self, request: RpcRequest) -> dict[str, Any]:
+        self.require_read_only_method(request.method)
         if request.method == "system.handshake":
             try:
                 hello = Handshake.model_validate(request.params)
@@ -465,6 +623,22 @@ class HostRuntime:
             return self.info()
         if self.status == "starting":
             raise ProtocolError("HOST_UNAVAILABLE", "Complete handshake first")
+        if request.method == "diagnostics.backup":
+            if request.params:
+                raise ProtocolError("INVALID_REQUEST", "Database backup takes no parameters")
+            if self.storage.health()["status"] != "ready" or self.storage.read_only:
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
+            if any(self.activity_counts().values()):
+                raise ProtocolError("RUN_CONFLICT", "Active work must finish before backup")
+            try:
+                source = self.storage.backup()
+                return {"data": {"internalPath": str(source),
+                                 "schemaVersion": self.storage.schema_version(),
+                                 "createdAt": timestamp(), "sizeBytes": source.stat().st_size}}
+            except (PersistenceError, OSError) as error:
+                code = (error.code if isinstance(error, PersistenceError)
+                        else "DATABASE_BACKUP_FAILED")
+                raise ProtocolError(code, "Database backup failed") from error
         if request.method == "diagnostics.prepare":
             if request.params:
                 raise ProtocolError("INVALID_REQUEST", "Diagnostics preview takes no parameters")
@@ -519,6 +693,7 @@ class HostRuntime:
             return self.run_command(request)
         if request.method not in (
             "system.ping", "system.info", "system.health", "system.activity",
+            "system.profileSwitchSafety",
             "system.shutdown"
         ):
             raise ProtocolError("UNKNOWN_COMMAND", "Method is not registered")
@@ -531,26 +706,80 @@ class HostRuntime:
         if request.method == "system.health":
             return self.health()
         if request.method == "system.activity":
-            development = self.development
-            counts = {
-                "startingRuns": len(development.starting) if development else 0,
-                "developmentRuns": len(development.running) if development else 0,
-                "scheduledRuns": len(development.scheduler.active) if development else 0,
-                "reviewJobs": len(self.review_runtime.running) if self.review_runtime else 0,
-                "verifyJobs": len(self.verifier.running),
-                "refinerJobs": len(self.refiner_jobs),
-                "ownedProcesses": sum(
-                    item.session.descriptor.status in ("running", "cancelling")
-                    for item in self.processes.records.values()
-                ),
-            }
+            counts = self.activity_counts()
             return {"activityCount": sum(counts.values()), "counts": counts,
                     "timestamp": timestamp()}
+        if request.method == "system.profileSwitchSafety":
+            return self.profile_switch_safety()
         if request.method == "system.shutdown":
             self.status = "stopping"
             self.running = False
             return {"hostId": self.host_id, "status": self.status}
         raise ProtocolError("UNKNOWN_COMMAND", "System method is not registered")
+
+    def activity_counts(self) -> dict[str, int]:
+        development = self.development
+        return {
+            "startingRuns": len(development.starting) if development else 0,
+            "developmentRuns": len(development.running) if development else 0,
+            "scheduledRuns": len(development.scheduler.active) if development else 0,
+            "reviewJobs": len(self.review_runtime.running) if self.review_runtime else 0,
+            "verifyJobs": len(self.verifier.running),
+            "refinerJobs": len(self.refiner_jobs),
+            "ownedProcesses": sum(
+                item.session.descriptor.status in ("running", "cancelling")
+                for item in self.processes.records.values()
+            ),
+        }
+
+    def profile_switch_safety(self) -> dict[str, object]:
+        """Fail closed on prior-runtime writers before changing the Desktop data root.
+
+        Historical PIDs are counted as uncertainty, never adopted or signaled.
+        Unlike a live-work count, these fences remain after Host restart.
+        """
+        db = self.storage.session()
+
+        def count(query: str) -> int:
+            row = db.execute(query).fetchone()
+            assert row is not None
+            return int(row[0])
+
+        version = self.storage.schema_version()
+        reconciled_runs = {
+            row["run_id"] for row in db.execute(
+                "SELECT run_id FROM run_recovery_observations WHERE resolved_at IS NOT NULL"
+            ).fetchall()
+        } if version >= 36 else set()
+        unresolved_process_records = sum(
+            record.get("runId") not in reconciled_runs
+            for record in self.processes.inspect_orphans()
+        )
+        resolved = (
+            "AND r.recovery_resolved_at IS NULL"
+            if version >= 36 else ""
+        )
+        fences = {
+            "unresolvedRuns": count(
+                "SELECT count(*) FROM runs r WHERE r.state IN "
+                "('queued','running','waiting_input','pausing','paused','canceling') "
+                "OR (r.state='interrupted' " + resolved + ")"
+            ) if version >= 15 else 0,
+            "quarantinedLeases": count(
+                "SELECT count(*) FROM run_workspace_leases "
+                "WHERE state IN ('active','quarantined')"
+            ) if version >= 15 else 0,
+            "interruptedReviewJobs": count(
+                "SELECT count(*) FROM review_jobs WHERE state IN ('running','interrupted')"
+            ) if version >= 17 else 0,
+            "interruptedVerifyJobs": count(
+                "SELECT count(*) FROM verifier_jobs WHERE state IN ('running','interrupted')"
+            ) if version >= 18 else 0,
+            "orphanProcessRecords": unresolved_process_records,
+            "uncertainProcessJournalEntries": self.processes.uncertain_journal_entries(),
+        }
+        return {"safe": all(value == 0 for value in fences.values()),
+                "fences": fences, "timestamp": timestamp()}
 
     async def attach_executor(self, adapter: ExecutorAdapter) -> None:
         """MIG-PY-07 registers a real adapter here; no fallback executor is implied."""
@@ -630,8 +859,11 @@ class HostRuntime:
         try:
             if cycle.triggerKind == "review":
                 job = self.storage.session().execute(
-                    "SELECT model_id FROM review_jobs WHERE report_id=?",
-                    (str(cycle.triggerReportId),),
+                    "SELECT model_id,profile_id,profile_revision FROM review_jobs "
+                    "WHERE report_id=? AND project_id=? AND task_id=? "
+                    "AND development_run_id=? AND snapshot_id=? AND state='completed'",
+                    (str(cycle.triggerReportId), str(cycle.projectId), str(cycle.taskId),
+                     str(cycle.sourceRunId), str(cycle.sourceSnapshotId)),
                 ).fetchone()
                 if job is None or self.review_runtime is None:
                     raise ReworkError("REWORK_GATE_UNAVAILABLE")
@@ -640,6 +872,7 @@ class HostRuntime:
                     developmentRunId=handoff.snapshot.runId,
                     expectedSnapshotId=handoff.snapshot.snapshotId,
                     modelId=job["model_id"], idempotencyKey=key,
+                    profileId=job["profile_id"], profileRevision=job["profile_revision"],
                 ))
             else:
                 row = self.storage.session().execute(
@@ -677,6 +910,25 @@ class HostRuntime:
         )
 
     async def dispatch_async(self, request: RpcRequest) -> dict[str, Any]:
+        self.require_read_only_method(request.method)
+        if request.method == "system.dependencies":
+            if request.params:
+                raise ProtocolError("INVALID_REQUEST", "Dependency probe takes no parameters")
+            if self.status == "starting" or self.storage.health()["status"] != "ready":
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge Host is unavailable")
+            return await inspect_dependencies()
+        if request.method.startswith("remote.loopback"):
+            if request.params:
+                raise ProtocolError("INVALID_REQUEST", "Loopback control takes no parameters")
+            if self.status != "ready" or self.storage.health()["status"] != "ready":
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge Host is unavailable")
+            if request.method == "remote.loopbackStart":
+                return {"data": await self.start_remote_loopback()}
+            if request.method == "remote.loopbackStop":
+                return {"data": await self.stop_remote_loopback()}
+            if request.method == "remote.loopbackInspect":
+                return {"data": self.remote_loopback_state()}
+            raise ProtocolError("UNKNOWN_COMMAND", "Loopback method is not registered")
         if request.method == "plugin.setBundledEnabled":
             if self.status == "starting" or self.storage.health()["status"] != "ready":
                 raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
@@ -702,6 +954,21 @@ class HostRuntime:
                     await self.plugins.deactivate("forge.executor.codex")
                 except PluginError as error:
                     raise ProtocolError(error.code, error.code) from error
+                self.applied_plugin_config_revision = None
+            return {"data": self.inspect_bundled_plugin()}
+        if request.method == "plugin.setBundledConfig":
+            if self.status == "starting" or self.storage.health()["status"] != "ready":
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
+            try:
+                change = BundledPluginConfigInput.model_validate(request.params)
+            except ValidationError as error:
+                raise ProtocolError("INVALID_REQUEST", "Invalid plugin config request") from error
+            try:
+                self.plugin_configuration.save(
+                    expected_revision=change.expectedRevision, values=change.config,
+                )
+            except PluginError as error:
+                raise ProtocolError(error.code, error.code) from error
             return {"data": self.inspect_bundled_plugin()}
         if request.method.startswith("memory."):
             if self.status == "starting" or self.storage.health()["status"] != "ready":
@@ -882,18 +1149,56 @@ class HostRuntime:
                      "modelIds": caps.modelIds if caps and caps.available else [],
                      "readOnlyEnforced": bool(caps and caps.readOnlyEnforced),
                      "networkPolicyEnforced": bool(caps and caps.networkPolicyEnforced),
+                     "structuredOutput": bool(caps and caps.structuredOutput),
                      "approval": bool(caps and caps.approval),
                      "reason": None if caps and caps.available else "EXECUTOR_UNAVAILABLE"},
                     {"executorId": "executor.claude", "available": False,
                      "modelIds": [], "readOnlyEnforced": False,
-                     "networkPolicyEnforced": False, "approval": False,
+                     "networkPolicyEnforced": False, "structuredOutput": False,
+                     "approval": False,
                      "reason": "CLAUDE_NOT_VERIFIED"},
                 ],
                 "modelProviders": [model_caps.model_dump(mode="json")],
             }}
+        if request.method == "run.recoveryPreview":
+            if self.status == "starting" or self.storage.health()["status"] != "ready":
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge Host is unavailable")
+            try:
+                target = RunIdInput.model_validate_json(json.dumps(request.params))
+                preview = await self.inspections.recovery_preview(
+                    target.projectId, target.runId, self.workspaces,
+                )
+            except ValidationError as error:
+                raise ProtocolError(
+                    "INVALID_REQUEST", "Invalid recovery preview request"
+                ) from error
+            except InspectionError as error:
+                raise ProtocolError(error.code, error.code) from error
+            return {"data": preview.model_dump(mode="json")}
+        if request.method in ("run.recoveryStatus", "run.recoveryResolve"):
+            if self.status == "starting" or self.storage.health()["status"] != "ready":
+                raise ProtocolError("HOST_UNAVAILABLE", "Forge Host is unavailable")
+            try:
+                if request.method == "run.recoveryStatus":
+                    target = RunIdInput.model_validate_json(json.dumps(request.params))
+                    recovery_result = self.recovery.status(target.projectId, target.runId)
+                else:
+                    target_resolve = RecoveryResolveInput.model_validate_json(
+                        json.dumps(request.params)
+                    )
+                    recovery_result = await self.recovery.resolve(
+                        target_resolve.projectId, target_resolve.runId,
+                        target_resolve.expectedRunRevision,
+                        target_resolve.expectedWorkspaceId, self.workspaces,
+                    )
+            except ValidationError as error:
+                raise ProtocolError("INVALID_REQUEST", "Invalid recovery request") from error
+            except RecoveryError as error:
+                raise ProtocolError(error.code, error.code) from error
+            return {"data": recovery_result}
         if request.method not in (
             "run.start", "run.cancel", "run.capabilities", "run.reviewStart",
-            "run.verifyStart", "run.finalDecide", "deliveries.merge",
+            "run.verifyStart", "run.finalDecide", "run.planAct", "deliveries.merge",
         ):
             return self.dispatch(request)
         if self.status == "starting":
@@ -904,6 +1209,8 @@ class HostRuntime:
                 start = RunLaunchInput.model_validate_json(params)
             elif request.method == "run.cancel":
                 cancel = RunIdInput.model_validate_json(params)
+            elif request.method == "run.planAct":
+                plan_action = PlanActionInput.model_validate_json(params)
             elif request.method == "run.reviewStart":
                 review_start = ReviewStartInput.model_validate_json(params)
             elif request.method == "run.verifyStart":
@@ -918,6 +1225,11 @@ class HostRuntime:
             raise ProtocolError("INVALID_REQUEST", "Invalid Run command payload") from error
         if self.storage.health()["status"] != "ready":
             raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
+        if request.method in ("run.start", "run.capabilities", "run.reviewStart") and (
+            self.plugin_configuration_pending()
+        ):
+            raise ProtocolError("RUN_PLUGIN_CONFIG_RESTART_REQUIRED",
+                                "Restart Forge to apply saved plugin configuration")
         if request.method == "run.verifyStart" and not self.verifier_ready:
             raise ProtocolError("HOST_UNAVAILABLE", "Verifier is not available")
         if (self.development is not None and self.development.plugins is not None and (
@@ -928,6 +1240,8 @@ class HostRuntime:
         if self.development is None and request.method not in (
             "run.verifyStart", "run.finalDecide", "deliveries.merge",
         ):
+            if self.storage.get_metadata("plugin.forge.executor.codex.enabled") == "0":
+                raise ProtocolError("RUN_PLUGIN_UNAVAILABLE", "Executor plugin is disabled")
             raise ProtocolError("MODEL_UNAVAILABLE", "Executor is not available")
         try:
             if request.method == "run.start":
@@ -936,6 +1250,9 @@ class HostRuntime:
             elif request.method == "run.cancel":
                 assert self.development is not None
                 result = await self.development.cancel(cancel.projectId, cancel.runId)
+            elif request.method == "run.planAct":
+                assert self.development is not None
+                result = await self.development.plan_action(plan_action)
             elif request.method == "run.reviewStart":
                 if self.review_runtime is None:
                     raise ProtocolError("MODEL_UNAVAILABLE", "Reviewer is not available")
@@ -970,7 +1287,7 @@ class HostRuntime:
                     capability.projectId, capability.taskId
                 )
             return {"data": to_jsonable_python(result)}
-        except (DevelopmentError, ReviewRuntimeError, ReviewCopyError,
+        except (DevelopmentError, PlannerError, ReviewRuntimeError, ReviewCopyError,
                 VerifierError, FinalAcceptanceError, DeliveryError) as error:
             raise ProtocolError(error.code, error.code) from error
 
@@ -983,6 +1300,9 @@ class HostRuntime:
             if method == "project.probe":
                 probe_input = ProjectPathInput.model_validate_json(params_json)
                 value: Any = self.projects.probe(probe_input.rootPath)
+            elif method == "project.reprobe":
+                reprobe_input = ProjectIdInput.model_validate_json(params_json)
+                value = self.projects.reprobe(str(reprobe_input.projectId))
             elif method == "project.create":
                 create_input = ProjectCreateInput.model_validate_json(params_json)
                 value = self.projects.create(
@@ -1041,21 +1361,36 @@ class HostRuntime:
             raise ProtocolError("HOST_UNAVAILABLE", "Forge storage is unavailable")
         try:
             params_json = json.dumps(request.params)
+            value: Any
             if request.method == "devices.pair.issue":
                 PairingIssueInput.model_validate_json(params_json)
                 value = self.device_pairing.issue()
             elif request.method == "devices.pair.inspect":
                 data = PairingIdInput.model_validate_json(params_json)
                 value = self.device_pairing.inspect_local(data.pairingId)
+            elif request.method == "devices.pair.list":
+                PairingIssueInput.model_validate_json(params_json)
+                value = self.device_pairing.list_local()
+            elif request.method == "devices.pair.audit":
+                device = DeviceIdInput.model_validate_json(params_json)
+                value = self.remote_policy.audit(device.deviceId)
             elif request.method == "devices.pair.decide":
                 data = PairingDecisionInput.model_validate_json(params_json)
                 value = self.device_pairing.decide(data)
+            elif request.method == "devices.pair.narrow":
+                narrow = DevicePolicyNarrow.model_validate_json(params_json)
+                value = self.remote_policy.narrow(narrow)
+            elif request.method == "devices.pair.revoke":
+                revoke = DevicePolicyRevoke.model_validate_json(params_json)
+                value = self.remote_policy.revoke(revoke)
             else:
                 raise ProtocolError("UNKNOWN_COMMAND", "Pairing method is not registered")
             return {"data": value}
         except ValidationError as error:
             raise ProtocolError("INVALID_REQUEST", "Invalid pairing command payload") from error
         except PairingError as error:
+            raise ProtocolError(error.code, error.code) from error
+        except RemotePolicyError as error:
             raise ProtocolError(error.code, error.code) from error
         except PersistenceError as error:
             raise ProtocolError(error.code, error.code) from error
@@ -1183,6 +1518,9 @@ class HostRuntime:
                 manual_input = DraftRequest.model_validate_json(params)
                 result: Any = self.drafts.manual(manual_input)
             elif method == "draft.generate":
+                if self.plugin_configuration_pending():
+                    raise ProtocolError("RUN_PLUGIN_CONFIG_RESTART_REQUIRED",
+                                        "Restart Forge to apply saved plugin configuration")
                 generate_input = DraftRequest.model_validate_json(params)
                 provider = self.plugins.resolve_model_provider(self.model_provider_id)
                 result = self.drafts.begin(
@@ -1270,6 +1608,7 @@ class HostRuntime:
             self.drafts.finish(project_id, draft_id, "new_task", None, "REFINER_FAILED")
 
     async def shutdown(self) -> None:
+        await self.stop_remote_loopback()
         self.review_copies.workspaces.stop_accepting()
         await self.verifier.shutdown()
         if self.review_runtime is not None:
@@ -1317,21 +1656,52 @@ class HostRuntime:
             elif request.method == "context.sources":
                 source_input = RunIdInput.model_validate_json(params)
                 result = self.contexts.run_sources(source_input.projectId, source_input.runId)
+            elif request.method == "run.planGet":
+                plan_input = PlanReadInput.model_validate_json(params)
+                result = PlanArtifactService(self.storage).gate(
+                    plan_input.projectId, plan_input.taskId, plan_input.runId,
+                    self.configs, self.workflow_drafts,
+                )
             elif request.method == "run.config":
                 config_input = RunIdInput.model_validate_json(params)
                 config = self.configs.get(config_input.projectId, config_input.runId)
                 run = self.runs.get(config_input.projectId, config_input.runId)
                 if config is None or run is None:
                     raise ProtocolError("RUN_NOT_FOUND", "Run configuration is unavailable")
+                stage_details = []
+                for lock in config.stageProfiles:
+                    profile = self.agent_profiles.get_locked(
+                        lock.id, lock.version, lock.contentHash, lock.executorPluginId,
+                    )
+                    if profile is None:
+                        continue
+                    stage_details.append({
+                        "id": lock.id, "version": lock.version, "name": profile.name,
+                        "role": profile.role, "modelId": profile.modelId,
+                        "policyProfile": profile.policyProfile,
+                    })
+                developer_profile = self.agent_profiles.get_locked(
+                    config.profile.id, config.profile.version,
+                    config.profile.contentHash, config.profile.executorPluginId,
+                )
                 result = {
                     "projectId": config.projectId, "runId": config.runId,
                     "taskId": config.taskId, "taskRevision": config.taskRevision,
                     "configHash": config.snapshotHash,
                     "workflow": config.workflow,
                     "developerProfile": config.profile,
+                    "maxDurationMs": config.budget.maxDurationMs,
+                    "maxTokens": config.budget.maxTokens,
+                    "maxToolCalls": config.budget.maxToolCalls,
+                    "maxOutputTokens": developer_profile.limits.maxOutputTokens if (
+                        developer_profile is not None
+                    ) else None,
                     "stageProfiles": config.stageProfiles,
+                    "stageProfileDetails": stage_details,
                     "environmentId": config.environment.environmentId,
                     "environmentRevision": config.environment.revision,
+                    "commandPresetIds": config.environment.config.commandPresetIds,
+                    "commandPresetLocks": config.commandPresets,
                     "actualNodeId": run.attempt.nodeId,
                 }
             elif request.method == "run.handoff":
@@ -1420,7 +1790,7 @@ class HostRuntime:
         except (RunError, InspectionError, HandoffError, PersistenceError,
                 ReviewRuntimeError, VerifierError, AcceptanceMatrixError,
                 ReworkError, FinalAcceptanceError, DeliveryError, TaskChangeError,
-                ContextError) as error:
+                ContextError, PlannerError) as error:
             raise ProtocolError(error.code, error.code) from error
 
     def approval_command(self, request: RpcRequest) -> dict[str, Any]:
@@ -1504,14 +1874,20 @@ async def serve() -> int:
                     if runtime.storage.get_metadata(
                         "plugin.forge.executor.codex.enabled"
                     ) != "0":
+                        configuration = runtime.plugin_configuration.read()
+                        if configuration.error is not None:
+                            raise PluginError(configuration.error)
                         if "forge.executor.codex" not in runtime.plugins.manifests:
                             runtime.plugins.discover_builtin("forge.executor.codex")
                         if "forge.executor.codex" not in runtime.plugins.activated:
-                            await runtime.plugins.activate("forge.executor.codex")
+                            await runtime.plugins.activate(
+                                "forge.executor.codex", configuration.values,
+                            )
                         adapter = runtime.plugins.resolve_executor("executor.codex")
                         if adapter is None:
                             raise PluginError("PLUGIN_EXECUTOR_UNAVAILABLE")
                         await runtime.attach_executor(adapter)
+                        runtime.applied_plugin_config_revision = configuration.revision
                 except PluginError as error:
                     LOGGER.warning(json.dumps({"event": "executor_unavailable",
                                                "code": error.code}))

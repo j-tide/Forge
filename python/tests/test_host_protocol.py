@@ -8,6 +8,7 @@ from uuid import uuid4
 
 import pytest
 
+from forge.persistence import LATEST_SCHEMA, ForgePersistence
 from forge.protocol import MAX_FRAME_BYTES, ProtocolError, encode_frame, parse_frame
 
 
@@ -31,6 +32,56 @@ def test_rejects_unknown_fields_and_oversized_frames() -> None:
         )
     with pytest.raises(ProtocolError, match="oversized"):
         parse_frame(b"x" * (MAX_FRAME_BYTES + 1))
+
+
+@pytest.mark.asyncio
+async def test_read_only_host_reports_mode_and_rejects_writes_before_services(
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "historical"
+    storage = ForgePersistence(data_dir)
+    storage.open()
+    storage.migrate(LATEST_SCHEMA)
+    storage.close()
+    proc = await asyncio.create_subprocess_exec(
+        sys.executable, "-m", "forge.host",
+        stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        env={**os.environ, "FORGE_HOST_OWNERSHIP_TOKEN": "read-only-owner",
+             "FORGE_HOST_DATA_DIR": str(data_dir), "FORGE_PYTHON_DB_READ_ONLY": "1"},
+    )
+    assert proc.stdin and proc.stdout
+
+    async def call(request_id: str, method: str,
+                   params: dict[str, object] | None = None) -> dict[str, object]:
+        assert proc.stdin and proc.stdout
+        proc.stdin.write(rpc(request_id, method, params))
+        await proc.stdin.drain()
+        import json
+        return json.loads(await asyncio.wait_for(proc.stdout.readline(), timeout=5))
+
+    try:
+        hello = await call("hello", "system.handshake", {
+            "productVersion": "0.0.1", "hostVersion": "0.0.1",
+            "protocolVersion": "forge-host-protocol/v5",
+            "ownershipToken": "read-only-owner",
+        })
+        assert "result" in hello
+        health = await call("health", "system.health")
+        assert health["result"]["storage"]["readOnly"] is True  # type: ignore[index]
+        listed = await call("list", "project.list")
+        assert listed["result"]["data"] == []  # type: ignore[index]
+        for method in ("project.create", "project.remove", "run.start",
+                       "plugin.setBundledEnabled", "diagnostics.cleanup"):
+            rejected = await call(method, method, {})
+            assert rejected["error"]["code"] == "DATABASE_READ_ONLY"  # type: ignore[index]
+        stopped = await call("stop", "system.shutdown")
+        assert stopped["result"]["status"] == "stopping"  # type: ignore[index]
+        assert await asyncio.wait_for(proc.wait(), timeout=5) == 0
+    finally:
+        if proc.returncode is None:
+            proc.kill()
+            await proc.wait()
 
 
 @pytest.mark.asyncio
@@ -99,7 +150,14 @@ async def test_real_host_handshake_health_errors_and_shutdown(tmp_path: Path) ->
         inspection = plugin["result"]["data"]  # type: ignore[index]
         assert inspection["pluginId"] == "forge.executor.codex"
         assert inspection["configSchema"]["additionalProperties"] is False
-        assert inspection["configSchema"]["properties"] == {}
+        timeout_field = inspection["configSchema"]["properties"][
+            "appServerInitializationTimeoutSeconds"
+        ]
+        assert timeout_field["minimum"] == 1
+        assert inspection["configRevision"] == 0 and inspection["configApplied"]
+        assert inspection["manifest"]["contributes"]["executors"] == ["executor.codex"]
+        assert inspection["manifest"]["contributes"]["tools"] == []
+        assert inspection["activeRunRefs"] == []
         rejected_plugin = await call("plugin-params", "plugin.inspectBundled", {"path": "/"})
         assert rejected_plugin["error"]["code"] == "INVALID_REQUEST"  # type: ignore[index]
         invalid = await call("invalid", "shell.exec")
@@ -189,6 +247,13 @@ async def test_real_host_project_probe_trust_and_restart(tmp_path: Path) -> None
         project = created["result"]["data"]  # type: ignore[index]
         assert project["trusted"] is True
         assert project["rootPath"] == str(source)
+        reprobed = await call("project.reprobe", {"projectId": project["projectId"]})
+        assert reprobed["result"]["data"]["rootPath"] == str(source)  # type: ignore[index]
+        assert not (source / "should-not-exist").exists()
+        invalid_reprobe = await call("project.reprobe", {
+            "projectId": project["projectId"], "rootPath": str(source),
+        })
+        assert invalid_reprobe["error"]["code"] == "INVALID_REQUEST"  # type: ignore[index]
         conversation = (await call(
             "conversation.create",
             {"projectId": project["projectId"], "title": "需求", "expectedRevision": 0},

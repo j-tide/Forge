@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import sqlite3
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -113,6 +114,39 @@ async def test_system_activity_is_real_host_memory_and_rejects_extra_params(
     try:
         idle = host.dispatch(request)
         assert idle["activityCount"] == 0
+        safety = host.dispatch(request.model_copy(update={
+            "method": "system.profileSwitchSafety",
+        }))
+        assert safety["safe"] is True
+        assert all(value == 0 for value in safety["fences"].values())
+        journal = host.processes.journal_dir
+        assert journal is not None
+        journal.mkdir(parents=True, exist_ok=True)
+        malformed = journal / "damaged.json"
+        incomplete = journal / "unfinished.tmp"
+        malformed.write_text("{", encoding="utf-8")
+        incomplete.write_text("partial", encoding="utf-8")
+        uncertain = host.dispatch(request.model_copy(update={
+            "method": "system.profileSwitchSafety",
+        }))
+        assert uncertain["safe"] is False
+        assert uncertain["fences"]["uncertainProcessJournalEntries"] == 2
+        malformed.unlink()
+        incomplete.unlink()
+        linked = journal / "linked.json"
+        linked.symlink_to(tmp_path / "outside.json")
+        assert host.dispatch(request.model_copy(update={
+            "method": "system.profileSwitchSafety",
+        }))["fences"]["uncertainProcessJournalEntries"] == 1
+        linked.unlink()
+        assert host.dispatch(request.model_copy(update={
+            "method": "system.profileSwitchSafety",
+        }))["safe"] is True
+        with pytest.raises(ProtocolError) as invalid_safety:
+            host.dispatch(request.model_copy(update={
+                "method": "system.profileSwitchSafety", "params": {"pid": 1},
+            }))
+        assert invalid_safety.value.code == "INVALID_REQUEST"
         task = asyncio.create_task(asyncio.sleep(30))
         host.refiner_jobs[str(uuid4())] = task
         active = host.dispatch(request)
@@ -127,3 +161,37 @@ async def test_system_activity_is_real_host_memory_and_rejects_extra_params(
         assert host.dispatch(request)["activityCount"] == 0
     finally:
         host.storage.close()
+
+
+@pytest.mark.asyncio
+async def test_explicit_database_backup_is_real_and_refuses_active_work(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FORGE_HOST_DATA_DIR", str(tmp_path / "isolated-data"))
+    host = HostRuntime()
+    host.storage_health()
+    def request(params: dict[str, object]) -> RpcRequest:
+        return RpcRequest(jsonrpc="2.0", id=str(uuid4()), method="diagnostics.backup",
+                          params=params, transportVersion=TRANSPORT_VERSION)
+    try:
+        with pytest.raises(ProtocolError) as invalid:
+            host.dispatch(request({"path": "/private/other.sqlite"}))
+        assert invalid.value.code == "INVALID_REQUEST"
+        running = asyncio.create_task(asyncio.sleep(30))
+        host.refiner_jobs[str(uuid4())] = running
+        with pytest.raises(ProtocolError) as busy:
+            host.dispatch(request({}))
+        assert busy.value.code == "RUN_CONFLICT"
+        running.cancel()
+        await asyncio.gather(running, return_exceptions=True)
+        host.refiner_jobs.clear()
+        result = host.dispatch(request({}))["data"]
+        source = Path(result["internalPath"])
+        assert source.parent == host.storage.data_dir / "backups"
+        assert source.stat().st_size == result["sizeBytes"]
+        with sqlite3.connect(source) as database:
+            assert database.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+            assert database.execute("PRAGMA user_version").fetchone()[0] == LATEST_SCHEMA
+        assert host.storage.health()["status"] == "ready"
+    finally:
+        await host.shutdown()
