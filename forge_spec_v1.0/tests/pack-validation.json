@@ -1,0 +1,178 @@
+{
+  "checkedAt": "2026-09-23T04:17:45.308796+00:00",
+  "scope": "Specification pack validation only. NOT actual Forge application/SDK/OS/security test results.",
+  "passed": true,
+  "checks": [
+    {
+      "name": "schema valid: approval-request",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "schema valid: executor-capabilities",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "schema valid: step-result",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "schema valid: approval-decision",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "schema valid: agent-profile",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "schema valid: handoff-bundle",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "schema valid: workflow",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "schema valid: command-envelope",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "schema valid: config",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "schema valid: task-contract",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "schema valid: plan-result",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "schema valid: event-envelope",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "schema valid: plugin-manifest",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "task contract example",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "plugin manifest example",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "profile: planner.profile",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "profile: product.profile",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "profile: developer.profile",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "profile: reviewer.profile",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "default workflow schema + semantic",
+      "passed": true,
+      "detail": "5 nodes, 4 normal edges, 2 bounded rework routes"
+    },
+    {
+      "name": "reject empty acceptance",
+      "passed": true,
+      "detail": "invalid input rejected"
+    },
+    {
+      "name": "reject unknown task fields",
+      "passed": true,
+      "detail": "invalid input rejected"
+    },
+    {
+      "name": "reject normal graph cycle",
+      "passed": true,
+      "detail": "invalid input rejected"
+    },
+    {
+      "name": "planning and test references",
+      "passed": true,
+      "detail": "100 tasks / 120 specified cases / 24 modules; dependencies and references valid"
+    },
+    {
+      "name": "OpenAPI references + command allowlist",
+      "passed": true,
+      "detail": "22 paths / 44 command variants / 126 resolved local refs"
+    },
+    {
+      "name": "command example",
+      "passed": true,
+      "detail": "ok"
+    },
+    {
+      "name": "reject client supplied actor",
+      "passed": true,
+      "detail": "invalid input rejected"
+    },
+    {
+      "name": "reject unknown command",
+      "passed": true,
+      "detail": "invalid input rejected"
+    },
+    {
+      "name": "SQLite DDL + negative constraints",
+      "passed": true,
+      "detail": {
+        "tableAndVirtualTableCount": 35,
+        "checks": [
+          "WAL",
+          "foreign keys",
+          "JSON valid",
+          "single writer",
+          "quarantine prevents new writer",
+          "idempotency unique",
+          "state constraint",
+          "FTS5 query"
+        ]
+      }
+    },
+    {
+      "name": "design asset links",
+      "passed": true,
+      "detail": "18 page specs + local screenshots + self-contained prototype"
+    }
+  ],
+  "counts": {
+    "schemas": 13,
+    "modules": 24,
+    "engineeringTasks": 100,
+    "specifiedProductTests": 120,
+    "designedPages": 18,
+    "apiPaths": 22,
+    "commands": 44
+  }
+}

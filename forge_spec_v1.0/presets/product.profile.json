@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "id": "profile.product",
+  "revision": 1,
+  "name": "Product",
+  "role": "refiner",
+  "executorId": "forge.refiner",
+  "modelId": null,
+  "promptTemplate": "prompts/product.md",
+  "contextProviders": [
+    "project-rules",
+    "repo-search"
+  ],
+  "policyProfile": "read-only",
+  "limits": {
+    "maxTurns": 24,
+    "maxSeconds": 1800,
+    "maxOutputTokens": 12000
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "id": "profile.planner",
+  "revision": 1,
+  "name": "Planner",
+  "role": "planner",
+  "executorId": "codex-sdk",
+  "modelId": null,
+  "promptTemplate": "prompts/planner.md",
+  "contextProviders": [
+    "project-rules",
+    "repo-search"
+  ],
+  "policyProfile": "read-only",
+  "limits": {
+    "maxTurns": 24,
+    "maxSeconds": 1800,
+    "maxOutputTokens": 12000
+  }
+}

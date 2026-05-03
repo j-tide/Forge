@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.local/schemas/config.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "executableMode": {
+      "enum": [
+        "sdk-managed",
+        "configured-path"
+      ]
+    },
+    "configuredExecutableRef": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "credentialRef": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "environmentPresetId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    }
+  },
+  "required": [
+    "executableMode",
+    "credentialRef",
+    "environmentPresetId"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "id": "profile.developer",
+  "revision": 1,
+  "name": "Developer",
+  "role": "developer",
+  "executorId": "codex-sdk",
+  "modelId": null,
+  "promptTemplate": "prompts/developer.md",
+  "contextProviders": [
+    "project-rules",
+    "repo-search"
+  ],
+  "policyProfile": "workspace-write",
+  "limits": {
+    "maxTurns": 24,
+    "maxSeconds": 1800,
+    "maxOutputTokens": 12000
+  }
+}

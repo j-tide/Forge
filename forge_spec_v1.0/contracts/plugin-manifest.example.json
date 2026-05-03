@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0",
+  "id": "forge.executor.codex-sdk",
+  "version": "0.1.0",
+  "forgeApiRange": "^1.0.0",
+  "entry": "dist/host.js",
+  "execution": "bundled-trusted",
+  "contributes": {
+    "executors": [
+      "codex-sdk"
+    ],
+    "modelProviders": [],
+    "contextProviders": [],
+    "tools": [],
+    "verifiers": [],
+    "viewTypes": []
+  },
+  "requires": [
+    "workspace.v1",
+    "artifact.v1",
+    "credential.v1"
+  ],
+  "requestedPermissions": [
+    "workspace.read",
+    "workspace.write",
+    "process.spawn"
+  ],
+  "configSchema": "config.schema.json",
+  "supportedPlatforms": [
+    "darwin-arm64",
+    "darwin-x64",
+    "win32-x64"
+  ]
+}

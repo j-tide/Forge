@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "1.0",
+  "taskId": "task.orders-filter",
+  "projectId": "project.demo",
+  "revision": 1,
+  "title": "订单列表增加日期筛选",
+  "type": "feature",
+  "goal": "支持日期范围筛选，翻页保留条件，清空后回到第一页。",
+  "acceptance": [
+    {
+      "id": "AC-01",
+      "statement": "选择合法日期范围后，请求包含 start_date 与 end_date。",
+      "method": "automated",
+      "required": true,
+      "sourceRefs": [
+        "chat:message-001"
+      ]
+    },
+    {
+      "id": "AC-02",
+      "statement": "切换页码仍保留当前日期参数。",
+      "method": "automated",
+      "required": true,
+      "sourceRefs": [
+        "chat:message-001"
+      ]
+    },
+    {
+      "id": "AC-03",
+      "statement": "清空后页码为 1，日期控件为空。",
+      "method": "automated",
+      "required": true,
+      "sourceRefs": [
+        "chat:message-001"
+      ]
+    },
+    {
+      "id": "AC-04",
+      "statement": "在 1280 与 1600 宽度下筛选控件未遮挡其他操作。",
+      "method": "manual",
+      "required": true,
+      "sourceRefs": [
+        "decision:layout-001"
+      ]
+    }
+  ],
+  "constraints": [
+    "只修改订单列表相关实现",
+    "不得修改已确认的验收条件"
+  ],
+  "scope": [
+    "src/orders",
+    "tests/orders"
+  ],
+  "outOfScope": [
+    "后端接口改造",
+    "移动端筛选页面"
+  ],
+  "dependencies": [],
+  "openQuestions": [],
+  "assumptions": [],
+  "sourceRefs": [
+    "chat:message-001"
+  ],
+  "workflowRef": "standard@1",
+  "priority": "normal"
+}

@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.local/schemas/workflow.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "start": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "agent",
+              "command",
+              "verifier",
+              "approval",
+              "condition"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "boardColumn": {
+            "type": "string",
+            "enum": [
+              "todo",
+              "development",
+              "review",
+              "verify",
+              "done"
+            ]
+          },
+          "binding": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requiredCapabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0
+          },
+          "outputSchema": {
+            "type": "string",
+            "minLength": 1
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "retryLimit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "readOnly": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "label",
+          "boardColumn",
+          "binding",
+          "requiredCapabilities",
+          "inputs",
+          "outputSchema",
+          "timeoutSeconds",
+          "retryLimit",
+          "readOnly"
+        ]
+      },
+      "minItems": 1
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "on": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          }
+        },
+        "required": [
+          "from",
+          "on",
+          "to"
+        ]
+      },
+      "minItems": 0
+    },
+    "rework": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "on": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "maxCycles": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "invalidateDescendants": {
+            "const": true
+          }
+        },
+        "required": [
+          "from",
+          "on",
+          "to",
+          "maxCycles",
+          "invalidateDescendants"
+        ]
+      },
+      "minItems": 0
+    },
+    "maxTotalAttempts": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "onUnmatched": {
+      "const": "escalate"
+    },
+    "finalAcceptance": {
+      "const": "human"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "revision",
+    "name",
+    "start",
+    "nodes",
+    "edges",
+    "rework",
+    "maxTotalAttempts",
+    "onUnmatched",
+    "finalAcceptance"
+  ]
+}

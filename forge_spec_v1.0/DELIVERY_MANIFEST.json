@@ -1,0 +1,403 @@
+{
+  "product": "Forge",
+  "specVersion": "1.0",
+  "generatedAt": "2026-09-23T04:18:25.270359+00:00",
+  "status": "Product and engineering specification plus interactive mock prototype. Not a completed Forge desktop application.",
+  "counts": {
+    "schemas": 13,
+    "modules": 24,
+    "engineeringTasks": 100,
+    "specifiedProductTests": 120,
+    "designedPages": 18,
+    "apiPaths": 22,
+    "commands": 44,
+    "mainDocumentPages": 105,
+    "designAtlasPages": 17
+  },
+  "implementationMilestones": {
+    "P3": "First real task delivery loop, to be implemented",
+    "P0-P6": "Desktop v1.0 for Windows/macOS, to be implemented",
+    "P7-P8": "Remote gateway and mobile PWA, to be implemented",
+    "P9": "Optional extensions, not required for v1.0"
+  },
+  "validation": {
+    "staticPackPassed": true,
+    "staticChecks": 30,
+    "prototypeSmokePassed": true,
+    "notTested": [
+      "Real Codex/Claude SDK execution",
+      "Installed Electron application",
+      "Real Windows/macOS compatibility",
+      "Remote deployment and authentication",
+      "Security penetration testing",
+      "120 specified product acceptance tests"
+    ]
+  },
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 4369,
+      "sha256": "ca6f09a6034a9262ae071a8002ab41325ec6f0ab8dce044c8df8eb9819549090"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1831,
+      "sha256": "05155734021319a9aba6f687a8ce12e1c969dac0fa820f3bd51b2644fbcd36a1"
+    },
+    {
+      "path": "START_HERE.md",
+      "bytes": 2834,
+      "sha256": "3e0161087866aa3cb388cb279cc7764af8725f051eeee34a3b10fb9d3cf87463"
+    },
+    {
+      "path": "contracts/agent-profile.schema.json",
+      "bytes": 1857,
+      "sha256": "d718a99692ea7f2d03a17a307ca374f2ff7c86dddcde4a745d4cbfd469aafb2a"
+    },
+    {
+      "path": "contracts/approval-decision.schema.json",
+      "bytes": 787,
+      "sha256": "14ee3fb5dff7cbaa727eddd67ddbeda25ef03d774c9a9da2c25bbbfe7ffb8b76"
+    },
+    {
+      "path": "contracts/approval-request.schema.json",
+      "bytes": 2082,
+      "sha256": "aa58d9cd78794a73d7ef43d0da6437540317e18d250125fb419457803465811b"
+    },
+    {
+      "path": "contracts/command-envelope.schema.json",
+      "bytes": 1234,
+      "sha256": "48dd3d8b99dfd6efa00fc8bba1689b03d94f4db75237d2653e501289766f9f39"
+    },
+    {
+      "path": "contracts/config.schema.json",
+      "bytes": 690,
+      "sha256": "0134a0dc9022a9eb957cb84a05a504861c3823b36a28470c1b0b7e3fd4ea843a"
+    },
+    {
+      "path": "contracts/event-envelope.schema.json",
+      "bytes": 2178,
+      "sha256": "3f4445e7bd50366f3888404fceb15e4140e68e3564e3925c88070937ada5880d"
+    },
+    {
+      "path": "contracts/executor-capabilities.schema.json",
+      "bytes": 1835,
+      "sha256": "5e4b0001746d895fea3d1da117681fcc196ef376d715d3dbfec7b49a72b72100"
+    },
+    {
+      "path": "contracts/handoff-bundle.schema.json",
+      "bytes": 2073,
+      "sha256": "f82220e989a21f3f4ef3f0c153f0f88467ce6679b39fcf89f58dc6c8abbdfb19"
+    },
+    {
+      "path": "contracts/openapi.yaml",
+      "bytes": 85662,
+      "sha256": "1449adb22f2f7795b9b9c8128ba2c5757d497c86280bc08007a096918a311864"
+    },
+    {
+      "path": "contracts/plan-result.schema.json",
+      "bytes": 3617,
+      "sha256": "c6a0c26a63f6e440f6bd47cebee3b2c830bde5d63cde160e1bb27f8089a3f739"
+    },
+    {
+      "path": "contracts/plugin-api.ts",
+      "bytes": 5950,
+      "sha256": "0e84f7c5ef4eb4b56a6d71e10b8cc684ba3415cf734a22c573b6ef279072d05e"
+    },
+    {
+      "path": "contracts/plugin-manifest.example.json",
+      "bytes": 660,
+      "sha256": "a920929fd319c9f6dbcb8a37d38ab6b2178d4ceb4e943f67cb114847ab6e1805"
+    },
+    {
+      "path": "contracts/plugin-manifest.schema.json",
+      "bytes": 3119,
+      "sha256": "51e55a93ee457e1e59976e901fe29ac2845b8c80ab871e5a839198cfd0489c2e"
+    },
+    {
+      "path": "contracts/schema.sql",
+      "bytes": 12908,
+      "sha256": "c67ac510bf090cf0ca20a30963f2f81a3e11a2045b51073bcf5f3c5ae4a797e7"
+    },
+    {
+      "path": "contracts/step-result.schema.json",
+      "bytes": 2647,
+      "sha256": "03d8eb1f0adfd12c8428202a0edfe5c27b4e4bec144f247bf8181a5f48d8c0a2"
+    },
+    {
+      "path": "contracts/task-contract.example.json",
+      "bytes": 1581,
+      "sha256": "7af77b02079bc82bd87dbbe8a1b7c752b133d924421bd92f93f44abbcf2d873e"
+    },
+    {
+      "path": "contracts/task-contract.schema.json",
+      "bytes": 3384,
+      "sha256": "9bec50aec336faa8d0c767a2b6fb28d928cfcd4aa7db560dbf5538247e402905"
+    },
+    {
+      "path": "contracts/workflow.schema.json",
+      "bytes": 4390,
+      "sha256": "b19100d874524c9995e6a82ef21adb158653b25dbb3721e8f0593c43253fa169"
+    },
+    {
+      "path": "design/forge_design_atlas_v1.0.pdf",
+      "bytes": 15556070,
+      "sha256": "0acf26e9b67fc2c61dfb8b163dd10caa46e2f5d38579a08c4d7fd8b7354a9f47"
+    },
+    {
+      "path": "design/index.html",
+      "bytes": 60160,
+      "sha256": "f793b78ae841cc1660409603eddbe7598c85a3c07257b2b3cc2f51da8bb392a1"
+    },
+    {
+      "path": "design/page-specs.json",
+      "bytes": 16085,
+      "sha256": "37be6d3b562de1b782edd72536a16e4aec8860b0d5683bf2ee80cbb11148e2fa"
+    },
+    {
+      "path": "design/page-specs.md",
+      "bytes": 18559,
+      "sha256": "b1338d5bcbca2f14534d2fbc1906167985a7719e1afe61697f0be786f92a110c"
+    },
+    {
+      "path": "design/screens/agents.png",
+      "bytes": 92595,
+      "sha256": "4d6064fc162a6b1763999fd09781e61c18d29540cf685b83746a5fff9ed35258"
+    },
+    {
+      "path": "design/screens/board-dark.png",
+      "bytes": 190662,
+      "sha256": "c459a1668b006d31ca5105231d43bd93f376dca2dd3c05dea14854f357636bfc"
+    },
+    {
+      "path": "design/screens/board.png",
+      "bytes": 179565,
+      "sha256": "7086e840b4c93eeb3061067452bd8802ceb5cdfcc7701043d78b01da115b0be2"
+    },
+    {
+      "path": "design/screens/devices.png",
+      "bytes": 92837,
+      "sha256": "e03bae509ccea49a2403fa0d7f7c766b781a2a8898231b98a4635d62d328b03d"
+    },
+    {
+      "path": "design/screens/draft.png",
+      "bytes": 165218,
+      "sha256": "d36dd09e0d471a5ad0c0d122c766172cb0d54a3984d56aeb8606b23d37bd5df9"
+    },
+    {
+      "path": "design/screens/knowledge.png",
+      "bytes": 108285,
+      "sha256": "3438afeccbff5657d310e4537759868588198f2ba0132d230892c893fab78ffa"
+    },
+    {
+      "path": "design/screens/mobile-approve.png",
+      "bytes": 60225,
+      "sha256": "da9e3689dd10805d7adfe5de25403a735e76d659fd1461850f05bcf918ea683b"
+    },
+    {
+      "path": "design/screens/mobile-inbox.png",
+      "bytes": 52550,
+      "sha256": "6ae204a3ead10e0ea4d5a1beaba1cb20908e7dd777ba4b4a3fea31123976f73f"
+    },
+    {
+      "path": "design/screens/mobile-task.png",
+      "bytes": 42887,
+      "sha256": "e515dd6e0afbe419936837ce7e87959b04715ebf5f2afee212b28881944fbd4a"
+    },
+    {
+      "path": "design/screens/plugins.png",
+      "bytes": 104247,
+      "sha256": "f518dd187379c0555f7a6b0a2c6f835f1da8b397e8a99ca9330c0d75b29ef369"
+    },
+    {
+      "path": "design/screens/profile.png",
+      "bytes": 103439,
+      "sha256": "f7d66e9f24620ba15ae291c3c7a71b7188a584ea9103e9171e03b4b051a29753"
+    },
+    {
+      "path": "design/screens/projects.png",
+      "bytes": 87640,
+      "sha256": "ad28259586d04871e955bb36f531f10e0c3ca22f42d5c81aca6b3c165bd0a6e1"
+    },
+    {
+      "path": "design/screens/review.png",
+      "bytes": 155353,
+      "sha256": "45b80f056774c562f69dfd45a37670bca08d9bd8933244c0565742ec23cbfb5d"
+    },
+    {
+      "path": "design/screens/run.png",
+      "bytes": 160514,
+      "sha256": "56b2f6bf8685765c4d4cfc7b45baed5e7c84ffc40e7bb2b19b923db8ab172683"
+    },
+    {
+      "path": "design/screens/settings.png",
+      "bytes": 94567,
+      "sha256": "e739b96c2f505fa9ef0d171743c23b0584f5cf0d360c7b9e95b3f61a59acf091"
+    },
+    {
+      "path": "design/screens/task.png",
+      "bytes": 172171,
+      "sha256": "587c1090bca59910e5120f441cb904384d878d6b37c8feb3e3710ab3ae30b875"
+    },
+    {
+      "path": "design/screens/verify.png",
+      "bytes": 171476,
+      "sha256": "5438f1dc0401820d0d72ba852ab84cfed69a733fe72fbdd7c001debe306a9f9e"
+    },
+    {
+      "path": "design/screens/workflow.png",
+      "bytes": 101923,
+      "sha256": "0c3a4e8ffbb5053e2cb4c4420f90e76914a21c59fe18fb00febac117e83ad75e"
+    },
+    {
+      "path": "design/screens/workflows.png",
+      "bytes": 83019,
+      "sha256": "f6b41ff749528a978273f49c09801892bb4da33fc57dc7d1defcd6433dfe81fd"
+    },
+    {
+      "path": "design/tokens.json",
+      "bytes": 1567,
+      "sha256": "13c79b48cc6063cb577ef96579332d41c4ee4bc95d2a4f842b159f68eb8fe86e"
+    },
+    {
+      "path": "docs/READING_MAP.md",
+      "bytes": 2274,
+      "sha256": "7b847d12dcb0d6b4a21a52587a6a7c8dc3d37649b1e661afe84e8904edc51198"
+    },
+    {
+      "path": "docs/codex-task-prompt.md",
+      "bytes": 1175,
+      "sha256": "36fa54a49b1c263e8b4435704e233bf84045050f5df316740523994d095ec4f0"
+    },
+    {
+      "path": "docs/compatibility-record.md",
+      "bytes": 1913,
+      "sha256": "9bf2941a495b465da6dd74f7265e95dea33ba911f652d004471da72794a886e2"
+    },
+    {
+      "path": "docs/extension-roadmap.md",
+      "bytes": 2673,
+      "sha256": "b267981c7bc9d92e8a4f44ed47de81b99854183261704af134f631195e3f9c93"
+    },
+    {
+      "path": "docs/forge_blueprint_v1.0.docx",
+      "bytes": 942610,
+      "sha256": "29d7c301bf5a01555c72697e493075689f88be5a0791659bbc50439a9a697c9c"
+    },
+    {
+      "path": "docs/forge_blueprint_v1.0.md",
+      "bytes": 146532,
+      "sha256": "1afb9d9cb7080272405cfd2b76b4c319d4fbdfda17358e8ea2bdc328b4e08af1"
+    },
+    {
+      "path": "docs/forge_blueprint_v1.0.pdf",
+      "bytes": 2985344,
+      "sha256": "10a8174367a0c097023c061c58dfc1a6fcc97b97feffb89d9bcd0eea68d92b05"
+    },
+    {
+      "path": "docs/sources.json",
+      "bytes": 5130,
+      "sha256": "aaca88874d6c64845ece25937804d9da7d543691aed2cbdc93c7c441e53dfc98"
+    },
+    {
+      "path": "planning/commands.json",
+      "bytes": 7697,
+      "sha256": "69b7dfef7c31a989af07361b021ec6438e29bcc94ae6cdea53fbd5dc8ae51608"
+    },
+    {
+      "path": "planning/modules.json",
+      "bytes": 26815,
+      "sha256": "e76e5771ef4383d0f58ac8366885c6982f4d31b5d62dd8dc31703d352e260ef0"
+    },
+    {
+      "path": "planning/phases.json",
+      "bytes": 3378,
+      "sha256": "7794e400ba50da89a4922801c783cbd97b9efa2d58689b889ee1c43540c143fc"
+    },
+    {
+      "path": "planning/tasks.json",
+      "bytes": 65771,
+      "sha256": "0cf1e078b8bbc517c8c2bab46009d8d99d974e13107c46440aa6d5fd856d05bb"
+    },
+    {
+      "path": "planning/tasks.md",
+      "bytes": 44225,
+      "sha256": "3f12623b4125e5e5a93df16434b2aa0d8c0efa7e1b63821ebb2552c37f0161a2"
+    },
+    {
+      "path": "presets/developer.profile.json",
+      "bytes": 411,
+      "sha256": "e3ea5d35728a79c2f1bd11484d23c031d33073b23523ff353494f1c4e0329e5a"
+    },
+    {
+      "path": "presets/planner.profile.json",
+      "bytes": 397,
+      "sha256": "1febd0a52dbda545762f2715ca75f3572e575b0a4344c6690fbf56369fea5c2c"
+    },
+    {
+      "path": "presets/product.profile.json",
+      "bytes": 401,
+      "sha256": "287c9430017f0dbd71d80580303231fda50e2aa706c8144799a798bc263c8424"
+    },
+    {
+      "path": "presets/reviewer.profile.json",
+      "bytes": 400,
+      "sha256": "7815fac1c5115bca1b990b292a77ad1e8e2d229ef812fd16ef9e2f632790d1cb"
+    },
+    {
+      "path": "presets/standard.workflow.yaml",
+      "bytes": 1819,
+      "sha256": "6d7efcaf7e7f1d401a2c7180af38f2ca4296bac80008486118cefa82c4c67072"
+    },
+    {
+      "path": "prompts/context-policy.md",
+      "bytes": 1185,
+      "sha256": "923ef8aa60d19644d6d3875c962db9accfb9819edc172ebf09763aa0070f5907"
+    },
+    {
+      "path": "prompts/developer.md",
+      "bytes": 1052,
+      "sha256": "71c2fc9638ee4ffc9f07b21a9009e1777739456ad3bf419ada50629f73c9fa7b"
+    },
+    {
+      "path": "prompts/planner.md",
+      "bytes": 726,
+      "sha256": "a6be1f8dd5d35cb9c86b5a4b9cb2ccfdc7057b41235e99ee9d411fd2ba696c96"
+    },
+    {
+      "path": "prompts/product.md",
+      "bytes": 1544,
+      "sha256": "e6df102a028448d74dcc6a610eda15c6aeb89bca59acdc95db189875384d295c"
+    },
+    {
+      "path": "prompts/reviewer.md",
+      "bytes": 931,
+      "sha256": "761ba203cea0ee2485062544f0b1a21fd333653db84b00d553be574a581a6291"
+    },
+    {
+      "path": "scripts/validate_pack.py",
+      "bytes": 10339,
+      "sha256": "e18584f40fd140bfd9df615dc414ef0fdf3de95139d923a0124b0022b918a819"
+    },
+    {
+      "path": "tests/acceptance-cases.json",
+      "bytes": 36194,
+      "sha256": "bf3cdc0e3fe683429a876ea447370e08ebceaf2d37beaa3aeea9b7b6e4aa100c"
+    },
+    {
+      "path": "tests/acceptance-cases.md",
+      "bytes": 20994,
+      "sha256": "ce9495b294f48cfecea32a8ad21c205876c4596a8b55ba8862df14c782d4552b"
+    },
+    {
+      "path": "tests/pack-validation.json",
+      "bytes": 4026,
+      "sha256": "76f25c6a6a341bd30d88744def95c3c071e50a1e0b1a7821e24313558db59741"
+    },
+    {
+      "path": "tests/prototype-smoke.json",
+      "bytes": 1679,
+      "sha256": "2ebc80de3366e934b6ed783a268ad2f975fb9a5b971cc6e81bfc96a984ed8588"
+    }
+  ]
+}

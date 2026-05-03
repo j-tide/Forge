@@ -1,0 +1,156 @@
+[
+  {
+    "id": "S01",
+    "title": "Electron Process Model",
+    "url": "https://www.electronjs.org/docs/latest/tutorial/process-model",
+    "use": "跨进程架构与 utility process；不将进程隔离等同安全沙箱。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S02",
+    "title": "Electron Security",
+    "url": "https://www.electronjs.org/docs/latest/tutorial/security",
+    "use": "Renderer、IPC、远程内容与导航安全。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S03",
+    "title": "Electron safeStorage",
+    "url": "https://www.electronjs.org/docs/latest/api/safe-storage",
+    "use": "操作系统支持的本地密文保护，非任意同用户进程隔离。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S04",
+    "title": "Tauri 2 Overview",
+    "url": "https://v2.tauri.app/start/",
+    "use": "桌面/移动平台支持与 WebView、Rust 边界，用于选型比较。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S05",
+    "title": "Capacitor Introduction",
+    "url": "https://capacitorjs.com/docs",
+    "use": "后续 iOS/Android Web UI 容器；不在手机运行桌面执行器。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S06",
+    "title": "DeepSeek Harness Architecture",
+    "url": "https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/architecture.md",
+    "use": "服务注册、插件生命周期和能力组合的参考；Forge 不直接依赖其内部实现。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S07",
+    "title": "Codex SDK",
+    "url": "https://developers.openai.com/codex/sdk/",
+    "use": "第一种执行器的官方集成入口，具体接口在 P0 钉住版本后验证。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S08",
+    "title": "Codex App Server",
+    "url": "https://developers.openai.com/codex/app-server/",
+    "use": "备选交互协议，文档对实验性能力有提示；不将其裸露到远端。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S09",
+    "title": "Claude Agent SDK",
+    "url": "https://code.claude.com/docs/en/agent-sdk/overview",
+    "use": "第二执行器与 API Key 认证约束；不能擅自转用 claude.ai 订阅登录。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S10",
+    "title": "pnpm Workspace",
+    "url": "https://pnpm.io/workspaces",
+    "use": "单产品 Monorepo 与 workspace 包依赖。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S11",
+    "title": "Git worktree",
+    "url": "https://git-scm.com/docs/git-worktree",
+    "use": "多工作目录管理；不是安全沙箱。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S12",
+    "title": "Vue Flow",
+    "url": "https://vueflow.dev/",
+    "use": "Vue 节点连线编辑器候选；执行语义由 Forge 定义。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S13",
+    "title": "Reka UI",
+    "url": "https://reka-ui.com/",
+    "use": "无预设视觉的 Vue 可访问性基础组件。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S14",
+    "title": "SQLite WAL",
+    "url": "https://sqlite.org/wal.html",
+    "use": "数据库并发、备份和运行目录限制。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S15",
+    "title": "SQLite FTS5",
+    "url": "https://sqlite.org/fts5.html",
+    "use": "本地关键词检索；中文需显式处理分词策略。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S16",
+    "title": "MCP Architecture",
+    "url": "https://modelcontextprotocol.io/docs/learn/architecture",
+    "use": "工具与资源接入协议，不替代 Forge 插件生命周期。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S17",
+    "title": "OWASP WebSocket Security",
+    "url": "https://cheatsheetseries.owasp.org/cheatsheets/WebSocket_Security_Cheat_Sheet.html",
+    "use": "实时通信认证、Origin、消息授权与限流；远端初版优先 SSE。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S18",
+    "title": "Tailscale Serve",
+    "url": "https://tailscale.com/docs/features/tailscale-serve",
+    "use": "可选私网 HTTPS 访问方式；不免除应用内认证。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S19",
+    "title": "Electron Code Signing",
+    "url": "https://www.electronjs.org/docs/latest/tutorial/code-signing",
+    "use": "macOS 签名公证、Windows 签名的发布入口；费用与资格另行核实。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S20",
+    "title": "Electron Updates",
+    "url": "https://www.electronjs.org/docs/latest/tutorial/updates",
+    "use": "更新检查与跨平台分发需分别测试。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S21",
+    "title": "Playwright Electron",
+    "url": "https://playwright.dev/docs/api/class-electron",
+    "use": "Electron 自动化支持属于实验性接口；应用业务 E2E 与原生安装测试分离。",
+    "checkedAt": "2026-09-23"
+  },
+  {
+    "id": "S22",
+    "title": "Electron Web Embeds",
+    "url": "https://www.electronjs.org/docs/latest/tutorial/web-embeds",
+    "use": "预览内容与可信管理界面的独立承载。",
+    "checkedAt": "2026-09-23"
+  }
+]
