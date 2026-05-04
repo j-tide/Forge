@@ -25,20 +25,30 @@ import {
   type KnowledgeCommand, type KnowledgeSource, type KnowledgeChunk, type KnowledgeSearchResult,
   memoryCommandSchema, projectMemorySchema, memorySearchResultSchema,
   devicePairingCommandSchema, pairingIssuedSchema, pairingInspectionSchema,
-  pairingDecisionResultSchema, type DevicePairingCommand,
+  pairingDecisionResultSchema, devicePolicyResultSchema, pairedDeviceSchema,
+  devicePolicyAuditSchema, type DevicePairingCommand,
+  remoteLoopbackActionSchema, remoteLoopbackStateSchema,
+  type RemoteLoopbackAction, type RemoteLoopbackState,
   type MemoryCommand, type ProjectMemory, type MemorySearchResult,
   type RunCommandEnvelope, type RunCommandResult,
   appPreviewRequestSchema, appPreviewResultSchema, type AppPreviewResult,
   diagnosticsPreviewSchema, diagnosticsExportResultSchema, diagnosticsCleanupResultSchema,
+  databaseBackupExportResultSchema,
+  databaseProfileStatusSchema, databaseRestoreResultSchema,
   type DiagnosticsPreview, type DiagnosticsExportResult, type DiagnosticsCleanupResult,
 } from '@forge/contracts';
+export { RemoteStreamTransport } from './remote-transport.js';
+export type { RemoteStreamListener, RemoteStreamState, RemoteStreamTimings } from './remote-transport.js';
+export { browserMobilePlatformBridge } from './mobile-platform.js';
+export type { MobilePlatformBridge, MobileCapability, NativePushPort,
+  NativeSecureStorePort, NativeScannerPort } from './mobile-platform.js';
 
 export interface ForgeTransport {
   readonly status: HostConnectionSnapshot;
   connect(): Promise<HostConnectionSnapshot>;
   disconnect(): void;
   health(): Promise<SystemCommandResult>;
-  invoke(command: SystemCommandEnvelope): Promise<SystemCommandResult>;
+  invoke(command: SystemCommandEnvelope, timeoutMs?: number): Promise<SystemCommandResult>;
   subscribe(listener: (snapshot: HostConnectionSnapshot) => void): () => void;
 }
 
@@ -102,10 +112,10 @@ export class LocalTransport implements ForgeTransport {
     return this.call('health', () => this.bridge.hostHealth());
   }
 
-  async invoke(command: SystemCommandEnvelope): Promise<SystemCommandResult> {
+  async invoke(command: SystemCommandEnvelope, timeoutMs?: number): Promise<SystemCommandResult> {
     const parsed = systemCommandEnvelopeSchema.safeParse(command);
     if (!parsed.success) return failed('invalid-command', 'INVALID_RESPONSE', 'Invalid local command');
-    return this.call(command.commandId, () => this.bridge.invokeSystem(parsed.data));
+    return this.call(command.commandId, () => this.bridge.invokeSystem(parsed.data), timeoutMs);
   }
 
   subscribe(listener: (snapshot: HostConnectionSnapshot) => void): () => void {
@@ -114,9 +124,9 @@ export class LocalTransport implements ForgeTransport {
     return () => { this.listeners.delete(listener); };
   }
 
-  private async call(commandId: string, action: () => Promise<SystemCommandResult>): Promise<SystemCommandResult> {
+  private async call(commandId: string, action: () => Promise<SystemCommandResult>, timeoutMs?: number): Promise<SystemCommandResult> {
     try {
-      const raw = await this.withTimeout(action());
+      const raw = await this.withTimeout(action(), timeoutMs);
       const parsed = systemCommandResultSchema.safeParse(raw);
       if (!parsed.success) throw new Error('INVALID_RESPONSE');
       return parsed.data;
@@ -145,12 +155,12 @@ export class LocalTransport implements ForgeTransport {
     for (const listener of this.listeners) listener(this.current);
   }
 
-  private async withTimeout<T>(promise: Promise<T>): Promise<T> {
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs = this.timeoutMs): Promise<T> {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       return await Promise.race([
         promise,
-        new Promise<T>((_resolve, reject) => { timer = setTimeout(() => reject(new Error('TRANSPORT_TIMEOUT')), this.timeoutMs); }),
+        new Promise<T>((_resolve, reject) => { timer = setTimeout(() => reject(new Error('TRANSPORT_TIMEOUT')), timeoutMs); }),
       ]);
     } finally {
       if (timer) clearTimeout(timer);
@@ -170,6 +180,13 @@ export class ForgeClient {
   disconnect(): void { this.transport.disconnect(); }
   health(): Promise<SystemCommandResult> { return this.transport.health(); }
   subscribe(listener: (snapshot: HostConnectionSnapshot) => void): () => void { return this.transport.subscribe(listener); }
+
+  get canRestartHost(): boolean { return typeof this.bridge?.restartPythonHost === 'function'; }
+  async restartHost(): Promise<HostConnectionSnapshot> {
+    if (!this.bridge?.restartPythonHost) throw new Error('HOST_UNAVAILABLE');
+    const raw: unknown = await this.bridge.restartPythonHost();
+    return hostConnectionSnapshotSchema.parse(raw);
+  }
 
   get canOpenAppPreview(): boolean { return typeof this.bridge?.openAppPreview === 'function'; }
   async openAppPreview(url: string): Promise<AppPreviewResult> {
@@ -194,12 +211,40 @@ export class ForgeClient {
     return diagnosticsCleanupResultSchema.parse(raw);
   }
 
+  get canExportDatabaseBackup(): boolean {
+    return typeof this.bridge?.exportDatabaseBackup === 'function';
+  }
+  async exportDatabaseBackup(): Promise<import('@forge/contracts').DatabaseBackupExportResult> {
+    if (!this.bridge?.exportDatabaseBackup) throw new Error('HOST_UNAVAILABLE');
+    const raw: unknown = await this.bridge.exportDatabaseBackup();
+    return databaseBackupExportResultSchema.parse(raw);
+  }
+
+  get canRestoreDatabaseBackup(): boolean {
+    return typeof this.bridge?.restoreDatabaseBackup === 'function';
+  }
+  async databaseProfileStatus(): Promise<import('@forge/contracts').DatabaseProfileStatus> {
+    if (!this.bridge?.databaseProfileStatus) throw new Error('HOST_UNAVAILABLE');
+    const raw: unknown = await this.bridge.databaseProfileStatus();
+    return databaseProfileStatusSchema.parse(raw);
+  }
+  async restoreDatabaseBackup(): Promise<import('@forge/contracts').DatabaseRestoreResult> {
+    if (!this.bridge?.restoreDatabaseBackup) throw new Error('HOST_UNAVAILABLE');
+    const raw: unknown = await this.bridge.restoreDatabaseBackup();
+    return databaseRestoreResultSchema.parse(raw);
+  }
+  async returnToOriginalData(): Promise<import('@forge/contracts').DatabaseRestoreResult> {
+    if (!this.bridge?.returnToOriginalData) throw new Error('HOST_UNAVAILABLE');
+    const raw: unknown = await this.bridge.returnToOriginalData();
+    return databaseRestoreResultSchema.parse(raw);
+  }
+
   invoke(type: string): Promise<SystemCommandResult> {
     const command = systemCommandEnvelopeSchema.parse({
       schemaVersion: '1.0', commandId: crypto.randomUUID(), type,
       createdAt: new Date().toISOString(), protocolVersion: hostProtocolVersion, payload: {},
     });
-    return this.transport.invoke(command);
+    return this.transport.invoke(command, type === 'system.dependencies' ? 8_000 : undefined);
   }
 
   async inspectBundledPlugin(): Promise<BundledPluginInspection | null> {
@@ -211,6 +256,12 @@ export class ForgeClient {
   async setBundledPluginEnabled(enabled: boolean): Promise<BundledPluginInspection> {
     if (!this.bridge) throw new Error('HOST_UNAVAILABLE');
     const raw: unknown = await this.bridge.setBundledPluginEnabled(enabled);
+    return bundledPluginInspectionSchema.parse(raw);
+  }
+
+  async saveBundledPluginConfig(value: import('@forge/contracts').BundledPluginConfigSave): Promise<BundledPluginInspection> {
+    if (!this.bridge) throw new Error('HOST_UNAVAILABLE');
+    const raw: unknown = await this.bridge.saveBundledPluginConfig(value);
     return bundledPluginInspectionSchema.parse(raw);
   }
 
@@ -319,6 +370,12 @@ export class ForgeClient {
   }
 
   get canPairLocalDevice(): boolean { return typeof this.bridge?.invokeDevicePairing === 'function'; }
+  get canControlLocalLoopback(): boolean { return typeof this.bridge?.remoteLoopback === 'function'; }
+  async remoteLoopback(action: RemoteLoopbackAction): Promise<RemoteLoopbackState> {
+    if (!this.bridge?.remoteLoopback) throw new Error('LOCAL_LOOPBACK_UNAVAILABLE');
+    return remoteLoopbackStateSchema.parse(await this.bridge.remoteLoopback(
+      remoteLoopbackActionSchema.parse(action)));
+  }
   async devicePairing(command: DevicePairingCommand): Promise<unknown> {
     if (!this.bridge?.invokeDevicePairing) throw new Error('LOCAL_PAIRING_UNAVAILABLE');
     const checked = devicePairingCommandSchema.parse(command);
@@ -326,7 +383,11 @@ export class ForgeClient {
     switch (checked.type) {
       case 'issue': return pairingIssuedSchema.parse(raw);
       case 'inspect': return pairingInspectionSchema.parse(raw);
+      case 'list': return pairedDeviceSchema.array().parse(raw);
+      case 'audit': return devicePolicyAuditSchema.array().parse(raw);
       case 'decide': return pairingDecisionResultSchema.parse(raw);
+      case 'narrow':
+      case 'revoke': return devicePolicyResultSchema.parse(raw);
     }
   }
 
