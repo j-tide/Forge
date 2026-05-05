@@ -1,0 +1,26 @@
+{
+  "taskId": "P0-01",
+  "releaseVersion": "0.0.1",
+  "verifiedOn": "2026-09-23",
+  "localEnvironment": {
+    "platform": "macOS arm64",
+    "macOSVersion": "27.0",
+    "node": "22.22.0",
+    "nodeModulesAbi": "127",
+    "nodeNapi": "10"
+  },
+  "lockedToolVersions": {
+    "pnpm": { "version": "12.3.4", "license": "MIT", "registryUnpackedBytes": 3910961, "role": "package manager" },
+    "typescript": { "version": "5.9.3", "license": "Apache-2.0", "registryUnpackedBytes": 23625066, "role": "strict type checking and build" },
+    "eslint": { "version": "10.11.0", "license": "MIT", "registryUnpackedBytes": 2946272, "role": "lint engine" },
+    "@eslint/js": { "version": "10.0.1", "license": "MIT", "registryUnpackedBytes": 15687, "role": "JavaScript lint rules" },
+    "typescript-eslint": { "version": "8.70.1", "license": "MIT", "registryUnpackedBytes": 42688, "role": "TypeScript lint rules" }
+  },
+  "deferredCompatibility": {
+    "electronAndBundledNode": "P0-02: not installed or tested",
+    "vueAndVite": "P0-02: not installed or tested",
+    "sqliteAndDrizzle": "P0-04: not installed or tested",
+    "codexSdk": "P0-05: not installed or tested",
+    "claudeAgentSdk": "P4: not installed or tested"
+  }
+}
