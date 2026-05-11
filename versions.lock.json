@@ -1,5 +1,5 @@
 {
-  "taskId": "P0-01",
+  "taskId": "P0-08",
   "releaseVersion": "0.0.1",
   "verifiedOn": "2026-09-23",
   "localEnvironment": {
@@ -7,20 +7,301 @@
     "macOSVersion": "27.0",
     "node": "22.22.0",
     "nodeModulesAbi": "127",
-    "nodeNapi": "10"
+    "nodeNapi": "10",
+    "electronBundledNode": "24.21.0",
+    "electronNodeModulesAbi": "149",
+    "electronNapi": "10",
+    "electronChromium": "152.0.7977.130"
   },
   "lockedToolVersions": {
-    "pnpm": { "version": "12.3.4", "license": "MIT", "registryUnpackedBytes": 3910961, "role": "package manager" },
-    "typescript": { "version": "5.9.3", "license": "Apache-2.0", "registryUnpackedBytes": 23625066, "role": "strict type checking and build" },
-    "eslint": { "version": "10.11.0", "license": "MIT", "registryUnpackedBytes": 2946272, "role": "lint engine" },
-    "@eslint/js": { "version": "10.0.1", "license": "MIT", "registryUnpackedBytes": 15687, "role": "JavaScript lint rules" },
-    "typescript-eslint": { "version": "8.70.1", "license": "MIT", "registryUnpackedBytes": 42688, "role": "TypeScript lint rules" }
+    "@eslint/js": {
+      "version": "10.0.1",
+      "license": "MIT",
+      "registryUnpackedBytes": 15687,
+      "role": "JavaScript lint rules"
+    },
+    "eslint": {
+      "version": "10.11.0",
+      "license": "MIT",
+      "registryUnpackedBytes": 2946272,
+      "role": "lint engine"
+    },
+    "eslint-plugin-vue": {
+      "version": "10.11.0",
+      "license": "MIT",
+      "registryUnpackedBytes": 1409136,
+      "role": "Vue single-file component lint rules"
+    },
+    "globals": {
+      "version": "17.12.0",
+      "license": "MIT",
+      "registryUnpackedBytes": 256841,
+      "role": "lint environment globals"
+    },
+    "playwright-core": {
+      "version": "1.63.0",
+      "license": "Apache-2.0",
+      "registryUnpackedBytes": 13453369,
+      "role": "real Electron smoke test"
+    },
+    "typescript": {
+      "version": "5.9.3",
+      "license": "Apache-2.0",
+      "registryUnpackedBytes": 23625066,
+      "role": "strict type checking and build"
+    },
+    "typescript-eslint": {
+      "version": "8.70.1",
+      "license": "MIT",
+      "registryUnpackedBytes": 42688,
+      "role": "TypeScript lint rules"
+    },
+    "pnpm": {
+      "version": "12.3.4",
+      "license": "MIT",
+      "registryUnpackedBytes": 3910961,
+      "role": "package manager"
+    }
   },
   "deferredCompatibility": {
-    "electronAndBundledNode": "P0-02: not installed or tested",
-    "vueAndVite": "P0-02: not installed or tested",
-    "sqliteAndDrizzle": "P0-04: not installed or tested",
-    "codexSdk": "P0-05: not installed or tested",
-    "claudeAgentSdk": "P4: not installed or tested"
+    "sqliteNodeAndElectron": "better-sqlite3 13.0.3 N-API prebuild loaded in Node 22.22.0 ABI 127 and Electron utilityProcess Node 24.21.0 ABI 149 on macOS arm64; packaged app and Windows/macOS Intel unverified",
+    "hostProcessAndProtocol": "Electron utilityProcess and standalone Node Host handshake, health, crash detection, and owned shutdown passed on macOS arm64; Windows x64 and macOS Intel unverified",
+    "electronAndBundledNode": "Electron 44.4.3 Desktop startup and renderer smoke passed on macOS arm64; Windows and macOS Intel unverified",
+    "vueAndVite": "Vue 3.5.43 and Vite 8.3.0 Web build, browser startup, and Desktop renderer passed on macOS arm64",
+    "sqliteAndDrizzle": "P0-04: better-sqlite3 13.0.3 and Drizzle 0.45.3 installed; Node and Electron utilityProcess SQLite runtime tested on macOS arm64; packaged app and Windows/macOS Intel unverified",
+    "codexSdk": "Codex SDK 0.155.1 and app-server CLI 0.155.1: real read-only, coding, streaming, interrupt, resume, approval approve/reject on macOS arm64; Windows/Intel and packaged app unverified",
+    "claudeAgentSdk": "P4: not installed or tested",
+    "codexPlatformBinary": "@openai/codex@0.155.1-darwin-arm64 optional binary in lockfile, real app-server and SDK runs on macOS arm64; Windows/Intel and packaged paths unverified",
+    "workspaceAndProcess": "P0-06: Node POSIX detached process groups and Git worktree verified on macOS arm64; Windows process-tree backend unavailable/unverified, macOS Intel unverified",
+    "designSystem": "P0-07: @forge/ui reuses exact Vue 3.5.43, TypeScript 5.9.3 and vue-tsc 3.3.11; Web and Electron renderer verified on macOS arm64. Windows and system DPI unverified.",
+    "contractValidator": "P0-08: Ajv 8.20.0, ajv-formats 3.0.1, yaml 2.9.1, and existing better-sqlite3 13.0.3 validated on macOS arm64 Node 22.22.0; Linux CI and Windows/macOS Intel not yet executed."
+  },
+  "applicationDependencies": {
+    "apps/web": {
+      "vue": {
+        "version": "3.5.43",
+        "license": "MIT",
+        "registryUnpackedBytes": 2553478,
+        "role": "shared application runtime"
+      },
+      "@types/node": {
+        "version": "22.20.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 2438105,
+        "role": "Node and Electron TypeScript declarations"
+      },
+      "@vitejs/plugin-vue": {
+        "version": "6.0.9",
+        "license": "MIT",
+        "registryUnpackedBytes": 77631,
+        "role": "Vue Vite transform"
+      },
+      "happy-dom": {
+        "version": "20.14.5",
+        "license": "MIT",
+        "registryUnpackedBytes": 8576237,
+        "role": "DOM environment for Vue mount tests"
+      },
+      "vite": {
+        "version": "8.3.0",
+        "license": "MIT",
+        "registryUnpackedBytes": 2361169,
+        "role": "Web development server and bundler"
+      },
+      "vitest": {
+        "version": "5.0.1",
+        "license": "MIT",
+        "registryUnpackedBytes": 2736905,
+        "role": "Vue application tests"
+      },
+      "vue-tsc": {
+        "version": "3.3.11",
+        "license": "MIT",
+        "registryUnpackedBytes": 7120,
+        "role": "strict Vue type checking"
+      }
+    },
+    "packages/ui": {
+      "vue": {
+        "version": "3.5.43",
+        "license": "MIT",
+        "registryUnpackedBytes": 2553478,
+        "role": "shared UI component runtime"
+      },
+      "typescript": {
+        "version": "5.9.3",
+        "license": "Apache-2.0",
+        "registryUnpackedBytes": 23625066,
+        "role": "typed design token exports and strict component check"
+      },
+      "vue-tsc": {
+        "version": "3.3.11",
+        "license": "MIT",
+        "registryUnpackedBytes": 7120,
+        "role": "Vue UI package typecheck"
+      }
+    },
+    "apps/desktop": {
+      "@types/node": {
+        "version": "24.9.0",
+        "license": "MIT",
+        "registryUnpackedBytes": 2502469,
+        "role": "Node and Electron TypeScript declarations"
+      },
+      "electron": {
+        "version": "44.4.3",
+        "license": "MIT",
+        "registryUnpackedBytes": 1161657,
+        "role": "Desktop runtime"
+      }
+    },
+    "apps/host": {
+      "@types/node": {
+        "version": "22.20.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 2438105,
+        "role": "standalone Node Host TypeScript declarations"
+      }
+    },
+    "packages/contracts": {
+      "zod": {
+        "version": "4.6.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 6138878,
+        "role": "strict Host protocol request and response validation"
+      }
+    },
+    "packages/persistence": {
+      "better-sqlite3": {
+        "version": "13.0.3",
+        "license": "MIT",
+        "registryUnpackedBytes": 27302969,
+        "role": "Host-owned SQLite driver with bundled N-API platform binaries"
+      },
+      "drizzle-orm": {
+        "version": "0.45.3",
+        "license": "Apache-2.0",
+        "registryUnpackedBytes": 10516772,
+        "role": "typed internal runtime metadata access"
+      },
+      "@types/better-sqlite3": {
+        "version": "9.6.0",
+        "license": "MIT",
+        "registryUnpackedBytes": 9548,
+        "role": "SQLite driver TypeScript declarations"
+      },
+      "@types/node": {
+        "version": "22.20.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 2438105,
+        "role": "standalone Host persistence TypeScript declarations"
+      }
+    },
+    "packages/process": {
+      "zod": {
+        "version": "4.6.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 6138878,
+        "role": "owned process descriptor validation"
+      },
+      "@types/node": {
+        "version": "22.20.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 2438105,
+        "role": "Node process control TypeScript declarations"
+      }
+    },
+    "packages/workspace": {
+      "zod": {
+        "version": "4.6.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 6138878,
+        "role": "worktree ownership descriptor validation"
+      },
+      "@types/node": {
+        "version": "22.20.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 2438105,
+        "role": "Git workspace TypeScript declarations"
+      }
+    },
+    "packages/plugin-api": {
+      "zod": {
+        "version": "4.6.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 6138878,
+        "role": "Executor API runtime validation"
+      }
+    },
+    "plugins/executor-codex": {
+      "@openai/codex": {
+        "version": "0.155.1",
+        "license": "Apache-2.0",
+        "registryUnpackedBytes": 13206,
+        "role": "pinned Codex app-server CLI and platform binary"
+      },
+      "@openai/codex-sdk": {
+        "version": "0.155.1",
+        "license": "Apache-2.0",
+        "registryUnpackedBytes": 79412,
+        "role": "official SDK comparison spike"
+      },
+      "zod": {
+        "version": "4.6.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 6138878,
+        "role": "Codex app-server response validation"
+      },
+      "@types/node": {
+        "version": "22.20.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 2438105,
+        "role": "Host executor TypeScript declarations"
+      }
+    },
+    "packages/contract-validator": {
+      "ajv": {
+        "version": "8.20.0",
+        "license": "MIT",
+        "registryUnpackedBytes": 1033496,
+        "role": "JSON Schema draft 2020-12 validation"
+      },
+      "ajv-formats": {
+        "version": "3.0.1",
+        "license": "MIT",
+        "registryUnpackedBytes": 56763,
+        "role": "JSON Schema date-time and other standard formats"
+      },
+      "yaml": {
+        "version": "2.9.1",
+        "license": "ISC",
+        "registryUnpackedBytes": 686297,
+        "role": "YAML workflow and OpenAPI parsing"
+      },
+      "better-sqlite3": {
+        "version": "13.0.3",
+        "license": "MIT",
+        "registryUnpackedBytes": 27302969,
+        "role": "Host-owned SQLite driver with bundled N-API platform binaries"
+      },
+      "@types/better-sqlite3": {
+        "version": "9.6.0",
+        "license": "MIT",
+        "registryUnpackedBytes": 9548,
+        "role": "SQLite driver TypeScript declarations"
+      },
+      "@types/node": {
+        "version": "22.20.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 2438105,
+        "role": "standalone Host persistence TypeScript declarations"
+      },
+      "typescript": {
+        "version": "5.9.3",
+        "license": "Apache-2.0",
+        "registryUnpackedBytes": 23625066,
+        "role": "typed design token exports and strict component check"
+      }
+    }
   }
 }
