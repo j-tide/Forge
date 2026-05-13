@@ -1,7 +1,8 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { forgeError, forgeErrorCodeSchema, hostConnectionSnapshotSchema, hostProtocolVersion,
-  bundledPluginInspectionSchema, type BundledPluginInspection,
+  bundledPluginInspectionSchema, bundledPluginConfigSaveSchema,
+  type BundledPluginInspection, type BundledPluginConfigSave,
   agentProfileCatalogSchema, agentProfileSchema, agentProfileSaveSchema,
   type AgentProfileCatalog, type AgentProfile, type AgentProfileSave,
   workflowCommandSchema, workflowCompileSchema, workflowImpactSchema, workflowRecordSchema,
@@ -11,9 +12,13 @@ import { forgeError, forgeErrorCodeSchema, hostConnectionSnapshotSchema, hostPro
   type KnowledgeCommand,
   memoryCommandSchema, projectMemorySchema, memorySearchResultSchema,
   devicePairingCommandSchema, pairingIssuedSchema, pairingInspectionSchema,
-  pairingDecisionResultSchema, type DevicePairingCommand,
-  diagnosticsPreviewSchema, diagnosticsCleanupResultSchema,
-  hostActivitySchema, type HostActivity,
+  pairingDecisionResultSchema, devicePolicyResultSchema, pairedDeviceSchema,
+  devicePolicyAuditSchema, type DevicePairingCommand,
+  remoteLoopbackActionSchema, remoteLoopbackStateSchema, type RemoteLoopbackAction,
+  type RemoteLoopbackState,
+  diagnosticsPreviewSchema, diagnosticsCleanupResultSchema, databaseBackupSourceSchema,
+  hostActivitySchema, hostProfileSwitchSafetySchema,
+  type HostActivity, type HostProfileSwitchSafety,
   type MemoryCommand,
   pythonHostHealthSchema, pythonHostInfoSchema, pythonHostSnapshotSchema, pythonTransportVersion,
   systemCommandEnvelopeSchema, systemCommandResultSchema,
@@ -27,6 +32,7 @@ import { forgeError, forgeErrorCodeSchema, hostConnectionSnapshotSchema, hostPro
   type ConversationCommandResult, type DraftCommandResult, type ApprovalCommandResult,
   type BoardCommandResult, type RunCommandResult, type PythonHostSnapshot } from '@forge/contracts';
 import { hostEnvironment } from './host-environment.js';
+import { exportDatabaseBackup } from './database-backup-export.js';
 
 const limits = Object.freeze({ frameBytes: 1_048_576, startupMs: 8_000, requestMs: 4_000,
   heartbeatMs: 3_000, shutdownMs: 20_000, terminateMs: 2_000 });
@@ -51,14 +57,43 @@ export class PythonHostController {
   private stopping = false;
   private probing = false;
   private longRequests = 0;
+  private dataSwitchQuiescing = false;
 
   constructor(private readonly interpreter: string, private readonly productVersion: string,
     private readonly dataDir: string,
     private readonly onStatus: (snapshot: PythonHostSnapshot) => void,
-    private readonly packagedPython?: { pythonHome: string; pythonPath: string }) {}
+    private readonly packagedPython?: { pythonHome: string; pythonPath: string },
+    private readonly remoteWebRoot?: string) {}
 
   get status(): HostConnectionSnapshot { return hostConnectionSnapshotSchema.parse(this.snapshot); }
   get pythonStatus(): PythonHostSnapshot { return this.snapshot; }
+  get ownedProcessStopped(): boolean { return this.child === null && this.ownedPid === null; }
+
+  /** Pause new Host work while Main checks for a safe data-profile switch. */
+  async quiesceForDataSwitch(): Promise<() => void> {
+    if (this.dataSwitchQuiescing || this.stopping || !this.child) {
+      throw new Error('RESTORE_HOST_UNAVAILABLE');
+    }
+    this.dataSwitchQuiescing = true;
+    if (this.heartbeat) clearInterval(this.heartbeat);
+    this.heartbeat = null;
+    const resume = (): void => {
+      if (!this.dataSwitchQuiescing) return;
+      this.dataSwitchQuiescing = false;
+      if (this.child && !this.stopping && !this.heartbeat) {
+        this.heartbeat = setInterval(() => { void this.probe(); }, limits.heartbeatMs);
+      }
+    };
+    const deadline = Date.now() + limits.requestMs;
+    while (this.pending.size > 0 || this.probing || this.longRequests > 0) {
+      if (Date.now() >= deadline) {
+        resume();
+        throw new Error('RESTORE_REQUESTS_IN_FLIGHT');
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, 25));
+    }
+    return resume;
+  }
 
   async start(): Promise<void> {
     if (this.child) return;
@@ -71,7 +106,8 @@ export class PythonHostController {
         env: { ...hostEnvironment(process.env),
           ...(this.packagedPython ? { PYTHONHOME: this.packagedPython.pythonHome,
             PYTHONPATH: this.packagedPython.pythonPath, PYTHONDONTWRITEBYTECODE: '1' } : {}),
-          FORGE_HOST_OWNERSHIP_TOKEN: this.token, FORGE_HOST_DATA_DIR: this.dataDir },
+          FORGE_HOST_OWNERSHIP_TOKEN: this.token, FORGE_HOST_DATA_DIR: this.dataDir,
+          ...(this.remoteWebRoot ? { FORGE_REMOTE_LOOPBACK_WEB_ROOT: this.remoteWebRoot } : {}) },
       });
     } catch { this.fail('HOST_STARTUP_FAILED'); return; }
     this.child = child;
@@ -102,6 +138,9 @@ export class PythonHostController {
   }
 
   private call(method: string, params: Record<string, unknown>, timeout: number = limits.requestMs): Promise<unknown> {
+    if (this.dataSwitchQuiescing && method !== 'system.activity' &&
+      method !== 'system.profileSwitchSafety' &&
+      method !== 'system.shutdown') return Promise.reject(new Error('RESTORE_IN_PROGRESS'));
     const child = this.child;
     if (!child || child.killed || !this.ownedPid) return Promise.reject(new Error('HOST_EXITED'));
     const id = randomUUID();
@@ -175,13 +214,26 @@ export class PythonHostController {
       protocolVersion: hostProtocolVersion, payload: {} });
   }
 
+  async remoteLoopback(action: RemoteLoopbackAction): Promise<RemoteLoopbackState> {
+    const checked = remoteLoopbackActionSchema.parse(action);
+    if (this.snapshot.state !== 'connected' || !this.snapshot.info) throw new Error('HOST_UNAVAILABLE');
+    const method = checked === 'start' ? 'remote.loopbackStart'
+      : checked === 'stop' ? 'remote.loopbackStop' : 'remote.loopbackInspect';
+    const raw = await this.call(method, {}, 8_000);
+    if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
+    const state = remoteLoopbackStateSchema.parse(raw.data);
+    if (state.hostId !== this.snapshot.info.hostId) throw new Error('INVALID_RESPONSE');
+    return state;
+  }
+
   async invokeSystem(raw: unknown): Promise<SystemCommandResult> {
     const parsed = systemCommandEnvelopeSchema.safeParse(raw);
     if (!parsed.success) return this.failure(randomUUID(), 'VALIDATION_ERROR');
-    if (!['system.health', 'system.info', 'system.ping'].includes(parsed.data.type)) {
+    if (!['system.health', 'system.info', 'system.ping', 'system.dependencies'].includes(parsed.data.type)) {
       return this.failure(parsed.data.commandId, 'UNKNOWN_COMMAND');
     }
-    const result = await this.invokeDomain(parsed.data, (value) => systemCommandResultSchema.parse(value));
+    const result = await this.invokeDomain(parsed.data, (value) => systemCommandResultSchema.parse(value),
+      parsed.data.type === 'system.dependencies' ? 8_000 : limits.requestMs);
     if (result.ok && parsed.data.type === 'system.health') {
       const health = pythonHostHealthSchema.safeParse(result.data);
       if (health.success && health.data.hostId === this.snapshot.info?.hostId && health.data.pid === this.ownedPid) {
@@ -208,6 +260,12 @@ export class PythonHostController {
   async setBundledPluginEnabled(enabled: boolean): Promise<BundledPluginInspection> {
     if (!['connected', 'degraded'].includes(this.snapshot.state)) throw new Error('HOST_UNAVAILABLE');
     const raw = await this.call('plugin.setBundledEnabled', { enabled });
+    if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
+    return bundledPluginInspectionSchema.parse(raw.data);
+  }
+  async saveBundledPluginConfig(value: BundledPluginConfigSave): Promise<BundledPluginInspection> {
+    if (!['connected', 'degraded'].includes(this.snapshot.state)) throw new Error('HOST_UNAVAILABLE');
+    const raw = await this.call('plugin.setBundledConfig', bundledPluginConfigSaveSchema.parse(value));
     if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
     return bundledPluginInspectionSchema.parse(raw.data);
   }
@@ -278,7 +336,11 @@ export class PythonHostController {
     switch (checked.type) {
       case 'issue': return pairingIssuedSchema.parse(raw.data);
       case 'inspect': return pairingInspectionSchema.parse(raw.data);
+      case 'list': return pairedDeviceSchema.array().parse(raw.data);
+      case 'audit': return devicePolicyAuditSchema.array().parse(raw.data);
       case 'decide': return pairingDecisionResultSchema.parse(raw.data);
+      case 'narrow':
+      case 'revoke': return devicePolicyResultSchema.parse(raw.data);
     }
   }
   async prepareDiagnostics(): Promise<import('@forge/contracts').DiagnosticsPreview> {
@@ -287,9 +349,24 @@ export class PythonHostController {
     if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
     return diagnosticsPreviewSchema.parse(raw.data);
   }
+  async createDatabaseBackup(): Promise<import('@forge/contracts').DatabaseBackupSource> {
+    if (this.snapshot.state !== 'connected') throw new Error('HOST_UNAVAILABLE');
+    const raw = await this.call('diagnostics.backup', {}, 60_000);
+    if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
+    return databaseBackupSourceSchema.parse(raw.data);
+  }
+  async exportDatabaseBackup(destination: string): Promise<import('@forge/contracts').DatabaseBackupExportResult> {
+    const source = await this.createDatabaseBackup();
+    return exportDatabaseBackup(source, this.dataDir, destination);
+  }
   async activity(): Promise<HostActivity> {
     if (!['connected', 'degraded'].includes(this.snapshot.state)) throw new Error('HOST_UNAVAILABLE');
     return hostActivitySchema.parse(await this.call('system.activity', {}, 8_000));
+  }
+  async profileSwitchSafety(): Promise<HostProfileSwitchSafety> {
+    if (!['connected', 'degraded'].includes(this.snapshot.state)) throw new Error('HOST_UNAVAILABLE');
+    return hostProfileSwitchSafetySchema.parse(await this.call(
+      'system.profileSwitchSafety', {}, 8_000));
   }
   async cleanupExpiredArtifacts(previewId: string): Promise<{ purgedImportedArtifacts: number }> {
     if (this.snapshot.state !== 'connected') throw new Error('HOST_UNAVAILABLE');
@@ -322,7 +399,7 @@ export class PythonHostController {
     if (!parsed.success) return this.failure(randomUUID(), 'VALIDATION_ERROR');
     return this.invokeDomain(parsed.data, (value) => runCommandResultSchema.parse(value),
       parsed.data.type === 'deliveries.merge' ? 180_000 :
-      ['run.start', 'run.capabilities', 'run.cancel', 'run.reviewStart',
+      ['run.start', 'run.planAct', 'run.capabilities', 'run.cancel', 'run.reviewStart',
         'run.verifyStart'].includes(parsed.data.type) ?
         25_000 : limits.requestMs);
   }
@@ -374,7 +451,8 @@ export class PythonHostController {
   }
 
   private async probe(): Promise<void> {
-    if (this.probing || this.longRequests > 0 || !this.child || this.stopping) return;
+    if (this.probing || this.longRequests > 0 || this.dataSwitchQuiescing ||
+      !this.child || this.stopping) return;
     this.probing = true;
     try {
       const health = pythonHostHealthSchema.parse(await this.call('system.health', {}));
@@ -426,6 +504,8 @@ export class PythonHostController {
         new Promise<void>((resolve) => setTimeout(resolve, limits.terminateMs))]);
       if (this.child === child && this.ownedPid === child.pid) {
         child.kill('SIGKILL');
+        await Promise.race([new Promise<void>((resolve) => child.once('exit', () => resolve())),
+          new Promise<void>((resolve) => setTimeout(resolve, limits.terminateMs))]);
       }
     }
   }
