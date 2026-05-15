@@ -10,12 +10,15 @@ const props = defineProps<{
   webRuntime: boolean;
   hostStatus: HostConnectionSnapshot;
   pythonHostStatus?: PythonHostSnapshot | null;
+  canRestartHost: boolean;
+  hostRestartBusy: boolean;
+  hostRestartError: string;
   projectName: string | null;
   reduceTransparency: boolean;
   reduceMotion: boolean;
   theme: 'light' | 'dark';
 }>();
-const emit = defineEmits<{ navigate: [view: ForgeView]; refreshHealth: [] }>();
+const emit = defineEmits<{ navigate: [view: ForgeView]; refreshHealth: []; restartHost: [] }>();
 const diagnosticsOpen = ref(false);
 const commandOpen = ref(false);
 const commandQuery = ref('');
@@ -79,16 +82,26 @@ onUnmounted(() => window.removeEventListener('keydown', onShortcut));
               <dt>PID</dt><dd>{{ hostStatus.info?.pid ?? '—' }}</dd>
               <dt>Uptime</dt><dd>{{ uptime }}</dd>
               <dt>Last Health Check</dt><dd>{{ hostStatus.lastHealthCheck ?? '—' }}</dd>
-              <dt>Storage</dt><dd>{{ hostStatus.health?.storage.status === 'ready' ? 'Ready' : 'Unavailable' }}</dd>
+              <dt>Storage</dt><dd>{{ hostStatus.health?.storage.status === 'ready' ? hostStatus.health.storage.readOnly ? 'Read-only' : 'Ready' : 'Unavailable' }}</dd>
               <dt>Schema</dt><dd>{{ hostStatus.health?.storage.schemaVersion ?? '—' }}</dd>
             </dl>
             <p v-if="hostStatus.error" class="diagnostics-error">{{ hostStatus.error.code }} · {{ hostStatus.error.message }}</p>
             <button v-if="hostStatus.state === 'connected' || hostStatus.state === 'degraded'" class="diagnostics-refresh" type="button" @click="emit('refreshHealth')">检查健康状态</button>
+            <template v-if="hostStatus.state === 'crashed' && canRestartHost">
+              <p>只重启当前 Desktop 拥有且已退出的 Host；未完成 Run 会中断并隔离工作区，不会自动继续执行。</p>
+              <button class="diagnostics-refresh" type="button" :disabled="hostRestartBusy" @click="emit('restartHost')">{{ hostRestartBusy ? '正在重启…' : '重启本地 Host' }}</button>
+              <p v-if="hostRestartError" role="alert" class="diagnostics-error">{{ hostRestartError }}</p>
+            </template>
           </ForgePopover>
         </div>
       </ForgeWorkspaceHeader>
     </template>
-    <ForgeContentArea><slot /></ForgeContentArea>
+    <ForgeContentArea :class="{ 'shell-content--historical': hostStatus.health?.storage.readOnly }">
+      <p v-if="hostStatus.health?.storage.readOnly" class="historical-read-only-banner" role="status">
+        历史数据只读 · 此窗口可查看记录，但不能更改项目、任务或运行。请使用正常的 Forge 工作区继续操作。
+      </p>
+      <slot />
+    </ForgeContentArea>
     <template #footer><footer class="shell-footer" :title="projectName ?? undefined">{{ projectName ? `${projectName} · 仅执行已批准的任务` : '当前为空工作区' }}</footer></template>
     <ForgeDialog v-model:open="commandOpen" title="快速导航" initial-focus="input.forge-text-input">
       <div class="quick-nav">
