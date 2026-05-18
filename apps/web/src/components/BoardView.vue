@@ -11,7 +11,7 @@ import DraftSheet from './DraftSheet.vue';
 import TaskDetailDrawer from './TaskDetailDrawer.vue';
 
 const props = defineProps<{ client: ForgeClient; projectId: string | null;
-  connected: boolean; refreshKey: number }>();
+  connected: boolean; readOnly?: boolean; refreshKey: number }>();
 const emit = defineEmits<{ chooseProject: [] }>();
 const snapshot = ref<BoardSnapshot | null>(null);
 const loading = ref(false);
@@ -100,7 +100,7 @@ watch(() => [props.projectId, props.connected, props.refreshKey], () => { void l
 
 async function reorder(task: BoardTask, index: number): Promise<void> {
   const board = snapshot.value;
-  if (!board || saving.value || !props.connected || filtersActive.value || task.boardColumn !== 'todo') return;
+  if (!board || saving.value || !props.connected || props.readOnly || filtersActive.value || task.boardColumn !== 'todo') return;
   const source = board.tasks.filter((item) => item.boardColumn === task.boardColumn)
     .sort((left, right) => left.position - right.position);
   const previous = source.findIndex((item) => item.id === task.id);
@@ -126,7 +126,9 @@ async function reorder(task: BoardTask, index: number): Promise<void> {
   } catch { error.value = '排序失败；看板状态未被本地伪造。'; await load(); }
   finally { saving.value = false; }
 }
-function dragStart(task: BoardTask): void { dragged = { taskId: task.id, column: task.boardColumn }; }
+function dragStart(task: BoardTask): void {
+  if (!props.readOnly) dragged = { taskId: task.id, column: task.boardColumn };
+}
 function drop(target: BoardTask): void {
   const source = dragged; dragged = null;
   if (!source) return;
@@ -149,7 +151,7 @@ function dropColumn(column: BoardColumn): void {
 
 async function createManual(): Promise<void> {
   const projectId = props.projectId;
-  if (!projectId || !props.connected || saving.value || !manualTitle.value.trim() ||
+  if (!projectId || !props.connected || props.readOnly || saving.value || !manualTitle.value.trim() ||
     !manualGoal.value.trim() || !manualAcceptance.value.trim()) return;
   saving.value = true; error.value = '';
   try {
@@ -221,14 +223,14 @@ function onApproved(): void { void load(); }
           <option value="normal">Normal</option><option value="low">Low</option></select></label>
         <label>Executor <select v-model="filters.executorId" aria-label="按 Executor 筛选"><option value="all">全部</option>
           <option value="">未分配</option><option v-for="agent in agents" :key="agent" :value="agent">{{ agent }}</option></select></label>
-        <ForgeButton variant="primary" :disabled="!connected" @click="manualOpen = true">手工创建任务</ForgeButton>
+        <ForgeButton v-if="!readOnly" variant="primary" :disabled="!connected" @click="manualOpen = true">手工创建任务</ForgeButton>
       </div>
       <p v-if="loading" role="status" class="board-feedback">正在读取 Host 看板…</p>
       <p v-if="error" role="alert" class="board-feedback board-error">{{ error }}</p>
       <p v-if="notice" role="status" class="board-feedback">{{ notice }}</p>
       <div v-if="!loading && !error && !anyTasks" class="board-empty-inline">
         <ForgeEmptyState title="还没有任务" description="从一条想法或手工草稿开始；经你批准后才会进入 TODO。" />
-        <ForgeButton variant="secondary" @click="manualOpen = true">新建手工草稿</ForgeButton>
+        <ForgeButton v-if="!readOnly" variant="secondary" @click="manualOpen = true">新建手工草稿</ForgeButton>
       </div>
       <p v-else-if="!loading && !visible.length && anyTasks" class="board-feedback">没有符合筛选条件的任务；原任务状态未改变。</p>
       <div class="board-columns" aria-label="五列任务看板">
@@ -239,13 +241,13 @@ function onApproved(): void { void load(); }
             <div :style="{ height: `${windowStart(column) * itemHeight}px` }" aria-hidden="true" />
             <article v-for="(task, offset) in columnTasks(column).slice(windowStart(column), windowEnd(column))"
               :key="task.id" :data-task-id="task.id" :title="task.title" class="board-task" tabindex="0"
-              :draggable="column === 'todo' && !filtersActive" @dragstart="dragStart(task)" @dragend="dragged = null"
+              :draggable="!readOnly && column === 'todo' && !filtersActive" @dragstart="dragStart(task)" @dragend="dragged = null"
               @drop.stop.prevent="drop(task)" @click="openDetail(task.id, $event)"
               @keydown.enter.self.prevent="openDetail(task.id)" @keydown.space.self.prevent="openDetail(task.id)">
               <small>{{ task.id.slice(0, 8) }} · {{ task.priority }}</small>
               <h3>{{ task.title }}</h3>
               <p>{{ task.blockReason ?? (task.boardColumn === 'todo' ? '已批准 · 尚未开工' : '真实开发运行中') }}</p>
-              <div v-if="column === 'todo'" class="board-card-actions">
+              <div v-if="column === 'todo' && !readOnly" class="board-card-actions">
                 <button type="button" :disabled="saving || filtersActive || offset + windowStart(column) === 0"
                   :aria-label="`上移 ${task.title}`" @click.stop="reorder(task, offset + windowStart(column) - 1)">↑</button>
                 <button type="button" :disabled="saving || filtersActive || offset + windowStart(column) === columnTasks(column).length - 1"
@@ -273,6 +275,7 @@ function onApproved(): void { void load(); }
       @approval-changed="onApproved" />
     <TaskDetailDrawer v-if="selectedTaskId && projectId" :open="detailOpen" :client="client"
       :project-id="projectId" :task-id="selectedTaskId" :connected="connected"
+      :read-only="readOnly"
       @run-changed="load"
       @update:open="detailOpenChanged" />
   </section>

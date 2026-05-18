@@ -4,8 +4,10 @@ import type { ForgeClient } from '@forge/client';
 import { forgeProjectSchema, projectProbeSchema, projectTrustVersion,
   type ForgeProject, type ProjectProbe } from '@forge/contracts';
 import { ForgeBadge, ForgeButton, ForgeCard, ForgeDialog, ForgeEmptyState } from '@forge/ui';
+import ProjectEnvironmentPanel from './ProjectEnvironmentPanel.vue';
 
-const props = defineProps<{ client: ForgeClient; desktop: boolean; connected: boolean; activeProject: ForgeProject | null }>();
+const props = defineProps<{ client: ForgeClient; desktop: boolean; connected: boolean;
+  readOnly?: boolean; activeProject: ForgeProject | null }>();
 const emit = defineEmits<{ activated: [project: ForgeProject | null]; home: [] }>();
 const projects = ref<ForgeProject[]>([]);
 const probe = ref<ProjectProbe | null>(null);
@@ -14,6 +16,7 @@ const busy = ref(false);
 const error = ref('');
 const removeTarget = ref<ForgeProject | null>(null);
 const removeOpen = ref(false);
+const removeError = ref('');
 
 async function refresh(): Promise<void> {
   if (!props.desktop || !props.connected) return;
@@ -22,7 +25,7 @@ async function refresh(): Promise<void> {
 }
 
 async function choose(): Promise<void> {
-  if (busy.value || !props.connected) return;
+  if (busy.value || !props.connected || props.readOnly) return;
   busy.value = true; error.value = '';
   try {
     const selected = await props.client.chooseProjectFolder();
@@ -37,7 +40,7 @@ async function choose(): Promise<void> {
 }
 
 async function trust(): Promise<void> {
-  if (!probe.value || busy.value) return;
+  if (!probe.value || busy.value || props.readOnly) return;
   busy.value = true; error.value = '';
   try {
     const result = await props.client.project({ type: 'project.create', payload: {
@@ -60,6 +63,7 @@ async function trust(): Promise<void> {
 }
 
 async function activate(project: ForgeProject): Promise<void> {
+  if (props.readOnly) return;
   busy.value = true; error.value = '';
   try {
     const result = await props.client.project({ type: 'project.setActive', payload: {
@@ -73,19 +77,30 @@ async function activate(project: ForgeProject): Promise<void> {
   finally { busy.value = false; }
 }
 
-function askRemove(project: ForgeProject): void { removeTarget.value = project; removeOpen.value = true; }
+function askRemove(project: ForgeProject): void {
+  if (props.readOnly) return;
+  removeTarget.value = project; removeError.value = ''; removeOpen.value = true;
+}
 async function remove(): Promise<void> {
+  if (props.readOnly) return;
   const target = removeTarget.value;
   if (!target) return;
-  busy.value = true; error.value = '';
+  busy.value = true; removeError.value = '';
   try {
     const result = await props.client.project({ type: 'project.remove', payload: {
       projectId: target.projectId, expectedRevision: target.revision,
     } });
-    if (!result.ok) { error.value = result.error.message; return; }
+    if (!result.ok) {
+      removeError.value = result.error.code === 'PROJECT_BUSY'
+        ? '项目还有正在进行的开发、审查、验证、返工或合并。请先等待它们结束，再从 Forge 移除。'
+        : result.error.code === 'RUN_RECOVERY_REQUIRED'
+          ? '项目有中断的开发、审查、验证或隔离工作区，结果尚未安全对账。请先保留项目和诊断记录。'
+          : result.error.message;
+      return;
+    }
     if (props.activeProject?.projectId === target.projectId) emit('activated', null);
     removeOpen.value = false; removeTarget.value = null; stage.value = 'choose'; await refresh();
-  } catch { error.value = 'Could not remove the Forge project record'; }
+  } catch { removeError.value = 'Could not remove the Forge project record'; }
   finally { busy.value = false; }
 }
 
@@ -105,6 +120,10 @@ watch(() => props.connected, (connected) => { if (connected) void refresh(); });
       <ForgeEmptyState title="Host unavailable" description="连接到本地 Forge Host 后才能探测或保存项目。" />
     </ForgeCard>
     <template v-else>
+      <ForgeCard v-if="readOnly" tone="reading" class="project-step" role="status">
+        <h2>历史项目记录</h2><p>此数据集只读。可以查看已保存项目；选择、信任、切换和移除已关闭。</p>
+      </ForgeCard>
+      <template v-else>
       <div class="project-step-indicator" aria-label="项目连接进度"><span :data-current="stage === 'choose'">01 选择</span><span :data-current="stage === 'detected'">02 探测</span><span :data-current="stage === 'trust'">03 信任</span><span :data-current="stage === 'ready'">04 就绪</span></div>
       <ForgeCard v-if="stage === 'choose'" tone="reading" class="project-step">
         <span class="project-step-icon" aria-hidden="true">⌁</span><h2>Choose project</h2>
@@ -135,22 +154,29 @@ watch(() => props.connected, (connected) => { if (connected) void refresh(); });
         <ul><li>Forge 以后可能读取项目文件并创建独立 Git worktree。</li><li>经后续任务授权后，Forge 可能在隔离工作区修改文件、运行项目脚本、构建、测试或启动 Coding Agent。</li><li>项目脚本可以执行任意本机代码；此处不会立即执行脚本。</li><li>信任项目不等于自动批准发布、推送、合并、删除或访问其他目录。</li></ul>
         <div class="project-actions"><ForgeButton variant="secondary" @click="stage = 'detected'">返回探测结果</ForgeButton><ForgeButton variant="primary" :loading="busy" @click="trust">Trust this project</ForgeButton></div>
       </ForgeCard>
-      <ForgeCard v-else-if="stage === 'ready' && activeProject" tone="reading" class="project-step project-ready">
+      <ForgeCard v-else-if="stage === 'ready' && activeProject?.trusted" tone="reading" class="project-step project-ready">
         <ForgeBadge>PROJECT CONNECTED</ForgeBadge><h2>{{ activeProject.name }}</h2>
         <p>已保存信任决定。当前工作区为该项目；任务草稿需人工批准，开发运行需单独启动。</p>
         <div class="project-actions"><ForgeButton variant="secondary" @click="stage = 'choose'">连接其他项目</ForgeButton><ForgeButton variant="primary" @click="emit('home')">进入 Forge Workspace</ForgeButton></div>
       </ForgeCard>
+      </template>
       <section v-if="projects.length" class="saved-projects" aria-labelledby="saved-projects-title"><h2 id="saved-projects-title">已保存项目</h2>
         <ForgeCard v-for="project in projects" :key="project.projectId" tone="reading" class="saved-project">
           <div><strong>{{ project.name }}</strong><p :title="project.rootPath">{{ project.rootPath }}</p><small>{{ project.repositoryType === 'git' ? project.probe.currentBranch ?? 'Detached / unknown branch' : 'Non-Git · limited capabilities' }}</small></div>
-          <ForgeBadge v-if="activeProject?.projectId === project.projectId">当前</ForgeBadge>
-          <ForgeButton v-else size="sm" @click="activate(project)">切换</ForgeButton>
-          <ForgeButton variant="ghost" size="sm" @click="askRemove(project)">Remove from Forge</ForgeButton>
+          <ForgeBadge v-if="!project.trusted">需重新信任</ForgeBadge>
+          <ForgeBadge v-else-if="activeProject?.projectId === project.projectId">当前</ForgeBadge>
+          <ForgeButton v-if="!readOnly && !project.trusted" size="sm" @click="choose">重新选择并探测</ForgeButton>
+          <ForgeButton v-else-if="!readOnly && activeProject?.projectId !== project.projectId" size="sm" @click="activate(project)">切换</ForgeButton>
+          <ForgeButton v-if="!readOnly" variant="ghost" size="sm" @click="askRemove(project)">Remove from Forge</ForgeButton>
         </ForgeCard>
       </section>
+      <p v-if="activeProject && !activeProject.trusted" role="alert">此恢复项目的历史记录可查看；运行与项目文件访问须重新选择目录并确认信任。</p>
+      <ProjectEnvironmentPanel v-if="activeProject?.trusted && !readOnly" :client="client" :project="activeProject"
+        :connected="connected" />
     </template>
     <ForgeDialog v-model:open="removeOpen" :title="`Remove “${removeTarget?.name ?? 'project'}” from Forge?`">
       <p>This removes Forge metadata only. Your project files will not be deleted.</p>
+      <p v-if="removeError" class="project-error" role="alert">{{ removeError }}</p>
       <div class="project-actions"><ForgeButton variant="secondary" @click="removeOpen = false">Cancel</ForgeButton><ForgeButton variant="danger" :loading="busy" @click="remove">Remove from Forge</ForgeButton></div>
     </ForgeDialog>
   </section>

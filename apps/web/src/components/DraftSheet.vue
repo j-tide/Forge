@@ -5,7 +5,7 @@ import { draftRevisionSchema, taskContractSchema, taskDraftSchema,
   taskApprovalSchema, type DraftRevision, type TaskApproval, type TaskContract,
   type TaskDraft } from '@forge/contracts';
 import type { ConversationMessage } from '@forge/contracts';
-import { ForgeButton, ForgeDrawer, ForgeInput, ForgeTextarea } from '@forge/ui';
+import { ForgeButton, ForgeDrawer, ForgeInput, ForgeSelect, ForgeTextarea } from '@forge/ui';
 
 const props = defineProps<{ client: ForgeClient; projectId: string; item: TaskDraft;
   messages: ConversationMessage[] }>();
@@ -24,6 +24,8 @@ const approval = ref<TaskApproval | null>(null);
 const approvalConfirmed = ref(false);
 const rejectionReason = ref('');
 const inspectedSource = ref<string | null>(null);
+const workflowOptions = ref<{ value: string; label: string }[]>([]);
+const workflowNotice = ref('');
 const fields = ['title', 'type', 'goal', 'acceptance', 'constraints', 'scope', 'outOfScope',
   'dependencies', 'openQuestions', 'assumptions', 'sourceRefs', 'workflowRef', 'priority'] as const;
 
@@ -53,13 +55,26 @@ async function refreshApproval(): Promise<void> {
   const parsed = taskApprovalSchema.nullable().safeParse(result.data);
   if (parsed.success) approval.value = parsed.data;
 }
+async function refreshWorkflows(): Promise<void> {
+  try {
+    const records = await props.client.listWorkflows();
+    workflowOptions.value = [
+      { value: 'standard', label: '兼容旧版 standard（直接开发，无 Planner）' },
+      ...records.filter((entry) => entry.publishedRevision !== null).map((entry) => ({
+        value: entry.workflowId,
+        label: `${entry.draft.name} · 已发布 v${entry.publishedRevision}`,
+      })),
+    ];
+    workflowNotice.value = '';
+  } catch { workflowNotice.value = '暂时无法读取已发布工作流；请核对 Host 连接。'; }
+}
 watch([open, () => props.item], ([isOpen]) => {
   if (!isOpen) return;
   form.value = initialContract(); answers.value = {}; decisionSummary.value = '';
   newQuestion.value = ''; inspectedSource.value = null;
   confirmRemoved.value = false; confirmScope.value = false; error.value = '';
   approvalConfirmed.value = false; rejectionReason.value = '';
-  void refreshHistory(); void refreshApproval();
+  void refreshHistory(); void refreshApproval(); void refreshWorkflows();
 }, { immediate: true });
 
 const removedAcceptanceIds = computed(() => props.item.contract?.acceptance
@@ -73,6 +88,9 @@ const changedFields = computed(() => form.value ? fields.filter((field) =>
 const unresolved = computed(() => form.value?.openQuestions.filter((q) => !answers.value[q]?.trim()) ?? []);
 const unsaved = computed(() => changedFields.value.length > 0 ||
   Object.values(answers.value).some((answer) => answer.trim()) || !!newQuestion.value.trim());
+const clarificationNeedsContractEdit = computed(() =>
+  Object.values(answers.value).some((answer) => answer.trim()) &&
+  !changedFields.value.some((field) => field !== 'openQuestions' && field !== 'sourceRefs'));
 
 function list(value: string): string[] { return value.split('\n').map((part) => part.trim()).filter(Boolean); }
 function lines(value: string[]): string { return value.join('\n'); }
@@ -139,6 +157,10 @@ async function save(): Promise<void> {
   const valid = taskContractSchema.safeParse(next);
   if (!valid.success) { error.value = '请填写标题、目标和至少一条有效验收条件。'; return; }
   if (!decisionSummary.value.trim()) { error.value = '请说明这次确认修改的依据。'; return; }
+  if (clarificationNeedsContractEdit.value) {
+    error.value = '请把澄清答案写入目标、验收条件或其他正式合同字段，再保存新 revision。';
+    return;
+  }
   if (removedAcceptanceIds.value.length && !confirmRemoved.value) {
     error.value = '删除验收项需要明确确认。'; return;
   }
@@ -157,7 +179,9 @@ async function save(): Promise<void> {
       confirmScopeChange: scopeChanged.value && confirmScope.value,
     } });
     if (!result.ok) { error.value = result.error.code === 'REVISION_CONFLICT' ?
-      '草稿已被其他窗口修改。请关闭后重新打开，查看最新版本。' : result.error.message; return; }
+      '草稿已被其他窗口修改。请关闭后重新打开，查看最新版本。' :
+      result.error.code === 'DRAFT_CLARIFICATION_NOT_APPLIED' ?
+        '请把澄清答案写入正式 Task Contract，再保存。' : result.error.message; return; }
     const parsed = taskDraftSchema.safeParse(result.data);
     if (!parsed.success) { error.value = 'Host 返回了无效草稿。'; return; }
     emit('saved', parsed.data); open.value = false;
@@ -217,6 +241,11 @@ async function decide(value: 'approve' | 'reject'): Promise<void> {
           <option value="refactor">Refactor</option><option value="chore">Chore</option></select>
       </label>
       <ForgeTextarea v-model="form.goal" label="目标" :rows="3" />
+      <ForgeSelect v-model="form.workflowRef" label="研发流程"
+        :options="workflowOptions.some((entry) => entry.value === form?.workflowRef)
+          ? workflowOptions : [{ value: form.workflowRef, label: `${form.workflowRef} · 当前未发布或不可读取` }, ...workflowOptions]" />
+      <p v-if="workflowNotice" role="alert">{{ workflowNotice }}</p>
+      <p>请先在「工作流」从 quick、standard 或 strict 模板配置角色并发布，再在批准 Task 前选择发布版本。保存或发布流程不会自动开工；Run 会冻结启动时的发布版本。</p>
       <div class="draft-sheet-section"><div class="draft-sheet-row"><h3>验收条件</h3>
         <ForgeButton size="sm" variant="secondary" @click="addAcceptance">添加</ForgeButton></div>
         <div v-for="(criterion, index) in form.acceptance" :key="criterion.id" class="draft-criterion">
@@ -240,6 +269,7 @@ async function decide(value: 'approve' | 'reject'): Promise<void> {
       <ForgeTextarea :model-value="lines(form.constraints)" label="约束（每行一项）" :rows="2"
         @update:model-value="setList('constraints', $event)" />
       <div class="draft-sheet-section"><h3>待澄清问题</h3>
+        <p v-if="form.openQuestions.length">回答会保留在修订历史；请同时把已确认要求写入上方目标、验收条件或其他合同字段，后续 Run 才会使用。</p>
         <div v-for="question in form.openQuestions" :key="question" class="draft-question">
           <p>{{ question }}</p><ForgeInput :model-value="answers[question] ?? ''"
             label="你的回答（留空则仍阻塞批准）" @update:model-value="answers[question] = $event" />

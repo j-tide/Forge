@@ -5,7 +5,7 @@ import { taskChangeViewSchema, type TaskChangeView, type TaskContract } from '@f
 import { ForgeButton, ForgeTextarea } from '@forge/ui';
 
 const props = defineProps<{ client: ForgeClient; projectId: string; taskId: string;
-  contract: TaskContract; connected: boolean }>();
+  contract: TaskContract; connected: boolean; readOnly?: boolean }>();
 const emit = defineEmits<{ changed: [] }>();
 const view = ref<TaskChangeView | null>(null);
 const goal = ref('');
@@ -44,7 +44,7 @@ async function refresh(): Promise<void> {
 async function propose(): Promise<void> {
   const nextGoal = goal.value.trim();
   const nextCriteria = criteria.value.map((item) => item.trim());
-  if (busy.value || !props.connected || reason.value.trim().length < 12 || !nextGoal ||
+  if (busy.value || !props.connected || props.readOnly || reason.value.trim().length < 12 || !nextGoal ||
     nextCriteria.some((item) => !item) || (changedAcceptance.value && !confirmScope.value) ||
     (nextGoal === props.contract.goal && !changedAcceptance.value)) return;
   busy.value = true; error.value = '';
@@ -82,7 +82,7 @@ async function propose(): Promise<void> {
 
 async function decide(decision: 'approve' | 'reject'): Promise<void> {
   const current = view.value;
-  if (busy.value || !current || current.state !== 'proposed' ||
+  if (busy.value || props.readOnly || !current || current.state !== 'proposed' ||
     approveReason.value.trim().length < 12) return;
   busy.value = true; error.value = '';
   try {
@@ -104,7 +104,7 @@ async function decide(decision: 'approve' | 'reject'): Promise<void> {
 
 async function apply(): Promise<void> {
   const current = view.value;
-  if (busy.value || current?.state !== 'awaiting_safe_point') return;
+  if (busy.value || props.readOnly || current?.state !== 'awaiting_safe_point') return;
   busy.value = true; error.value = '';
   try {
     const result = await props.client.run({type:'task.change.apply',payload:{
@@ -141,21 +141,21 @@ watch(() => [props.projectId,props.taskId,props.connected,props.contract.revisio
     <template v-if="view && (view.state === 'proposed' || view.state === 'awaiting_safe_point')">
       <p>提议 v{{ view.proposedRevision }}：{{ view.contract.goal }} · 状态 {{ view.state }}</p>
       <p>原版本 v{{ view.baseRevision }} 与已有 Run 保留。</p>
-      <template v-if="view.state === 'proposed'">
+      <template v-if="view.state === 'proposed' && !readOnly">
         <ForgeTextarea v-model="approveReason" label="批准或拒绝理由" :rows="2" />
         <ForgeButton size="sm" :disabled="busy || approveReason.trim().length < 12"
           @click="decide('approve')">批准此版本</ForgeButton>
         <ForgeButton variant="ghost" size="sm" :disabled="busy || approveReason.trim().length < 12"
           @click="decide('reject')">拒绝</ForgeButton>
       </template>
-      <template v-else>
+      <template v-else-if="!readOnly">
         <p role="status">已批准，等待旧 Run、Review、Verify 与返工完全结束后由用户明确应用。</p>
         <ForgeButton size="sm" :disabled="busy" @click="apply">在安全点应用新版本</ForgeButton>
       </template>
     </template>
     <template v-else>
       <p v-if="view?.state === 'applied'">上次变更已应用；历史 Run 和报告保留。</p>
-      <ForgeTextarea v-model="goal" label="下一版本目标" :rows="3" />
+      <template v-if="!readOnly"><ForgeTextarea v-model="goal" label="下一版本目标" :rows="3" />
       <ForgeTextarea v-for="(item,index) in contract.acceptance" :key="item.id"
         :model-value="criteria[index] ?? ''" :label="`${item.id} 验收条件`" :rows="2"
         @update:model-value="criteria[index] = $event" />
@@ -165,7 +165,7 @@ watch(() => [props.projectId,props.taskId,props.connected,props.contract.revisio
       <ForgeButton size="sm" :disabled="busy || reason.trim().length < 12 ||
         criteria.some((item) => !item.trim()) || (changedAcceptance && !confirmScope) ||
         (goal.trim() === contract.goal && !changedAcceptance)"
-        @click="propose">提出新版本</ForgeButton>
+        @click="propose">提出新版本</ForgeButton></template>
     </template>
   </section>
 </template>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { ForgeClient } from '@forge/client';
-import { taskDetailViewSchema, type TaskDetailView, type TaskSource } from '@forge/contracts';
+import { finalAcceptanceViewSchema, taskDetailViewSchema,
+  type TaskDetailView, type TaskSource } from '@forge/contracts';
 import { ForgeBadge, ForgeButton, ForgeDrawer } from '@forge/ui';
 import RunInspector from './RunInspector.vue';
 import AcceptanceMatrixPanel from './AcceptanceMatrixPanel.vue';
@@ -12,12 +13,13 @@ import DeliveryPanel from './DeliveryPanel.vue';
 import TaskChangePanel from './TaskChangePanel.vue';
 
 const props = defineProps<{ client: ForgeClient; projectId: string; taskId: string;
-  connected: boolean }>();
+  connected: boolean; readOnly?: boolean }>();
 const emit = defineEmits<{ runChanged: [] }>();
 const open = defineModel<boolean>('open', { required: true });
 const data = ref<TaskDetailView | null>(null);
 const loading = ref(false);
 const error = ref('');
+const acceptanceBlockReason = ref('');
 const activeSource = ref<TaskSource | null>(null);
 const runRefreshKey = ref(0);
 let requestNumber = 0;
@@ -29,6 +31,7 @@ function showSource(ref: string): void {
 async function load(): Promise<void> {
   const serial = ++requestNumber;
   data.value = null; activeSource.value = null; error.value = '';
+  acceptanceBlockReason.value = '';
   if (!open.value || !props.connected) return;
   loading.value = true;
   try {
@@ -43,6 +46,27 @@ async function load(): Promise<void> {
       parsed.data.detail.task.projectId !== props.projectId) {
       error.value = 'Host 返回了无效的任务详情。'; return;
     }
+    try {
+      const final = await props.client.run({ type:'run.finalAcceptance', payload:{
+        projectId:props.projectId, taskId:props.taskId,
+      } });
+      if (serial !== requestNumber) return;
+      const checked = final.ok ? finalAcceptanceViewSchema.safeParse(final.data) : null;
+      if (!checked?.success || checked.data.projectId !== props.projectId ||
+        checked.data.taskId !== props.taskId) {
+        acceptanceBlockReason.value = '最终验收状态无法核对；新运行和证据写入已暂停，请刷新或检查 Host。';
+      } else if (checked.data.blockers.includes('ACCEPTANCE_BASIS_CHANGED')) {
+        acceptanceBlockReason.value = '已接受交付的证据发生变化；新运行和证据写入已暂停。历史记录仍可查看。';
+      } else if (checked.data.status === 'accepted' &&
+        parsed.data.detail.task.state !== 'done') {
+        acceptanceBlockReason.value = '当前快照已由 Owner 接受；需要受控修订后才能启动新运行。';
+      }
+    } catch {
+      if (serial !== requestNumber) return;
+      acceptanceBlockReason.value = '最终验收状态无法核对；新运行和证据写入已暂停，请刷新或检查 Host。';
+    }
+    if (props.readOnly) acceptanceBlockReason.value =
+      '这是历史只读数据集；新运行和证据写入已关闭。';
     data.value = parsed.data;
   } catch { if (serial === requestNumber) error.value = '任务详情读取失败。'; }
   finally { if (serial === requestNumber) loading.value = false; }
@@ -59,6 +83,7 @@ watch(() => [open.value, props.projectId, props.taskId, props.connected], () => 
       <p v-else-if="!connected" role="alert">Host 不可用；任务详情未加载。</p>
       <p v-else-if="error" role="alert">{{ error }}</p>
       <template v-else-if="data">
+        <p v-if="acceptanceBlockReason" role="alert">{{ acceptanceBlockReason }}</p>
         <p class="eyebrow">FORGE / TASK / {{ data.detail.task.id }}</p>
         <h3>{{ data.detail.contract.title }}</h3>
         <div class="task-detail-meta"><ForgeBadge>{{ data.detail.task.state === 'todo' ? 'TODO' :
@@ -98,20 +123,25 @@ watch(() => [open.value, props.projectId, props.taskId, props.connected], () => 
         <section><h4>依赖</h4><p v-if="!data.detail.contract.dependencies.length">没有声明任务依赖</p>
           <ul v-else><li v-for="id in data.detail.contract.dependencies" :key="id">{{ id }}</li></ul></section>
         <TaskChangePanel :client="client" :project-id="projectId" :task-id="taskId"
-          :contract="data.detail.contract" :connected="connected" @changed="onRunChanged" />
+          :contract="data.detail.contract" :connected="connected" :read-only="readOnly" @changed="onRunChanged" />
         <section><RunInspector :client="client" :project-id="projectId" :task-id="taskId"
           :task-revision="data.detail.contract.revision" :task-state="data.detail.task.state"
-          :connected="connected" @run-changed="onRunChanged" /></section>
+          :acceptance-block-reason="acceptanceBlockReason"
+          :connected="connected" :read-only="readOnly" @run-changed="onRunChanged" /></section>
         <AcceptanceMatrixPanel :client="client" :project-id="projectId" :task-id="taskId"
-          :connected="connected" @decision-changed="runRefreshKey += 1" />
+          :task-state="data.detail.task.state" :connected="connected"
+          :acceptance-block-reason="acceptanceBlockReason"
+          @decision-changed="runRefreshKey += 1" />
         <VerifyReportPanel :client="client" :project-id="projectId" :task-id="taskId"
-          :connected="connected" :refresh-key="runRefreshKey" />
+          :task-revision="data.detail.contract.revision" :task-state="data.detail.task.state"
+          :acceptance-block-reason="acceptanceBlockReason"
+          :connected="connected" :refresh-key="runRefreshKey" @verification-changed="onRunChanged" />
         <ReworkStatusPanel :key="runRefreshKey" :client="client" :project-id="projectId"
-          :task-id="taskId" :connected="connected" />
+          :task-id="taskId" :connected="connected" @changed="onRunChanged" />
         <FinalAcceptancePanel :client="client" :project-id="projectId" :task-id="taskId"
-          :connected="connected" :refresh-key="runRefreshKey" @accepted="onRunChanged" />
+          :connected="connected" :read-only="readOnly" :refresh-key="runRefreshKey" @accepted="onRunChanged" />
         <DeliveryPanel v-if="data.detail.task.state === 'done'" :client="client"
-          :project-id="projectId" :task-id="taskId" :connected="connected"
+          :project-id="projectId" :task-id="taskId" :connected="connected" :read-only="readOnly"
           :refresh-key="runRefreshKey" />
       </template>
     </div>

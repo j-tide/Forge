@@ -7,7 +7,7 @@ import { ForgeButton, ForgeCard, ForgeDialog, ForgeEmptyState, ForgeInput, Statu
 
 const props = defineProps<{
   client: ForgeClient; desktop: boolean; connected: boolean; projectId: string | null;
-  environmentId?: string | null;
+  environmentId?: string | null; readOnly?: boolean;
 }>();
 const sources = ref<KnowledgeSource[]>([]);
 const relativePath = ref('');
@@ -51,6 +51,7 @@ async function load(): Promise<void> {
   finally { busy.value = false; }
 }
 async function importSource(): Promise<void> {
+  if (props.readOnly) return;
   if (!props.projectId || !relativePath.value.trim()) return;
   busy.value = true;
   try {
@@ -73,6 +74,7 @@ async function openSource(source: KnowledgeSource): Promise<void> {
   catch { notice.value = '原文定位不可用；请重新读取来源。'; }
 }
 async function revoke(): Promise<void> {
+  if (props.readOnly) return;
   if (!props.projectId || !revokeTarget.value) return;
   busy.value = true;
   try {
@@ -105,6 +107,7 @@ async function searchMemory(): Promise<void> {
   finally { busy.value = false; }
 }
 function startProposal(): void {
+  if (props.readOnly) return;
   if (!selected.value) return;
   memorySubject.value = '';
   memoryText.value = selected.value.text.trim().slice(0, 2000);
@@ -112,6 +115,7 @@ function startProposal(): void {
   editing.value = null;
 }
 function startEdit(item: ProjectMemory): void {
+  if (props.readOnly) return;
   editing.value = item;
   memorySubject.value = item.subjectKey;
   memoryText.value = item.text;
@@ -122,6 +126,7 @@ function expiryIso(): string | null {
   return new Date(`${memoryExpiry.value}T23:59:59.000Z`).toISOString();
 }
 async function saveMemory(): Promise<void> {
+  if (props.readOnly) return;
   if (!props.projectId || !props.environmentId || !memoryText.value.trim()) return;
   busy.value = true;
   try {
@@ -145,6 +150,7 @@ async function saveMemory(): Promise<void> {
   finally { busy.value = false; }
 }
 function requestDecision(item: ProjectMemory, action: 'validate' | 'deprecate' | 'revoke'): void {
+  if (props.readOnly) return;
   decisionTarget.value = item;
   decisionAction.value = action;
   decisionReason.value = '';
@@ -155,6 +161,7 @@ function requestDecision(item: ProjectMemory, action: 'validate' | 'deprecate' |
   decisionOpen.value = true;
 }
 async function decideMemory(): Promise<void> {
+  if (props.readOnly) return;
   if (!props.projectId || !decisionTarget.value || decisionReason.value.trim().length < 12) return;
   busy.value = true;
   try {
@@ -187,7 +194,7 @@ watch(() => [props.desktop, props.connected, props.projectId], () => { void load
     <ForgeEmptyState v-else-if="!connected" title="Host unavailable" description="连接 Python Host 后才能查看项目资料。" />
     <ForgeEmptyState v-else-if="!projectId" title="请先选择项目" description="信任并激活一个真实项目后才能导入其文档。" />
     <template v-else>
-      <ForgeCard tone="reading" class="knowledge-panel">
+      <ForgeCard v-if="!readOnly" tone="reading" class="knowledge-panel">
         <h2>导入来源</h2>
         <p>仅接受项目根目录的 README/OpenAPI，或 docs、spec、specs、knowledge 目录下的 .md/.txt/OpenAPI。单文件最多 1 MiB；不会执行脚本。</p>
         <div class="knowledge-actions">
@@ -223,7 +230,7 @@ watch(() => [props.desktop, props.connected, props.projectId], () => { void load
             <StatusTag :tone="source.status === 'active' ? 'success' : 'neutral'"
               :label="source.status === 'active' ? '已导入' : '已撤销'" />
             <ForgeButton v-if="source.status === 'active'" variant="secondary" @click="openSource(source)">查看原文定位</ForgeButton>
-            <ForgeButton v-if="source.status === 'active'" variant="danger" @click="revokeTarget = source; revokeOpen = true">撤销来源</ForgeButton>
+            <ForgeButton v-if="!readOnly && source.status === 'active'" variant="danger" @click="revokeTarget = source; revokeOpen = true">撤销来源</ForgeButton>
           </li>
         </ul>
       </ForgeCard>
@@ -232,9 +239,9 @@ watch(() => [props.desktop, props.connected, props.projectId], () => { void load
         <p>{{ selected.sourceRef }} · 第 {{ selected.startLine }}–{{ selected.endLine }} 行 · {{ selected.status }}</p>
         <pre>{{ selected.text }}</pre>
         <p>此处显示 Host 保存的原文片段；不是模型生成结果，也未运行检索。</p>
-        <ForgeButton variant="secondary" :disabled="!environmentId" @click="startProposal">从此来源提议记忆</ForgeButton>
+        <ForgeButton v-if="!readOnly" variant="secondary" :disabled="!environmentId" @click="startProposal">从此来源提议记忆</ForgeButton>
       </ForgeCard>
-      <ForgeCard v-if="editing || (selected && memoryText)" tone="reading" class="knowledge-panel">
+      <ForgeCard v-if="!readOnly && (editing || (selected && memoryText))" tone="reading" class="knowledge-panel">
         <h2>{{ editing ? '编辑候选记忆' : '提议候选记忆' }}</h2>
         <p>来源：{{ editing ? editing.sources.map((item) => item.sourceRef).join('，') : selected?.sourceRef }}。只有人工确认且来源有效的记忆才可检索。</p>
         <ForgeInput v-model="memorySubject" label="主题键（小写字母开头）" placeholder="api.date_filter" :disabled="!!editing" />
@@ -263,10 +270,10 @@ watch(() => [props.desktop, props.connected, props.projectId], () => { void load
             </div>
             <StatusTag :tone="item.status === 'validated' ? 'success' : item.status === 'candidate' ? 'info' : 'neutral'"
               :label="item.status === 'candidate' ? '候选' : item.status === 'validated' ? '已确认' : item.status === 'stale' ? '过时' : '已撤销'" />
-            <ForgeButton v-if="item.status === 'candidate'" variant="secondary" @click="startEdit(item)">编辑</ForgeButton>
-            <ForgeButton v-if="item.status === 'candidate'" variant="primary" @click="requestDecision(item, 'validate')">确认记忆</ForgeButton>
-            <ForgeButton v-if="item.status === 'validated'" variant="secondary" @click="requestDecision(item, 'deprecate')">标记过时</ForgeButton>
-            <ForgeButton v-if="item.status !== 'revoked'" variant="danger" @click="requestDecision(item, 'revoke')">撤销记忆</ForgeButton>
+            <ForgeButton v-if="!readOnly && item.status === 'candidate'" variant="secondary" @click="startEdit(item)">编辑</ForgeButton>
+            <ForgeButton v-if="!readOnly && item.status === 'candidate'" variant="primary" @click="requestDecision(item, 'validate')">确认记忆</ForgeButton>
+            <ForgeButton v-if="!readOnly && item.status === 'validated'" variant="secondary" @click="requestDecision(item, 'deprecate')">标记过时</ForgeButton>
+            <ForgeButton v-if="!readOnly && item.status !== 'revoked'" variant="danger" @click="requestDecision(item, 'revoke')">撤销记忆</ForgeButton>
           </li>
         </ul>
       </ForgeCard>
@@ -292,7 +299,8 @@ watch(() => [props.desktop, props.connected, props.projectId], () => { void load
 </template>
 
 <style scoped>
-.knowledge-view { width: 100%; min-width: 0; padding: var(--forge-space-32); display: grid; gap: var(--forge-space-20); }
+.knowledge-view { width: 100%; min-width: 0; padding: var(--forge-space-32); display: grid; align-content: start; gap: var(--forge-space-20); }
+.knowledge-view h1, .knowledge-view > p { margin: 0; }
 .knowledge-view > p, .knowledge-panel p { color: var(--forge-color-text-secondary); }
 .knowledge-panel { max-width: 1000px; padding: var(--forge-space-24); }
 .knowledge-actions { display: flex; flex-wrap: wrap; gap: var(--forge-space-8); align-items: end; }

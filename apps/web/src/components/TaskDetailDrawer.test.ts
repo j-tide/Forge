@@ -56,4 +56,24 @@ describe('approved task detail', () => {
     document.querySelector<HTMLButtonElement>('.task-detail-source-links button')!.click();
     await vi.waitFor(() => expect(document.body.textContent).toContain('来源已撤回或无法定位'));
   });
+
+  it('keeps history visible but closes write controls when accepted evidence changes', async () => {
+    const run = vi.fn(async (command: { type: string }) => ({ ok:true, data:
+      command.type === 'run.finalAcceptance' ? {
+        projectId, taskId, snapshotId:'80cb23df-a080-4647-83d8-0558be4b4d97',
+        contractRevision:2, basisHash:'a'.repeat(64), readAt:now,
+        reviewReportId:null, advisoryIssues:[], verifyReportIds:[],
+        criterionDecisionIds:[], blockers:['ACCEPTANCE_BASIS_CHANGED'],
+        status:'unavailable', decision:null,
+      } : [] }));
+    mount({ board:vi.fn(async () => ({ ok:true, data:detail })), run,
+      agentProfileCatalog:async () => null } as unknown as ForgeClient);
+    await vi.waitFor(() => expect(document.body.textContent).toContain(
+      '已接受交付的证据发生变化；新运行和证据写入已暂停'));
+    expect(document.body.textContent).toContain('Show approved requirements');
+    expect(document.body.textContent).toContain('Trace each criterion');
+    expect([...document.querySelectorAll<HTMLButtonElement>('button')].some((button) =>
+      button.textContent?.includes('明确启动开发'))).toBe(false);
+    expect(run).not.toHaveBeenCalledWith(expect.objectContaining({type:'run.start'}));
+  });
 });
