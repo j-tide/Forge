@@ -1,0 +1,14 @@
+{
+  "name": "@forge/process",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": { "zod": "4.6.4" },
+  "devDependencies": { "@types/node": "22.20.4" }
+}
