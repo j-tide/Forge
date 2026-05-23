@@ -16,6 +16,8 @@ jobs:
           node-version: 22.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Validate reference and production contracts
+        run: pnpm validate:contracts
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
