@@ -6,7 +6,7 @@ import { deliverySummarySchema, mergePreviewSchema, mergeReceiptSchema,
 import { ForgeButton } from '@forge/ui';
 
 const props = defineProps<{ client: ForgeClient; projectId: string; taskId: string;
-  connected: boolean; refreshKey: number }>();
+  connected: boolean; readOnly?: boolean; refreshKey: number }>();
 const summary = ref<DeliverySummary | null>(null);
 const preview = ref<MergePreview | null>(null);
 const receipt = ref<MergeReceipt | null>(null);
@@ -46,7 +46,7 @@ async function refresh(): Promise<void> {
 async function merge(): Promise<void> {
   const record = summary.value;
   const target = preview.value;
-  if (busy.value || !confirmed.value || !record || !target?.canMerge || !target.targetHead ||
+  if (props.readOnly || busy.value || !confirmed.value || !record || !target?.canMerge || !target.targetHead ||
     target.deliveryId !== record.deliveryId) return;
   busy.value = true; error.value = '';
   try {
@@ -104,7 +104,7 @@ watch(() => [props.projectId,props.taskId,props.connected,props.refreshKey], () 
         {{ preview.resultCommit?.slice(0,12) }}。未推送、未部署。</p>
       <p v-if="receipt?.state === 'merged'">已显式本地合并，结果 Commit {{ receipt.resultCommit?.slice(0,12) }}。
         未推送、未部署。</p>
-      <template v-else-if="preview.canMerge && summary">
+      <template v-else-if="!readOnly && preview.canMerge && summary">
         <p>只有目标 HEAD 与已验证 base 一致且工作树干净时才能合并。此操作会修改当前本地分支和工作树。</p>
         <label><input v-model="confirmed" type="checkbox" /> 我确认将当前快照显式合并到上述本地分支；不推送或部署。</label>
         <ForgeButton variant="primary" size="sm" :disabled="busy || !confirmed" :loading="busy"

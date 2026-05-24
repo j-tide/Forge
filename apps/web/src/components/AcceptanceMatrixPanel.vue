@@ -5,7 +5,7 @@ import { acceptanceMatrixSchema, type AcceptanceMatrix } from '@forge/contracts'
 import { ForgeBadge, ForgeButton, ForgeSelect, ForgeTextarea } from '@forge/ui';
 
 const props = defineProps<{ client: ForgeClient; projectId: string; taskId: string;
-  connected: boolean }>();
+  connected: boolean; taskState: string; acceptanceBlockReason?: string }>();
 const emit = defineEmits<{ decisionChanged: [] }>();
 const matrix = ref<AcceptanceMatrix | null>(null);
 const error = ref('');
@@ -48,7 +48,9 @@ async function refresh(): Promise<void> {
 }
 async function record(): Promise<void> {
   const current = matrix.value;
-  if (!current?.snapshotId || !selectedCriterion.value || reason.value.trim().length < 12 ||
+  if (props.taskState === 'done' || props.acceptanceBlockReason ||
+    !current?.snapshotId || !selectedCriterion.value ||
+    reason.value.trim().length < 12 ||
     pending.value) return;
   pending.value = true;
   error.value = '';
@@ -74,7 +76,7 @@ async function record(): Promise<void> {
   } catch { error.value = '决定未获确认；请刷新后重试。'; }
   finally { pending.value = false; }
 }
-watch(() => [props.projectId,props.taskId,props.connected], () => {
+watch(() => [props.projectId,props.taskId,props.connected,props.taskState], () => {
   matrix.value = null; decisionKey = null; void refresh();
 }, {immediate:true});
 </script>
@@ -101,7 +103,9 @@ watch(() => [props.projectId,props.taskId,props.connected], () => {
       <ul v-else><li v-for="report in matrix.checkReports" :key="report.reportId">
         {{ report.kind }} · {{ report.status }} · exit {{ report.exitCode ?? '未知' }} ·
         {{ report.reportId.slice(0, 8) }}</li></ul>
-      <template v-if="matrix.snapshotId">
+      <p v-if="taskState === 'done'" role="status">Owner 已接受当前交付；逐项判断作为历史保留。新的判断需要受控 Task 修订和新快照。</p>
+      <p v-else-if="acceptanceBlockReason" role="status">{{ acceptanceBlockReason }} 逐项判断只作历史展示。</p>
+      <template v-else-if="matrix.snapshotId">
         <h5>记录逐条判断</h5>
         <p>验证通过需明确关联当前快照的报告；人工判断与风险接受必须写明依据。记录不会将 Task 标为 Done。</p>
         <ForgeSelect v-model="selectedCriterion" label="验收条件" :options="matrix.criteria.map((item) =>

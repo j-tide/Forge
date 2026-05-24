@@ -100,4 +100,35 @@ describe('final human acceptance', () => {
       expectedIssueRevision:1,nonSecurityConfirmed:true,
     })});
   });
+
+  it('does not offer advisory waiver after owner acceptance', async () => {
+    const accepted: FinalAcceptanceView = {...ready,status:'accepted',
+      advisoryIssues:[{issueId:crypto.randomUUID(),reviewId:ready.reviewReportId!,
+        snapshotId,revision:1,severity:'advisory',status:'open',
+        reason:'Historical advisory remains visible'}]};
+    const run=vi.fn(async()=>({ok:true,data:accepted}));
+    mount({run} as unknown as ForgeClient);
+    await vi.waitFor(()=>expect(document.body.textContent).toContain('已由本地 Owner 验收'));
+    expect(document.body.textContent).toContain('Historical advisory remains visible');
+    expect(document.body.textContent).not.toContain('记录 waived');
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows changed accepted evidence as blocked and offers no second signature', async () => {
+    const tampered: FinalAcceptanceView = {...ready,status:'unavailable',
+      blockers:['ACCEPTANCE_BASIS_CHANGED'], advisoryIssues:[{
+        issueId:crypto.randomUUID(), reviewId:ready.reviewReportId!, snapshotId,
+        revision:1, severity:'advisory', status:'open',
+        reason:'Historical advisory cannot be waived after evidence changed',
+      }]};
+    const run=vi.fn(async()=>({ok:true,data:tampered}));
+    mount({run} as unknown as ForgeClient);
+    await vi.waitFor(()=>expect(document.body.textContent).toContain('已接受交付的证据发生变化'));
+    expect(document.body.textContent).toContain('ACCEPTANCE_BASIS_CHANGED');
+    expect(document.body.textContent).not.toContain('退回并创建新 Attempt');
+    expect(document.body.textContent).not.toContain('接受当前版本');
+    expect(document.body.textContent).not.toContain('记录 waived');
+    expect(document.querySelector('textarea')).toBeNull();
+    expect(run).toHaveBeenCalledTimes(1);
+  });
 });

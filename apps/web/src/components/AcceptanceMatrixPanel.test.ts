@@ -26,7 +26,7 @@ it('shows missing required AC and records explicit snapshot-bound risk without c
   }));
   root=document.createElement('div');document.body.append(root);
   app=createApp({render:()=>h(AcceptanceMatrixPanel,{client:{run} as unknown as ForgeClient,
-    projectId,taskId,connected:true})});app.mount(root);
+    projectId,taskId,connected:true,taskState:'review'})});app.mount(root);
   await vi.waitFor(()=>expect(root?.textContent).toContain('未覆盖必需项：AC-01'));
   expect(root?.textContent).toContain('无逐条报告');
   const selects=[...root!.querySelectorAll<HTMLSelectElement>('select')];
@@ -44,4 +44,31 @@ it('shows missing required AC and records explicit snapshot-bound risk without c
     status:'risk_accepted',reportId:null,
   })});
   expect(root?.textContent).toContain('仍需最终人工验收');
+});
+
+it('keeps accepted criteria readable but offers no new decision', async () => {
+  const run=vi.fn(async()=>({ok:true,data:matrix}));
+  root=document.createElement('div');document.body.append(root);
+  app=createApp({render:()=>h(AcceptanceMatrixPanel,{
+    client:{run} as unknown as ForgeClient,projectId,taskId,connected:true,taskState:'done',
+  })});app.mount(root);
+  await vi.waitFor(()=>expect(root?.textContent).toContain('Owner 已接受当前交付'));
+  expect(root?.textContent).toContain('AC-01');
+  expect(root?.textContent).not.toContain('记录逐条判断');
+  expect(root?.querySelector('textarea')).toBeNull();
+  expect(run).toHaveBeenCalledTimes(1);
+});
+
+it('hides new criterion decisions when the accepted basis has changed', async () => {
+  const run=vi.fn(async()=>({ok:true,data:matrix}));
+  root=document.createElement('div');document.body.append(root);
+  app=createApp(AcceptanceMatrixPanel,{
+    client:{run} as unknown as ForgeClient,projectId,taskId,connected:true,
+    taskState:'todo',acceptanceBlockReason:'验收依据异常',
+  });app.mount(root);
+  await vi.waitFor(()=>expect(root?.textContent).toContain('Real acceptance condition'));
+  expect(root?.textContent).toContain('验收依据异常');
+  expect(root?.textContent).not.toContain('记录逐条判断');
+  expect(root?.querySelector('textarea')).toBeNull();
+  expect(run).not.toHaveBeenCalledWith(expect.objectContaining({type:'run.acceptanceDecide'}));
 });

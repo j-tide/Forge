@@ -5,7 +5,7 @@ import { finalAcceptanceViewSchema, type FinalAcceptanceView } from '@forge/cont
 import { ForgeButton, ForgeSelect, ForgeTextarea } from '@forge/ui';
 
 const props = defineProps<{ client: ForgeClient; projectId: string; taskId: string;
-  connected: boolean; refreshKey: number }>();
+  connected: boolean; readOnly?: boolean; refreshKey: number }>();
 const emit = defineEmits<{ accepted: [] }>();
 const view = ref<FinalAcceptanceView | null>(null);
 const loading = ref(false);
@@ -49,11 +49,12 @@ async function refresh(): Promise<void> {
 }
 
 async function decide(decision: 'accept' | 'return'): Promise<void> {
+  if (props.readOnly) return;
   const current = view.value;
   if (!current) return;
   const canReturn = current.snapshotId && !current.blockers.some((code) => [
     'CODE_SNAPSHOT_MISSING', 'DEVELOPMENT_NOT_CURRENT', 'REPORT_STILL_RUNNING',
-    'REWORK_UNRESOLVED',
+    'REWORK_UNRESOLVED', 'ACCEPTANCE_BASIS_CHANGED',
   ].includes(code));
   if (pending.value || (decision === 'accept' ? !confirmed.value ||
     current.status !== 'ready' : !returnConfirmed.value || !canReturn) ||
@@ -86,9 +87,12 @@ async function decide(decision: 'accept' | 'return'): Promise<void> {
 }
 
 async function waiveAdvisory(): Promise<void> {
+  if (props.readOnly) return;
   const current = view.value;
   const issue = current?.advisoryIssues.find((item) => item.issueId === selectedIssueId.value);
-  if (pending.value || !current?.snapshotId || !current.reviewReportId || !issue ||
+  if (pending.value || current?.status === 'accepted' ||
+    current?.blockers.includes('ACCEPTANCE_BASIS_CHANGED') || !current?.snapshotId ||
+    !current.reviewReportId || !issue ||
     issue.severity !== 'advisory' || issue.status !== 'open' || !waiverConfirmed.value ||
     waiverReason.value.trim().length < 12) return;
   pending.value = true; error.value = '';
@@ -132,6 +136,9 @@ watch(() => [props.projectId,props.taskId,props.connected,props.refreshKey], () 
         · 已判断验收项 {{ view.criterionDecisionIds.length }} 条</p>
       <p v-else>尚无当前版本的 CodeSnapshot；不能最终验收。</p>
       <p v-if="view.blockers.length" role="status">硬门禁：{{ view.blockers.join('、') }}。</p>
+      <p v-if="view.blockers.includes('ACCEPTANCE_BASIS_CHANGED')" role="alert">
+        已接受交付的证据发生变化；不能在同一快照重新签署。请检查历史记录和数据完整性。
+      </p>
       <template v-if="view.advisoryIssues.length">
         <h5>当前 Review 意见</h5>
         <ul><li v-for="issue in view.advisoryIssues" :key="issue.issueId">
@@ -139,7 +146,9 @@ watch(() => [props.projectId,props.taskId,props.connected,props.refreshKey], () 
           {{ issue.status === 'waived' ? '已接受风险（waived，非 pass）' : issue.status }}
           · v{{ issue.revision }}</li></ul>
       </template>
-      <template v-if="view.advisoryIssues.some((item) => item.severity === 'advisory' && item.status === 'open')">
+      <template v-if="!readOnly && view.status !== 'accepted' &&
+        !view.blockers.includes('ACCEPTANCE_BASIS_CHANGED') && view.advisoryIssues.some((item) =>
+        item.severity === 'advisory' && item.status === 'open')">
         <p>仅可对当前 Review 的非安全建议作明确人工风险决定；阻塞 Review 不能在这里豁免。</p>
         <ForgeSelect v-model="selectedIssueId" label="待决定的建议"
           :options="view.advisoryIssues.filter((item) => item.severity === 'advisory' && item.status === 'open')
@@ -151,7 +160,8 @@ watch(() => [props.projectId,props.taskId,props.connected,props.refreshKey], () 
           @click="waiveAdvisory">记录 waived（非通过）</ForgeButton>
       </template>
       <p v-if="view.status === 'accepted'">当前交付已由本地 Owner 验收。Done 不表示已合并或部署。</p>
-      <template v-else-if="view.status !== 'returned'">
+      <template v-else-if="!readOnly && view.status !== 'returned' &&
+        !view.blockers.includes('ACCEPTANCE_BASIS_CHANGED')">
         <p>请先查看上方 Diff、Review、验证报告与逐条 AC。此决定只针对当前读取的版本；证据变化会被 Host 拒绝。</p>
         <ForgeTextarea v-model="reason" label="最终验收依据" :rows="3" />
         <template v-if="view.status === 'ready'">
@@ -162,7 +172,7 @@ watch(() => [props.projectId,props.taskId,props.connected,props.refreshKey], () 
         </template>
         <template v-if="view.snapshotId && !view.blockers.some((code) => [
           'CODE_SNAPSHOT_MISSING','DEVELOPMENT_NOT_CURRENT','REPORT_STILL_RUNNING',
-          'REWORK_UNRESOLVED'].includes(code))">
+          'REWORK_UNRESOLVED','ACCEPTANCE_BASIS_CHANGED'].includes(code))">
           <label><input v-model="returnConfirmed" type="checkbox" /> 我确认退回本快照，并启动一个独立的新开发 Attempt。</label>
           <ForgeButton variant="danger" size="sm" :loading="pending"
             :disabled="pending || !returnConfirmed || reason.trim().length < 12"

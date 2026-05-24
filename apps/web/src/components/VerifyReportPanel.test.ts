@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { createApp, h, type App as VueApp } from 'vue';
+import { createApp, h, ref, type App as VueApp } from 'vue';
 import type { ForgeClient } from '@forge/client';
 import VerifyReportPanel from './VerifyReportPanel.vue';
 
@@ -34,7 +34,7 @@ it('loads real-shape report evidence through the fixed client and renders hostil
   }));
   root=document.createElement('div');document.body.append(root);
   app=createApp({render:()=>h(VerifyReportPanel,{client:{run} as unknown as ForgeClient,
-    projectId,taskId,connected:true,refreshKey:0})});app.mount(root);
+    projectId,taskId,taskRevision:1,taskState:'active',connected:true,refreshKey:0})});app.mount(root);
   await vi.waitFor(()=>expect(root?.textContent).toContain('test · failed · exit 7'));
   const button=[...root!.querySelectorAll('button')].find((item)=>
     item.textContent?.includes('查看 stdout 纯文本'))!;
@@ -54,10 +54,108 @@ it('rejects an artifact with a report identity different from the selected repor
   }));
   root=document.createElement('div');document.body.append(root);
   app=createApp({render:()=>h(VerifyReportPanel,{client:{run} as unknown as ForgeClient,
-    projectId,taskId,connected:true,refreshKey:0})});app.mount(root);
+    projectId,taskId,taskRevision:1,taskState:'active',connected:true,refreshKey:0})});app.mount(root);
   await vi.waitFor(()=>expect(root?.textContent).toContain('test · failed · exit 7'));
   [...root!.querySelectorAll('button')].find((item)=>
     item.textContent?.includes('查看 stdout 纯文本'))!.click();
   await vi.waitFor(()=>expect(root?.textContent).toContain('验证证据读取失败'));
   expect(root.querySelector('pre')).toBeNull();
+});
+
+it('keeps accepted Task reports readable without claiming its snapshot is missing',async()=>{
+  const run=vi.fn(async(command:{type:string})=>({ok:true,data:
+    command.type==='run.verifyJobs' ? [job] :
+    command.type==='run.verifyReport' ? report : []}));
+  root=document.createElement('div');document.body.append(root);
+  app=createApp(VerifyReportPanel,{client:{run} as unknown as ForgeClient,
+    projectId,taskId,taskRevision:1,taskState:'done',connected:true,refreshKey:0});app.mount(root);
+  await vi.waitFor(()=>expect(root?.textContent).toContain('test · failed · exit 7'));
+  expect(root.textContent).toContain('任务已由 Owner 验收；已有验证报告仍可查看');
+  expect(root.textContent).not.toContain('尚无可对当前任务执行验证的已冻结开发快照');
+  expect([...root.querySelectorAll('button')].some((item)=>
+    item.textContent?.includes('明确启动验证'))).toBe(false);
+});
+
+it('keeps report history but does not offer Verify after accepted evidence changes',async()=>{
+  const run=vi.fn(async(command:{type:string})=>({ok:true,data:
+    command.type==='run.verifyJobs' ? [job] :
+    command.type==='run.verifyReport' ? report : []}));
+  root=document.createElement('div');document.body.append(root);
+  app=createApp(VerifyReportPanel,{client:{run} as unknown as ForgeClient,
+    projectId,taskId,taskRevision:1,taskState:'todo',connected:true,refreshKey:0,
+    acceptanceBlockReason:'验收依据异常'});app.mount(root);
+  await vi.waitFor(()=>expect(root?.textContent).toContain('test · failed · exit 7'));
+  expect(root?.textContent).toContain('验收依据异常');
+  expect(root?.textContent).not.toContain('尚无可对当前任务执行验证的已冻结开发快照');
+  expect([...root!.querySelectorAll('button')].some((item)=>
+    item.textContent?.includes('明确启动验证'))).toBe(false);
+  expect(run).not.toHaveBeenCalledWith(expect.objectContaining({type:'run.verifyStart'}));
+});
+
+it('starts only a frozen, separately approved preset against the current snapshot',async()=>{
+  const runId=job.developmentRunId;
+  const attemptId='e5134c6a-cf9c-4266-a4eb-4e937b24dd5d';
+  const presetId='ba4a9748-8b23-45a4-bec1-ce95769a6fc1';
+  const environmentId='544a6d95-3a1b-471d-a6e0-a3e5527a6679';
+  const runView={runId,projectId,taskId,configHash:'a'.repeat(64),state:'succeeded',
+    revision:3,createdAt:now,finishedAt:now,attempt:{attemptId,runId,nodeId:'develop',
+      attemptNo:1,leaseEpoch:1,workspaceLeaseId:'35571d19-7e2c-460d-a764-037010717114',
+      state:'succeeded',nativeSessionRef:'session',lastEventSequence:3,
+      startedAt:now,endedAt:now}};
+  const handoff={snapshot:{schemaVersion:'1.0',snapshotId,projectId,runId,attemptId,
+    workspaceId:'cf3e11f9-fb35-420c-b570-dbe51333d119',baseRevision:'a'.repeat(40),
+    baseTree:'a'.repeat(40),filteredBaseTree:'a'.repeat(40),commitSha:'b'.repeat(40),
+    treeSha:'b'.repeat(40),contentHash:'c'.repeat(64),files:[],excludedPaths:[],
+    noChange:false,createdAt:now},
+  bundle:{schemaVersion:'1.0',taskId,contractRevision:1,workflowRevision:1,
+    snapshotId,runConfigHash:'a'.repeat(64),contractRef:`task:${taskId}@1`,
+    contextBundleId:'948911de-c1da-451f-932d-388664626804',artifactIds:[],
+    humanDecisionIds:[],openIssueIds:[],nativeSessionRef:null,redactionVersion:'1'},
+  stepResult:{schemaVersion:'1.0',runId,attemptId,nodeId:'develop',contractRevision:1,
+    snapshotId,outcome:'ready',artifactIds:[],unresolved:[],acceptanceResults:[],
+    summary:'Frozen development result'},
+  artifact:{artifactId:'a5032de5-83d4-4bec-acf7-3d5b9c1ba348',snapshotId,
+    kind:'development-step-result',mime:'application/json',byteSize:5,
+    contentHash:'d'.repeat(64),redactionVersion:'1',createdAt:now}};
+  const preset={presetId,projectId,environmentId,name:'test',executable:'node',
+    argv:['test.js'],cwdRelative:'.',envRefs:[],timeoutSeconds:120,
+    scriptsHash:'f'.repeat(64),approvalHash:'e'.repeat(64),revision:2,
+    createdAt:now,updatedAt:now,archivedAt:null};
+  let started=false;
+  const run=vi.fn(async(command:{type:string})=>({ok:true,data:
+    command.type==='run.verifyJobs' ? (started ? [{...job,developmentRunId:runId,
+      presetId,state:'running',reportId:null}] : []) :
+    command.type==='run.list' ? [runView] :
+    command.type==='run.handoff' ? handoff :
+    command.type==='run.config' ? {projectId,runId,taskId,taskRevision:1,
+      configHash:'a'.repeat(64),workflow:{id:'standard',version:'1',
+        contentHash:'b'.repeat(64)},developerProfile:{id:'profile.developer',version:'1',
+        contentHash:'c'.repeat(64),executorPluginId:'executor.codex'},stageProfiles:[],
+      environmentId,environmentRevision:1,commandPresetIds:[presetId],
+      commandPresetLocks:[{presetId,revision:2,approvalHash:preset.approvalHash}],
+      actualNodeId:'develop'} :
+    command.type==='run.verifyStart' ? (started=true,{...job,developmentRunId:runId,
+      presetId,state:'running',reportId:null}) : null}));
+  const project=vi.fn(async()=>({ok:true,data:[preset]}));
+  const taskState=ref('active');
+  root=document.createElement('div');document.body.append(root);
+  app=createApp({render:()=>h(VerifyReportPanel,{client:{run,project} as unknown as ForgeClient,
+    projectId,taskId,taskRevision:1,taskState:taskState.value,connected:true,refreshKey:0})});
+  app.mount(root);
+  await vi.waitFor(()=>expect(root?.textContent).toContain('本次冻结环境的验证命令'));
+  taskState.value='done';
+  await vi.waitFor(()=>expect(root?.textContent).toContain('任务已由 Owner 验收'));
+  expect([...root.querySelectorAll('button')].some((item)=>
+    item.textContent?.includes('明确启动验证'))).toBe(false);
+  expect(run).not.toHaveBeenCalledWith(expect.objectContaining({type:'run.verifyStart'}));
+  taskState.value='active';
+  await vi.waitFor(()=>expect(root?.textContent).toContain('本次冻结环境的验证命令'));
+  const action=[...root.querySelectorAll<HTMLButtonElement>('button')].find((item)=>
+    item.textContent?.includes('明确启动验证'))!;
+  expect(action.disabled).toBe(false);
+  action.click();
+  await vi.waitFor(()=>expect(run).toHaveBeenCalledWith(expect.objectContaining({
+    type:'run.verifyStart',payload:expect.objectContaining({projectId,taskId,
+      developmentRunId:runId,expectedSnapshotId:snapshotId,kind:'test',presetId}),
+  })));
 });
