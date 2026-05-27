@@ -4,6 +4,8 @@ export interface SchemaFormField {
   title?: string | undefined;
   description?: string | undefined;
   format?: 'forge-credential-ref' | undefined;
+  minimum?: number | undefined;
+  maximum?: number | undefined;
 }
 export interface SchemaFormDefinition {
   type: 'object';
@@ -27,7 +29,9 @@ export function buildPluginConfig(schema: SchemaFormDefinition, input: Record<st
       }
       output[key] = value;
     } else if ((field.type === 'integer' || field.type === 'number') && typeof value === 'number'
-      && Number.isFinite(value) && (field.type !== 'integer' || Number.isInteger(value))) output[key] = value;
+      && Number.isFinite(value) && (field.type !== 'integer' || Number.isInteger(value))
+      && (field.minimum === undefined || value >= field.minimum)
+      && (field.maximum === undefined || value <= field.maximum)) output[key] = value;
     else throw new Error(`Invalid field: ${key}`);
   }
   return output;

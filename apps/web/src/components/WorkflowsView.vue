@@ -12,7 +12,8 @@ import { diffWorkflowDefinitions, type WorkflowDifference } from '../workflow-di
 
 const WorkflowCanvas = defineAsyncComponent(() => import('./WorkflowCanvas.vue'));
 
-const props = defineProps<{ client: ForgeClient; desktop: boolean; connected: boolean }>();
+const props = defineProps<{ client: ForgeClient; desktop: boolean; connected: boolean;
+  readOnly?: boolean }>();
 const presets = ref<WorkflowTemplate[]>([]);
 const records = ref<WorkflowRecord[]>([]);
 const profiles = ref<AgentProfileCatalog | null>(null);
@@ -34,9 +35,11 @@ const selectedNodeId = ref('');
 const recordOptions = computed(() => records.value.map((item) => ({
   value: item.workflowId, label: `${item.draft.name} · 草稿 v${item.draftRevision}`,
 })));
+const agentRole = (node: WorkflowNode): 'planner' | 'developer' | 'reviewer' =>
+  node.outputSchema === 'plan-result' ? 'planner'
+    : node.boardColumn === 'review' ? 'reviewer' : 'developer';
 const profileOptions = (node: WorkflowNode): { value: string; label: string }[] => {
-  const role = node.boardColumn === 'review' ? 'reviewer'
-    : node.boardColumn === 'todo' ? 'planner' : 'developer';
+  const role = agentRole(node);
   const options = (profiles.value?.profiles ?? []).filter((item) => item.role === role).map((item) => ({
     value: item.id,
     label: `${item.name} · v${item.revision}${profiles.value?.availability.find(
@@ -200,8 +203,10 @@ function add(kind: 'agent' | 'verifier'): void {
 }
 function setRole(node: WorkflowNode, role: string): void {
   node.boardColumn = role === 'reviewer' ? 'review' : 'development';
-  node.readOnly = role === 'reviewer';
-  node.inputs = role === 'reviewer' ? ['task', 'snapshot', 'diff'] : ['task'];
+  node.readOnly = role !== 'developer';
+  node.inputs = role === 'reviewer' ? ['task', 'snapshot', 'diff']
+    : role === 'planner' ? ['task', 'repo'] : ['task'];
+  node.outputSchema = role === 'planner' ? 'plan-result' : 'step-result';
   node.binding = 'profile.unbound'; dirty.value = true; compiled.value = null;
   normalize();
 }
@@ -273,10 +278,22 @@ watch(() => [props.desktop, props.connected], () => { void load(); });
           <ForgeSelect :model-value="currentRecord?.workflowId ?? ''" label="已保存草稿"
             :options="[{ value: '', label: '选择草稿' }, ...recordOptions]"
             @update:model-value="selectRecord" />
-          <div class="workflow-actions"><ForgeButton v-for="preset in presets" :key="preset.id"
+          <div v-if="!readOnly" class="workflow-actions"><ForgeButton v-for="preset in presets" :key="preset.id"
             variant="secondary" @click="fromPreset(preset)">从{{ preset.id }}模板新建</ForgeButton></div>
         </div>
-        <template v-if="draft">
+        <section v-if="readOnly && draft" class="workflow-impact" aria-label="历史流程定义">
+          <h2>{{ draft.name }}</h2>
+          <p>流程 ID {{ draft.id }} · 草稿 v{{ currentRecord?.draftRevision ?? 0 }} ·
+            {{ currentRecord?.publishedRevision ? `已发布 v${currentRecord.publishedRevision}` : '尚未发布' }}。
+            这是历史只读定义；不能编辑、保存或发布。</p>
+          <ol><li v-for="node in draft.nodes" :key="node.id">
+            {{ node.label }} · {{ node.kind }} · {{ node.binding }}
+          </li></ol>
+          <p v-if="impact">已有冻结 Run：{{ Object.entries(impact.frozenRunCounts).length
+            ? Object.entries(impact.frozenRunCounts).map(([revision, count]) => `v${revision}：${count}`).join('、')
+            : '无' }}。</p>
+        </section>
+        <template v-else-if="draft">
           <div class="workflow-actions">
             <ForgeButton variant="secondary" @click="canvasOpen = !canvasOpen">
               {{ canvasOpen ? '收起高级画布' : '打开高级画布' }}
@@ -329,8 +346,9 @@ watch(() => [props.desktop, props.connected], () => { void load(); });
                   :tone="node.kind === 'approval' ? 'warning' : 'info'" /></div>
               <ForgeInput v-model="node.label" :label="`步骤 ${index + 1} 名称`" @update:model-value="dirty = true" />
               <template v-if="node.kind === 'agent'">
-                <ForgeSelect :model-value="node.boardColumn === 'review' ? 'reviewer' : 'developer'"
-                  label="职责" :options="[{ value: 'developer', label: 'Developer' }, { value: 'reviewer', label: 'Reviewer（只读）' }]"
+                <ForgeSelect :model-value="agentRole(node)"
+                  label="职责" :options="[{ value: 'planner', label: 'Planner（只读计划）' },
+                    { value: 'developer', label: 'Developer' }, { value: 'reviewer', label: 'Reviewer（只读）' }]"
                   @update:model-value="setRole(node, $event)" />
                 <ForgeSelect v-model="node.binding" label="Agent Profile"
                   :options="[{ value: 'profile.unbound', label: '未绑定（不能发布）' }, ...profileOptions(node)]"

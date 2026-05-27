@@ -37,6 +37,32 @@ it('ordinary Web has no local workflow bridge or file access', () => {
   expect(presets).not.toHaveBeenCalled();
 });
 
+it('shows the standard Plan node as a read-only Planner even in the development column', async () => {
+  const standard: WorkflowTemplate = { ...fixture, id: 'standard', name: 'Standard', start: 'plan',
+    nodes: [{ ...fixture.nodes[0]!, id: 'plan', label: '实施计划',
+      binding: 'profile.planner', readOnly: true, inputs: ['task', 'repo'],
+      outputSchema: 'plan-result' }, ...fixture.nodes],
+    edges: [{ from: 'plan', on: 'ready', to: 'develop' }, ...fixture.edges] };
+  const desktop = mount({
+    workflowPresets: vi.fn().mockResolvedValue([standard]),
+    listWorkflows: vi.fn().mockResolvedValue([]),
+    agentProfileCatalog: vi.fn().mockResolvedValue({
+      profiles: [{ id: 'profile.planner', name: 'Planner', role: 'planner', revision: 1 }],
+      availability: [{ profileId: 'profile.planner', runnable: false }],
+      executors: [], modelProviders: [],
+    }),
+  }, true, true);
+  await vi.waitFor(() => expect(desktop.textContent).toContain('从standard模板新建'));
+  [...desktop.querySelectorAll<HTMLButtonElement>('button')].find(
+    (button) => button.textContent?.includes('从standard模板新建'),
+  )?.click();
+  await nextTick();
+  const selects = desktop.querySelector('.workflow-node')?.querySelectorAll('select');
+  expect(selects?.[0]?.value).toBe('planner');
+  expect(selects?.[1]?.selectedOptions[0]?.textContent).toContain('当前不可启动');
+  expect(selects?.[1]?.selectedOptions[0]?.textContent).not.toContain('当前未安装');
+});
+
 it('shows differences between real immutable published revisions with frozen Run counts', async () => {
   const old = { ...fixture, id: 'workflow.fixture', revision: 1 };
   const latest = { ...old, revision: 2, name: 'Quick v2' };

@@ -4,12 +4,15 @@ import type { SchemaFormDefinition } from '../schema-form';
 import { buildPluginConfig } from '../schema-form';
 import ForgeButton from './ForgeButton.vue';
 
-const props = defineProps<{ schema: SchemaFormDefinition; disabled?: boolean; submitLabel?: string }>();
+const props = defineProps<{ schema: SchemaFormDefinition; disabled?: boolean; submitLabel?: string;
+  initialValues?: Record<string, string | number | boolean> }>();
 const emit = defineEmits<{ submit: [config: Record<string, string | number | boolean>] }>();
-const values = ref<Record<string, string | number | boolean>>({});
+const values = ref<Record<string, string | number | boolean>>({ ...props.initialValues });
 const error = ref('');
 const fields = computed(() => Object.entries(props.schema.properties));
-watch(() => props.schema, () => { values.value = {}; error.value = ''; });
+watch(() => [props.schema, props.initialValues], () => {
+  values.value = { ...props.initialValues }; error.value = '';
+});
 function update(key: string, value: string | boolean, kind: string): void {
   if (value === '' && kind !== 'boolean') { delete values.value[key]; return; }
   values.value[key] = kind === 'integer' || kind === 'number' ? Number(value) : value;
@@ -30,6 +33,7 @@ function submit(): void {
         :disabled="disabled" @change="update(key, ($event.target as HTMLInputElement).checked, field.type)" />
       <input v-else :id="`forge-plugin-${key}`" :type="field.format === 'forge-credential-ref' ? 'password' : field.type === 'integer' || field.type === 'number' ? 'number' : 'text'"
         :step="field.type === 'integer' ? '1' : field.type === 'number' ? 'any' : undefined"
+        :min="field.minimum" :max="field.maximum"
         :autocomplete="field.format === 'forge-credential-ref' ? 'off' : undefined"
         :value="values[key] ?? ''" :disabled="disabled"
         @input="update(key, ($event.target as HTMLInputElement).value, field.type)" />
