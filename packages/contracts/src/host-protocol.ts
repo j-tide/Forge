@@ -1,6 +1,13 @@
 import { z } from 'zod';
+import { projectCommandEnvelopeSchema, projectCommandResultSchema } from './project.js';
+import { conversationCommandEnvelopeSchema, conversationCommandResultSchema,
+  conversationStreamEventSchema } from './conversation.js';
+import { draftCommandEnvelopeSchema, draftCommandResultSchema } from './task-draft.js';
+import { approvalCommandEnvelopeSchema, approvalCommandResultSchema } from './task-approval.js';
+import { boardCommandEnvelopeSchema, boardCommandResultSchema } from './board.js';
+import { runCommandEnvelopeSchema, runCommandResultSchema } from './run-inspection.js';
 
-export const hostProtocolVersion = 'forge-host-protocol/v2' as const;
+export const hostProtocolVersion = 'forge-host-protocol/v5' as const;
 export const hostStatusSchema = z.enum(['starting', 'ready', 'degraded', 'stopping', 'offline']);
 export const connectionStateSchema = z.enum(['starting', 'connected', 'degraded', 'unavailable', 'crashed', 'incompatible']);
 
@@ -15,6 +22,41 @@ export const forgeErrorCodeSchema = z.enum([
   'TRANSPORT_TIMEOUT', 'INVALID_RESPONSE', 'INTERNAL_ERROR',
   'DATABASE_OPEN_FAILED', 'DATABASE_MIGRATION_FAILED', 'DATABASE_VERSION_UNSUPPORTED',
   'DATABASE_BUSY', 'DATABASE_CORRUPT', 'DATABASE_IO_ERROR',
+  'DATABASE_DISK_FULL', 'DATABASE_BACKUP_FAILED',
+  'PROJECT_INVALID_PATH', 'PROJECT_PROBE_FAILED', 'PROJECT_NOT_FOUND',
+  'PROJECT_PROBE_STALE', 'PROJECT_TRUST_REQUIRED',
+  'REVISION_CONFLICT', 'PROJECT_ARCHIVED', 'ENVIRONMENT_NOT_FOUND', 'ENVIRONMENT_IN_USE',
+  'COMMAND_PRESET_NOT_FOUND', 'COMMAND_PRESET_REFERENCED',
+  'CONVERSATION_NOT_FOUND', 'MESSAGE_NOT_FOUND', 'INVALID_MESSAGE_CONTENT', 'CONVERSATION_BUSY', 'MODEL_UNAVAILABLE',
+  'DRAFT_SOURCE_NOT_FOUND', 'DRAFT_NOT_FOUND', 'DRAFT_APPROVED', 'DRAFT_INVALID_REVISION',
+  'DRAFT_UNRESOLVED_QUESTIONS', 'DRAFT_ACCEPTANCE_CONFIRMATION_REQUIRED',
+  'DRAFT_SCOPE_CONFIRMATION_REQUIRED',
+  'APPROVAL_NOT_READY', 'APPROVAL_NOT_FOUND', 'APPROVAL_STALE', 'APPROVAL_EXPIRED',
+  'APPROVAL_ALREADY_DECIDED',
+  'TASK_NOT_FOUND', 'TASK_REVISION_INVALID', 'BOARD_CROSS_COLUMN_FORBIDDEN', 'BOARD_INVALID_REORDER',
+  'RUN_NOT_FOUND', 'RUN_CONFLICT', 'RUN_START_FAILED', 'RUN_CANCEL_FAILED',
+  'RUN_DELIVERY_FAILED', 'RUN_CONFIG_MISMATCH', 'RUN_DIFF_UNAVAILABLE',
+  'RUN_EXPIRED', 'RUN_INVALID_TIME', 'RUN_PROCESS_UNCONFIRMED', 'RUN_STALE',
+  'HANDOFF_CONFLICT', 'HANDOFF_CORRUPT', 'HANDOFF_EXPLANATION_REQUIRED', 'HANDOFF_STALE',
+  'VERIFY_ARTIFACT_NOT_FOUND', 'VERIFY_CONFLICT', 'VERIFY_CWD_INVALID',
+  'VERIFY_ENV_UNAVAILABLE', 'VERIFY_NOT_FOUND', 'VERIFY_PRESET_REQUIRED',
+  'VERIFY_PRESET_UNAPPROVED', 'VERIFY_PROCESS_UNCONFIRMED', 'VERIFY_REPORT_INVALID',
+  'VERIFY_RUNTIME_ERROR', 'VERIFY_SOURCE_STALE', 'VERIFY_WORKSPACE_UNAVAILABLE',
+  'ACCEPTANCE_CONFLICT', 'ACCEPTANCE_CRITERION_UNKNOWN', 'ACCEPTANCE_EVIDENCE_REQUIRED',
+  'ACCEPTANCE_REASON_REQUIRED', 'ACCEPTANCE_REASON_SENSITIVE',
+  'ACCEPTANCE_REPORT_INVALID', 'ACCEPTANCE_SOURCE_STALE',
+  'REWORK_CONFLICT', 'REWORK_LIMIT_REACHED', 'REWORK_SOURCE_STALE',
+  'REWORK_TRIGGER_INVALID', 'REWORK_LAUNCH_FAILED',
+  'REWORK_GATE_UNAVAILABLE',
+  'DELIVERY_NOT_ACCEPTED', 'DELIVERY_SOURCE_STALE', 'MERGE_GIT_REQUIRED',
+  'MERGE_REPO_CHANGED', 'MERGE_GIT_UNAVAILABLE', 'MERGE_GIT_FAILED',
+  'MERGE_SNAPSHOT_CHANGED', 'MERGE_BRANCH_INVALID', 'MERGE_TARGET_NOT_CHECKED_OUT',
+  'MERGE_TARGET_DIRTY', 'MERGE_TARGET_UNKNOWN', 'MERGE_REVALIDATION_REQUIRED',
+  'MERGE_ALREADY_APPLIED', 'MERGE_OPERATION_EXISTS', 'MERGE_OPERATION_CONFLICT',
+  'MERGE_DELIVERY_STALE', 'MERGE_ROOT_INVALID', 'MERGE_CONFLICT',
+  'MERGE_OUTCOME_UNKNOWN', 'MERGE_CANCELLED',
+  'TASK_CHANGE_NOT_FOUND', 'TASK_CHANGE_INVALID', 'TASK_CHANGE_STALE',
+  'TASK_CHANGE_CONFLICT', 'TASK_CHANGE_WAITING_SAFE_POINT',
 ]);
 
 export const forgeErrorSchema = z.strictObject({
@@ -32,14 +74,21 @@ export const hostInfoSchema = z.strictObject({
   productVersion: versionSchema,
   startedAt: timestampSchema,
   protocolVersion: z.string().min(1).max(80),
-  runtime: z.strictObject({
+  runtime: z.union([z.strictObject({
     version: versionSchema,
     node: versionSchema,
     modules: versionSchema,
     electron: versionSchema.nullable(),
     platform: z.string().min(1),
     arch: z.string().min(1),
-  }),
+  }), z.strictObject({
+    version: versionSchema,
+    python: versionSchema,
+    implementation: versionSchema,
+    platform: z.string().min(1),
+    arch: z.string().min(1),
+  })]),
+  transportVersion: z.literal('forge-local-jsonrpc/v1').optional(),
 });
 
 export const storageHealthSchema = z.strictObject({
@@ -113,6 +162,30 @@ const wireCommandRequestSchema = z.strictObject({
   requestId: identifierSchema,
   command: systemCommandEnvelopeSchema,
 });
+const wireProjectRequestSchema = z.strictObject({
+  kind: z.literal('project-command'), requestId: identifierSchema,
+  command: projectCommandEnvelopeSchema,
+});
+const wireConversationRequestSchema = z.strictObject({
+  kind: z.literal('conversation-command'), requestId: identifierSchema,
+  command: conversationCommandEnvelopeSchema,
+});
+const wireDraftRequestSchema = z.strictObject({
+  kind: z.literal('draft-command'), requestId: identifierSchema,
+  command: draftCommandEnvelopeSchema,
+});
+const wireApprovalRequestSchema = z.strictObject({
+  kind: z.literal('approval-command'), requestId: identifierSchema,
+  command: approvalCommandEnvelopeSchema,
+});
+const wireBoardRequestSchema = z.strictObject({
+  kind: z.literal('board-command'), requestId: identifierSchema,
+  command: boardCommandEnvelopeSchema,
+});
+const wireRunRequestSchema = z.strictObject({
+  kind: z.literal('run-command'), requestId: identifierSchema,
+  command: runCommandEnvelopeSchema,
+});
 
 const wireShutdownRequestSchema = z.strictObject({
   kind: z.literal('shutdown'),
@@ -122,7 +195,11 @@ const wireShutdownRequestSchema = z.strictObject({
 });
 
 export const hostWireRequestSchema = z.discriminatedUnion('kind', [
-  wireHelloRequestSchema, wireCommandRequestSchema, wireShutdownRequestSchema,
+  wireHelloRequestSchema, wireCommandRequestSchema, wireProjectRequestSchema,
+  wireConversationRequestSchema, wireDraftRequestSchema, wireApprovalRequestSchema,
+  wireBoardRequestSchema,
+  wireRunRequestSchema,
+  wireShutdownRequestSchema,
 ]);
 
 const wireHelloResultSchema = z.union([
@@ -139,6 +216,18 @@ export const hostWireResponseSchema = z.union([
   z.strictObject({ kind: z.literal('ready'), info: hostInfoSchema }),
   wireHelloResultSchema,
   z.strictObject({ kind: z.literal('command-result'), requestId: identifierSchema, result: systemCommandResultSchema }),
+  z.strictObject({ kind: z.literal('project-command-result'), requestId: identifierSchema, result: projectCommandResultSchema }),
+  z.strictObject({ kind: z.literal('conversation-command-result'), requestId: identifierSchema,
+    result: conversationCommandResultSchema }),
+  z.strictObject({ kind: z.literal('draft-command-result'), requestId: identifierSchema,
+    result: draftCommandResultSchema }),
+  z.strictObject({ kind: z.literal('approval-command-result'), requestId: identifierSchema,
+    result: approvalCommandResultSchema }),
+  z.strictObject({ kind: z.literal('board-command-result'), requestId: identifierSchema,
+    result: boardCommandResultSchema }),
+  z.strictObject({ kind: z.literal('run-command-result'), requestId: identifierSchema,
+    result: runCommandResultSchema }),
+  z.strictObject({ kind: z.literal('conversation-event'), event: conversationStreamEventSchema }),
   wireShutdownResultSchema,
   z.strictObject({ kind: z.literal('protocol-error'), requestId: identifierSchema, error: forgeErrorSchema }),
 ]);
