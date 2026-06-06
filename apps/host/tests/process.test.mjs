@@ -101,7 +101,7 @@ test('real Node Host validates handshake, executes health, rejects invalid input
     assert.equal(health.result.data.pid, child.pid);
     assert.equal(health.result.data.hostId, ready.info.hostId);
     assert.equal(health.result.data.storage.status, 'ready');
-    assert.equal(health.result.data.storage.schemaVersion, 2);
+    assert.equal(health.result.data.storage.schemaVersion, 15);
     assert.equal(child.listenerCount('message'), listenersBefore);
   }
 

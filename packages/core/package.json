@@ -7,6 +7,42 @@
     "./commands": {
       "types": "./dist/commands.d.ts",
       "default": "./dist/commands.js"
+    },
+    "./task-revisions": {
+      "types": "./dist/task-revisions.d.ts",
+      "default": "./dist/task-revisions.js"
+    },
+    "./approvals": {
+      "types": "./dist/approvals.d.ts",
+      "default": "./dist/approvals.js"
+    },
+    "./task-projection": {
+      "types": "./dist/task-projection.d.ts",
+      "default": "./dist/task-projection.js"
+    },
+    "./task-queries": {
+      "types": "./dist/task-queries.d.ts",
+      "default": "./dist/task-queries.js"
+    },
+    "./intent-commands": {
+      "types": "./dist/intent-commands.d.ts",
+      "default": "./dist/intent-commands.js"
+    },
+    "./run-config": {
+      "types": "./dist/run-config.d.ts",
+      "default": "./dist/run-config.js"
+    },
+    "./run": {
+      "types": "./dist/run.d.ts",
+      "default": "./dist/run.js"
+    },
+    "./context": {
+      "types": "./dist/context.d.ts",
+      "default": "./dist/context.js"
+    },
+    "./handoff": {
+      "types": "./dist/handoff.d.ts",
+      "default": "./dist/handoff.js"
     }
   },
   "scripts": {
@@ -16,5 +52,8 @@
   },
   "dependencies": {
     "@forge/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4"
   }
 }

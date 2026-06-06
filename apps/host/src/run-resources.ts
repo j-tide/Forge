@@ -1,4 +1,5 @@
-import type { ExecutorRunHandle, ExecutorRunRequest } from '@forge/plugin-api';
+import { scheduledExecutorRunRequestSchema,
+  type ExecutorRunHandle, type ExecutorRunRequest, type ScheduledExecutorRunRequest } from '@forge/plugin-api';
 import type { ProcessController } from '@forge/process';
 import type { WorkspaceDescriptor, WorkspaceManager } from '@forge/workspace';
 import { HostExecutorRegistry } from './executors.js';
@@ -12,10 +13,22 @@ export class HostRunResources {
     request: Omit<ExecutorRunRequest, 'workspace'>): Promise<ExecutorRunHandle> {
     const current = this.workspaces.inspect(workspace.workspaceId);
     if (current.status !== 'busy' || current.ownerRunId !== request.runId ||
+      !current.activeLeaseId || current.activeLeaseId !== workspace.activeLeaseId ||
+      current.leaseEpoch !== workspace.leaseEpoch ||
       current.rootPath !== workspace.rootPath || current.ownershipId !== workspace.ownershipId) {
       throw new Error('Executor launch lacks the active Forge workspace lease');
     }
     return this.executors.start(executorId, { ...request, workspace: current.rootPath });
+  }
+
+  async startScheduled(executorId: string, workspace: WorkspaceDescriptor,
+    request: Omit<ScheduledExecutorRunRequest, 'workspace'>): Promise<ExecutorRunHandle> {
+    const parsed = scheduledExecutorRunRequestSchema.parse({ ...request, workspace: workspace.rootPath });
+    if (!workspace.activeLeaseId || parsed.attempt.workspaceLeaseId !== workspace.activeLeaseId ||
+      parsed.attempt.leaseEpoch !== workspace.leaseEpoch) {
+      throw new Error('Scheduled Executor request lacks the active workspace lease');
+    }
+    return this.start(executorId, workspace, parsed);
   }
 
   async cancelAndRelease(handle: ExecutorRunHandle, workspace: WorkspaceDescriptor,

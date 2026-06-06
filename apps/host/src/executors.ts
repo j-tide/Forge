@@ -1,6 +1,7 @@
 import { CodexExecutorAdapter } from '@forge/executor-codex';
 import { ProcessController } from '@forge/process';
-import type { ExecutorAdapter, ExecutorEvent, ExecutorRunHandle, ExecutorRunRequest } from '@forge/plugin-api';
+import { ExecutorEventGate, executorEventSchema,
+  type ExecutorAdapter, type ExecutorEvent, type ExecutorRunHandle, type ExecutorRunRequest } from '@forge/plugin-api';
 
 /** Host-only registry. It does not create Task/Run business state or expose Renderer commands. */
 export class HostExecutorRegistry {
@@ -26,8 +27,22 @@ export class HostExecutorRegistry {
     const adapter = this.resolve(id);
     if (!adapter) throw new Error('Executor is not registered');
     const handle = await adapter.start(request);
+    const gate = new ExecutorEventGate(request.runId);
+    let invalid = false;
     const unsubscribe = handle.subscribe((event) => {
-      for (const listener of this.listeners) listener(event);
+      if (invalid) return;
+      let checked: ExecutorEvent;
+      try { checked = gate.accept(event); }
+      catch {
+        invalid = true;
+        checked = executorEventSchema.parse({ type: 'run.failed', runId: request.runId,
+          sequence: gate.nextSequence, timestamp: new Date().toISOString(),
+          code: 'EXECUTOR_PROTOCOL_ERROR', message: 'Executor event validation failed' });
+        void handle.cancel().catch(() => {});
+      }
+      for (const listener of this.listeners) {
+        try { listener(checked); } catch { /* A diagnostic subscriber cannot break the adapter. */ }
+      }
     });
     this.subscriptions.set(request.runId, unsubscribe);
     void handle.completion.finally(() => {

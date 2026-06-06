@@ -1,0 +1,20 @@
+# ADR 0027 · Immutable CodeSnapshot and development handoff
+
+Date: 2026-09-24  
+Status: Accepted for P2-09 Host-internal publication
+
+## Decision
+
+- `@forge/workspace` freezes only an owned, `ready` worktree after its writer lease is released and ProcessController reports no active Run process. It holds a manager-local freeze lock. Git status uses NUL-separated output; paths come from Git, not a Renderer string. Source HEAD, source worktree and the user's index are untouched.
+- The snapshot builder starts a temporary Git index from the recorded base tree, strips excluded baseline paths, reads regular files without following symlinks, scans the exact bytes it writes as Git blobs, and creates a new tree plus `commit-tree` object. It updates only a generated `refs/forge/snapshots/<UUID>` ref to keep the commit reachable; no user branch moves. Git commands use executable plus argv and an empty hooks directory. The private index is removed after use. Added and previously untracked files are included.
+- Changed `.env`/key/credential paths and recognized secret text block publication. Generated `node_modules` paths are excluded. Symlinks, binary/unscannable files, and files over the bounded scan limits are rejected. The scanner is a conservative local gate, not a guarantee that all secrets can be detected. No rejected source bytes or private paths enter Run artifacts.
+- SQLite schema 15 atomically publishes `code_snapshots`, one content-checked JSON `development-step-result` artifact, and the specification-shaped Handoff Bundle. Immutable triggers prevent update/delete. The result summary is derived from the changed-file manifest and recorded checkpoint issues. Every Task criterion remains `unverified`; Review and Verify are explicitly outstanding. A no-change snapshot needs an explanation and is `inconclusive`.
+- Production `@forge/contracts` matches the exact required field sets of the read-only `handoff-bundle.schema.json` and `step-result.schema.json`. The reference bundle requires numeric `workflowRevision`, while current P2-01 RunConfig freezes workflow `version` and `contentHash` but does not carry that number. The Host-internal publisher therefore requires an explicit positive revision from its trusted caller; it never derives one from a version string. The fixture uses revision 1 from the reference standard workflow. P2-10's resolved workflow entry must supply this revision before exposing a user Start path.
+
+## Publication boundary and recovery
+
+The Git commit/ref is written before the SQLite transaction. A failure before the database commit can leave an orphan Forge-owned snapshot ref, but cannot publish a partial Handoff Bundle or move a user branch. Repeating a published Run returns the same immutable record; conflicting identities are rejected. Orphan-ref reconciliation and retention belong to P3-09. The current service is Host-internal and runs after a `succeeded` Run; Task remains TODO and a succeeded Run without a Handoff must not be called a delivered development result. P2-10 must gate its vertical completion on a saved snapshot. Target-branch movement and explicit merge revalidation belong to P3-08.
+
+## Evidence and limits
+
+On macOS arm64, real Git tests verified untracked Unicode/space paths, option-looking filenames, content hashes and ref-reachable tree reconstruction; source HEAD/status/index were unchanged. Secret paths/text and symlink escapes were rejected. Real SQLite tests verified project scoping, immutability, idempotency and restart durability. A real authenticated Codex Run created `tests/invalid.test.mjs`, modified `src/add.js`, passed fixture tests, and both files appeared in the saved CodeSnapshot; formal acceptance remains `unverified`. Renderer has no Git/FS/SQL or artifact write channel. T047/T049 are now covered; T046's user Start race belongs to P2-10, T050's base drift/merge to P3-08, and T064's formal report rendering to P3-12. Windows x64, macOS Intel, installer packaging, and crash orphan cleanup remain unverified. No new external dependency is added.

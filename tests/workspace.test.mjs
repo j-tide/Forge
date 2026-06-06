@@ -39,7 +39,7 @@ test('recorded direct dependency licenses match the installed inventory', async 
     ['apps/desktop/package.json', versions.applicationDependencies['apps/desktop']],
     ['apps/host/package.json', versions.applicationDependencies['apps/host']],
     ['packages/contracts/package.json', versions.applicationDependencies['packages/contracts']],
-    ['packages/core/package.json', {}],
+    ['packages/core/package.json', versions.applicationDependencies['packages/core']],
     ['packages/client/package.json', {}],
     ['packages/persistence/package.json', versions.applicationDependencies['packages/persistence']],
     ['packages/process/package.json', versions.applicationDependencies['packages/process']],

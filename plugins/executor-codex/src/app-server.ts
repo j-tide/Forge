@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { createInterface, type Interface } from 'node:readline';
+import { z } from 'zod';
 import { ExecutorError } from '@forge/plugin-api';
 import { ProcessController, type ProcessSession } from '@forge/process';
 
@@ -14,6 +15,9 @@ export function codexEnvironment(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
     'APPDATA', 'LOCALAPPDATA', 'USERPROFILE', 'TEMP', 'TMP', 'SystemRoot', 'ComSpec',
     'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME'];
   const environment = Object.fromEntries(allowed.flatMap((key) => typeof source[key] === 'string' ? [[key, source[key]]] : []));
+  // Electron utilityProcess uses the Electron Helper as process.execPath. Its owned
+  // Codex CLI child must explicitly enter Node mode; this flag is never renderer-controlled.
+  if (process.versions.electron) environment.ELECTRON_RUN_AS_NODE = '1';
   for (const key of ['HTTPS_PROXY', 'HTTP_PROXY', 'https_proxy', 'http_proxy']) {
     const value = source[key];
     if (!value) continue;
@@ -26,9 +30,12 @@ export function codexEnvironment(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return environment;
 }
 
-type RpcResponse = { id: number; result?: unknown; error?: { code: number; message: string } };
 type RpcMessage = { method: string; params?: unknown; id?: number };
 type Pending = { resolve(value: unknown): void; reject(error: Error): void; timer: NodeJS.Timeout };
+const rpcNotificationSchema = z.object({ method: z.string().min(1), params: z.unknown().optional(),
+  id: z.number().int().nonnegative().optional() });
+const rpcResponseSchema = z.object({ id: z.number().int().nonnegative(), result: z.unknown().optional(),
+  error: z.object({ code: z.number().int(), message: z.string() }).optional() });
 
 export class AppServerConnection {
   private session: ProcessSession | null = null;
@@ -93,11 +100,16 @@ export class AppServerConnection {
   }
 
   private receive(line: string): void {
+    if (line.length > 1024 * 1024) { this.failProtocol(); return; }
     let raw: unknown;
     try { raw = JSON.parse(line); } catch { this.failProtocol(); return; }
-    if (typeof raw !== 'object' || raw === null) { this.failProtocol(); return; }
-    const message = raw as Partial<RpcMessage & RpcResponse>;
-    if (typeof message.id === 'number' && !message.method) {
+    if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) { this.failProtocol(); return; }
+    if (!('method' in raw)) {
+      const result = rpcResponseSchema.safeParse(raw);
+      if (!result.success || (result.data.result === undefined) === (result.data.error === undefined)) {
+        this.failProtocol(); return;
+      }
+      const message = result.data;
       const pending = this.pending.get(message.id);
       if (!pending) return;
       clearTimeout(pending.timer);
@@ -106,11 +118,19 @@ export class AppServerConnection {
       else pending.resolve(message.result);
       return;
     }
-    if (typeof message.method !== 'string') { this.failProtocol(); return; }
-    for (const listener of this.listeners) listener(message as RpcMessage);
+    const notification = rpcNotificationSchema.safeParse(raw);
+    if (!notification.success) { this.failProtocol(); return; }
+    const message: RpcMessage = { method: notification.data.method, params: notification.data.params,
+      ...(notification.data.id === undefined ? {} : { id: notification.data.id }) };
+    for (const listener of this.listeners) listener(message);
   }
 
   private failProtocol(): void {
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timer);
+      pending.reject(new ExecutorError('EXECUTOR_PROTOCOL_ERROR', 'Codex returned an invalid response'));
+    }
+    this.pending.clear();
     for (const listener of this.listeners) listener({ method: 'forge/invalidResponse' });
   }
 

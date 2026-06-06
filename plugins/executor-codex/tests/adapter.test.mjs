@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { codexEnvironment, mapCodexError } from '../dist/index.js';
+import { AppServerConnection } from '../dist/app-server.js';
 
 test('provider authentication, timeout, workspace and protocol errors map to Forge codes', () => {
   assert.equal(mapCodexError(new Error('Unauthorized')).code, 'EXECUTOR_AUTH_FAILED');
@@ -15,4 +16,20 @@ test('Codex subprocess receives only the narrow runtime environment', () => {
     FORGE_HOST_OWNERSHIP_TOKEN: 'secret' }), { PATH: '/usr/bin', HOME: '/tmp/home' });
   assert.deepEqual(codexEnvironment({ HTTPS_PROXY: 'http://127.0.0.1:7890',
     HTTP_PROXY: 'http://user:secret@127.0.0.1:7890' }), { HTTPS_PROXY: 'http://127.0.0.1:7890' });
+});
+
+test('app-server line parser rejects malformed and oversized upstream envelopes', () => {
+  const connection = new AppServerConnection();
+  const received = [];
+  const unsubscribe = connection.onMessage((message) => received.push(message));
+  connection.receive('{"method":"item/started","params":{"item":{}}}');
+  connection.receive('{"method":42}');
+  connection.receive('{"id":"wrong","result":{}}');
+  connection.receive('{"id":1,"result":{},"error":{"code":0,"message":"bad"}}');
+  connection.receive(' '.repeat(1024 * 1024 + 1));
+  assert.deepEqual(received.map((item) => item.method), [
+    'item/started', 'forge/invalidResponse', 'forge/invalidResponse',
+    'forge/invalidResponse', 'forge/invalidResponse',
+  ]);
+  unsubscribe();
 });

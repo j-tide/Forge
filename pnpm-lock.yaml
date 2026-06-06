@@ -139,9 +139,6 @@ importers:
       '@forge/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@forge/host':
-        specifier: workspace:*
-        version: link:../host
       '@forge/web':
         specifier: workspace:*
         version: link:../web
@@ -173,6 +170,9 @@ importers:
       '@forge/process':
         specifier: workspace:*
         version: link:../../packages/process
+      '@forge/refiner':
+        specifier: workspace:*
+        version: link:../../plugins/refiner
       '@forge/workspace':
         specifier: workspace:*
         version: link:../../packages/workspace
@@ -189,6 +189,9 @@ importers:
       '@forge/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@forge/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@forge/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -260,12 +263,19 @@ importers:
       '@forge/contracts':
         specifier: workspace:*
         version: link:../contracts
+    devDependencies:
+      '@types/node':
+        specifier: 22.20.4
+        version: 22.20.4
 
   packages/persistence:
     dependencies:
       '@forge/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@forge/core':
+        specifier: workspace:*
+        version: link:../core
       better-sqlite3:
         specifier: 13.0.3
         version: 13.0.3
@@ -346,6 +356,15 @@ importers:
       '@types/node':
         specifier: 22.20.4
         version: 22.20.4
+
+  plugins/refiner:
+    dependencies:
+      '@forge/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      zod:
+        specifier: 4.6.4
+        version: 4.6.4
 
 packages:
 

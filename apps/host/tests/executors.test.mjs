@@ -23,6 +23,38 @@ test('Host registers only the built-in Codex executor and clears listeners', asy
   } finally { await registry.dispose(); }
 });
 
+test('Host rejects malformed upstream event without forwarding provider data', async () => {
+  const registry = new HostExecutorRegistry();
+  const observed = [];
+  let cancelled = 0;
+  let finish;
+  const completion = new Promise((resolve) => { finish = resolve; });
+  const runId = 'invalid-provider-run';
+  registry.adapters.set('fixture.invalid', { id: 'fixture.invalid',
+    probe: async () => { throw new Error('not used'); }, dispose: async () => {},
+    start: async () => ({ runId, providerSessionId: 'fixture', completion,
+      subscribe: (listener) => {
+        listener({ type: 'run.started', runId, sequence: 1,
+          timestamp: new Date().toISOString(), providerSessionId: 'fixture' });
+        listener({ type: 'assistant.message', runId, sequence: 3,
+          timestamp: new Date().toISOString(), text: 'untrusted' });
+        return () => {};
+      },
+      cancel: async () => { cancelled += 1; finish('cancelled'); },
+      interrupt: async () => {}, resume: async () => { throw new Error('not used'); },
+      respondToApproval: async () => {}, dispose: async () => {},
+    }),
+  });
+  registry.onEvent((event) => observed.push(event));
+  try {
+    await registry.start('fixture.invalid', { runId });
+    await completion;
+    assert.deepEqual(observed.map((event) => event.type), ['run.started', 'run.failed']);
+    assert.equal(observed[1].code, 'EXECUTOR_PROTOCOL_ERROR');
+    assert.equal(cancelled, 1);
+  } finally { await registry.dispose(); }
+});
+
 test('unconfirmed provider cancellation quarantines its worktree', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'forge-unconfirmed-run-'));
   const source = join(dir, 'repo');
@@ -43,6 +75,17 @@ test('unconfirmed provider cancellation quarantines its worktree', async () => {
     const created = await manager.create({ sourceRepo: source, ownerRunId: 'unconfirmed-run' });
     const workspace = await manager.acquire(created.workspaceId, 'unconfirmed-run');
     const resources = new HostRunResources(registry, manager, processes);
+    const scheduled = { runId: 'unconfirmed-run', taskId: 'fixture-task', goal: 'Inspect fixture',
+      context: [], permission: 'read-only', approval: 'never', maxDurationMs: 1000,
+      attempt: { attemptId: 'attempt1', leaseEpoch: workspace.leaseEpoch,
+        workspaceLeaseId: workspace.activeLeaseId, contractRevision: 1,
+        contextBundleId: 'context1', profileRevision: 1, outputSchemaId: 'result1' } };
+    await assert.rejects(resources.startScheduled('executor.codex', workspace,
+      { ...scheduled, attempt: { ...scheduled.attempt, leaseEpoch: workspace.leaseEpoch + 1 } }),
+    /active workspace lease/);
+    await assert.rejects(resources.startScheduled('executor.codex', workspace,
+      { ...scheduled, attempt: { ...scheduled.attempt, workspaceLeaseId: randomUUID() } }),
+    /active workspace lease/);
     const handle = { runId: 'unconfirmed-run', subscribe: () => () => {}, cancel: async () => {},
       completion: Promise.resolve('completed'), dispose: async () => {} };
     await assert.rejects(resources.cancelAndRelease(handle, workspace, true), /not confirmed/);
