@@ -40,9 +40,16 @@ test('reading text and state labels meet 4.5:1 on their opaque surfaces', () => 
   };
   for (const [foreground, background] of [
     ['color-text', 'surface-reading'], ['color-text-secondary', 'surface-reading'],
+    ['color-text-secondary', 'surface-control'],
+    ['color-text-muted', 'surface-control'],
+    ['color-eyebrow', 'surface-reading'], ['color-eyebrow', 'surface-control'],
+    ['color-placeholder', 'surface-reading'], ['color-placeholder', 'surface-control'],
+    ['color-footnote', 'surface-control'], ['color-footer', 'surface-control'],
     ['color-accent-text', 'surface-reading'], ['color-info', 'surface-icon'],
     ['color-neutral-text', 'surface-control'], ['color-success', 'surface-reading'],
-    ['color-warning', 'surface-reading'], ['color-danger', 'surface-reading'],
+    ['color-success', 'surface-control'], ['color-warning', 'surface-reading'],
+    ['color-warning', 'surface-control'], ['color-danger', 'surface-reading'],
+    ['color-danger', 'surface-control'],
   ]) {
     const a = luminance(values[foreground]);
     const b = luminance(values[background]);
@@ -64,6 +71,8 @@ test('dark tokens have matching names, clear reading contrast and solid fallback
   };
   for (const [foreground, background] of [
     ['color-text', 'surface-reading'], ['color-text-secondary', 'surface-reading'],
+    ['color-text-secondary', 'surface-control'],
+    ['color-eyebrow', 'surface-control'], ['color-placeholder', 'surface-control'],
     ['color-accent-text', 'surface-reading'], ['color-info', 'surface-icon'],
     ['color-neutral-text', 'surface-control'], ['color-success', 'surface-reading'],
     ['color-warning', 'surface-reading'], ['color-danger', 'surface-reading'],
