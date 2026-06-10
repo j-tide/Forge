@@ -1,28 +1,72 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { _electron as electron } from 'playwright-core';
 
 const requireDesktop = createRequire(new URL('../apps/desktop/package.json', import.meta.url));
 const desktopDirectory = fileURLToPath(new URL('../apps/desktop/', import.meta.url));
-const root = mkdtempSync(join(tmpdir(), 'forge-refiner-desktop-'));
+const repositoryRoot = fileURLToPath(new URL('../', import.meta.url));
+const dmg = process.env.FORGE_REFINER_DMG;
+const requestedRoot = process.env.FORGE_REFINER_ROOT;
+const artifactTag = process.env.FORGE_REFINER_TAG;
+const manualClarification = process.env.FORGE_REFINER_MANUAL_CLARIFICATION === '1';
+const resumeExisting = process.env.FORGE_REFINER_RESUME_EXISTING === '1';
+if (resumeExisting && !requestedRoot) throw new Error('Resume requires FORGE_REFINER_ROOT');
+if (dmg && (process.platform !== 'darwin' || process.arch !== 'arm64')) {
+  throw new Error('Packaged refiner QA requires a macOS arm64 installation');
+}
+if (requestedRoot && (!isAbsolute(requestedRoot) ||
+    existsSync(requestedRoot) !== resumeExisting)) {
+  throw new Error('FORGE_REFINER_ROOT must be an absolute directory with the requested state');
+}
+if (artifactTag && !/^[a-z0-9][a-z0-9-]{0,39}$/.test(artifactTag)) {
+  throw new Error('FORGE_REFINER_TAG must be a short lowercase slug');
+}
+const root = requestedRoot ?? mkdtempSync(join(tmpdir(), 'forge-refiner-desktop-'));
+if (requestedRoot && !resumeExisting) mkdirSync(root, { recursive: true });
 const repo = join(root, 'Refiner 真实测试项目');
 const output = resolve('output/playwright');
-mkdirSync(repo); mkdirSync(output, { recursive: true });
-writeFileSync(join(repo, 'package.json'), JSON.stringify({ name: 'refiner-fixture',
-  scripts: { test: 'node --test' } }));
+if (!resumeExisting) {
+  mkdirSync(repo);
+  writeFileSync(join(repo, 'package.json'), JSON.stringify({ name: 'refiner-fixture',
+    scripts: { test: 'node --test' } }));
+}
+mkdirSync(output, { recursive: true });
 const git = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8' }).trim();
-git('init', '-q'); git('config', 'user.name', 'Forge Test'); git('config', 'user.email', 'forge@example.invalid');
-git('add', '.'); git('commit', '-qm', 'fixture');
+if (!resumeExisting) {
+  git('init', '-q'); git('config', 'user.name', 'Forge Test'); git('config', 'user.email', 'forge@example.invalid');
+  git('add', '.'); git('commit', '-qm', 'fixture');
+}
 const before = readFileSync(join(repo, 'package.json'), 'utf8');
 let app;
+let installRoot;
+let mount;
+let mounted = false;
 try {
-  app = await electron.launch({ executablePath: requireDesktop('electron'), args: [desktopDirectory],
-    env: { ...process.env, FORGE_DEV_SERVER_URL: '', FORGE_HOST_DATA_DIR: join(root, 'forge-data') } });
+  let executable = requireDesktop('electron');
+  let args = [desktopDirectory];
+  const env = { ...process.env, FORGE_DEV_SERVER_URL: '',
+    FORGE_HOST_DATA_DIR: join(root, 'forge-data') };
+  if (dmg) {
+    installRoot = mkdtempSync(join(repositoryRoot, 'build', 'macos', 'qa-install-'));
+    mount = join(installRoot, 'mounted');
+    mkdirSync(mount);
+    execFileSync('hdiutil', ['attach', '-readonly', '-nobrowse', '-mountpoint', mount, dmg]);
+    mounted = true;
+    const installed = join(installRoot, 'Forge INTERNAL.app');
+    execFileSync('ditto', [join(mount, 'Forge INTERNAL.app'), installed]);
+    execFileSync('codesign', ['--verify', '--deep', '--strict', installed]);
+    execFileSync('hdiutil', ['detach', mount]);
+    mounted = false;
+    executable = join(installed, 'Contents', 'MacOS', 'Forge');
+    args = [];
+    env.FORGE_INTERNAL_TEST_HOME = join(root, 'isolated-app-data');
+  }
+  app = await electron.launch({ executablePath: executable, args, env });
   app.process().stderr?.on('data', (chunk) => {
     for (const line of String(chunk).split('\n')) {
       if (line.includes('"event":"refiner_model_failed"')) console.error(line);
@@ -31,16 +75,39 @@ try {
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'Host connected' }).waitFor({ timeout: 15000 });
-  await page.getByRole('button', { name: /未选择项目/ }).click();
-  await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () =>
-    ({ canceled: false, filePaths: [path] }); }, repo);
-  await page.getByRole('button', { name: 'Choose folder' }).click();
-  await page.getByRole('button', { name: '继续查看信任范围' }).click();
-  await page.getByRole('button', { name: 'Trust this project' }).click();
-  await page.getByRole('button', { name: '进入 Forge Workspace' }).click();
-  await page.locator('.conversation-panel textarea').fill('修复空邮箱也能通过登录校验的 bug，补充回归测试');
-  await page.getByRole('button', { name: '保存输入' }).click();
-  await page.getByRole('button', { name: '整理为草稿' }).click();
+  if (!resumeExisting) {
+    await page.getByRole('button', { name: /未选择项目/ }).click();
+    await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () =>
+      ({ canceled: false, filePaths: [path] }); }, repo);
+    await page.getByRole('button', { name: 'Choose folder' }).click();
+    await page.getByRole('button', { name: '继续查看信任范围' }).click();
+    await page.getByRole('button', { name: 'Trust this project' }).click();
+    await page.getByRole('button', { name: '进入 Forge Workspace' }).click();
+    await page.locator('.conversation-panel textarea').fill('修复空邮箱也能通过登录校验的 bug，补充回归测试');
+    await page.getByRole('button', { name: '保存输入' }).click();
+  }
+  if (manualClarification) {
+    await page.getByRole('button', { name: '手工草稿', exact: true }).click();
+    try {
+      await page.getByRole('button', { name: '编辑草稿 · v1' }).waitFor({ timeout: 10_000 });
+    } catch (error) {
+      console.error(JSON.stringify({ stage: 'manual-draft-missing',
+        conversation: await page.locator('.conversation-panel').innerText() }));
+      throw error;
+    }
+    await page.getByRole('button', { name: '编辑草稿 · v1' }).click();
+    const editor = page.getByRole('dialog', { name: 'Task Draft · 编辑与澄清' });
+    await editor.getByLabel('标题').fill('修复空邮箱通过登录校验的问题');
+    await editor.getByLabel('验收条件 ac1').fill('空邮箱必须被登录校验拒绝。');
+    await editor.getByLabel('新增问题').fill('是否也应拒绝仅包含空白字符的邮箱？');
+    await editor.getByRole('button', { name: '添加问题' }).click();
+    await editor.getByLabel('本次用户决定 / 修改原因').fill('手工建立待澄清合同');
+    await editor.getByRole('button', { name: '保存新 revision' }).click();
+    await editor.waitFor({ state: 'hidden' });
+    await page.getByRole('button', { name: '编辑草稿 · v2' }).waitFor();
+  } else {
+    await page.getByRole('button', { name: '整理为草稿' }).click();
+  }
   await page.waitForFunction(() => {
     const text = globalThis.document.querySelector('.task-draft-card')?.textContent ?? '';
     return text.includes('Task Draft · proposed') || text.includes('Task Draft · needs_clarification') ||
@@ -52,7 +119,20 @@ try {
   assert.match(await card.textContent(), /bug|校验|登录/i);
   assert.equal(readFileSync(join(repo, 'package.json'), 'utf8'), before);
   assert.equal(git('status', '--porcelain'), '');
-  await page.screenshot({ path: join(output, 'p1-04-generated-draft-1440x900.png') });
+  const screenshot = join(output, artifactTag ?
+    `${artifactTag}-generated-draft-1440x900.png` : 'p1-04-generated-draft-1440x900.png');
+  await page.screenshot({ path: screenshot });
   console.log(JSON.stringify({ result: 'pass', status: 'proposal-or-clarification',
-    card: (await card.textContent())?.slice(0, 400), sourceUnchanged: true }));
-} finally { await app?.close(); rmSync(root, { recursive: true, force: true }); }
+    packaged: Boolean(dmg), manualClarification,
+    card: (await card.textContent())?.slice(0, 400),
+    sourceUnchanged: true, screenshot }));
+} finally {
+  await app?.close();
+  if (mounted && mount) execFileSync('hdiutil', ['detach', mount]);
+  if (installRoot) rmSync(installRoot, { recursive: true, force: true });
+  if (process.env.FORGE_REFINER_KEEP_FIXTURE === '1') {
+    console.error(`Forge refiner fixture retained: ${root}`);
+  } else {
+    rmSync(root, { recursive: true, force: true });
+  }
+}

@@ -17,19 +17,45 @@ const repositoryRoot = fileURLToPath(new URL('../', import.meta.url));
 const packagedAcceptance = process.env.FORGE_VERTICAL_PACKAGED === '1';
 const p3Acceptance = process.env.FORGE_P3_ACCEPTANCE === '1';
 const contextOnly = process.env.FORGE_VERTICAL_CONTEXT_ONLY === '1';
+const memoryContext = process.env.FORGE_VERTICAL_MEMORY_CONTEXT === '1';
 const customWorkflow = process.env.FORGE_VERTICAL_CUSTOM_WORKFLOW === '1';
 const mergeOnly = process.env.FORGE_VERTICAL_MERGE_ONLY === '1';
 const finalOnly = process.env.FORGE_VERTICAL_FINAL_ONLY === '1' || mergeOnly;
+const observedTokenChoice = process.env.FORGE_VERTICAL_MAX_TOKENS;
+if (observedTokenChoice && !['50000','100000','200000'].includes(observedTokenChoice)) {
+  throw new Error('FORGE_VERTICAL_MAX_TOKENS must be an allowed explicit Run choice');
+}
+const uiStart = process.env.FORGE_VERTICAL_UI_START === '1';
+if (uiStart && !packagedAcceptance) {
+  throw new Error('FORGE_VERTICAL_UI_START requires an installed Desktop package');
+}
+const uiVerify = process.env.FORGE_VERTICAL_UI_VERIFY === '1';
+const ownerReturn = process.env.FORGE_VERTICAL_OWNER_RETURN === '1';
+const verifyRework = process.env.FORGE_VERTICAL_VERIFY_REWORK === '1';
+const reviewRework = process.env.FORGE_VERTICAL_REVIEW_REWORK === '1';
+if (ownerReturn && (!packagedAcceptance || !finalOnly || mergeOnly)) {
+  throw new Error('FORGE_VERTICAL_OWNER_RETURN requires a packaged final-acceptance run without merge');
+}
+if (verifyRework && (!packagedAcceptance || !uiVerify || finalOnly || ownerReturn)) {
+  throw new Error('FORGE_VERTICAL_VERIFY_REWORK requires packaged UI Verify without final acceptance');
+}
+if (reviewRework && (!packagedAcceptance || process.env.FORGE_VERTICAL_PROFILE !== '1' ||
+    process.env.FORGE_VERTICAL_REVIEW_ONLY !== '1' || finalOnly || verifyRework)) {
+  throw new Error('FORGE_VERTICAL_REVIEW_REWORK requires packaged Reviewer profile and review-only fixture');
+}
 const requestedRoot = process.env.FORGE_VERTICAL_ROOT;
 if (requestedRoot && (!isAbsolute(requestedRoot) || existsSync(requestedRoot))) {
   throw new Error('FORGE_VERTICAL_ROOT must be an absolute path that does not exist');
 }
-const root = requestedRoot ?? await mkdtemp(join(tmpdir(), 'forge-python-desktop-live-'));
-if (requestedRoot) await mkdir(root, { recursive: true });
+if (memoryContext && !contextOnly) {
+  throw new Error('FORGE_VERTICAL_MEMORY_CONTEXT requires FORGE_VERTICAL_CONTEXT_ONLY');
+}
 const artifactTag = process.env.FORGE_VERTICAL_ARTIFACT_TAG;
 if (artifactTag && !/^[a-z0-9][a-z0-9-]{0,39}$/.test(artifactTag)) {
   throw new Error('FORGE_VERTICAL_ARTIFACT_TAG must be a short lowercase slug');
 }
+const root = requestedRoot ?? await mkdtemp(join(tmpdir(), 'forge-python-desktop-live-'));
+if (requestedRoot) await mkdir(root, { recursive: true });
 const packagedScreenshot = (part) => artifactTag ?
   join(repositoryRoot, 'output', 'playwright', `${artifactTag}-${part}-1440x900.png`) :
   fileURLToPath(new URL(`../output/playwright/p6-06-packaged-${part}-1440x900.png`, import.meta.url));
@@ -104,10 +130,14 @@ try {
   git('init', '-b', 'main');
   git('config', 'user.name', 'Forge fixture');
   git('config', 'user.email', 'forge-fixture@example.invalid');
-  await writeFile(join(source, 'math.js'), 'export const add = (a, b) => a + b;\n');
-  await writeFile(join(source, 'test.js'), "import { add } from './math.js';\nimport assert from 'node:assert/strict';\nassert.equal(add(1, 2), 3);\nconsole.log('Forge fixture test completed');\n");
-  await writeFile(join(source, 'hold.js'), 'setTimeout(() => {}, 120_000);\n');
-  await writeFile(join(source, 'package.json'), '{"type":"module","scripts":{"test":"node test.js"}}\n');
+  await writeFile(join(source, 'arithmetic.js'), 'export const add = (a, b) => a + b;\n');
+  await writeFile(join(source, 'arithmetic.test.js'), "import { add } from './arithmetic.js';\nimport assert from 'node:assert/strict';\nassert.equal(add(1, 2), 3);\nconsole.log('Forge fixture test completed');\n");
+  if (verifyRework) {
+    await writeFile(join(source, 'verify.js'),
+      "import { add } from './arithmetic.js';\nimport assert from 'node:assert/strict';\nassert.throws(() => add(null, 1), { name: 'TypeError', message: 'Forge numeric input required after verification' });\nconsole.log('Forge rework verification completed');\n");
+  }
+  await writeFile(join(source, 'forge-cancel-probe.js'), 'setTimeout(() => {}, 120_000);\n');
+  await writeFile(join(source, 'package.json'), '{"type":"module","scripts":{"test":"node arithmetic.test.js"}}\n');
   if (contextOnly) {
     await mkdir(join(source, 'docs'));
     await writeFile(join(source, 'docs', 'context.md'),
@@ -142,7 +172,7 @@ try {
   const hostHealth = await page.evaluate(() => globalThis.forge.hostHealth());
   assert.equal(hostHealth.ok, true);
   assert.equal(hostHealth.data.runtime.implementation, 'CPython');
-  assert.equal(hostHealth.data.storage.schemaVersion, 32);
+  assert.equal(hostHealth.data.storage.schemaVersion, 37);
   if (packagedAcceptance) {
     const packagePaths = await desktop.evaluate(({ app }) => ({
       packaged: app.isPackaged, appData: app.getPath('appData'), resources: process.resourcesPath,
@@ -167,33 +197,85 @@ try {
     approved: true, expectedRevision: 0,
   });
   let contextSourceId;
+  let contextMemoryId;
   if (contextOnly) {
     const imported = await page.evaluate((projectId) => globalThis.forge.invokeKnowledge({
       type: 'import', payload: { projectId, relativePath: 'docs/context.md' },
     }), project.projectId);
     assert.equal(imported.status, 'active');
     contextSourceId = imported.sourceId;
+    if (memoryContext) {
+      const chunk = await page.evaluate(({projectId, sourceId, version}) =>
+        globalThis.forge.invokeKnowledge({type:'chunk',payload:{projectId,sourceId,
+          version,ordinal:0}}), {projectId:project.projectId,sourceId:imported.sourceId,
+          version:imported.version});
+      assert.equal(chunk.status, 'active');
+      const candidate = await page.evaluate(({projectId,environmentId,chunk}) =>
+        globalThis.forge.invokeMemory({type:'propose',payload:{projectId,environmentId,
+          scope:'environment',kind:'project_convention',subjectKey:'date.filter',
+          text:'Date filters use start_date in this fixture.',
+          sources:[{sourceRef:chunk.sourceRef,sourceHash:chunk.contentHash}],
+          idempotencyKey:crypto.randomUUID()}}),
+      {projectId:project.projectId,environmentId:project.environmentId,chunk});
+      assert.equal(candidate.status, 'candidate');
+      const validated = await page.evaluate(({projectId,candidate}) =>
+        globalThis.forge.invokeMemory({type:'decide',payload:{projectId,
+          memoryId:candidate.memoryId,expectedRevision:candidate.revision,
+          decision:'validate',reason:'Fixture owner confirmed the imported source.',
+          confirmed:true,decisionId:crypto.randomUUID()}}),
+      {projectId:project.projectId,candidate});
+      assert.equal(validated.status, 'validated');
+      contextMemoryId = validated.memoryId;
+    }
   }
   let verifierPreset;
-  if (process.env.FORGE_VERTICAL_VERIFY_ONLY === '1' || finalOnly) {
+  if (process.env.FORGE_VERTICAL_VERIFY_ONLY === '1' || finalOnly || verifyRework || reviewRework) {
     const environment = await invoke(page, 'project', 'environment.get', {
       projectId: project.projectId, environmentId: project.environmentId,
     });
-    const preset = await invoke(page, 'project', 'commandPreset.save', {
-      projectId: project.projectId, expectedRevision: 0,
-      environmentId: environment.environmentId, name: 'test',
-      executable: process.execPath, argv: ['test.js'], cwdRelative: '.',
-      envRefs: [], timeoutSeconds: 30, scriptsHash: probe.scriptsHash,
-    });
-    verifierPreset = await invoke(page, 'project', 'commandPreset.approve', {
-      projectId: project.projectId, presetId: preset.presetId,
-      expectedRevision: preset.revision, scriptsHash: probe.scriptsHash,
-    });
-    await invoke(page, 'project', 'environment.save', {
-      projectId: project.projectId, environmentId: environment.environmentId,
-      expectedRevision: environment.revision, name: environment.name,
-      config: { commandPresetIds: [preset.presetId], envRefs: [], networkMode: 'trusted-local' },
-    });
+    if (uiVerify) {
+      await page.reload();
+      await page.getByRole('button', {name:/Forge fixture 空格/}).waitFor();
+      await page.getByRole('button', {name:/Forge fixture 空格/}).click();
+      await page.getByRole('heading', {name:'项目环境与验证命令'}).waitFor();
+      await page.getByText('环境 v1', {exact:false}).waitFor();
+      await page.getByRole('textbox', {name:'可执行文件'}).fill(process.execPath);
+      await page.getByRole('textbox', {name:'参数（每行一个，不进行 Shell 拆词）'})
+        .fill(verifyRework ? 'verify.js' : 'arithmetic.test.js');
+      await page.getByRole('textbox', {name:'超时秒数（1～7200）'}).fill('30');
+      await page.getByRole('button', {name:'保存但不批准'}).click();
+      await page.getByText('预设已保存，尚未批准', {exact:false}).waitFor();
+      await page.getByRole('button', {name:'审阅并批准'}).click();
+      const approvalDialog = page.getByRole('dialog', {name:'批准此项目命令？'});
+      await approvalDialog.getByRole('checkbox').check();
+      await approvalDialog.getByRole('button', {name:'批准当前版本'}).click();
+      await page.getByText('预设已获本机人工批准', {exact:false}).waitFor();
+      await page.getByRole('button', {name:'加入新 Run 的环境'}).click();
+      await page.getByText('环境新版本已保存', {exact:false}).waitFor();
+      const configured = await invoke(page, 'project', 'commandPreset.list', {
+        projectId:project.projectId,environmentId:environment.environmentId,
+      });
+      assert.equal(configured.length,1);
+      verifierPreset = configured[0];
+      assert.equal(verifierPreset.approvalHash?.length,64);
+    } else {
+      const preset = await invoke(page, 'project', 'commandPreset.save', {
+        projectId: project.projectId, expectedRevision: 0,
+        environmentId: environment.environmentId, name: 'test',
+        executable: process.execPath, argv: [verifyRework ? 'verify.js' : 'arithmetic.test.js'],
+        cwdRelative: '.',
+        envRefs: [], timeoutSeconds: 30, scriptsHash: probe.scriptsHash,
+      });
+      verifierPreset = await invoke(page, 'project', 'commandPreset.approve', {
+        projectId: project.projectId, presetId: preset.presetId,
+        expectedRevision: preset.revision, scriptsHash: probe.scriptsHash,
+      });
+      await invoke(page, 'project', 'environment.save', {
+        projectId: project.projectId, environmentId: environment.environmentId,
+        expectedRevision: environment.revision, name: environment.name,
+        config: { commandPresetIds: [preset.presetId], envRefs: [], networkMode: 'trusted-local' },
+      });
+    }
   }
   const conversation = await invoke(page, 'conversation', 'conversation.create', {
     projectId: project.projectId, title: 'Desktop Python run', expectedRevision: 0,
@@ -246,10 +328,10 @@ try {
   const decisionRef = `decision:${decisionId}`;
   const contract = { schemaVersion: '1.0', taskId: draft.draftId, projectId: project.projectId,
     revision: 2, title: 'Validate add', type: 'feature',
-    goal: 'In this tiny fixture, update math.js so add(a,b) rejects non-number inputs with TypeError. Add assertions in test.js for invalid inputs. Run npm test. Do not change package.json. Finish when tests pass.',
+    goal: 'In this tiny fixture, update arithmetic.js so add(a,b) rejects non-number inputs with TypeError. Add assertions in arithmetic.test.js for invalid inputs. Run npm test. Do not change package.json. Finish when tests pass.',
     acceptance: [{ id: 'AC-01', statement: 'Invalid inputs rejected', method: 'automated',
       required: true, sourceRefs: [decisionRef] }],
-    constraints: [], scope: ['math.js', 'test.js'], outOfScope: [], dependencies: [],
+    constraints: [], scope: ['arithmetic.js', 'arithmetic.test.js'], outOfScope: [], dependencies: [],
     openQuestions: [], assumptions: [],
     sourceRefs: [`message:${sent.message.messageId}`, decisionRef],
     workflowRef, priority: 'normal' };
@@ -279,6 +361,13 @@ try {
   });
   assert.equal(capabilities.available, true);
   assert.ok(capabilities.modelIds.includes(modelId));
+  if (customWorkflow) {
+    assert.equal(capabilities.workflowBinding?.workflowId, workflowRef);
+    assert.equal(capabilities.workflowBinding?.workflowRevision, 1);
+    assert.equal(capabilities.workflowBinding?.profileId,
+      'profile.fixture.workflow.developer');
+    assert.equal(capabilities.workflowBinding?.modelId, modelId);
+  }
   if (contextOnly) {
     const rejected = await page.evaluate(({projectId,taskId,modelId}) =>
       globalThis.forge.invokeRun({schemaVersion:'1.0',commandId:crypto.randomUUID(),
@@ -317,7 +406,8 @@ try {
       schemaVersion: '1.0', revision: 1, name: 'Fixture Developer', role: 'developer',
       executorId: 'executor.codex', promptTemplate: 'Develop only in the isolated workspace.',
       contextProviders: ['task-contract', 'project-context'], policyProfile: 'workspace-write',
-      limits: { maxTurns: 10, maxSeconds: 180, maxOutputTokens: 50000 },
+      limits: { maxTurns: 10, maxSeconds: reviewRework ? 420 : 180,
+        maxOutputTokens: 50000 },
     };
     const bad = await page.evaluate((value) => globalThis.forge.saveAgentProfile(value), {
       profile: { ...base, id: 'profile.fixture.unsupported', modelId: 'unsupported-model' },
@@ -333,13 +423,23 @@ try {
     assert.equal(refused.ok, false);
     assert.equal(refused.error.code, 'MODEL_UNAVAILABLE');
     savedProfile = await page.evaluate((value) => globalThis.forge.saveAgentProfile(value), {
-      profile: { ...base, id: 'profile.fixture.developer', modelId }, expectedRevision: 0,
+      profile: { ...base, id: 'profile.fixture.developer', modelId,
+        promptTemplate: reviewRework ?
+          'Develop only in the isolated workspace. This is a two-attempt QA drill. '
+          + 'On the first attempt, implement add validation for null or undefined only; '
+          + 'leave string inputs accepted so the Reviewer can flag AC-01. '
+          + 'When rework feedback arrives, fix all non-number inputs and add tests. '
+          + 'Never modify package.json.' : base.promptTemplate }, expectedRevision: 0,
     });
     if (process.env.FORGE_VERTICAL_REVIEW_ONLY === '1') {
       savedReviewerProfile = await page.evaluate((value) =>
         globalThis.forge.saveAgentProfile(value), {
         profile: { ...base, id: 'profile.fixture.reviewer', name: 'Fixture Reviewer',
-          role: 'reviewer', modelId, promptTemplate:
+          role: 'reviewer', modelId, promptTemplate: reviewRework ?
+            'Review the fixed snapshot read-only against AC-01. If add accepts any '
+            + 'non-number input such as a string, report a blocking issue with a '
+            + 'arithmetic.js line anchor and acceptance basis. If corrected, approve. '
+            + 'Return the requested structured result; do not modify files.' :
             'Review the fixed snapshot for correctness. Return the requested structured result.',
           contextProviders: ['task-contract', 'snapshot-diff'], policyProfile: 'read-only' },
         expectedRevision: 0,
@@ -348,13 +448,53 @@ try {
   }
   let successResult;
   if (process.env.FORGE_VERTICAL_SKIP_SUCCESS !== '1') {
-  const runId = crypto.randomUUID();
-  const run = await invoke(page, 'run', 'run.start', {
-    projectId: project.projectId, taskId: draft.draftId,
-    expectedTaskRevision: 2, modelId, idempotencyKey: runId,
-    ...(savedProfile ? { profileId: savedProfile.id, profileRevision: savedProfile.revision } : {}),
-    ...(contextOnly ? { contextQuery: 'start_date' } : {}),
-  });
+  let runId = crypto.randomUUID();
+  let run;
+  if (uiStart) {
+    await page.reload();
+    await page.getByRole('button', {name:/Forge fixture 空格/}).waitFor();
+    await page.getByRole('button', {name:'研发看板'}).click();
+    await page.locator('.board-task').filter({hasText:'Validate add'}).click();
+    if (!customWorkflow) await page.getByLabel('Codex 模型').selectOption(modelId);
+    await page.getByLabel('本次总 Token 观测上限')
+      .selectOption(observedTokenChoice ?? '50000');
+    if (savedProfile && !customWorkflow) {
+      await page.getByLabel('Developer Profile').selectOption(savedProfile.id);
+    }
+    if (customWorkflow) {
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        if (await page.getByLabel('Developer Profile').inputValue() ===
+            capabilities.workflowBinding.profileId) break;
+        await delay(250);
+      }
+      assert.equal(await page.getByLabel('Developer Profile').inputValue(),
+        capabilities.workflowBinding.profileId);
+      assert.equal(await page.getByLabel('Codex 模型').inputValue(), modelId);
+      assert.equal(await page.getByLabel('Developer Profile').isDisabled(), true);
+      assert.equal(await page.getByLabel('Codex 模型').isDisabled(), true);
+    }
+    if (contextOnly) await page.getByLabel('运行时资料检索词（可选）').fill('start_date');
+    await page.getByRole('button', {name:'明确启动开发'}).click();
+    for (let attempt=0; attempt<40; attempt+=1) {
+      const listed=await invoke(page,'run','run.list',{
+        projectId:project.projectId,taskId:draft.draftId,
+      });
+      run=listed[0];
+      if (run) break;
+      await delay(250);
+    }
+    assert.ok(run, 'Desktop Start did not create a Host Run');
+    runId=run.runId;
+  } else {
+    run = await invoke(page, 'run', 'run.start', {
+      projectId: project.projectId, taskId: draft.draftId,
+      expectedTaskRevision: 2, modelId, idempotencyKey: runId,
+      ...(observedTokenChoice ? { maxTokens:Number(observedTokenChoice) } : {}),
+      ...(savedProfile && !customWorkflow ?
+        { profileId: savedProfile.id, profileRevision: savedProfile.revision } : {}),
+      ...(contextOnly ? { contextQuery: 'start_date' } : {}),
+    });
+  }
   assert.equal(run.runId, runId);
   if (contextOnly) {
     const python = fileURLToPath(new URL('../python/.venv/bin/python', import.meta.url));
@@ -363,18 +503,26 @@ try {
       join(dataDir, 'forge.sqlite'), runId], { encoding: 'utf8' }));
     assert.ok(sourceEvidence.some((item) => item.kind === 'retrieved_knowledge' &&
       item.authority === 'untrusted_project' && item.sourceRef.startsWith('knowledge:')));
+    if (memoryContext) assert.ok(sourceEvidence.some((item) =>
+      item.kind === 'validated_memory' && item.authority === 'validated_memory' &&
+      item.sourceRef.startsWith(`memory:${contextMemoryId}@`)));
     console.log(JSON.stringify({ stage: 'p5-context-run', runId,
-      sources: sourceEvidence.filter((item) => item.kind === 'retrieved_knowledge') }));
+      sources: sourceEvidence.filter((item) => ['retrieved_knowledge','validated_memory']
+        .includes(item.kind)) }));
   }
   let inspection;
-  for (let attempt = 0; attempt < 240; attempt += 1) {
+  for (let attempt = 0; attempt < (reviewRework ? 480 : 240); attempt += 1) {
     await delay(1000);
     inspection = await invoke(page, 'run', 'run.inspect', {
       projectId: project.projectId, runId, afterCursor: 0, limit: 100,
     });
     if (['succeeded', 'failed', 'cancelled', 'interrupted'].includes(inspection.run.state)) break;
   }
-  assert.equal(inspection?.run.state, 'succeeded', JSON.stringify(inspection));
+  assert.equal(inspection?.run.state, 'succeeded', JSON.stringify({
+    runId, state: inspection?.run.state, budgetFailure: inspection?.budgetFailure,
+    usage: inspection?.usage,
+    lastObservations: inspection?.observations?.slice(-8),
+  }));
   const pluginLockFile = packagedAcceptance ? join(installedApp, 'Contents', 'Resources',
     'forge-python', 'packages', 'forge', 'builtin_plugins', 'plugins.lock.json') :
     fileURLToPath(new URL('../python/src/forge/builtin_plugins/plugins.lock.json', import.meta.url));
@@ -386,6 +534,8 @@ try {
     join(dataDir, 'forge.sqlite'), runId,
   ], { encoding: 'utf8', timeout: 15_000 });
   const frozenPlugin = JSON.parse(snapshotText).plugins.find((entry) => entry.id === pluginLock.id);
+  assert.equal(JSON.parse(snapshotText).budget.maxTokens,
+    observedTokenChoice ? Number(observedTokenChoice) : 50_000);
   if (customWorkflow) {
     const frozen = JSON.parse(snapshotText);
     assert.equal(frozen.workflow.id, workflowRef);
@@ -399,9 +549,13 @@ try {
     assert.equal(configSource.developerProfile.id, frozen.profile.id);
     assert.equal(configSource.actualNodeId, 'develop');
   }
-  if (savedProfile) {
+  if (savedProfile && !customWorkflow) {
     assert.equal(JSON.parse(snapshotText).profile.id, savedProfile.id);
     assert.equal(JSON.parse(snapshotText).profile.version, String(savedProfile.revision));
+    if (reviewRework) {
+      assert.equal(JSON.parse(snapshotText).budget.maxDurationMs,
+        savedProfile.limits.maxSeconds * 1000);
+    }
   }
   assert.deepEqual(frozenPlugin, { id: pluginLock.id, version: pluginLock.version,
     contentHash: pluginLock.contentHash });
@@ -414,9 +568,16 @@ try {
     `Codex completed without requested fixture edits: ${JSON.stringify({ inspection, handoff })}`);
   assert.ok(handoff.stepResult.acceptanceResults.every((item) => item.status === 'unverified'));
   const changed = handoff.snapshot.files.map((file) => file.path).sort();
-  assert.deepEqual(changed, ['math.js', 'test.js']);
+  if (reviewRework) {
+    assert.ok(changed.includes('arithmetic.js'));
+    assert.ok(changed.every((file) => ['arithmetic.js', 'arithmetic.test.js'].includes(file)));
+  } else {
+    assert.deepEqual(changed, ['arithmetic.js', 'arithmetic.test.js']);
+  }
   await page.reload();
   await page.getByRole('button', { name: /Forge fixture 空格/ }).waitFor();
+  const closeRunDrawer = page.getByRole('button', { name: '关闭抽屉' });
+  if (await closeRunDrawer.isVisible()) await closeRunDrawer.click();
   await page.getByRole('button', { name: '研发看板' }).click();
   await page.locator('.board-task').filter({ hasText: 'Validate add' }).click();
   await page.getByText('已冻结 CodeSnapshot', { exact: false }).waitFor({ timeout: 15_000 });
@@ -424,27 +585,46 @@ try {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.screenshot({ path: screenshot });
   const workspace = join(dataDir, 'workspaces', 'trees', handoff.snapshot.workspaceId);
-  execFileSync('node', ['test.js'], { cwd: workspace, timeout: 20_000 });
-  const fixtureDiff = execFileSync('git', ['-C', workspace, 'diff', '--', 'math.js', 'test.js'],
+  execFileSync('node', ['arithmetic.test.js'], { cwd: workspace, timeout: 20_000 });
+  const fixtureDiff = execFileSync('git', ['-C', workspace, 'diff', '--', 'arithmetic.js', 'arithmetic.test.js'],
     { encoding: 'utf8' });
-  assert.match(fixtureDiff, /diff --git a\/math\.js b\/math\.js/);
-  assert.match(fixtureDiff, /diff --git a\/test\.js b\/test\.js/);
-  const diffArtifact = fileURLToPath(new URL('../output/playwright/p2-10-vertical.diff',
-    import.meta.url));
+  assert.match(fixtureDiff, /diff --git a\/arithmetic\.js b\/arithmetic\.js/);
+  assert.match(fixtureDiff, /diff --git a\/arithmetic\.test\.js b\/arithmetic\.test\.js/);
+  const diffArtifact = artifactTag ?
+    join(repositoryRoot, 'output', 'playwright', `${artifactTag}-vertical.diff`) :
+    fileURLToPath(new URL('../output/playwright/p2-10-vertical.diff', import.meta.url));
   await writeFile(diffArtifact, fixtureDiff);
   assert.equal(git('rev-parse', 'HEAD'), sourceHead);
   assert.equal(git('status', '--porcelain'), '');
-  assert.equal(await readFile(join(source, 'math.js'), 'utf8'), 'export const add = (a, b) => a + b;\n');
+  assert.equal(await readFile(join(source, 'arithmetic.js'), 'utf8'), 'export const add = (a, b) => a + b;\n');
   successResult = { successRunId: runId, successSnapshotId: handoff.snapshot.snapshotId,
     runState: inspection.run.state, changed, sourceClean: true,
-    formalAcceptance: handoff.stepResult.acceptanceResults[0].status, screenshot,
+    acceptanceAtHandoff: handoff.stepResult.acceptanceResults[0].status, screenshot,
     diffArtifact };
   if (contextOnly) {
     const initialSources = await invoke(page, 'run', 'context.sources', {
       projectId: project.projectId, runId,
     });
-    assert.equal(initialSources.length, 1);
-    assert.equal(initialSources[0].status, 'current');
+    assert.equal(initialSources.length, memoryContext ? 2 : 1);
+    assert.ok(initialSources.every((item) => item.status === 'current'));
+    if (memoryContext) {
+      const list = await page.evaluate((projectId) => globalThis.forge.invokeMemory({
+        type:'list',payload:{projectId},
+      }), project.projectId);
+      const current = list.find((item) => item.memoryId === contextMemoryId);
+      assert.equal(current.status, 'validated');
+      const revokedMemory = await page.evaluate(({projectId,current}) =>
+        globalThis.forge.invokeMemory({type:'decide',payload:{projectId,
+          memoryId:current.memoryId,expectedRevision:current.revision,decision:'revoke',
+          reason:'Fixture owner withdrew this project convention.',confirmed:true,
+          decisionId:crypto.randomUUID()}}), {projectId:project.projectId,current});
+      assert.equal(revokedMemory.status, 'revoked');
+      const retrieval = await page.evaluate(({projectId,environmentId}) =>
+        globalThis.forge.invokeMemory({type:'retrieve',payload:{projectId,environmentId,
+          query:'start_date'}}),
+      {projectId:project.projectId,environmentId:project.environmentId});
+      assert.equal(retrieval.items.some((item) => item.memoryId === contextMemoryId),false);
+    }
     const revoked = await page.evaluate(({projectId,sourceId}) => globalThis.forge.invokeKnowledge({
       type: 'revoke', payload: { projectId, sourceId },
     }), {projectId:project.projectId,sourceId:contextSourceId});
@@ -452,26 +632,174 @@ try {
     const after = await invoke(page, 'run', 'context.sources', {
       projectId: project.projectId, runId,
     });
-    assert.equal(after[0].status, 'revoked');
+    assert.equal(after.length, memoryContext ? 2 : 1);
+    assert.ok(after.every((item) => item.status === 'revoked'));
     await page.getByRole('tab', { name: 'context' }).click();
     await page.getByText('历史 Run 输入已冻结', { exact: false }).waitFor();
     await page.getByText('retrieved_knowledge', { exact: false }).first().waitFor();
-    await page.screenshot({ path: fileURLToPath(new URL(
-      '../output/playwright/p5-11-context-source-desktop.png', import.meta.url)) });
+    await page.screenshot({ path: artifactTag ?
+      packagedScreenshot('context-source') :
+      fileURLToPath(new URL('../output/playwright/p5-11-context-source-desktop.png',
+        import.meta.url)) });
     assert.equal(git('status', '--porcelain'), '');
     console.log(JSON.stringify({stage:'p5-context-run-completed',runId,
       runState:inspection.run.state,sourceStatus:after[0].status,sourceClean:true}));
   }
-  if (process.env.FORGE_VERTICAL_VERIFY_ONLY === '1' || finalOnly) {
+  if (verifyRework) {
+    assert.ok(verifierPreset?.approvalHash);
+    const panel = page.locator('section[aria-label="验证报告"]');
+    await panel.getByRole('button', { name: '明确启动验证' }).click();
+    let firstJob;
+    for (let attempt = 0; attempt < 60 && !firstJob; attempt += 1) {
+      const jobs = await invoke(page, 'run', 'run.verifyJobs', {
+        projectId: project.projectId, taskId: draft.draftId,
+      });
+      firstJob = jobs.find((item) => item.developmentRunId === runId &&
+        item.snapshotId === handoff.snapshot.snapshotId);
+      if (!firstJob) await delay(200);
+    }
+    assert.ok(firstJob, 'Desktop Verify did not start a real Host job');
+    for (let attempt = 0; attempt < 100 && firstJob.state === 'running'; attempt += 1) {
+      await delay(300);
+      firstJob = await invoke(page, 'run', 'run.verifyJob', {
+        projectId: project.projectId, verificationId: firstJob.verificationId,
+      });
+    }
+    assert.equal(firstJob.state, 'completed', JSON.stringify(firstJob));
+    const failed = await invoke(page, 'run', 'run.verifyReport', {
+      projectId: project.projectId, verificationId: firstJob.verificationId,
+    });
+    assert.equal(failed.status, 'failed', JSON.stringify(failed));
+    assert.notEqual(failed.exitCode, 0);
+    assert.equal(failed.snapshotId, handoff.snapshot.snapshotId);
+    await panel.getByRole('button', { name: '刷新报告' }).click();
+    await panel.getByText('test · failed', { exact: false }).waitFor();
+    await page.screenshot({ path: packagedScreenshot('verify-failed') });
+    let cycle;
+    for (let attempt = 0; attempt < 80 && !cycle; attempt += 1) {
+      const cycles = await invoke(page, 'run', 'run.reworkCycles', {
+        projectId: project.projectId, taskId: draft.draftId,
+      });
+      cycle = cycles.find((item) => item.triggerReportId === failed.reportId);
+      if (!cycle) await delay(250);
+    }
+    assert.ok(cycle?.nextRunId, 'Failed Verify did not reserve a new Attempt');
+    assert.equal(cycle.triggerKind, 'verify');
+    assert.equal(cycle.cycleNo, 1);
+    const nextRunId = cycle.nextRunId;
+    let nextInspection;
+    for (let attempt = 0; attempt < 240; attempt += 1) {
+      await delay(1000);
+      nextInspection = await invoke(page, 'run', 'run.inspect', {
+        projectId: project.projectId, runId: nextRunId, afterCursor: 0, limit: 100,
+      });
+      if (['succeeded', 'failed', 'cancelled', 'interrupted'].includes(
+        nextInspection.run.state)) break;
+    }
+    assert.equal(nextInspection?.run.state, 'succeeded', JSON.stringify(nextInspection));
+    let nextHandoff;
+    for (let attempt = 0; attempt < 75 && !nextHandoff; attempt += 1) {
+      nextHandoff = await invoke(page, 'run', 'run.handoff', {
+        projectId: project.projectId, runId: nextRunId,
+      });
+      if (!nextHandoff) await delay(200);
+    }
+    assert.ok(nextHandoff?.snapshot && !nextHandoff.snapshot.noChange);
+    assert.notEqual(nextHandoff.snapshot.snapshotId, handoff.snapshot.snapshotId);
+    let secondJob;
+    for (let attempt = 0; attempt < 100 && !secondJob; attempt += 1) {
+      const jobs = await invoke(page, 'run', 'run.verifyJobs', {
+        projectId: project.projectId, taskId: draft.draftId,
+      });
+      secondJob = jobs.find((item) => item.developmentRunId === nextRunId &&
+        item.snapshotId === nextHandoff.snapshot.snapshotId);
+      if (!secondJob) await delay(300);
+    }
+    assert.ok(secondJob, 'Rework did not automatically re-run frozen Verify');
+    for (let attempt = 0; attempt < 100 && secondJob.state === 'running'; attempt += 1) {
+      await delay(300);
+      secondJob = await invoke(page, 'run', 'run.verifyJob', {
+        projectId: project.projectId, verificationId: secondJob.verificationId,
+      });
+    }
+    assert.equal(secondJob.state, 'completed', JSON.stringify(secondJob));
+    const passed = await invoke(page, 'run', 'run.verifyReport', {
+      projectId: project.projectId, verificationId: secondJob.verificationId,
+    });
+    assert.equal(passed.status, 'passed', JSON.stringify(passed));
+    assert.equal(passed.exitCode, 0);
+    assert.equal(passed.snapshotId, nextHandoff.snapshot.snapshotId);
+    const cyclesAfter = await invoke(page, 'run', 'run.reworkCycles', {
+      projectId: project.projectId, taskId: draft.draftId,
+    });
+    assert.equal(cyclesAfter.find((item) => item.cycleId === cycle.cycleId)?.state,
+      'succeeded');
+    const reworkWorkspace = join(dataDir, 'workspaces', 'trees',
+      nextHandoff.snapshot.workspaceId);
+    execFileSync('node', ['arithmetic.test.js'], { cwd: reworkWorkspace, timeout: 20_000 });
+    execFileSync('node', ['verify.js'], { cwd: reworkWorkspace, timeout: 20_000 });
+    assert.match(await readFile(join(reworkWorkspace, 'arithmetic.js'), 'utf8'),
+      /Forge numeric input required after verification/);
+    assert.equal(git('rev-parse', 'HEAD'), sourceHead);
+    assert.equal(git('status', '--porcelain'), '');
+    const beforeOwner = await boardSnapshot(page, project.projectId);
+    assert.notEqual(beforeOwner.tasks.find((item) => item.id === draft.draftId)?.state,
+      'done');
+    await page.reload();
+    const closeDrawer = page.getByRole('button', { name: '关闭抽屉' });
+    if (await closeDrawer.isVisible()) await closeDrawer.click();
+    await page.getByRole('button', { name: '研发看板' }).click();
+    await page.locator('.board-task').filter({ hasText: 'Validate add' }).click();
+    await page.getByText('已生成新快照', { exact: false }).waitFor({ timeout: 15_000 });
+    await page.screenshot({ path: packagedScreenshot('rework-passed') });
+    await desktop.close(); desktop = null;
+    desktop = await electron.launch({ executablePath: desktopExecutable,
+      args: desktopArgs, env: desktopEnv });
+    page = await desktop.firstWindow();
+    await page.getByRole('button', { name: 'Host connected' }).waitFor({ timeout: 20_000 });
+    const restored = await invoke(page, 'run', 'run.reworkCycles', {
+      projectId: project.projectId, taskId: draft.draftId,
+    });
+    assert.equal(restored.find((item) => item.cycleId === cycle.cycleId)?.state,
+      'succeeded');
+    assert.notEqual((await boardSnapshot(page, project.projectId)).tasks.find(
+      (item) => item.id === draft.draftId)?.state, 'done');
+    console.log(JSON.stringify({ stage: 'packaged-verify-auto-rework',
+      projectId: project.projectId, taskId: draft.draftId, firstRunId: runId,
+      firstSnapshotId: handoff.snapshot.snapshotId, failedReportId: failed.reportId,
+      cycleId: cycle.cycleId, nextRunId,
+      nextSnapshotId: nextHandoff.snapshot.snapshotId, passedReportId: passed.reportId,
+      sourceClean: true, taskNotDone: true,
+      screenshots: [packagedScreenshot('verify-failed'),
+        packagedScreenshot('rework-passed')] }));
+  }
+  if (!verifyRework && (process.env.FORGE_VERTICAL_VERIFY_ONLY === '1' || finalOnly)) {
     assert.ok(verifierPreset?.approvalHash);
     const verifyInput = {
       projectId: project.projectId, taskId: draft.draftId,
       developmentRunId: runId, expectedSnapshotId: handoff.snapshot.snapshotId,
       kind: 'test', presetId: verifierPreset.presetId, idempotencyKey: crypto.randomUUID(),
     };
-    const startedCheck = await invoke(page, 'run', 'run.verifyStart', verifyInput);
-    const replayed = await invoke(page, 'run', 'run.verifyStart', verifyInput);
-    assert.equal(replayed.verificationId, startedCheck.verificationId);
+    let startedCheck;
+    if (uiVerify) {
+      const panel = page.locator('section[aria-label="验证报告"]');
+      await panel.getByRole('button', {name:'明确启动验证'}).waitFor({timeout:15000});
+      await panel.getByRole('button', {name:'明确启动验证'}).click();
+      for (let attempt = 0; attempt < 30 && !startedCheck; attempt += 1) {
+        const found = await invoke(page, 'run', 'run.verifyJobs', {
+          projectId: project.projectId, taskId: draft.draftId,
+        });
+        startedCheck = found.find((item) => item.developmentRunId === runId &&
+          item.snapshotId === handoff.snapshot.snapshotId &&
+          item.presetId === verifierPreset.presetId);
+        if (!startedCheck) await delay(200);
+      }
+      assert.ok(startedCheck, 'Desktop Verify action did not create a Host Job');
+    } else {
+      startedCheck = await invoke(page, 'run', 'run.verifyStart', verifyInput);
+      const replayed = await invoke(page, 'run', 'run.verifyStart', verifyInput);
+      assert.equal(replayed.verificationId, startedCheck.verificationId);
+    }
     let check = startedCheck;
     for (let attempt = 0; attempt < 60 && check.state === 'running'; attempt += 1) {
       await delay(500);
@@ -567,14 +895,17 @@ try {
     });
     assert.equal(reports.length, 1);
     assert.equal(reports[0].snapshotId, handoff.snapshot.snapshotId);
-    if (savedReviewerProfile) {
-      const storedProfile = execFileSync('uv', [
-        '--directory', fileURLToPath(new URL('../python/', import.meta.url)),
-        'run', '--frozen', 'python', '-c',
-        "import sqlite3,sys,pathlib; p=pathlib.Path(sys.argv[1]); db=sqlite3.connect(p.as_uri()+'?mode=ro',uri=True); row=db.execute('SELECT profile_id,profile_revision FROM review_jobs WHERE review_run_id=?',(sys.argv[2],)).fetchone(); print((row[0] or '')+':'+str(row[1] or ''))",
+    if (savedReviewerProfile || customWorkflow) {
+      const storedProfile = execFileSync(packagedAcceptance ? 'python3' : 'uv', [
+        ...(packagedAcceptance ? [] : ['--directory', fileURLToPath(new URL('../python/', import.meta.url)),
+          'run', '--frozen', 'python']), '-c',
+        "import json,sqlite3,sys,pathlib; p=pathlib.Path(sys.argv[1]); db=sqlite3.connect(p.as_uri()+'?mode=ro',uri=True); row=db.execute('SELECT profile_id,profile_revision,model_id FROM review_jobs WHERE review_run_id=?',(sys.argv[2],)).fetchone(); print(json.dumps(row))",
         join(dataDir, 'forge.sqlite'), reviewJob.reviewRunId,
       ], { encoding: 'utf8', timeout: 15_000 }).trim();
-      assert.equal(storedProfile, `${savedReviewerProfile.id}:${savedReviewerProfile.revision}`);
+      assert.deepEqual(JSON.parse(storedProfile), [
+        savedReviewerProfile?.id ?? 'profile.fixture.workflow.reviewer',
+        savedReviewerProfile?.revision ?? 1, modelId,
+      ]);
     }
     assert.ok(reports[0].result, `Review has no structured result: status=${reports[0].status}, jobError=${reviewJob.errorCode ?? 'none'}`);
     assert.notEqual(reports[0].status, 'stale');
@@ -598,9 +929,135 @@ try {
       reviewStatus: reports[0].status, issueCount: reports[0].issues.length,
       snapshotId: reports[0].snapshotId, sourceClean: true,
       screenshot: reviewScreenshot }));
+    if (reviewRework) {
+      assert.equal(reports[0].status, 'changes_requested', JSON.stringify(reports[0]));
+      assert.ok(reports[0].reworkHandoff?.issues?.length);
+      const firstRunId = runId;
+      const firstSnapshotId = handoff.snapshot.snapshotId;
+      let cycle;
+      for (let attempt = 0; attempt < 120 && !cycle?.nextRunId; attempt += 1) {
+        const cycles = await invoke(page, 'run', 'run.reworkCycles', {
+          projectId: project.projectId, taskId: draft.draftId,
+        });
+        cycle = cycles.find((item) => item.triggerKind === 'review' &&
+          item.sourceSnapshotId === firstSnapshotId);
+        if (!cycle?.nextRunId) await delay(500);
+      }
+      assert.ok(cycle?.nextRunId, 'Review did not reserve a real rework Run');
+      runId = cycle.nextRunId;
+      let newInspection;
+      for (let attempt = 0; attempt < 480; attempt += 1) {
+        await delay(1000);
+        newInspection = await invoke(page, 'run', 'run.inspect', {
+          projectId: project.projectId, runId, afterCursor: 0, limit: 100,
+        });
+        if (['succeeded','failed','cancelled','interrupted'].includes(newInspection.run.state)) break;
+      }
+      assert.equal(newInspection?.run.state, 'succeeded', JSON.stringify(newInspection));
+      handoff = await invoke(page, 'run', 'run.handoff', {
+        projectId: project.projectId, runId,
+      });
+      assert.ok(handoff?.snapshot && !handoff.snapshot.noChange);
+      assert.notEqual(handoff.snapshot.snapshotId, firstSnapshotId);
+      let followupJob;
+      for (let attempt = 0; attempt < 240; attempt += 1) {
+        const jobs = await invoke(page, 'run', 'run.reviewJobs', {
+          projectId: project.projectId, taskId: draft.draftId,
+        });
+        followupJob = jobs.find((item) => item.developmentRunId === runId &&
+          item.snapshotId === handoff.snapshot.snapshotId);
+        if (followupJob && followupJob.state !== 'running') break;
+        await delay(1000);
+      }
+      assert.equal(followupJob?.state, 'completed', JSON.stringify(followupJob));
+      const followupReports = await invoke(page, 'run', 'run.reviewReports', {
+        projectId: project.projectId, taskId: draft.draftId,
+      });
+      const approvedReview = followupReports.find((item) => item.developmentRunId === runId &&
+        item.snapshotId === handoff.snapshot.snapshotId);
+      assert.equal(approvedReview?.status, 'approved', JSON.stringify(followupReports));
+      const reviewerLock = JSON.parse(execFileSync('python3', ['-c',
+        'import json,sqlite3,sys; c=sqlite3.connect(sys.argv[1]); rows=c.execute("SELECT development_run_id,profile_id,profile_revision FROM review_jobs WHERE task_id=? ORDER BY rowid",(sys.argv[2],)).fetchall(); print(json.dumps(rows))',
+        join(dataDir, 'forge.sqlite'), draft.draftId,
+      ], { encoding: 'utf8' }).trim());
+      assert.deepEqual(reviewerLock.map((item) => item.slice(1)), [
+        [savedReviewerProfile.id, savedReviewerProfile.revision],
+        [savedReviewerProfile.id, savedReviewerProfile.revision],
+      ]);
+      await page.reload();
+      await page.getByText('Review 与问题历史').waitFor({ timeout: 15_000 });
+      await page.locator('section[aria-label="有限返工记录"]').scrollIntoViewIfNeeded();
+      await page.screenshot({ path: packagedScreenshot('review-rework') });
+      assert.equal(git('rev-parse','HEAD'), sourceHead);
+      assert.equal(git('status','--porcelain'), '');
+      const startedCheck = await invoke(page, 'run', 'run.verifyStart', {
+        projectId: project.projectId, taskId: draft.draftId,
+        developmentRunId: runId, expectedSnapshotId: handoff.snapshot.snapshotId,
+        kind: 'test', presetId: verifierPreset.presetId,
+        idempotencyKey: crypto.randomUUID(),
+      });
+      let check = startedCheck;
+      for (let attempt = 0; attempt < 120 && check.state === 'running'; attempt += 1) {
+        await delay(500);
+        check = await invoke(page, 'run', 'run.verifyJob', {
+          projectId: project.projectId, verificationId: startedCheck.verificationId,
+        });
+      }
+      assert.equal(check.state, 'completed', JSON.stringify(check));
+      const checkReport = await invoke(page, 'run', 'run.verifyReport', {
+        projectId: project.projectId, verificationId: check.verificationId,
+      });
+      assert.equal(checkReport.status, 'passed', JSON.stringify(checkReport));
+      assert.equal(checkReport.exitCode, 0);
+      const matrixPanel = page.locator('section[aria-label="逐条验收矩阵"]');
+      await matrixPanel.getByRole('button', { name: '刷新真实证据' }).click();
+      await matrixPanel.getByLabel('当前快照报告（自动项验证必选）')
+        .selectOption(checkReport.reportId);
+      await matrixPanel.getByLabel('判断依据 / 未验证说明 / 风险接受原因').fill(
+        'The Reviewer approved the corrected snapshot and its real test report passed.');
+      await matrixPanel.getByRole('button', { name: '记录本快照的判断' }).click();
+      let final = await invoke(page, 'run', 'run.finalAcceptance', {
+        projectId: project.projectId, taskId: draft.draftId,
+      });
+      assert.equal(final.status, 'ready', JSON.stringify(final));
+      const finalPanel = page.locator('section[aria-label="人类最终验收"]');
+      await finalPanel.getByRole('button', { name: '重新读取交付' }).click();
+      await finalPanel.getByLabel('最终验收依据').fill(
+        'I checked the corrected snapshot, independent Review, test and AC evidence.');
+      await finalPanel.getByLabel('我已检查当前快照与报告，并明确接受这一交付。').check();
+      await finalPanel.getByRole('button', { name: '接受当前版本' }).click();
+      final = await invoke(page, 'run', 'run.finalAcceptance', {
+        projectId: project.projectId, taskId: draft.draftId,
+      });
+      assert.equal(final.status, 'accepted', JSON.stringify(final));
+      const delivery = await invoke(page, 'run', 'deliveries.get', {
+        projectId: project.projectId, taskId: draft.draftId,
+      });
+      assert.equal(delivery.snapshotId, handoff.snapshot.snapshotId);
+      assert.equal((await boardSnapshot(page, project.projectId)).tasks.find((item) =>
+        item.id === draft.draftId)?.state, 'done');
+      await finalPanel.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: packagedScreenshot('review-rework-accepted') });
+      await desktop.close(); desktop = null;
+      desktop = await electron.launch({ executablePath: desktopExecutable,
+        args: desktopArgs, env: desktopEnv });
+      page = await desktop.firstWindow();
+      await page.getByRole('button', { name: 'Host connected' }).waitFor({ timeout: 20_000 });
+      assert.equal((await boardSnapshot(page, project.projectId)).tasks.find((item) =>
+        item.id === draft.draftId)?.state, 'done');
+      assert.equal(git('status','--porcelain'), '');
+      console.log(JSON.stringify({ stage:'packaged-review-rework-accepted',
+        projectId: project.projectId, taskId: draft.draftId,
+        initialRunId: firstRunId, initialSnapshotId: firstSnapshotId,
+        initialReviewId: reports[0].reviewId, reworkRunId: runId,
+        newSnapshotId: handoff.snapshot.snapshotId,
+        followupReviewId: approvedReview.reviewId,
+        verificationId: checkReport.verificationId, deliveryId: delivery.deliveryId,
+        sourceClean: true, restoredState: 'done' }));
+    }
   }
   if (finalOnly) {
-    const current = await invoke(page, 'run', 'run.finalAcceptance', {
+    let current = await invoke(page, 'run', 'run.finalAcceptance', {
       projectId: project.projectId, taskId: draft.draftId,
     });
     assert.equal(current.status, 'ready', JSON.stringify(current));
@@ -609,6 +1066,131 @@ try {
     await finalPanel.getByRole('button', { name: '重新读取交付' }).click();
     await finalPanel.getByText(`快照 ${handoff.snapshot.snapshotId.slice(0,8)}`, { exact: false })
       .waitFor({ timeout: 15_000 });
+    if (ownerReturn) {
+      const originalRunId = runId;
+      const originalSnapshotId = handoff.snapshot.snapshotId;
+      await finalPanel.getByLabel('最终验收依据').fill(
+        'Reject this snapshot: make TypeError say Forge numeric input required and test that exact message.');
+      await finalPanel.getByLabel(
+        '我确认退回本快照，并启动一个独立的新开发 Attempt。').check();
+      await finalPanel.getByRole('button', { name: '退回并创建新 Attempt' }).click();
+      await finalPanel.getByText('当前快照已退回', { exact: false })
+        .waitFor({ timeout: 20_000 });
+      const returned = await invoke(page, 'run', 'run.finalAcceptance', {
+        projectId: project.projectId, taskId: draft.draftId,
+      });
+      assert.equal(returned.status, 'returned', JSON.stringify(returned));
+      assert.equal(returned.snapshotId, originalSnapshotId);
+      assert.ok(returned.decision?.nextRunId);
+      const boardWhileReturned = await boardSnapshot(page, project.projectId);
+      assert.notEqual(boardWhileReturned.tasks.find((item) =>
+        item.id === draft.draftId)?.state, 'done');
+      await finalPanel.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: packagedScreenshot('owner-returned') });
+      runId = returned.decision.nextRunId;
+      let nextInspection;
+      for (let attempt = 0; attempt < 240; attempt += 1) {
+        await delay(1000);
+        nextInspection = await invoke(page, 'run', 'run.inspect', {
+          projectId: project.projectId, runId, afterCursor: 0, limit: 100,
+        });
+        if (['succeeded', 'failed', 'cancelled', 'interrupted'].includes(
+          nextInspection.run.state)) break;
+      }
+      assert.equal(nextInspection?.run.state, 'succeeded', JSON.stringify(nextInspection));
+      let nextHandoff = null;
+      for (let attempt = 0; attempt < 75 && !nextHandoff; attempt += 1) {
+        nextHandoff = await invoke(page, 'run', 'run.handoff', {
+          projectId: project.projectId, runId,
+        });
+        if (!nextHandoff) await delay(200);
+      }
+      assert.ok(nextHandoff?.snapshot && !nextHandoff.snapshot.noChange);
+      assert.notEqual(nextHandoff.snapshot.snapshotId, originalSnapshotId);
+      handoff = nextHandoff;
+      const frozenRework = await invoke(page, 'run', 'run.config', {
+        projectId: project.projectId, runId,
+      });
+      assert.equal(frozenRework.workflow.id, workflowRef);
+      if (customWorkflow) {
+        assert.equal(frozenRework.developerProfile.id,
+          'profile.fixture.workflow.developer');
+      }
+      const reworkWorkspace = join(dataDir, 'workspaces', 'trees',
+        handoff.snapshot.workspaceId);
+      execFileSync('node', ['arithmetic.test.js'], { cwd: reworkWorkspace, timeout: 20_000 });
+      assert.match(await readFile(join(reworkWorkspace, 'arithmetic.js'), 'utf8'),
+        /Forge numeric input required/);
+      assert.match(await readFile(join(reworkWorkspace, 'arithmetic.test.js'), 'utf8'),
+        /Forge numeric input required/);
+      assert.equal(git('status', '--porcelain'), '');
+      const startedReworkCheck = await invoke(page, 'run', 'run.verifyStart', {
+        projectId: project.projectId, taskId: draft.draftId,
+        developmentRunId: runId, expectedSnapshotId: handoff.snapshot.snapshotId,
+        kind: 'test', presetId: verifierPreset.presetId,
+        idempotencyKey: crypto.randomUUID(),
+      });
+      let reworkCheck = startedReworkCheck;
+      for (let attempt = 0; attempt < 60 && reworkCheck.state === 'running'; attempt += 1) {
+        await delay(500);
+        reworkCheck = await invoke(page, 'run', 'run.verifyJob', {
+          projectId: project.projectId, verificationId: startedReworkCheck.verificationId,
+        });
+      }
+      assert.equal(reworkCheck.state, 'completed', JSON.stringify(reworkCheck));
+      const reworkReport = await invoke(page, 'run', 'run.verifyReport', {
+        projectId: project.projectId, verificationId: reworkCheck.verificationId,
+      });
+      assert.equal(reworkReport.status, 'passed', JSON.stringify(reworkReport));
+      assert.equal(reworkReport.exitCode, 0);
+      assert.equal(reworkReport.snapshotId, handoff.snapshot.snapshotId);
+      const reviewStart = await invoke(page, 'run', 'run.reviewStart', {
+        projectId: project.projectId, taskId: draft.draftId,
+        developmentRunId: runId, expectedSnapshotId: handoff.snapshot.snapshotId,
+        modelId, idempotencyKey: crypto.randomUUID(),
+      });
+      let reworkReview = reviewStart;
+      for (let attempt = 0; attempt < 240 && reworkReview.state === 'running'; attempt += 1) {
+        await delay(1000);
+        reworkReview = await invoke(page, 'run', 'run.reviewJob', {
+          projectId: project.projectId, reviewRunId: reviewStart.reviewRunId,
+        });
+      }
+      assert.equal(reworkReview.state, 'completed', JSON.stringify(reworkReview));
+      const reviews = await invoke(page, 'run', 'run.reviewReports', {
+        projectId: project.projectId, taskId: draft.draftId,
+      });
+      assert.equal(reviews.find((item) =>
+        item.developmentRunId === runId &&
+        item.snapshotId === handoff.snapshot.snapshotId)?.status, 'approved',
+      JSON.stringify(reviews));
+      await page.reload();
+      const matrixPanel = page.locator('section[aria-label="逐条验收矩阵"]');
+      await matrixPanel.getByRole('button', { name: '刷新真实证据' }).click();
+      await matrixPanel.getByLabel('当前快照报告（自动项验证必选）')
+        .selectOption(reworkReport.reportId);
+      await matrixPanel.getByLabel('判断依据 / 未验证说明 / 风险接受原因').fill(
+        'The returned attempt now tests the exact TypeError message on the new snapshot.');
+      await matrixPanel.getByRole('button', { name: '记录本快照的判断' }).click();
+      await matrixPanel.getByText('必需项均有逐条决定；仍需最终人工验收')
+        .waitFor({ timeout: 15_000 });
+      current = await invoke(page, 'run', 'run.finalAcceptance', {
+        projectId: project.projectId, taskId: draft.draftId,
+      });
+      assert.equal(current.status, 'ready', JSON.stringify(current));
+      assert.equal(current.snapshotId, handoff.snapshot.snapshotId);
+      assert.equal(git('status', '--porcelain'), '');
+      successResult = { ...successResult, successRunId: runId,
+        successSnapshotId: handoff.snapshot.snapshotId };
+      console.log(JSON.stringify({ stage: 'packaged-owner-return-rework',
+        originalRunId, originalSnapshotId, nextRunId: runId,
+        nextSnapshotId: handoff.snapshot.snapshotId,
+        verificationId: reworkReport.reportId,
+        reviewRunId: reworkReview.reviewRunId, sourceClean: true }));
+      await finalPanel.getByRole('button', { name: '重新读取交付' }).click();
+      await finalPanel.getByText('快照 ' + handoff.snapshot.snapshotId.slice(0,8),
+        { exact: false }).waitFor({ timeout: 15_000 });
+    }
     await finalPanel.getByLabel('最终验收依据').fill(
       'I inspected the exact current diff, approved Review, passing test and AC report.');
     await finalPanel.getByLabel('我已检查当前快照与报告，并明确接受这一交付。').check();
@@ -798,7 +1380,8 @@ try {
   }
   }
 
-  if ((packagedAcceptance || process.env.FORGE_VERTICAL_REVIEW_ONLY !== '1') &&
+  if (!ownerReturn && !verifyRework && !reviewRework &&
+      (packagedAcceptance || process.env.FORGE_VERTICAL_REVIEW_ONLY !== '1') &&
       process.env.FORGE_VERTICAL_VERIFY_ONLY !== '1' &&
       (packagedAcceptance || !finalOnly)) {
   if (!contextOnly) {
@@ -807,7 +1390,7 @@ try {
   const failureMessage = await invoke(page, 'conversation', 'conversation.send', {
     projectId: project.projectId, conversationId: conversation.conversationId,
     idempotencyKey: 'python-desktop-live-msg-02',
-    text: 'Run the fixture hold command and report what happened.', attachmentIds: [],
+    text: 'Run the fixture cancellation probe and report what happened.', attachmentIds: [],
   });
   const failureDraft = await invoke(page, 'draft', 'draft.manual', {
     projectId: project.projectId, conversationId: conversation.conversationId,
@@ -818,10 +1401,10 @@ try {
   const failureRef = `decision:${failureDecisionId}`;
   const failureContract = { ...contract, taskId: failureDraft.draftId,
     title: 'Trace provider failure',
-    goal: 'Run node hold.js in the isolated workspace. Wait for it to finish before doing anything else. Do not skip the command. After it finishes, add a comment to math.js.',
+    goal: 'Run node forge-cancel-probe.js in the isolated workspace. Wait for it to finish before doing anything else. Do not skip the command. After it finishes, add a comment to arithmetic.js.',
     acceptance: [{ id: 'AC-01', statement: 'Long command completes before edit',
       method: 'inspection', required: true, sourceRefs: [failureRef] }],
-    scope: ['hold.js', 'math.js'],
+    scope: ['forge-cancel-probe.js', 'arithmetic.js'],
     sourceRefs: [`message:${failureMessage.message.messageId}`, failureRef] };
   const failureRevised = await invoke(page, 'draft', 'draft.revise', {
     projectId: project.projectId, draftId: failureDraft.draftId, expectedRevision: 1,
@@ -960,9 +1543,9 @@ try {
     const ownedWorkspace = workspaces.find((item) => item.ownerRunId === failureRunId);
     assert.ok(ownedWorkspace, 'Run workspace ownership record is missing');
     const workspacePath = ownedWorkspace.rootPath;
-    const before = await readFile(join(workspacePath, 'math.js'), 'utf8');
+    const before = await readFile(join(workspacePath, 'arithmetic.js'), 'utf8');
     await delay(2_000);
-    assert.equal(await readFile(join(workspacePath, 'math.js'), 'utf8'), before,
+    assert.equal(await readFile(join(workspacePath, 'arithmetic.js'), 'utf8'), before,
       'Cancelled Run continued writing the workspace');
     const stopped = JSON.parse(await readFile(join(recordsDir,
       `${owned.processId}.json`), 'utf8'));

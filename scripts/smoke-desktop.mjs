@@ -57,7 +57,7 @@ try {
     processType: typeof window.process,
     ipcRendererType: typeof window.ipcRenderer,
   }));
-  assert.deepEqual(renderer.bridgeKeys, ['platform', 'hostStatus', 'hostHealth', 'pythonHostStatus', 'invokeSystem', 'inspectBundledPlugin', 'setBundledPluginEnabled', 'agentProfileCatalog', 'saveAgentProfile', 'invokeWorkflow', 'invokeKnowledge', 'invokeMemory', 'invokeDevicePairing', 'chooseProjectFolder', 'openAppPreview', 'prepareDiagnostics', 'exportDiagnostics', 'cleanupExpiredArtifacts', 'invokeProject', 'invokeConversation', 'invokeDraft', 'invokeApproval', 'invokeBoard', 'invokeRun', 'onConversationEvent', 'onHostStatus', 'onPythonHostStatus']);
+  assert.deepEqual(renderer.bridgeKeys, ['platform', 'hostStatus', 'hostHealth', 'restartPythonHost', 'pythonHostStatus', 'invokeSystem', 'inspectBundledPlugin', 'setBundledPluginEnabled', 'saveBundledPluginConfig', 'agentProfileCatalog', 'saveAgentProfile', 'invokeWorkflow', 'invokeKnowledge', 'invokeMemory', 'invokeDevicePairing', 'remoteLoopback', 'chooseProjectFolder', 'openAppPreview', 'prepareDiagnostics', 'exportDiagnostics', 'cleanupExpiredArtifacts', 'exportDatabaseBackup', 'databaseProfileStatus', 'restoreDatabaseBackup', 'returnToOriginalData', 'invokeProject', 'invokeConversation', 'invokeDraft', 'invokeApproval', 'invokeBoard', 'invokeRun', 'onConversationEvent', 'onHostStatus', 'onPythonHostStatus']);
   assert.equal(renderer.platform, process.platform);
   assert.equal(renderer.requireType, 'undefined');
   assert.equal(renderer.processType, 'undefined');
@@ -76,7 +76,7 @@ try {
   assert.equal(health.data.status, 'ready');
   assert.equal(health.data.protocolVersion, 'forge-host-protocol/v5');
   assert.equal(health.data.storage.status, 'ready');
-  assert.equal(health.data.storage.schemaVersion, 32);
+  assert.equal(health.data.storage.schemaVersion, 37);
   const pairing = await page.evaluate(() => window.forge.invokeDevicePairing({
     type: 'issue', payload: {},
   }));
@@ -100,15 +100,18 @@ try {
   assert.equal(health.data.version, '0.0.1');
   const plugin = await page.evaluate(() => window.forge.inspectBundledPlugin());
   assert.equal(plugin.pluginId, 'forge.executor.codex');
-  assert.equal(plugin.version, '0.0.2');
+  assert.equal(plugin.version, '0.0.3');
   assert.equal(plugin.compatible, true);
   assert.equal(plugin.active, true);
-  assert.deepEqual(plugin.configSchema.properties, {});
+  assert.equal(plugin.configRevision, 0);
+  assert.equal(plugin.configApplied, true);
+  assert.deepEqual(plugin.configSchema.properties.appServerInitializationTimeoutSeconds.minimum, 1);
   const agentCatalog = await page.evaluate(() => window.forge.agentProfileCatalog());
   assert.ok(agentCatalog.executors.some((item) => item.executorId === 'executor.codex'));
   assert.deepEqual(agentCatalog.executors.find((item) => item.executorId === 'executor.claude'), {
     executorId: 'executor.claude', available: false, modelIds: [],
-    readOnlyEnforced: false, networkPolicyEnforced: false, approval: false,
+    readOnlyEnforced: false, networkPolicyEnforced: false,
+    structuredOutput: false, approval: false,
     reason: 'CLAUDE_NOT_VERIFIED',
   });
   const codex = agentCatalog.executors.find((item) => item.executorId === 'executor.codex');
@@ -133,6 +136,22 @@ try {
   await page.getByRole('heading', { name: 'Agent Profiles' }).waitFor();
   await page.getByText('CLAUDE_NOT_VERIFIED').waitFor({ timeout: 30_000 });
   assert.match(await page.locator('.agents-panel').textContent(), /未配置\/未验收/);
+  if (codex.available && codex.modelIds.length) {
+    await page.locator('.agent-row').filter({ hasText: 'Smoke developer' })
+      .getByRole('button', { name: '编辑' }).click();
+    await page.getByLabel('最长运行时间（秒）').fill('420');
+    await page.getByRole('checkbox', { name: '允许启动新 Run 时显式检索项目知识与记忆' })
+      .uncheck();
+    await page.getByRole('button', { name: '保存新版本' }).click();
+    await page.getByText('Profile 版本已保存', { exact: false }).waitFor();
+    const edited = await page.evaluate(() => window.forge.agentProfileCatalog());
+    const developer = edited.profiles.find((item) => item.id === 'profile.smoke.developer');
+    assert.equal(developer?.revision, 2);
+    assert.deepEqual(developer.contextProviders, ['task-contract']);
+    assert.deepEqual(developer.limits, {
+      maxTurns: 8, maxSeconds: 420, maxOutputTokens: 4000,
+    });
+  }
   if (process.env.FORGE_AGENTS_SCREENSHOT) {
     await page.screenshot({ path: process.env.FORGE_AGENTS_SCREENSHOT });
   }
@@ -223,9 +242,9 @@ try {
   assert.equal(invalidWorkflow, true);
   await page.getByRole('button', { name: '插件' }).click();
   await page.getByRole('heading', { name: 'forge.executor.codex' }).waitFor();
-  assert.match(await page.locator('.plugins-panel').textContent(), /当前插件没有可编辑配置项/);
+  assert.match(await page.locator('.plugins-panel').textContent(), /Codex 启动握手等待/);
   if (process.env.FORGE_PLUGIN_SCREENSHOT) await page.screenshot({ path: process.env.FORGE_PLUGIN_SCREENSHOT });
-  await page.getByRole('button', { name: '工作台' }).click();
+  await page.getByRole('button', { name: '工作台', exact: true }).click();
   assert.ok(health.data.pid > 0);
   assert.match(health.data.hostId, /^[0-9a-f-]{36}$/);
   ownedPid = health.data.pid;
@@ -234,7 +253,7 @@ try {
   const pythonStatus = await page.evaluate(() => window.forge.pythonHostStatus());
   assert.equal(pythonStatus.health.runtime.python, health.data.runtime.python);
   assert.equal(pythonStatus.health.storage.status, 'ready');
-  assert.equal(pythonStatus.health.storage.schemaVersion, 32);
+  assert.equal(pythonStatus.health.storage.schemaVersion, 37);
   assert.equal(pythonStatus.health.transportVersion, 'forge-local-jsonrpc/v1');
   assert.equal(pythonStatus.health.pid, pythonStatus.info.pid);
   assert.equal(pythonStatus.info.pid, ownedPid);
@@ -247,13 +266,23 @@ try {
   assert.equal(diagnostics.Protocol, health.data.protocolVersion);
   assert.equal(diagnostics.PID, String(ownedPid));
   assert.equal(diagnostics.Storage, 'Ready');
-  assert.equal(diagnostics.Schema, '32');
+  assert.equal(diagnostics.Schema, '37');
   assert.equal(diagnostics['Python Version'], health.data.runtime.python);
   assert.notEqual(diagnostics['Last Health Check'], '—');
   const revisionBeforeRefresh = await page.evaluate(async () => (await window.forge.hostStatus()).revision);
   await page.getByRole('button', { name: '检查健康状态' }).click();
   await page.waitForFunction(async (previous) => (await window.forge.hostStatus()).revision > previous, revisionBeforeRefresh);
   await page.getByRole('button', { name: '关闭 Host 诊断' }).click();
+  await page.getByRole('button', { name: '设置' }).click();
+  await page.getByRole('heading', { name: '远程连接与设备' }).waitFor();
+  await page.getByText('尚无已配对设备').waitFor();
+  assert.match(await page.locator('.remote-devices').textContent(),
+    /本机浏览器预览未开启/);
+  if (process.env.FORGE_REMOTE_DEVICES_SCREENSHOT) {
+    await page.locator('.remote-devices').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: process.env.FORGE_REMOTE_DEVICES_SCREENSHOT });
+  }
+  await page.getByRole('button', { name: '工作台', exact: true }).click();
 
   const unknown = await page.evaluate(() => window.forge.invokeSystem({
     schemaVersion: '1.0', commandId: 'smoke-unknown', type: 'shell.any',
@@ -275,11 +304,27 @@ try {
   assert.equal(arbitraryRun.ok, false);
   assert.equal(arbitraryRun.error.code, 'VALIDATION_ERROR');
 
+  await page.getByRole('button', { name: '设置' }).click();
+  await page.getByLabel('界面主题').selectOption('dark');
+  await page.getByRole('switch', { name: '减少透明度' }).click();
+  await page.getByRole('switch', { name: '减少动效' }).click();
+  assert.equal(await page.locator('.app-shell').getAttribute('data-theme'), 'dark');
+  assert.equal(await page.locator('.app-shell').getAttribute('data-reduce-transparency'), 'true');
+  assert.equal(await page.locator('.app-shell').getAttribute('data-reduce-motion'), 'true');
   await page.reload();
   await page.getByRole('button', { name: 'Host connected' }).waitFor();
   const afterReload = await page.evaluate(() => window.forge.hostHealth());
   assert.equal(afterReload.data.hostId, health.data.hostId);
   assert.equal(afterReload.data.pid, ownedPid);
+  assert.equal(await page.locator('.app-shell').getAttribute('data-theme'), 'dark');
+  assert.equal(await page.locator('.app-shell').getAttribute('data-reduce-transparency'), 'true');
+  assert.equal(await page.locator('.app-shell').getAttribute('data-reduce-motion'), 'true');
+  await page.getByRole('button', { name: '设置' }).click();
+  assert.equal(await page.getByLabel('界面主题').inputValue(), 'dark');
+  await page.getByLabel('界面主题').selectOption('system');
+  await page.getByRole('switch', { name: '减少透明度' }).click();
+  await page.getByRole('switch', { name: '减少动效' }).click();
+  await page.getByRole('button', { name: '工作台', exact: true }).click();
 
   if (process.env.FORGE_SMOKE_SCREENSHOT) {
     await page.locator('.board-pane').evaluate((element) =>
@@ -483,8 +528,23 @@ try {
   await page.getByRole('button', { name: 'Host crashed' }).click();
   assert.equal(await page.locator('#host-diagnostics dd').first().textContent(), '—');
   await waitGone(crashPid);
+  await electronApp.evaluate(({ dialog }) => {
+    dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false });
+  });
+  await page.getByRole('button', { name: '重启本地 Host' }).click();
+  await page.getByText('已取消重启。').waitFor({ timeout: 10000 });
+  assert.equal((await page.evaluate(() => window.forge.hostStatus())).state, 'crashed');
+  await electronApp.evaluate(({ dialog }) => {
+    dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false });
+  });
+  await page.getByRole('button', { name: '重启本地 Host' }).click();
+  await page.getByRole('button', { name: 'Host connected' }).waitFor({ timeout: 15000 });
+  const restarted = await page.evaluate(() => window.forge.hostHealth());
+  assert.equal(restarted.ok, true);
+  assert.notEqual(restarted.data.hostId, beforeCrash.data.hostId);
+  assert.notEqual(restarted.data.pid, crashPid);
   console.log(JSON.stringify({ stage: 'crash-detected', pid: crashPid, state: afterCrash[0].state,
-    error: afterCrash[1].error.code }, null, 2));
+    error: afterCrash[1].error.code, restartedPid: restarted.data.pid }, null, 2));
 } finally {
   await electronApp.evaluate(({ dialog }) => {
     dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false });
