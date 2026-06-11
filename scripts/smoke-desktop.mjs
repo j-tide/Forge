@@ -50,7 +50,7 @@ try {
     processType: typeof window.process,
     ipcRendererType: typeof window.ipcRenderer,
   }));
-  assert.deepEqual(renderer.bridgeKeys, ['platform', 'hostStatus', 'hostHealth', 'invokeSystem', 'onHostStatus']);
+  assert.deepEqual(renderer.bridgeKeys, ['platform', 'hostStatus', 'hostHealth', 'pythonHostStatus', 'invokeSystem', 'inspectBundledPlugin', 'chooseProjectFolder', 'invokeProject', 'invokeConversation', 'invokeDraft', 'invokeApproval', 'invokeBoard', 'invokeRun', 'onConversationEvent', 'onHostStatus', 'onPythonHostStatus']);
   assert.equal(renderer.platform, process.platform);
   assert.equal(renderer.requireType, 'undefined');
   assert.equal(renderer.processType, 'undefined');
@@ -63,20 +63,42 @@ try {
   assert.equal(webPreferences?.sandbox, true);
 
   const health = await page.evaluate(() => window.forge.hostHealth());
+  if (!health.ok) console.error(JSON.stringify({ stage: 'host-health-failed', health,
+    status: await page.evaluate(() => window.forge.pythonHostStatus()) }));
   assert.equal(health.ok, true);
   assert.equal(health.data.status, 'ready');
-  assert.equal(health.data.protocolVersion, 'forge-host-protocol/v2');
+  assert.equal(health.data.protocolVersion, 'forge-host-protocol/v5');
   assert.equal(health.data.storage.status, 'ready');
-  assert.equal(health.data.storage.schemaVersion, 2);
+  assert.equal(health.data.storage.schemaVersion, 24);
   assert.equal(health.data.storage.journalMode, 'wal');
   assert.equal(health.data.runtime.platform, process.platform);
   assert.equal(health.data.runtime.arch, process.arch);
-  assert.equal(health.data.runtime.electron, '44.4.3');
+  assert.match(health.data.runtime.python, /^3\.12\./);
+  assert.equal(health.data.transportVersion, 'forge-local-jsonrpc/v1');
   assert.equal(health.data.version, '0.0.1');
+  const plugin = await page.evaluate(() => window.forge.inspectBundledPlugin());
+  assert.equal(plugin.pluginId, 'forge.executor.codex');
+  assert.equal(plugin.version, '0.0.1');
+  assert.equal(plugin.compatible, true);
+  assert.equal(plugin.active, true);
+  assert.deepEqual(plugin.configSchema.properties, {});
+  await page.getByRole('button', { name: '插件' }).click();
+  await page.getByRole('heading', { name: 'forge.executor.codex' }).waitFor();
+  assert.match(await page.locator('.plugins-panel').textContent(), /当前插件没有可编辑配置项/);
+  if (process.env.FORGE_PLUGIN_SCREENSHOT) await page.screenshot({ path: process.env.FORGE_PLUGIN_SCREENSHOT });
+  await page.getByRole('button', { name: '工作台' }).click();
   assert.ok(health.data.pid > 0);
   assert.match(health.data.hostId, /^[0-9a-f-]{36}$/);
   ownedPid = health.data.pid;
   assert.equal(alive(ownedPid), true);
+
+  const pythonStatus = await page.evaluate(() => window.forge.pythonHostStatus());
+  assert.equal(pythonStatus.health.runtime.python, health.data.runtime.python);
+  assert.equal(pythonStatus.health.storage.status, 'ready');
+  assert.equal(pythonStatus.health.storage.schemaVersion, 24);
+  assert.equal(pythonStatus.health.transportVersion, 'forge-local-jsonrpc/v1');
+  assert.equal(pythonStatus.health.pid, pythonStatus.info.pid);
+  assert.equal(pythonStatus.info.pid, ownedPid);
 
   await page.getByRole('button', { name: 'Host connected' }).click();
   const diagnostics = await page.locator('#host-diagnostics').evaluate((element) =>
@@ -86,7 +108,8 @@ try {
   assert.equal(diagnostics.Protocol, health.data.protocolVersion);
   assert.equal(diagnostics.PID, String(ownedPid));
   assert.equal(diagnostics.Storage, 'Ready');
-  assert.equal(diagnostics.Schema, '2');
+  assert.equal(diagnostics.Schema, '24');
+  assert.equal(diagnostics['Python Version'], health.data.runtime.python);
   assert.notEqual(diagnostics['Last Health Check'], '—');
   const revisionBeforeRefresh = await page.evaluate(async () => (await window.forge.hostStatus()).revision);
   await page.getByRole('button', { name: '检查健康状态' }).click();
@@ -95,16 +118,23 @@ try {
 
   const unknown = await page.evaluate(() => window.forge.invokeSystem({
     schemaVersion: '1.0', commandId: 'smoke-unknown', type: 'shell.any',
-    createdAt: new Date().toISOString(), protocolVersion: 'forge-host-protocol/v2', payload: {},
+    createdAt: new Date().toISOString(), protocolVersion: 'forge-host-protocol/v5', payload: {},
   }));
   assert.equal(unknown.ok, false);
   assert.equal(unknown.error.code, 'UNKNOWN_COMMAND');
   const forged = await page.evaluate(() => window.forge.invokeSystem({
     schemaVersion: '1.0', commandId: 'smoke-forged', type: 'system.ping',
-    createdAt: new Date().toISOString(), protocolVersion: 'forge-host-protocol/v2', payload: {}, actor: 'owner',
+    createdAt: new Date().toISOString(), protocolVersion: 'forge-host-protocol/v5', payload: {}, actor: 'owner',
   }));
   assert.equal(forged.ok, false);
   assert.equal(forged.error.code, 'VALIDATION_ERROR');
+  const arbitraryRun = await page.evaluate(() => window.forge.invokeRun({
+    schemaVersion: '1.0', commandId: crypto.randomUUID(), type: 'shell.execute',
+    createdAt: new Date().toISOString(), protocolVersion: 'forge-host-protocol/v5',
+    payload: { command: 'whoami' },
+  }));
+  assert.equal(arbitraryRun.ok, false);
+  assert.equal(arbitraryRun.error.code, 'VALIDATION_ERROR');
 
   await page.reload();
   await page.getByRole('button', { name: 'Host connected' }).waitFor();
@@ -142,6 +172,10 @@ try {
   assert.equal(degraded.data.storage.status, 'unavailable');
   assert.equal(degraded.data.storage.error.code, 'DATABASE_CORRUPT');
   assert.doesNotMatch(JSON.stringify(degraded), new RegExp(invalidDataDir));
+  const pythonDegraded = await page.evaluate(() => window.forge.pythonHostStatus());
+  assert.equal(pythonDegraded.health.storage.status, 'unavailable');
+  assert.equal(pythonDegraded.health.storage.error.code, 'DATABASE_CORRUPT');
+  assert.doesNotMatch(JSON.stringify(pythonDegraded), new RegExp(invalidDataDir));
   degradedPid = degraded.data.pid;
   await page.getByRole('button', { name: 'Host degraded' }).click();
   assert.match(await page.locator('#host-diagnostics').textContent(), /Storage\s*Unavailable/);
@@ -171,6 +205,13 @@ try {
   assert.equal(afterCrash[0].info, null);
   assert.equal(afterCrash[1].ok, false);
   assert.equal(afterCrash[1].error.code, 'HOST_EXITED');
+  const runAfterCrash = await page.evaluate(() => window.forge.invokeRun({
+    schemaVersion: '1.0', commandId: crypto.randomUUID(), type: 'run.list',
+    createdAt: new Date().toISOString(), protocolVersion: 'forge-host-protocol/v5',
+    payload: { projectId: crypto.randomUUID(), taskId: crypto.randomUUID() },
+  }));
+  assert.equal(runAfterCrash.ok, false);
+  assert.equal(runAfterCrash.error.code, 'HOST_EXITED');
   await page.getByRole('button', { name: 'Host crashed' }).click();
   assert.equal(await page.locator('#host-diagnostics dd').first().textContent(), '—');
   await waitGone(crashPid);
