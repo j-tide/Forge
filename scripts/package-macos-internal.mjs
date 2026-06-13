@@ -1,5 +1,6 @@
 /** Internal macOS artifact only. This script never uses a distribution identity or notarization. */
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { cp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,6 +38,8 @@ if (process.platform !== 'darwin' || process.arch !== 'arm64') {
   throw new Error('Internal macOS packaging has only been implemented and tested on darwin-arm64');
 }
 const appVersion = JSON.parse(await readFile(join(root, 'apps', 'desktop', 'package.json'), 'utf8')).version;
+const qaId = createHash('sha256').update(`${appVersion}:${artifactSuffix || 'base'}`)
+  .digest('hex').slice(0, 16);
 const pythonVersion = (await readFile(join(root, 'python', '.python-version'), 'utf8')).trim();
 if (!/^3\.12\.\d+$/.test(pythonVersion)) throw new Error('Expected a pinned CPython 3.12 patch version');
 const managedPython = run('uv', ['python', 'find', pythonVersion, '--managed-python',
@@ -74,13 +77,13 @@ const probe = run(join(pythonHome, 'bin', 'python3.12'),
   { env: { ...process.env, PYTHONHOME: pythonHome, PYTHONPATH: pythonPath } });
 if (!probe.startsWith(`${appVersion} `)) throw new Error(`Bundled Host version mismatch: ${probe}`);
 await writeFile(join(resources, 'FORGE_INTERNAL_TEST_BUILD'),
-  'Internal local QA artifact; never use this marker in a public release.\n');
+  `${JSON.stringify({ kind: 'internal-qa', qaId })}\n`);
 
 const plist = join(contents, 'Info.plist');
 await rename(join(contents, 'MacOS', 'Electron'), join(contents, 'MacOS', 'Forge'));
 for (const [key, value] of [
   ['CFBundleExecutable', 'Forge'],
-  ['CFBundleIdentifier', 'dev.forge.desktop'],
+  ['CFBundleIdentifier', `dev.forge.desktop.internal.${qaId}`],
   ['CFBundleName', 'Forge'],
   ['CFBundleDisplayName', 'Forge INTERNAL'],
   ['CFBundleShortVersionString', appVersion],
@@ -100,8 +103,9 @@ await rename(join(stage, appName), appPath);
 
 const notice = `Forge ${appVersion} — INTERNAL TEST BUILD\n\n`
   + 'Ad-hoc signed, not notarized. This is not a public macOS release.\n'
-  + 'Only use in an isolated test user profile. macOS may block opening it through Gatekeeper.\n'
-  + 'Removing Forge.app does not remove Forge user data under Application Support/Forge.\n'
+  + 'This QA build uses its own data profile under Application Support/Forge Internal QA.\n'
+  + 'macOS may block opening it through Gatekeeper.\n'
+  + 'Removing Forge.app does not remove its QA data under Application Support.\n'
   + 'No upgrade, rollback or credential migration claim is made by this artifact.\n';
 const dmgRoot = join(stage, 'dmg-root');
 await mkdir(dmgRoot, { recursive: true });
