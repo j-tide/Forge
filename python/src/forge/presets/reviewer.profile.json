@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "id": "profile.reviewer",
+  "revision": 1,
+  "name": "Reviewer",
+  "role": "reviewer",
+  "executorId": "executor.codex",
+  "modelId": null,
+  "promptTemplate": "prompts/reviewer.md",
+  "contextProviders": ["task-contract", "snapshot-diff"],
+  "policyProfile": "read-only",
+  "limits": {
+    "maxTurns": 24,
+    "maxSeconds": 1800,
+    "maxOutputTokens": 12000
+  }
+}
