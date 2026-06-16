@@ -51,3 +51,53 @@ Windows x64, macOS Intel, packaged Python/Codex, installer/signing/DPI,
 existing user DB migration, adversarial third-party plugin isolation and
 unattended recovery of historical orphan processes remain unverified.
 No source reference package, user repository or existing database is reset.
+
+## Accepted snapshot gate · 2026-09-26
+
+An Owner's final acceptance is bound to one Task contract revision and one
+CodeSnapshot. A later Review or Verify report on that same accepted pair could
+change the acceptance basis hash after the Owner signed it. The Python Host
+therefore rejects a **new** Review or Verify Job for an accepted pair with the
+existing stale-source error before starting a provider or project command.
+Both starts prepare an isolated copy asynchronously; Owner acceptance can
+occur during that preparation. Each start checks the same immutable decision
+again inside the Job-insert transaction and releases its owned temporary copy
+when the decision wins that race. A Job inserted first is visible as running
+to the acceptance gate, which refuses to sign while a report is pending.
+Idempotent retries of a previously created Job retain their existing result.
+The Desktop disables the Review start control for a Done Task and keeps
+historical reports readable. A controlled Task revision and a new snapshot
+still use the normal approval and evidence flow; an old acceptance does not
+authorize the new version. The gate reads the immutable final decision in the
+Host database; it does not trust Renderer state or `tasks.state`, since Done is
+projected from delivery evidence. No migration, new permission or workflow
+state was introduced.
+
+The same immutable acceptance fences new criterion decisions and advisory
+waivers for that snapshot. Either write would change the signed acceptance
+basis without new code. The Host checks the accepted tuple inside each write
+transaction; an exact idempotent retry of a previously committed decision
+still returns its prior outcome. The Desktop leaves the historical matrix and
+issues visible while hiding their write controls for a Done Task. A targeted
+tamper fixture still inserts a later criterion row directly into its disposable
+SQLite database to prove that delivery and Done projection reject altered
+evidence; this bypass is not a product command. No migration was required.
+
+If stored evidence is altered outside the public write path after acceptance,
+the old Owner signature cannot be silently reused. The Host marks the view
+`ACCEPTANCE_BASIS_CHANGED`, withholds Done and delivery, and refuses a second
+accept/return on the same snapshot. Desktop shows a specific integrity warning
+instead of offering another signature. This protects against accidental or
+external database modification without claiming to repair that database.
+
+Done is only a read projection. If accepted evidence is altered, that projection
+falls back to a blocked state with an explicit integrity reason, but the immutable Owner decision still owns
+the same Contract revision. The Python Host now checks that decision before
+starting a Development Run, while freezing a new Run configuration, and again
+inside the durable Run-intent transaction after asynchronous workspace setup.
+A controlled, approved Contract revision has a new revision number and may use
+the normal Run path; a changed projection alone cannot reopen the accepted
+revision. The Task drawer independently reads the Host's final-acceptance view
+before offering new Development, Review, Verify or criterion writes. If that
+view is unreadable, those controls fail closed while history stays visible.
+The Host transaction checks, not the Renderer controls, enforce this rule.

@@ -49,3 +49,14 @@ This work does not implement Claude. It does not extend Project Trust into
 tool approval, automatically approve operations, or make a Profile alone
 sufficient to start a Run. Windows x64, macOS Intel, packaged Python/Codex
 and real user database upgrade remain unverified.
+
+## 2026-09-27 角色身份保护补充
+
+Profile ID 指向同一 Agent 角色的不可变修订链。Host 在同一个 SQLite
+事务内核对前一版摘要、CAS revision 和 `role`；同 ID 跨角色保存返回
+`PROFILE_ROLE_MISMATCH`，而不是把 Planner、Refiner 或其他未知角色改作
+Developer。Planner/Refiner 只能声明真实只读权限；看板 `development` 列
+与 Workflow `plan` 节点不决定 Agent `role`。已有 Run 的 Profile hash
+仍按原 revision 解析，不迁移或重写旧快照。Desktop 编辑既有 Profile 时
+锁定角色选择；若要改变职责，用户需新建 Profile。未有确切来源证明的
+历史数据不做按名称猜测的自动修复。

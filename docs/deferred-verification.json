@@ -76,7 +76,7 @@
       "sourceTaskId": "P1-10",
       "status": "DEFERRED_VERIFICATION",
       "ownerTaskId": "P6-09",
-      "reason": "P2-08 提供取消/中断状态，P6-09 首次有完整 Agent 评测汇总，可确认 cancelled/interrupted 不计 pass。"
+      "reason": "同一 macOS arm64 内部包的真实 Codex Run 已分别产生 cancelled 和 Host 崩溃后的 interrupted；两个隔离 QA 库的只读评测均为 accepted=0。崩溃脚本首轮需限定 PID 处理真实原生退出确认，脚本已修但未重复在线全程；T120 无人值守回归、其他平台与 P6 发布评测仍待验。"
     },
     {
       "testId": "T041",
@@ -167,7 +167,7 @@
       "sourceTaskId": "P2-10",
       "status": "DEFERRED_VERIFICATION",
       "ownerTaskId": "P6-09",
-      "reason": "P2-10 真实取消独立保持 cancelled、没有快照交接；汇总评测中将 cancelled/interrupted 单列而不计 pass 需 P6-09 的评测统计。"
+      "reason": "同一 macOS arm64 内部包的真实 Codex Run 已分别产生 cancelled 和 Host 崩溃后的 interrupted；两个隔离 QA 库的只读评测均为 accepted=0。崩溃脚本首轮需限定 PID 处理真实原生退出确认，脚本已修但未重复在线全程；T120 无人值守回归、其他平台与 P6 发布评测仍待验。"
     },
     {
       "testId": "T116",
@@ -202,7 +202,7 @@
       "sourceTaskId": "P3-12",
       "status": "DEFERRED_VERIFICATION",
       "ownerTaskId": "P6-09",
-      "reason": "P3 已验证取消/中断不写成 Task Done；但在正式评测汇总中将 cancelled/interrupted 单列且不计 pass 要等 P6-09。"
+      "reason": "同一 macOS arm64 内部包的真实 Codex Run 已分别产生 cancelled 和 Host 崩溃后的 interrupted；两个隔离 QA 库的只读评测均为 accepted=0。崩溃脚本首轮需限定 PID 处理真实原生退出确认，脚本已修但未重复在线全程；T120 无人值守回归、其他平台与 P6 发布评测仍待验。"
     },
     {
       "testId": "T108",
@@ -251,35 +251,7 @@
       "sourceTaskId": "P4-10",
       "status": "DEFERRED_VERIFICATION",
       "ownerTaskId": "P6-09",
-      "reason": "当前 Run 取消/中断不计 Task Done；正式评测汇总将 cancelled/interrupted 单列且不计 pass 需 P6-09。"
-    },
-    {
-      "testId": "T029",
-      "sourceTaskId": "P5-01",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P6-09",
-      "reason": "P6-01 已在真实 Desktop 经只读 Host getPublished 显示两份不可变发布定义的逐字段差异，P5-05/11 已分别验证旧 RunConfig 锁仍指向旧版本；尚未在同一个端到端 fixture 中把已有 Run 与新发布版差异同时打开核对。完整 T029 留 P6-09 全功能 E2E，不把分段证据冒充整项 PASSED。"
-    },
-    {
-      "testId": "T029",
-      "sourceTaskId": "P5-02",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P6-09",
-      "reason": "P6-01 已在真实 Desktop 经只读 Host getPublished 显示两份不可变发布定义的逐字段差异，P5-05/11 已分别验证旧 RunConfig 锁仍指向旧版本；尚未在同一个端到端 fixture 中把已有 Run 与新发布版差异同时打开核对。完整 T029 留 P6-09 全功能 E2E，不把分段证据冒充整项 PASSED。"
-    },
-    {
-      "testId": "T029",
-      "sourceTaskId": "P5-03",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P6-09",
-      "reason": "P6-01 已在真实 Desktop 经只读 Host getPublished 显示两份不可变发布定义的逐字段差异，P5-05/11 已分别验证旧 RunConfig 锁仍指向旧版本；尚未在同一个端到端 fixture 中把已有 Run 与新发布版差异同时打开核对。完整 T029 留 P6-09 全功能 E2E，不把分段证据冒充整项 PASSED。"
-    },
-    {
-      "testId": "T029",
-      "sourceTaskId": "P5-04",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P6-09",
-      "reason": "P6-01 已在真实 Desktop 经只读 Host getPublished 显示两份不可变发布定义的逐字段差异，P5-05/11 已分别验证旧 RunConfig 锁仍指向旧版本；尚未在同一个端到端 fixture 中把已有 Run 与新发布版差异同时打开核对。完整 T029 留 P6-09 全功能 E2E，不把分段证据冒充整项 PASSED。"
+      "reason": "同一 macOS arm64 内部包的真实 Codex Run 已分别产生 cancelled 和 Host 崩溃后的 interrupted；两个隔离 QA 库的只读评测均为 accepted=0。崩溃脚本首轮需限定 PID 处理真实原生退出确认，脚本已修但未重复在线全程；T120 无人值守回归、其他平台与 P6 发布评测仍待验。"
     },
     {
       "testId": "T081",
@@ -349,28 +321,21 @@
       "sourceTaskId": "P7-05",
       "status": "DEFERRED_VERIFICATION",
       "ownerTaskId": "P7-07",
-      "reason": "P7-05 真实回环入口已拒绝客户端 actor/scopes 伪造，但计划写入因设备操作 grant 未存在而全部 403。须先完成权威写命令到 Python Host 的安全映射，并在 P7-07 用真实允许的敏感写请求证明 session actor 注入和伪造拒绝双路径。"
+      "reason": "P7-05 真实回环入口拒绝客户端 actor/scopes 伪造；获 Host 授权的 conversations.send 与 tasks.approve 已真实写入，后者按当前审批版本/范围原子进入 TODO。Run/最终接受等敏感写仍关闭；T091 全方法双路径及私网设备证据待补，不把两条方法记作全项通过。"
     },
     {
       "testId": "T092",
       "sourceTaskId": "P7-05",
       "status": "DEFERRED_VERIFICATION",
       "ownerTaskId": "P7-07",
-      "reason": "当前远端无获授权写入，无法真实验证同一幂等 key 不同 payload 返回 409 且原操作不变。P7-07 操作授权和 P7-05 生产写映射接通后补验。"
+      "reason": "P7-05 当前获授权的 conversations.send 与 tasks.approve 均有真实 HTTP→Host→SQLite 的持久回执/原命令重放；消息路径还验证同 key 不同 payload 409、跨 Host 重启重放。T092 对其余敏感写方法的完整覆盖随契约映射补验，不把局部证据扩展成全部方法通过。"
     },
     {
       "testId": "T093",
       "sourceTaskId": "P7-05",
       "status": "DEFERRED_VERIFICATION",
       "ownerTaskId": "P7-07",
-      "reason": "当前远端无获授权写入，无法真实验证并发相同 revision 只有一次提交。P7-07 操作授权与 CommandBus CAS 生产写映射接通后补验，不以全部拒绝代替冲突保护。"
-    },
-    {
-      "testId": "T094",
-      "sourceTaskId": "P7-05",
-      "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P7-06",
-      "reason": "T094 是过期事件游标重连与 resync_required；P7-05 没有 SSE 订阅。P7-06 建立事件流后用真实保留期游标补验。"
+      "reason": "conversations.send 已有真实 expectedRevision CAS；tasks.approve 两台设备的先后决策只提交一张 TODO。新增同一设备两条真实 HTTP tasks.revise 请求竞争同一个 Draft revision 2 的测试：一条 200、一条 409，只留下修订 3 和一份回执。该测试尚非两台真实手机私网同时更新已批准 Task 的完整场景；T093 原 ID 继续 DEFERRED_VERIFICATION，不把 Draft 并发测试扩展为全项通过。"
     },
     {
       "testId": "T085",
@@ -390,8 +355,8 @@
       "testId": "T097",
       "sourceTaskId": "P7-01",
       "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P7-06",
-      "reason": "设备撤销后在线 SSE 关闭与继续写 403 依赖 P7-03 设备记录、P7-04 session 与 P7-06 事件订阅；P7-01 无网络入口时无法执行。"
+      "ownerTaskId": "P7-10",
+      "reason": "P7-07 已通过真实本机 Host→SQLite 授权撤销及认证 loopback HTTP 第二设备 SSE 关闭、旧 cookie 写 403；完整 T097 仍需在 P7-10 用实际手机/私网 HTTPS 连接验证，不能把回环浏览器客户端冒充真机。"
     },
     {
       "testId": "T098",
@@ -404,8 +369,8 @@
       "testId": "T099",
       "sourceTaskId": "P7-01",
       "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P7-07",
-      "reason": "设备移除 Project scope 后旧缓存不能授予权限，首次依赖 P7-07 的每请求权限重新校验；P7-01 只管本地 Host 生命周期。"
+      "ownerTaskId": "P7-10",
+      "reason": "P7-07 已通过本机 Host 版本 CAS 缩权、真实 loopback HTTP 旧 Project 写 403 与 SSE 关闭，缓存身份不再授予权限；完整 T099 仍需 P7-10 的实际手机/私网 HTTPS 路径补验。"
     },
     {
       "testId": "T100",
@@ -425,8 +390,8 @@
       "testId": "T097",
       "sourceTaskId": "P7-02",
       "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P7-06",
-      "reason": "P7-02 没有设备会话或 SSE；撤销在线设备关闭流并拒写需 P7-03/04/06 的真实链路。"
+      "ownerTaskId": "P7-10",
+      "reason": "P7-07 已通过真实本机 Host→SQLite 授权撤销及认证 loopback HTTP 第二设备 SSE 关闭、旧 cookie 写 403；完整 T097 仍需在 P7-10 用实际手机/私网 HTTPS 连接验证，不能把回环浏览器客户端冒充真机。"
     },
     {
       "testId": "T098",
@@ -439,8 +404,8 @@
       "testId": "T099",
       "sourceTaskId": "P7-02",
       "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P7-07",
-      "reason": "P7-02 不暴露 Project 数据；设备 scope 缩小后的缓存拒绝要在 P7-07 每次请求重新校验时验证。"
+      "ownerTaskId": "P7-10",
+      "reason": "P7-07 已通过本机 Host 版本 CAS 缩权、真实 loopback HTTP 旧 Project 写 403 与 SSE 关闭，缓存身份不再授予权限；完整 T099 仍需 P7-10 的实际手机/私网 HTTPS 路径补验。"
     },
     {
       "testId": "T100",
@@ -460,8 +425,8 @@
       "testId": "T097",
       "sourceTaskId": "P7-03",
       "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P7-06",
-      "reason": "P7-03 只保存经本机批准的设备记录，尚无会话/SSE；在线撤销后流关闭及写入 403 要在 P7-06 具备事件流时验证。"
+      "ownerTaskId": "P7-10",
+      "reason": "P7-07 已通过真实本机 Host→SQLite 授权撤销及认证 loopback HTTP 第二设备 SSE 关闭、旧 cookie 写 403；完整 T097 仍需在 P7-10 用实际手机/私网 HTTPS 连接验证，不能把回环浏览器客户端冒充真机。"
     },
     {
       "testId": "T098",
@@ -474,8 +439,8 @@
       "testId": "T099",
       "sourceTaskId": "P7-03",
       "status": "DEFERRED_VERIFICATION",
-      "ownerTaskId": "P7-07",
-      "reason": "P7-03 已做本机批准时 Project ID 白名单；设备 scope 缩小后对旧 Project 的命令拒绝需要 P7-07 的远端逐请求授权。"
+      "ownerTaskId": "P7-10",
+      "reason": "P7-07 已通过本机 Host 版本 CAS 缩权、真实 loopback HTTP 旧 Project 写 403 与 SSE 关闭，缓存身份不再授予权限；完整 T099 仍需 P7-10 的实际手机/私网 HTTPS 路径补验。"
     },
     {
       "testId": "T100",
@@ -518,6 +483,111 @@
       "status": "DEFERRED_VERIFICATION",
       "ownerTaskId": "P7-07",
       "reason": "P7-04 会话承载经本机批准的 Project IDs，不授权业务操作；远端逐请求 scope 与节点权限交集到 P7-07 才能验证，不能将会话建立当作权限批准。"
+    },
+    {
+      "testId": "T101",
+      "sourceTaskId": "P8-01",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-05",
+      "reason": "P8-01 仅实现数据为空的移动布局和路由，不存在可缓存的真实审批。离线审批绝不排队的端到端测试属于 P8-05 移动审批实现；目前无私网 HTTPS/真机，不能标 PASSED。"
+    },
+    {
+      "testId": "T102",
+      "sourceTaskId": "P8-01",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-05",
+      "reason": "旧版本审批 409 和重新查看差异必须在 P8-05 正向审批入口、Host 版本校验接通后测试；当前布局没有审批操作。"
+    },
+    {
+      "testId": "T103",
+      "sourceTaskId": "P8-01",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-05",
+      "reason": "两台合法设备的真实并发审批需要 P7-05 原子批准命令及 P8-05 操作入口；P8-01 无审批数据和写入，不能用空页面替代。"
+    },
+    {
+      "testId": "T104",
+      "sourceTaskId": "P8-01",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-06",
+      "reason": "P8-01 已在 390×844 与 844×390 触屏横屏实际浏览器检查路由、52px 导航和焦点入口；中文长需求输入、保存与旋转后的数据保持需 P8-06 的真实聊天草稿入口。"
+    },
+    {
+      "testId": "T105",
+      "sourceTaskId": "P8-01",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-08",
+      "reason": "P8-01 不建立远端连接或 Start 队列；断线重连后 snapshot/cursor 和重复 Start 幂等属于 P8-08，当前未验证。"
+    },
+    {
+      "testId": "T101",
+      "sourceTaskId": "P8-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-05",
+      "reason": "P8-03 已在实际浏览器显示断线和带时间的只读快照，但没有批准按钮；断线点击批准不入重放队列须在 P8-05 正向审批入口后验收。"
+    },
+    {
+      "testId": "T102",
+      "sourceTaskId": "P8-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-05",
+      "reason": "旧版本审批 409、刷新并重新查看差异必须在 P8-05 移动批准命令接通后真实执行；只读列表不能代替。"
+    },
+    {
+      "testId": "T103",
+      "sourceTaskId": "P8-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-05",
+      "reason": "P8-03 的审批清单只读，双设备真正同时批准/拒绝及 UI 已处理反馈留 P8-05；已有 Host 顺序竞争证据不算该用例通过。"
+    },
+    {
+      "testId": "T104",
+      "sourceTaskId": "P8-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-06",
+      "reason": "P8-03 在 390×844 实际浏览器展示项目、审批、Task 并检查可读性；长中文输入、保存与横竖屏保持依赖 P8-06 手机消息草稿。"
+    },
+    {
+      "testId": "T105",
+      "sourceTaskId": "P8-03",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-08",
+      "reason": "P8-03 的断线只读显示通过；断流后的权威 snapshot/cursor 重建和重复 Start 幂等必须在 P8-08 受控运行操作后测试。"
+    },
+    {
+      "testId": "T101",
+      "sourceTaskId": "P8-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-05",
+      "reason": "P8-04 只读 Task 详情在断线时隐藏正文/Diff；断线点击移动批准且绝不后台重放需 P8-05 正向审批入口。"
+    },
+    {
+      "testId": "T102",
+      "sourceTaskId": "P8-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-05",
+      "reason": "P8-04 不执行批准；旧版本审批 409、刷新 scopeHash 并重新审阅差异须由 P8-05 实测。"
+    },
+    {
+      "testId": "T103",
+      "sourceTaskId": "P8-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-05",
+      "reason": "真实 Host 已有两设备顺序审批竞争证据，但移动双设备并发批准/拒绝和已处理反馈属于 P8-05。"
+    },
+    {
+      "testId": "T104",
+      "sourceTaskId": "P8-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-06",
+      "reason": "390×844 浏览器 Task 详情可读；长中文需求输入与方向切换后的草稿保持需 P8-06 的消息/修订入口。"
+    },
+    {
+      "testId": "T105",
+      "sourceTaskId": "P8-04",
+      "status": "DEFERRED_VERIFICATION",
+      "ownerTaskId": "P8-08",
+      "reason": "P8-04 断线会隐藏任务详情，旧 Diff cursor 返回 409；弱网重连后的权威快照与重复 Start 幂等仍需 P8-08。"
     }
   ]
 }

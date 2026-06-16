@@ -43,3 +43,30 @@ unsupported field types and raw secret input. An independent Python Host stdio
 test rejects plugin inspection parameters. No dependency, SQLite migration,
 remote adapter, third-party install or privileged credential capability was
 added.
+
+## Desktop completion addendum · 2026-09-27
+
+The original empty Codex Schema and read-only form were accurate for P4-04 at
+that time. The subsequent Desktop delivery requirement needs one real,
+permission-neutral setting to be saved and consumed by a new Run. Bundled Codex
+version 0.0.3 therefore declares only
+`appServerInitializationTimeoutSeconds` (integer 1–60, default 15). This is
+the app-server initialization handshake timeout, not an Agent run deadline,
+model choice, approval policy, sandbox level or credential.
+
+The Python Host alone stores a closed, size-bounded, version/content-locked
+record in its existing SQLite metadata. A revision check rejects stale edits.
+At Host start, the validated values are supplied to the bundled plugin through
+its public `PluginContext` and to each newly created Codex connection. A save
+requires an explicit Forge restart before new Run, Review or model-refinement
+jobs start; active jobs retain their existing adapter and are not rewritten.
+The fixed `plugin.setBundledConfig` Renderer bridge and Host method accept only
+that Schema and revision, preserving source checks and method whitelists.
+Invalid, stale or corrupt records fail closed and expose safe issue codes.
+
+Credential references remain unavailable for persistence until a trusted
+credential broker exists. Third-party plugin installation and arbitrary
+configuration are outside this addendum. The local change has no new package
+dependency, SQL migration, remote endpoint or permission. The full installed
+app save/restart check is tracked separately from the real app-server-process
+fixture so a package smoke cannot be mistaken for an online Codex run.

@@ -76,6 +76,102 @@
         "P7 security gates for authentication, device/project scope, approval freshness, CSRF and revocation must be implemented and tested before enabling remote control"
       ],
       "releaseGate": "P6-10 remains BLOCKED for full public guide and another-computer release verification; P7/P8 development does not authorize public network exposure, P6/P7/P8 release, or skipping remote security acceptance."
+    },
+    {
+      "blockedTaskId": "P7-05",
+      "allowedTaskId": "P7-06",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-25: finish all required product work; continue independent, security-preserving remote tasks while the full public write map is reconciled. This edge permits authenticated, project-filtered read/event SSE development; it does not treat the supported message and exact approval paths as P7-05 completion or permit an unmapped write.",
+      "preconditions": [
+        "P7-05 project/board/task HTTP reads use the real Python Host and persisted session project allowlist",
+        "closed public command envelope, actor forgery, unknown/local-only methods and malformed payloads are rejected by real loopback tests",
+        "all unmapped remote writes remain denied; supported message and exact approval writes use explicit Host grants, freshness/CAS and durable receipts, never an inferred pairing-wide right"
+      ],
+      "releaseGate": "P7-05 remains BLOCKED for Task revision, Run, final acceptance and other public writes; positive message/approval methods do not pass T091-T093 as a full suite. P7-06 cannot open private or public remote control, and P7 Phase Gate still requires safe full mapping and physical-device evidence."
+    },
+    {
+      "blockedTaskId": "P7-09",
+      "allowedTaskId": "P7-10",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-25: continue all required product development independent of missing physical-phone/private-network conditions while retaining exact remote security gates. This edge permits only a factual remote pilot guide and safety-preflight implementation, not gateway activation or P7 acceptance.",
+      "preconditions": [
+        "real loopback session expiry, SSE disconnect, bounded replay, device revoke and owned Host process exit/restart have isolated integration evidence",
+        "sequential two-device approval arbitration is tested, but a simultaneous remote approval race, actual sleep, private HTTPS and phone offline UI remain explicitly unverified",
+        "no public or private network listener is enabled by documentation or by this scheduling exception"
+      ],
+      "releaseGate": "P7-09 remains BLOCKED for true phone/HTTPS offline display, sleep and simultaneous two-device approval race. P7-10 cannot pass its security gate until those plus authorized private-network and physical-phone tests complete."
+    },
+    {
+      "blockedTaskId": "P7-10",
+      "allowedTaskId": "P8-01",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-25: implement the full required mobile product while external phone/private HTTPS conditions are pending. This exact edge permits a responsive, data-free mobile route/layout shell on the existing Web app, without a remote transport or a live action.",
+      "preconditions": [
+        "ordinary Web has no local Host bridge or project filesystem capability",
+        "mobile layout uses current Forge glass tokens and clearly shows unavailable until a trusted remote session exists",
+        "no mobile approval, Run command, pairing session or public network endpoint is enabled before P7-10 security gate"
+      ],
+      "releaseGate": "P7-10 and full P7 Phase Gate remain BLOCKED for private HTTPS, pairing/authorization and physical-device tests. P8-01 layout work cannot claim mobile functionality or pass P8 release acceptance."
+    },
+    {
+      "blockedTaskId": "P8-02",
+      "allowedTaskId": "P8-03",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-25: continue the full required product while missing private HTTPS/physical-phone conditions are tracked. This precise edge permits only read-only mobile inbox and task-list work over an already authenticated same-origin Host session; P8-02 pairing remains IN_PROGRESS.",
+      "preconditions": [
+        "P8-02 manual one-time claim, explicit Host approval, Secure/HttpOnly session readback and revoke have real isolated loopback browser evidence",
+        "P8-03 reads must derive Project scope from the current Host session, use fixed same-origin API paths, and never infer approval or online status from cached data",
+        "no remote write, private/public listener or phone support claim is enabled by the task order exception"
+      ],
+      "releaseGate": "P8-02 remains incomplete for QR, same Desktop Host pilot, private HTTPS and physical-phone pairing/expiry/revocation. P8-03 development cannot pass T101-T105, P7/P8 Phase Gate or a remote-product support claim."
+    },
+    {
+      "blockedTaskId": "P8-05",
+      "allowedTaskId": "P8-06",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-25: continue the full required mobile product while the P8-05 physical-phone/private-HTTPS/reject cases remain open. This exact edge permits only existing-conversation message reads and the already authorized task:draft message writer; it does not authorize draft creation, revision, approval bypass or offline command replay.",
+      "preconditions": [
+        "P8-05 exact Task approval has real isolated Host/SQLite/Chromium approve-to-TODO evidence with two-stage freshness confirmation and no automatic Start",
+        "conversations.send has real Host-scoped Project/device grant, revision CAS, CSRF and durable idempotent receipt evidence",
+        "unmapped Task draft/revise and other remote writes remain denied; no public/private listener or phone support claim is enabled"
+      ],
+      "releaseGate": "P8-05 remains IN_PROGRESS and P8-06 cannot pass T101-T105 or the P8 Phase Gate until physical phone/private HTTPS, complete approval semantics and actual mobile draft/revision/offline behavior are verified. P7-05 remains BLOCKED for the full remote write map."
+    },
+    {
+      "blockedTaskId": "P8-06",
+      "allowedTaskId": "P8-07",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-25: complete independent required P8 product work while P8-06 public draft/revision payloads lack lossless Host provenance. This exact edge permits static PWA shell install/cache and cache clearing only; it does not make incomplete mobile draft/revision or offline command replay acceptable.",
+      "preconditions": [
+        "P8-06 current mobile message writer is real Host-scoped, revision-bound and does not queue uncertain writes",
+        "P8-07 service worker intercepts only fixed same-origin GET static assets and navigation, never /v1 API, evidence, credentials or POST",
+        "P8-06 remains IN_PROGRESS and no private/public remote listener or phone support claim is enabled"
+      ],
+      "releaseGate": "P8-06 full draft/revision/offline message and P8-07 physical-device install/offline/revoke acceptance remain required; P7/P8 Phase Gates and remote release stay BLOCKED."
+    },
+    {
+      "blockedTaskId": "P8-07",
+      "allowedTaskId": "P8-08",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-25: continue all independent mandatory product work while private HTTPS and physical-phone conditions are unavailable. This exact edge permits authenticated reconnection and in-app notification-list development against current Python Host/SQLite; it does not pass P8-07 physical-device installation or cache acceptance.",
+      "preconditions": [
+        "P8-07 built static shell and bounded redacted summary have actual offline/revoke loopback browser evidence",
+        "P8-08 reconnect must reload authoritative snapshot and cursor, never infer command success from cached summary or SSE alone",
+        "no background push, command queue, automatic write replay, private/public listener or phone support claim is enabled"
+      ],
+      "releaseGate": "P8-07 remains IN_PROGRESS for private HTTPS/physical-device install and revocation. P8-08 development cannot pass T101-T105 or P8 Phase Gate without its own real reconnection evidence and later physical-phone security acceptance."
+    },
+    {
+      "blockedTaskId": "P8-09",
+      "allowedTaskId": "P8-10",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-26: complete all mandatory product development while the physical iOS/Android and authorized private HTTPS environment are unavailable. This exact edge permits a truthful PWA guide and typed future native capability boundary only; it does not permit v1.1 publication or declare phone acceptance.",
+      "preconditions": [
+        "P8-08 built mobile Web has real loopback Host/SQLite reconnect and in-app notification evidence, with no offline command replay",
+        "P8-10 browser capability adapter must report native push, secure storage and scanner unavailable until real implementations and permission gates exist",
+        "installation guidance must distinguish the local internal preview from an authorized private HTTPS phone deployment and cite current platform documentation"
+      ],
+      "releaseGate": "P8-09 remains BLOCKED for physical Safari/Chromium, network change, input/rotation, expiry and current/stale approval tests. P8-10 cannot pass v1.1 publication, T111-T115 or P8 Phase Gate without those results and the existing P7/P6 safety and distribution gates."
     }
   ]
 }

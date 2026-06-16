@@ -1,5 +1,32 @@
 # ADR 0073 — Internal macOS package and distribution gate
 
+## Internal QA isolation refinement · 2026-09-27
+
+The original explicit `FORGE_INTERNAL_TEST_HOME` override remains available to
+isolated smoke tests. For **new** internal ad-hoc bundles, the package script
+also writes a strict `internal-qa` marker with a build-specific 16-hex identity
+and assigns a matching `dev.forge.desktop.internal.<id>` bundle identifier.
+The packaged Main validates this marker before window/Host startup and, when
+no explicit test-home override is present, uses
+`Application Support/Forge Internal QA/<id>` as its `appData` root. A malformed,
+oversized or linked marker fails startup rather than selecting normal Forge
+data. The absence of the marker does not honor `FORGE_INTERNAL_TEST_HOME`; a
+public package retains the normal data path. This supersedes the earlier
+"marker and explicit path both required" QA behavior below for current
+internal builds only. Old artifacts and their databases are unchanged.
+
+The exact `desktop-finder-safe-final-20260927` DMG was mounted read-only,
+copied to a separate Applications path, ad-hoc signature checked, then started
+with macOS `open -n` **without** a special launcher or environment override.
+It kept a Main, sandboxed Renderer and its bundled Python Host running; its
+new isolated SQLite database reached schema 36 and `quick_check=ok` with zero
+projects/runs. This is a real local LaunchServices path in a multi-copy QA
+environment, not a fresh-user Gatekeeper or Developer ID/notarization test.
+An artifact suffix identifies the QA data namespace; reusing a suffix for a
+rebuild deliberately reuses that QA namespace, so test operators must assign
+a new suffix for an independent fixture. No existing QA or normal Forge data
+was migrated or deleted.
+
 Date: 2026-09-25
 Status: Internal package implemented; P6-06 distribution acceptance blocked
 
