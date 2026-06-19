@@ -3,6 +3,8 @@
 > **用途**：Forge 后续开发的单一可执行实施文档。<br>
 > **当前基线**：MIG-PY-01～09 在当前 macOS arm64 开发环境完成；Desktop 的唯一业务 Host 已切到 Python。P2-10 的 Python Host 纵向真实 Demo 与 P2 Phase Gate 已在 macOS arm64 开发路径通过；历史 Node 结果只作对照，跨平台与安装包仍未验证。<br>
 > **执行模型**：一次只实施一个权威 Task；Autopilot 启用时完成后由 `docs/forge-codex-autopilot-protocol.md` 决定自动继续。<br>
+> **当前完整交付目标（用户 2026-09-25 授权）**：权威任务图与已批准 ADR 中的全部必做产品范围均须落地并真实验收。内部 Demo、本机闭环和阶段报告是过程证据，不是停止条件；缺少签名、Claude 凭据或目标平台时只保留精确未验项，继续不依赖它们的工作。P9 等权威可选远期增强仍按原标记，不因本目标自动实施。用户入口、真实 Python Host 运行和验收证据须同时成立。<br>
+> **最新排期覆盖（2026-09-26）**：当前里程碑改为 Desktop 全部已确认功能实际可用。优先复核并补齐项目/环境、自然语言/任务、Run/看板、Review/Verify、Profile/Workflow、插件/工具、知识/记忆、安装体验；每项均需实现、桌面入口、Python Host 真实链路和对应版本证据。P7/P8 手机与远程新增开发从安全点后置，保留代码/历史状态/权威 ID 和安全门禁，未完成远程写继续拒绝。桌面里程碑报告后停止，不自动恢复 P7/P8。本优先级覆盖下文按 Phase 寻找下一 TODO 的排期规则，不改变权威任务图或正式发行验收。<br>
 > **项目边界**：ProofRun 与 Forge 当前完全独立，ProofRun 不进入 Forge 仓库、数据库、工作流或默认插件。未来如需接入，只能通过稳定的公开插件接口。<br>
 > **工程规格优先级**：
 >
@@ -35,8 +37,8 @@
    - planning
    - acceptance cases
 7. 检查 Git 状态和用户已有改动。
-8. 找到本文件中第一个 `Status: TODO` 且所有 `Depends on` 都是 `DONE` 的任务。
-9. 只实施这一项。
+8. 当前 Desktop 里程碑先从既有功能对应表找第一个尚无「实现、用户入口、真实运行、当前版本验收」四层证据的桌面缺口；其权威 Task 即使标为 DONE，仍须补齐真实缺口并记录，不改写历史结论。桌面缺口清零后才按权威图找第一个依赖满足的 `Status: TODO`。
+9. 一次只实施一个任务或可验证桌面缺口；手机/远程新增工作当前不入队。
 
 ## A2. Baseline
 
@@ -139,7 +141,7 @@ Not Implemented
 Next
 ```
 
-7. **停止，不自动执行下一任务。**
+7. Autopilot 启用时继续下一个可执行的权威必做任务；仅真实 Hard Stop 或全部独立工作已尽时交付剩余条件清单。
 
 ---
 
@@ -1774,6 +1776,8 @@ D-048.
 
 **Phase Gate:** 保持核心不变，给在线Windows/Mac主机增加受控远程入口。
 
+**当前排期后置（2026-09-26）**：用户要求先完成 Desktop。P7/P8 既有 DONE 是历史范围内结论，不回退；BLOCKED 保留真实安全/外部验收缺口；未完成且原为 IN_PROGRESS 的移动任务用现有 `DEFERRED` 状态记录优先级暂停。原 Task/Test ID、Depends on、Phase Gate 和 `docs/development-dependency-exceptions.json` 的历史精确授权不变，当前不据此继续手机/远程开发。未完成的远程写保持拒绝，默认不开公网或私网监听。Desktop 里程碑完成后停下报告，由用户决定何时恢复。
+
 ## P7-01 Host常驻模式
 
 **Status:** DONE
@@ -1880,7 +1884,7 @@ None; follow the authoritative task and referenced contracts.
 
 ## P7-05 Command HTTP适配
 
-**Status:** IN_PROGRESS
+**Status:** BLOCKED
 **Depends on:** P7-04
 **Module:** M19
 **Acceptance cases:** T091, T092, T093, T094, T095
@@ -1898,15 +1902,23 @@ None; follow the authoritative task and referenced contracts.
 
 D-049.
 
-2026-09-25：可选回环网关的 Project 列表、Board 和 Task 详情三个只读 GET 经真实 session、Project 白名单映射现有 Python Host CommandBus；Task URL 不含 Project 时只在获授权项目中查找。`POST /v1/commands` 按权威闭合 envelope/CSRF/actor 防伪校验，但因 P7-07 尚无设备操作 grant，所有计划写命令明确 403。未知/本机专属命令不得到达 Host。权威写命令名与当前 Host 本地方法和 payload 存在差异，不能直接重命名；T091–T093 成功写路径和 T094 SSE 游标未通过，P7-05 继续 IN_PROGRESS。详见 ADR 0079。P7-06 不因此视为依赖已满足。
+2026-09-25：可选回环网关的 Project 列表、Board 和 Task 详情三个只读 GET 经真实 session、Project 白名单映射现有 Python Host CommandBus；Task URL 不含 Project 时只在获授权项目中查找。`POST /v1/commands` 按权威闭合 envelope/CSRF/actor 防伪校验，但因 P7-07 尚无设备操作 grant，所有计划写命令明确 403。未知/本机专属命令不得到达 Host。权威写命令名与当前 Host 本地方法和 payload 存在差异，不能直接重命名；T091–T093 成功写路径仍未通过，P7-05 保持 BLOCKED。T094 已在 P7-06 用真实 HTTP 补验；详见 ADR 0079/0080。P7-06 只依据精确开发例外推进，不能将其视为 P7-05 通过。
+
+同日完整交付修订：已对 `conversations.send` 做无副作用的闭合字段映射，真实 HTTP 测试验证合法请求仍 403、错误字段 400、不兼容方法 403；并保留外层 expectedRevision/idempotencyKey 供将来的 Host 授权与 CAS 使用。其余公开写方法不得编造本地必填字段。P7-05 因尚无设备操作 grant 和正向写 CAS/幂等证据保持 BLOCKED；`docs/development-dependency-exceptions.json` 精确允许不依赖写入的 P7-06 只读 SSE 开发，不通过 P7-05 或 T091–T093。
+
+后续本轮增量（前两段是历史检查点）：schema34→35 原子命令回执使获得 `task:draft` 授权的真实设备可从 loopback HTTP 提交**仅含正文、空附件**的 `conversations.send`。Host 在同事务复查会话/CSRF/Project/scope、比较 conversation revision、写消息/失效事件/回执；同 key 同请求跨重启重放原回执，同 key 改内容、旧 revision、复用 command ID 返回 409。`GET /v1/commands/{commandId}` 仅向原设备在当前 Project 授权下提供原回执，供弱网不确定结果查询。未支持的附件 422，其他写包括 `tasks.approve` 仍拒绝，不暗自补 reason、snapshot 或 model。T092 的当前单方法场景有真实 HTTP 证据，T091 敏感写及 T093 两个同版本 Task 请求仍待补；P7-05 整体保持 BLOCKED。见 ADR 0079。
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
+
+最新增量：公开 `tasks.approve` 本身是批准决定，envelope 的 `expectedRevision` 和 body 的 `approvalId`/`scopeHash` 能无损形成当前本机批准语义（空 reason，拒绝仍须理由）。Python Host 在同一 SQLite 事务内重验会话、CSRF、设备当前 Project/`task:approve` 授权和审批新鲜度，提交 Approval、TODO 与设备专属持久回执；已完成命令仅向仍获授权的原设备重放。真实 loopback HTTP 与双设备隔离数据库测试覆盖批准进入 TODO、回执 GET/重放、第二设备重决策 409、旧版本/错 hash 409、缩权及撤销拒绝。其余公开写仍拒绝；真正同时提交的 Task revision CAS、私网 HTTPS/真机、完整 T091～T093 尚未通过，P7-05 继续 BLOCKED。前面关于批准仍拒绝的描述是实施历史。见 ADR 0079。
+
+CAS 补验：两个同版本、不同决定 ID 的 `tasks.revise` 真实 HTTP 请求在已授权的同一个 Draft 上并发；Host/SQLite 只提交一个版本 3 和一份回执，另一个 409。此证据不代替物理双设备私网更新已批准 Task 的完整 T093，也不打开 `runs.start/cancel` 或 `acceptance.decide`；P7-05 仍 BLOCKED。见 ADR 0079。
 
 ---
 
 ## P7-06 SSE增量订阅
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P7-05
 **Module:** M19
 **Acceptance cases:** T091, T092, T093, T094, T095
@@ -1926,11 +1938,13 @@ None; follow the authoritative task and referenced contracts.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25：Python Host schema32→33 增量迁移建立同事务、最小化、按 Project 过滤的远端事件索引；真实 Conversation/Draft/Approval/Run/Review/Verify/接受与 Board 变化可按 `p:<seq>` 订阅。可选本机认证 SSE 实施心跳、有限流寿命/写超时、单 Project scope、撤销/缩权关流、独立读限流与 8 流并发上限。真实 Host/SQLite/HTTP 覆盖旧库数据保留、重启、跨项目隔离、过期 cursor→权威 Board snapshot→新 cursor、重复事件不重放、撤销和并发上限；T094 当前协议集成路径通过，T091～T093 仍依赖 P7-05/07 正向写。完整 Python 194 pytest/Ruff/mypy、TS lint/typecheck/test/build、合同/任务图与 macOS arm64 Electron smoke/schema33 通过；见 ADR 0080。P7-06 的 loopback 协议范围 DONE，P7-05 正向写、私网 HTTPS/手机与 outbox 物理保留策略仍开放；下一项 P7-07。
+
 ---
 
 ## P7-07 远端权限与审批freshness
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P7-06
 **Module:** M20
 **Acceptance cases:** T096, T097, T098, T099, T100
@@ -1950,11 +1964,13 @@ D-052.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25：Python Host 的 schema33→34 给已配对设备增量增加默认空的操作 scope、policy revision 与缩权/撤销审计。只允许本机经显式配对确认授予操作；每次远端命令根据 Host session 重新读取设备、Project 与 scope。Host 本机 `devices.pair.narrow/revoke` 是闭合、版本化的子集缩小/全部撤销；撤销废止当前会话。`tasks.approve` 先比对真实 Approval ID、revision、scope hash、action digest、Draft 当前合同及到期时间；旧审批返回 409，敏感/未映射写入继续 403。真实 loopback HTTP 验证缩权后旧 Project 写命令 403、SSE 关闭，撤销后第二设备流关闭且旧 cookie 写 403；SQLite migration/重启/审计与严格 mypy/Ruff/pytest 通过。公开批准缺失 Host decision/reason，正向远端批准及 P7-05 其他写命令仍未授权/未验收；本 preflight 不是未来原子提交的替代。私网 HTTPS/真机 T097/T099 留 P7-10，P7-08 负责用户管理页面。见 ADR 0081。
+
 ---
 
 ## P7-08 远程连接管理页面
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P7-07
 **Module:** M20
 **Acceptance cases:** T096, T097, T098, T099, T100
@@ -1974,11 +1990,13 @@ D-049.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25：Desktop Settings 的正式 Vue/@forge/ui「远程连接与设备」入口读取 Python Host SQLite 的真实设备清单与有界授权审计，展示 Project/操作 grant、修订、未过期会话凭据数并明确其不等于在线状态；本 Desktop 未启动网关、无可分享 Host 地址/TLS 证书时如实显示。用户可用固定 Preload/Main/Host 命令把设备收窄只读、移除当前 Project 或撤销；撤销由 Main 原生确认，Host 版本 CAS/子集/审计负责最终判定。真实 Electron→Python Host→SQLite smoke 在独立临时 Project/数据库中通过 Project Trust、配对、有效会话、UI 只读、审计、撤销并检查 revision 3/会话 0；截图 `output/playwright/p7-08-remote-device-authorized-1440x900.png` 和空状态截图均来自实际应用。普通 Web 无 bridge 不读取本地设备。T096/T098 的真实手机私网 HTTPS 和 T100 离线 UI 仍待 P7-09/10/P8；P7-05 正向写仍 BLOCKED，不能把此页当远程执行可用证明。
+
 ---
 
 ## P7-09 弱网与Host崩溃测试
 
-**Status:** TODO
+**Status:** BLOCKED
 **Depends on:** P7-08
 **Module:** M24
 **Acceptance cases:** T116, T117, T118, T119, T120
@@ -1996,13 +2014,17 @@ D-049.
 
 None; follow the authoritative task and referenced contracts.
 
+2026-09-25 当前检查：真实 Host/SQLite/loopback HTTP 的 SSE 在 session 到期时断开且旧 cookie GET 401；正常 Host 停止给流 EOF 和权威 HTTP 503；测试单独启动的 Host+gateway 进程被精确 PID 终止后原 SSE EOF、端口拒绝，新 Host 读到原有配对/Project 的一致 Board。弱网重复提交可凭持久回执查询或同 key 重放；当前没有实际手机 UI、私网 TLS、sleep 场景或两个设备正向审批，因此 T100 和权威 P7-09 全项仍未验收，任务保持 BLOCKED；T116～T120 是评测模块引用，依原映射保留至 P9，不伪报本阶段通过。
+
+2026-09-26 双设备并发补验：隔离 Host/SQLite、两个各自配对且获得 `task:approve` 的设备经真实 loopback HTTP 同时提交同一新鲜审批，只有一方 `200` 创建 TODO，另一方 `409 REMOTE_APPROVAL_STALE`；胜者同命令重试返回原回执，败者不能读取胜者回执，库中恰好 1 Task/1 远端命令回执/0 Run。该用例不包含远端拒绝、实体双手机、私网 TLS、睡眠或断网，所以 P7-09 保持 BLOCKED，T100 与完整 Phase Gate 未通过。见 ADR 0079。
+
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
 ---
 
 ## P7-10 远程试用指南与安全闸门
 
-**Status:** TODO
+**Status:** BLOCKED
 **Depends on:** P7-09
 **Module:** M20
 **Acceptance cases:** T096, T097, T098, T099, T100
@@ -2030,7 +2052,7 @@ D-057.
 
 ## P8-01 移动App布局与路由
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P7-10
 **Module:** M21
 **Acceptance cases:** T101, T102, T103, T104, T105
@@ -2050,11 +2072,15 @@ D-053.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25：`apps/web/src/mobile/` 实现普通 Web 的独立小屏 Inbox 优先四栏导航、固定 hash 路由、全页任务详情不可用态；Desktop 仍使用原共享 UI。390×844 与触屏横屏 844×390 的真实浏览器渲染和截图、52px 底部目标、固定路由/恶意 ID 拒绝与 Vue 组件测试通过。此任务只收口布局/路由；T101–T105 的审批、输入、重连业务子项保留 `DEFERRED_VERIFICATION`，分别归 P8-05/06/08；P7-10 私网安全闸门不通过。
+
+2026-09-26 回归更正：安装版在不模拟触屏的 844×390 Chromium 中暴露显式 `/#/m/messages` 误切普通 Web 壳；先前异步切换前的输入断言不构成该场景验收。现已由显式手机路由保持 Companion，新增组件测试；`mobile-route-20260926` DMG 安装后实际横屏截图 `output/playwright/mobile-route-20260926-packaged-landscape-844x390.png` 显示长中文输入、键盘焦点、≥44px 底部导航且页面无横向溢出。实体手机与私网 HTTPS 仍未验证，不改变跨端业务用例状态。
+
 ---
 
 ## P8-02 设备连接与配对UI
 
-**Status:** TODO
+**Status:** DEFERRED
 **Depends on:** P8-01
 **Module:** M21
 **Acceptance cases:** T101, T102, T103, T104, T105
@@ -2074,11 +2100,15 @@ None; follow the authoritative task and referenced contracts.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25 当前开发范围：普通 Web 手机「连接」页新增同源安全网关探测、一次性代码和设备名称输入、人工 Desktop 确认等待/检查、Host 会话回读及显式本机会话撤销。配对 secret 只留页面内存，Host 会话只在 Secure/HttpOnly cookie，由真实响应决定连接标签；不保存到 local/sessionStorage。无网关时页面明确不可用，不向 Vite 或任意 Host 发跨源写。Vue transport/组件测试通过；真实 Chromium→独立 loopback Host/SQLite 的新构建从一次性 claim→批准前 pending→测试控制器本机显式批准→cookie 回读→刷新恢复→revoke→刷新失效通过，截图见 `output/playwright/p8-02-mobile-loopback-paired-390x844.png`。这不是同一 Desktop UI 确认或手机私网 HTTPS；扫码、真机证书/过期/撤销验收未完成，任务保持 IN_PROGRESS；T101–T105 全项继续 DEFERRED_VERIFICATION。
+
+2026-09-25 同实例增量：Desktop Settings 增加默认空权限的仅 `task:draft`/`task:approve` 选择和本机原生确认的 loopback 预览控制；Main 固定传构建后的 Web root，Python Host 自己绑定 `127.0.0.1`，默认不监听，退出关闭。真实 Electron→同一 Host/SQLite→浏览器 HTTP claim→Desktop claimed 审阅/批准→当前 cookie/Project/grant 回读和端口关闭通过；自动化代行本机点击，不是手机真机。截图 `output/playwright/p8-02-same-desktop-{preview,loopback}.png`。私网 HTTPS、扫码与真机验收仍待办，P8-02 保持 IN_PROGRESS。
+
 ---
 
 ## P8-03 待处理与任务列表
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P8-02
 **Module:** M21
 **Acceptance cases:** T101, T102, T103, T104, T105
@@ -2098,11 +2128,13 @@ D-054.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25 当前范围验收：认证 Host 的 Project、当前可决定的草稿审批、Board Task 使用固定同源只读路径；Task cursor 绑定 board revision，分页中变更返回 409。待处理优先显示审批及 Host 实际标记为 blocked 的 Task；项目可切换。浏览器在隔离 Host/SQLite 中读取真实审批与 TODO，停止 Host 后明确显示断线和上次确认时间，留只读快照、不执行或重放操作。真实 HTTP 两条任务翻页、旧 cursor、越权和 Web 组件测试通过。当前 Board 尚不产生 `awaiting_acceptance` 状态，完整交付待处理判断随 P8-05 实现；当前仅一条 Host 会话，Host 选择留 P8-02 的多 Host 连接边界；草稿澄清归 P8-06。T101–T105 原编号保留并按能力归属递延；私网 HTTPS/手机/P7 Gate 尚未验收，不能宣称远程产品完成。截图：`output/playwright/p8-03-mobile-host-{inbox,tasks}-390x844.png`。
+
 ---
 
 ## P8-04 移动任务详情与Diff摘要
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P8-03
 **Module:** M21
 **Acceptance cases:** T101, T102, T103, T104, T105
@@ -2122,11 +2154,13 @@ D-055.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25 当前只读范围验收：固定同源、经设备/Project 授权的 Task 详情包含目标、AC、真实 Run 活动和来自已保存 SQLite 报告的 Review/Verify/Owner/Delivery 元数据；历史证据明确不等于当前版本通过。最新 Run 的保存 Diff 经路径筛选与文本脱敏后按内容哈希 cursor 有界分页，旧 cursor 返回 409；没有文件 API、任意文件路径读取或手机执行命令。Vue 详情页折叠纯文本差异并能跳到文件名位置。真实进程在隔离 Git 工作区写出的 Diff 经重新启动的 Host 配对会话读取，活动也按 cursor 翻页；390×844 Chromium 连隔离 Host/SQLite 展示已批准真实 Task 的无 Run 空态，截图 `output/playwright/p8-04-mobile-task-detail-390x844.png`。有 Run 的 UI 分页在组件测试中验证，浏览器未用付费模型伪造一次完整开发；私网 HTTPS/真机仍未验。T101–T105 的审批、输入、重连跨任务部分分别递延 P8-05/06/08，P7/P8 Gate 保持 BLOCKED；此项 DONE 不授权下一项的远端写。
+
 ---
 
 ## P8-05 移动审批与危险确认
 
-**Status:** TODO
+**Status:** DEFERRED
 **Depends on:** P8-04
 **Module:** M21
 **Acceptance cases:** T101, T102, T103, T104, T105
@@ -2146,11 +2180,15 @@ None; follow the authoritative task and referenced contracts.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25 检查点（仍 IN_PROGRESS）：正式手机 Inbox 对当前 Host 授权的 Task 草稿新增固定审批详情、完整合同/权限/版本/范围/无代码快照审阅、确认前两次 freshness GET、显式最终确认、单条 `tasks.approve` POST、断网不排队及响应不明时仅手工查询原回执。真实隔离 Host/SQLite/Chromium 完成配对后批准→TODO→运行 0 次，Python/Web 契约与失败测试通过；截图见 `output/playwright/p8-05-approval-{review,confirm}-390x844.png` 与 `output/playwright/p8-05-approved-todo-390x844.png`。没有私网 HTTPS/真机/同一 Desktop 配对。T101、T102 有本地分层证据但端到端仍未过，T103 所说远端 reject 不在权威公开命令白名单，不能绕过 `remoteAllowed: false` 直接暴露本机 `approvals.decide`；T104 属 P8-06，T105 属 P8-08。其他 Run/Owner 写仍 403，P7-05 完整正向写和 P7/P8 Gate 继续 BLOCKED；详见 ADR 0079。
+
+2026-09-26 安装版局部 T101 补验：新 `policy-fence-20260926` DMG 内同一 Desktop/Host 配对本机 390×844 浏览器后，审批确认弹层断网使提交按钮不可用；联网恢复前后没有审批 POST，也没有自动排队/重放。仅在重新查看当前范围并再次人工确认后 Host 才将草稿转为 TODO，SQLite 为 1 TODO/0 Run。随后设备缩权与撤销也按 Host 权威策略生效。该实测不是实体手机/私网 HTTPS 的完整 T101，P8-05 保持 IN_PROGRESS。
+
 ---
 
 ## P8-06 移动聊天与修订草稿
 
-**Status:** TODO
+**Status:** DEFERRED
 **Depends on:** P8-05
 **Module:** M03
 **Acceptance cases:** T011, T012, T013, T014, T015
@@ -2170,11 +2208,21 @@ None; follow the authoritative task and referenced contracts.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25 安全的局部实施：精确开发依赖例外 `P8-05:P8-06` 只开放现有 Desktop 会话的 Project 级元数据查询，以及已经在 P7-05 映射、由 Host 每次验证 `task:draft`/CSRF/CAS/持久回执的空附件用户消息。构建后 390×844 浏览器与隔离 Host/SQLite 实际保存中文消息，`output/playwright/p8-06-mobile-message-{saved,receipt}-390x844.png` 为当前 Vue 截图；不自动运行模型、创建 Task 或重发不明结果。权威公开 `TaskCreateDraft`、`TaskRevise` 字段不足以无损提供当前 Python Host 所需来源消息、decisionId 和显式范围确认；这两种写继续 403，不猜测来源。离线跨页面消息草稿、澄清、草稿生成/修订及真机仍待实施/验证；P8-06 保持 IN_PROGRESS、P8-05 仍 IN_PROGRESS、P7-05/P8 Gate 保持阻塞。
+
+最新可验证增量（上一段为历史检查点）：手机可显式保存一条设备/项目/会话绑定、随会话到期的 `sessionStorage` 未提交消息草稿；离线可编辑但不排队/重放 Host 命令。公开 `tasks.createDraft` 仅在 Contract 来源为 Host 已保存的真实单条用户消息、决定来源为当前 `commandId` 且 Host 重新验证所属 Project/会话/`task:draft` 授权时创建人工 Draft。公开 `tasks.revise` 的真实 `reason` 和 `commandId` 进入修订历史；缺少确认字段的澄清解决、范围变化和验收删除继续拒绝。创建和修订都与设备专属回执同事务且可重启回读。构建后 390×844 浏览器真实写入一条消息、一个 Draft、两个版本，Task/Run 为零；截图 `output/playwright/p8-06-manual-draft-revision-390x844.png` 经视觉检查。手机页刷新后可通过固定有界 Host 草稿列表重新审阅并续修，实图 `output/playwright/p8-06-reopened-host-draft-revision-390x844.png`；私网 HTTPS/真机、自动整理、澄清解答及完整 T011～T015 不标通过；P8-06 仍 IN_PROGRESS、P7-05 仍 BLOCKED。ADR 0079/0082。
+
+后续有授权正文增量：手机现在通过固定 GET 在 Host 按 Project/会话/`task:draft` grant 读取至多 20 条真实用户或助手消息，按 sequence 向前分页，单条最长显示 4000 字并标明截断；工具/系统正文和附件不出 Host。断线、换设备/项目/会话清除页面内文字，纯文本渲染不执行消息中的 HTML。真实构建后的 390×844 Chromium/隔离 Python Host/SQLite 显示两条已保存的中文消息，[实际截图](../output/playwright/p8-06-mobile-host-message-history-390x844.png) 已目视核对；非法 cursor、越权、缺少操作 grant、分页、截断有真 HTTP/组件证据。该构建晚于 `product-progress-20260925` 包，但已包含在更新的 `product-history-cas-20260925` QA 包中；后者仅安装启动通过，手机页面未在安装版验收。真机私网 HTTPS、自动整理与澄清答案仍未通过，P8-06 状态不变。
+
+2026-09-26 会话失效增量：移动「消息」把 Host 文本请求绑定 Project/设备/会话 ID；会话消失或轮换立刻清除 Host 数据并丢弃迟到结果。同设备短暂断连保留未提交本机文字，但原会话若消失，不自动选首个其他会话作为发送目标。组件新增真实身份切换与迟到响应测试；Web 共 111 项、lint/typecheck/test/build 和 macOS arm64 Desktop smoke 通过。当前源码晚于最新 DMG；私网 HTTPS/真机、自动整理和澄清答案仍开放，P8-06 不改 DONE。
+
+2026-09-26 安装版横屏补验：`mobile-route-20260926` 的同一 Host/浏览器会话在 844×390 编辑未发送长中文消息，返回 390×844 并重载后原文本仍在，Host 没有收到该草稿或自动发送。`/#/m/messages` 始终是 Companion 页面；`pnpm smoke:package:mobile-local` 对真实 DMG 通过。此证据仅覆盖本机 Web 草稿和路由，不代替真机、澄清答复或远程业务验收。
+
 ---
 
 ## P8-07 PWA安装与缓存策略
 
-**Status:** TODO
+**Status:** DEFERRED
 **Depends on:** P8-06
 **Module:** M21
 **Acceptance cases:** T101, T102, T103, T104, T105
@@ -2194,11 +2242,15 @@ D-053.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25 本机 PWA/缓存检查点（仍 IN_PROGRESS）：精确 `P8-06:P8-07` 开发例外放行 Manifest/图标、构建静态 Worker 与不含标题/源码/凭据的有限只读数量摘要。真实 390×844 构建后浏览器与隔离 Host/SQLite 配对，离线重载显示标时摘要和 Host unavailable；Host 设备策略撤销后浏览器再联网自动清除 Forge 摘要/缓存/Worker，Host Project/Task 未删除。截图 `output/playwright/p8-07-redacted-offline-summary-scrolled-390x844.png`、`output/playwright/p8-07-host-revoked-cache-cleared-390x844.png`。Worker 不拦截 `/v1`、POST、证据或任意文件；没有私网 HTTPS/真机、手机草稿验收。P8-06/P8-07 保持 IN_PROGRESS，T101–T105 不因此标 PASSED；见 ADR 0082。
+
+2026-09-26 安装版补验：从 `remote-session-20260926` 原 DMG 实际安装的 Desktop 与同包 Python Host 配对本机浏览器，确有 `forge-shell-*` 缓存。Desktop 原生确认撤销后，手机布局页面自动清除已读 Host 消息、Forge 缓存与 Worker；旧 cookie 得到 `403 REMOTE_AUTH_REVOKED`，SQLite TODO 保留。截图 `output/playwright/remote-session-20260926-packaged-mobile-revoked-390x844.png` 已目视核对。该证据不等于实体 iOS/Android 的 PWA 安装、私网 HTTPS 或完整 T101～T105；P8-07 仍 IN_PROGRESS。
+
 ---
 
 ## P8-08 断线重连与通知入口
 
-**Status:** TODO
+**Status:** DEFERRED
 **Depends on:** P8-07
 **Module:** M21
 **Acceptance cases:** T101, T102, T103, T104, T105
@@ -2216,13 +2268,19 @@ D-053.
 
 D-056.
 
+2026-09-25 本机检查点（仍 IN_PROGRESS）：`@forge/client` 固定同源 SSE 在带设备会话的 Project 授权下消费持久 `p:<seq>` 失效事件；每次事件必须重新读取 Host Task/Approval 快照，`resync_required` 不可用旧游标冒充。Host 的站内通知固定路径只回最近 20 条已提交事件元数据，手机 Inbox 显式展开，不离线缓存或后台推送。构建后 390×844 Chromium/隔离 Host/SQLite 在线新增 TODO 自动刷新，离页后 Host 新增再打开显示权威列表，断网旧列表禁用操作、恢复联网后刷新；截图 `output/playwright/p8-08-mobile-notifications-390x844.png`、`p8-08-reopen-authoritative-tasks-390x844.png`。浏览器 `fetch` 绑定错误在真浏览器中发现并修复。私网 HTTPS、物理手机、弱网重复 Start 尚未验收；T101–T105 保留原编号/追踪，不标 PASSED；P7/P8 门禁不变，见 ADR 0080。
+
+2026-09-26：SSE 建连/无心跳有明确超时与中止，停止的旧连接不能报告在线或推进游标；站内通知失败不阻塞权威 Task/Approval 快照。客户端 11 项、Web 109 项和新 `remote-reconnect-20260926` 内部 DMG 的安装/本机跨端 smoke 通过；安装版未主动制造断流，真机/私网 HTTPS/重复 Start 仍未验，P8-08 保持 IN_PROGRESS。
+
+2026-09-26 策略修订增量：Host 会话读取返回数据库中的设备 `policyRevision`；本机浏览器 SSE 带原修订，Host 每次轮询复核，旧修订重连 403，手机重新取权威会话并清除旧 Host 读取。新 `policy-fence-20260926` 安装版通过同 Project 设备操作权限缩为只读的实测：手机仍显示会话已验证，先前读到的 Host 消息自动消失；之后撤销彻底断开。新包离线审批无 POST/重放也通过，详见 ADR 0081 与实施状态。真实代理弱网/重复 Start、物理手机和私网 HTTPS 仍未验，P8-08 不改 DONE。
+
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
 ---
 
 ## P8-09 iOS/Android浏览器实测
 
-**Status:** TODO
+**Status:** BLOCKED
 **Depends on:** P8-08
 **Module:** M24
 **Acceptance cases:** T116, T117, T118, T119, T120
@@ -2240,13 +2298,15 @@ Safari与Chromium、不同网络、输入法、横竖屏、登录过期。
 
 None; follow the authoritative task and referenced contracts.
 
+2026-09-26：本任务需要实体 iOS Safari/Android Chromium 与获授权的私网 HTTPS；当前只有 macOS arm64 安装包→同 Host 本机 390×844 Chromium 证据，不能替代真实手机、切网或旧审批测试。T116～T120 未标通过。依据用户完整产品目标保留 BLOCKED，并精确放行 P8-10 中独立的 PWA 指南和原生能力接口开发；本任务和 P8 Gate 的验收仍需实机。
+
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
 ---
 
 ## P8-10 v1.1发布与Capacitor预留
 
-**Status:** TODO
+**Status:** DEFERRED
 **Depends on:** P8-09
 **Module:** M23
 **Acceptance cases:** T111, T112, T113, T114, T115
@@ -2263,6 +2323,10 @@ None; follow the authoritative task and referenced contracts.
 ### Existing detailed guidance
 
 None; follow the authoritative task and referenced contracts.
+
+2026-09-26：仅通过 `P8-09:P8-10` 开发例外开始不依赖真机的指南与平台能力接口；公开 v1.1 发布、T111～T115 和 P8 Phase Gate 仍不可据此通过。
+
+`docs/mobile/pwa-user-guide.md` 记录当前仅本机回环可操作、未来手机安装的必要安全前提和官方浏览器安装步骤。`@forge/client` 的 `MobilePlatformBridge` 预留 push/secureStore/scanner，浏览器适配器真实报告三项不可用；移动「连接」页显示该状态。原生实现、系统推送、私网 TLS、实体手机和公开 v1.1 继续缺失，不能标本 Task DONE。
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 

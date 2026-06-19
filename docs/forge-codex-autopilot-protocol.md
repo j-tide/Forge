@@ -14,6 +14,8 @@
 
 任务 ID、名称、依赖与 Phase Gate 固定来自 `forge_spec_v1.0/planning/tasks.json` 和 `planning/phases.json`；Playbook 只承载这些权威 Task 的实施说明。
 
+> **2026-09-26 Desktop-first 排期覆盖**：用户已暂停 P7/P8 手机、Companion、设备配对、远程 HTTPS/命令与跨设备协作的新增工作，转为 Desktop 完整可用。此覆盖仅改变选下一项的顺序：先按既有 PDF 功能对应表逐一核验并修复桌面缺口，即使相关权威 Task 历史状态为 DONE。每项须有实现、正常桌面入口、Python Host 真实运行及当前版本验收；已有 Demo 不能代替整桌面验收。远程历史代码/测试/记录保留，未完成写继续拒绝，网络默认关闭。Desktop 里程碑完成后停止并报告，不自动恢复 P7/P8。Claude、Windows/Intel、签名/公证、真机等原验收与发布门禁不因排期而通过；既有开发依赖例外仅作历史授权，当前不据此选远程工作。
+
 > **2026-09-24 单执行器开发依赖放行**：用户仅授权 `P4-05 → P4-06` 和将来满足前提的 `P4-10 → P5-01` 两条开发排期例外，详见 [ADR 0052](decisions/0052-claude-sdk-api-key-gate.md) 与 `docs/development-dependency-exceptions.json`。P4-05 保持 BLOCKED，P4-10 的第二真实执行器验收不得伪造或标 PASSED，P4 完整 Phase Gate 和多执行器发布不得宣称通过。只允许 Codex 和执行器无关的 P4-06～09 / 后续 P5 工作；不借用订阅登录、不请求新凭据、不自动批准工具。此例外不改变权威 Depends on，也不允许一般性跳过 BLOCKED。
 
 > **2026-09-25 P6 限定开发排期放行**：用户明确授权 `P6-06 → P6-07`，在同一内部 macOS arm64 DMG 已真实安装、包内 Python Host 与隔离数据通过后，先补该安装包的真实业务验收，再进行不依赖 Developer ID/公证的 Windows 准备。该安装版完整 Codex/取消/重启闭环已执行；P6-06 仍 `BLOCKED`，T111–T113 不得标通过。P6-07 的 Windows x64 内部 staging/测试入口已准备，但无 Windows 环境或签名，正式验收仍 `BLOCKED`；用户本次授权的精确 `P6-07 → P6-08` 只覆盖离线签名元数据校验、隔离数据库迁移预演，不覆盖安装更新。后续每一条 P6 权威依赖边须单独核查、记录证据与限制，才可继续 P6-09～P6-10 的独立部分。不能跳过进程取消、权限、数据完整性、更新完整性等失败；P6 完整 Gate 与公开发布继续阻塞。详见 [ADR 0073](decisions/0073-internal-macos-package-and-distribution-gate.md)、[ADR 0074](decisions/0074-windows-internal-staging-and-platform-gate.md) 和 `docs/development-dependency-exceptions.json`。
@@ -22,7 +24,13 @@
 
 > P6-09 当前平台单 Codex/安装版适用验收有真实证据，但完整安全/平台/多执行器/评测用例仍 `BLOCKED`。精确 `P6-09 → P6-10` 只允许编写当前可用能力的内部安装、首次任务、恢复和限制说明，不允许宣布完整 v1.0、自动上传或发布；详见 `docs/p6-current-scope-acceptance.md`。
 
-> **2026-09-25 本地 Demo 先行与 P7/P8 开发放行**：用户新增精确 `P6-10 → P7-01` 开发排期例外，授权随后按权威顺序推进 P7/P8，但不使 P6-10/P6 Gate 通过。先交付由同一已验收 DMG 安装、使用独立项目/数据的常驻人工 Demo；桌面功能依用户给定 PDF 页清单逐项核对，缺口映射回权威 Task。P7/P8 默认关闭远程入口，只在 loopback 或明确授权私网验证；设备认证、项目隔离、审批版本、Origin/CSRF、撤销、离线不重放等失败不能以发布凭据例外跳过。手机真机需用户参与时先完成独立工程，再集中给操作清单。P9 不在本次授权范围；精确例外见 `docs/development-dependency-exceptions.json`。
+> **2026-09-25 完整产品交付目标**：用户已将执行范围扩展为权威任务图、已批准 ADR 和产品介绍中全部必做功能，取代“先交 Demo/到阶段即停”的范围限制。已有 `P6-10 → P7-01` 等精确开发例外仍保留其历史证据和发布限制；不将 BLOCKED 改成 DONE。每次处理一个任务或可验证缺口，过关即继续；P9 等权威可选远期增强不自动纳入。缺少 Claude 凭据、正式签名、公证或目标平台时继续独立工作，集中记录用户条件，绝不伪造验收。远程入口默认关闭，只在 loopback 或明确授权私网验证；认证、项目隔离、审批新鲜度、Origin/CSRF、撤销和离线不重放不能递延后开放控制。
+
+> **P7/P8 精确开发边界**：`docs/development-dependency-exceptions.json` 列出当前每条获授权的具体依赖边和实际前提；不得从某条例外推导其他 BLOCKED 任务已经完成。P8-01 布局、P8-02 本机回环配对以及后续移动页面的既有代码证据均不等于 P7-10 私网 HTTPS、安全闸门、实体手机或 T101–T105 已通过。每条新增正向能力仍须核对真实身份、Project/操作授权、版本新鲜度、CSRF、撤销与离线不重放。
+
+> **2026-09-26 P8-09 → P8-10 精确开发例外**：实体 iOS/Android 与私网 HTTPS 尚未提供，P8-09 保持 BLOCKED。用户完整交付授权只允许提前制作准确的 PWA 使用指南与未来 push/secureStore/scanner 的类型化接口；浏览器实现必须报告这些原生能力不可用。它不允许发表 v1.1、把本机 Chromium 当真机、绕过远程安全闸门或把 T111–T115 标为通过。
+
+> **2026-09-25 P8-02 → P8-03 精确只读开发例外**：P8-02 的手工一次性 claim、显式本机 Host fixture 批准、cookie 会话和撤销已在独立 loopback 浏览器验证，但 QR、同一 Desktop UI、私网 HTTPS 与真机仍未验收。仅允许 P8-03 使用当前真实会话的同源 Project/审批/Task 只读列表和断线快照；不允许由此开启远端写、公开网络、P7/P8 Phase Gate 或 T101–T105。当前 P8-03 的该范围已有真实证据，P8-02 仍 IN_PROGRESS。
 
 > **Python Core 迁移覆盖已完成**（用户于 2026-09-24 明确批准）：MIG-PY-01～09 已在 macOS arm64 的 Python-only Desktop 开发路径真实验证。P2-10 的 Python 纵向验收与 P2 Phase Gate 已通过当前阶段范围；Autopilot 回到权威产品任务图，继续 P3。旧 Node Host 只作历史对照，不是业务 fallback。此记录不更改权威 Task/Test ID、产品语义或安全规则。
 
@@ -81,7 +89,9 @@ git status --short
 
 ## STEP 2 — Select Next Task
 
-从 Playbook 中寻找：
+当前 Desktop 里程碑先读取 `docs/pdf-feature-operation-map.md`，从 A～H 桌面功能中找第一个缺少真实实现、用户入口、Python Host 运行或当前版本验收证据的缺口。优先检查自定义 Workflow 修正后复验、知识/记忆进入实际 Run、Profile/模型/插件对新 Run 的作用、安装版与源码一致性；沿已有权威 Task/Test 映射补齐，保留原 DONE 历史状态及新的缺口说明。一个缺口真实验证后继续下一个。P7/P8 手机/远程新增工作当前不选。
+
+桌面缺口清零且用户以后恢复远程排期时，才按 Playbook 寻找：
 
 1. `Status: TODO`
 2. 所有 `Depends on` 均为 `DONE`
@@ -106,6 +116,8 @@ git status --short
 ## STEP 3 — Mark IN_PROGRESS
 
 开始真正修改代码前：
+
+若当前为 Desktop 历史 DONE 任务的产品缺口，保持该任务原状态，改在 `docs/forge-autopilot-state.md` 与功能对应表记录「Desktop 缺口进行中」及对应权威 Task/Test；不得回退历史任务状态或宣称缺口已验。下列 TODO→IN_PROGRESS 只用于新权威任务。
 
 将当前任务：
 
@@ -541,9 +553,9 @@ Resume command:
 
 Autopilot 持续运行，直到：
 
-- P8 所有非 DEFERRED Task 均 DONE，且每个 Phase Gate 均通过；或
+- 权威任务图与已批准产品范围中的所有必做功能，在实现、用户入口、真实运行和适用验收四层均完成，所有必需 Phase Gate 真实通过；或
 - 用户主动停止；或
-- 触发 Hard Stop；或
+- 触发 Hard Stop，且所有独立可执行工作均已完成；此时集中交付所需用户条件与剩余待办，不能报告完整交付；或
 - 平台强制结束。
 
-权威 `planning/tasks.json` 中的 P8 是手机 PWA Companion，属于正常任务链；P9 才是可选增强，默认 DEFERRED，不自动实施，除非用户后续明确开启。
+权威 `planning/tasks.json` 中的 P8 手机 PWA Companion 属于必做任务链；P9 才是可选增强，默认 DEFERRED，不自动实施，除非用户后续明确开启。内部 Demo 或局部 macOS 闭环不能替代上述完成条件。
