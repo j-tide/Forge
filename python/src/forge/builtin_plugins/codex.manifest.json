@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "id": "forge.executor.codex",
+  "version": "0.0.1",
+  "forgeApiRange": "^1.0.0",
+  "entry": "codex.py",
+  "execution": "bundled-trusted",
+  "contributes": {
+    "executors": ["executor.codex"],
+    "modelProviders": [],
+    "contextProviders": [],
+    "tools": [],
+    "verifiers": [],
+    "viewTypes": []
+  },
+  "requires": ["process.v1"],
+  "requestedPermissions": ["workspace.read", "workspace.write", "process.spawn"],
+  "configSchema": "codex.config.schema.json",
+  "supportedPlatforms": ["darwin-arm64"]
+}

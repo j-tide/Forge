@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0",
+  "plugins": [
+    {
+      "id": "forge.executor.codex",
+      "version": "0.0.1",
+      "files": {
+        "codex.manifest.json": "3073f84eabbbd66c44e37fc3689d67cb62cacd655123125d35165c9d0fd7cbe1",
+        "codex.py": "5d61884ea900a2d21bdea50f5bb69b2f78761c47f7791282531615e6bdc1739c",
+        "codex.config.schema.json": "91e1556fb053be7728bab4ce7b2823ca64807c5ffa117a3e8fbba79c683a2344"
+      },
+      "contentHash": "93f7a6313303e4e9e37c6835dfcfcc2ba8aeee3be4d6a5feb4ca7d05b7e1d26c"
+    }
+  ]
+}
