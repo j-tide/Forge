@@ -114,6 +114,8 @@ async function start(): Promise<void> {
       let data: ProjectCommandResult & { ok: true } extends { data: infer T } ? T : never;
       switch (command.type) {
         case 'project.probe': data = await projects.probe(command.payload.rootPath); break;
+        case 'project.reprobe': throw new ProjectError('VALIDATION_ERROR',
+          'The legacy Node Host does not provide trusted project re-probe');
         case 'project.create': data = await projects.create(command.payload.rootPath, command.payload.fingerprint,
           command.payload.trustVersion, command.payload.approved, command.payload.expectedRevision); break;
         case 'project.list': data = projects.list(); break;

@@ -40,6 +40,9 @@ for (const [name, mutate, expected] of [
 for (const [blocked, allowed] of [
   ['P6-06', 'P6-07'], ['P6-07', 'P6-08'], ['P6-08', 'P6-09'], ['P6-09', 'P6-10'],
   ['P6-10', 'P7-01'],
+  ['P7-05', 'P7-06'],
+  ['P7-09', 'P7-10'], ['P7-10', 'P8-01'], ['P8-02', 'P8-03'],
+  ['P8-06', 'P8-07'], ['P8-07', 'P8-08'], ['P8-09', 'P8-10'],
 ]) test(`${blocked} to ${allowed} scheduling exception is exact and cannot release`, () => {
   const dir = mkdtempSync(join(tmpdir(), 'forge-development-dependency-exception-'));
   try {

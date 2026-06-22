@@ -102,7 +102,9 @@ for (const id of referencedDetails.keys()) if (!details.some((entry) => entry[1]
 // Explicit development-only exceptions to the exact user-authorized canonical edges.
 // Never infer that arbitrary BLOCKED tasks satisfy their downstream dependencies.
 const authorizedEdges = new Set(['P4-05:P4-06', 'P4-10:P5-01', 'P6-06:P6-07',
-  'P6-07:P6-08', 'P6-08:P6-09', 'P6-09:P6-10', 'P6-10:P7-01']);
+  'P6-07:P6-08', 'P6-08:P6-09', 'P6-09:P6-10', 'P6-10:P7-01',
+  'P7-05:P7-06', 'P7-09:P7-10', 'P7-10:P8-01', 'P8-02:P8-03',
+  'P8-05:P8-06', 'P8-06:P8-07', 'P8-07:P8-08', 'P8-09:P8-10']);
 if (exceptions.schemaVersion !== '1.0' || !Array.isArray(exceptions.exceptions)) {
   issues.push('Development dependency exceptions require schemaVersion 1.0 and exceptions array');
 } else {
