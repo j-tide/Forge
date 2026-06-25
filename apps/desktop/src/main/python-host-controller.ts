@@ -452,17 +452,30 @@ export class PythonHostController {
 
   private async probe(): Promise<void> {
     if (this.probing || this.longRequests > 0 || this.dataSwitchQuiescing ||
-      !this.child || this.stopping) return;
+      this.pending.size > 0 || !this.child || this.stopping || !this.snapshot.info) return;
+    const child = this.child;
+    const info = this.snapshot.info;
     this.probing = true;
     try {
       const health = pythonHostHealthSchema.parse(await this.call('system.health', {}));
-      if (health.hostId !== this.snapshot.info?.hostId || health.pid !== this.ownedPid) {
+      if (this.child !== child || this.stopping) return;
+      if (health.hostId !== info.hostId || health.pid !== this.ownedPid) {
         throw new Error('INVALID_RESPONSE');
       }
       this.publish({ state: health.status === 'ready' ? 'connected' : 'degraded',
-        info: this.snapshot.info ? { ...this.snapshot.info, status: health.status } : null,
+        info: { ...info, status: health.status },
         health, lastHealthCheck: new Date().toISOString(), error: health.storage.error });
-    } catch { this.fail('TRANSPORT_TIMEOUT'); }
+    } catch (error) {
+      if (this.child !== child || this.stopping) return;
+      if (error instanceof Error && error.message === 'TRANSPORT_TIMEOUT') {
+        this.publish({ state: 'unavailable', info, health: null,
+          lastHealthCheck: this.snapshot.lastHealthCheck,
+          error: forgeError('TRANSPORT_TIMEOUT', 'Python Host transport timeout',
+            'python-host', true) });
+      } else {
+        this.fail('INVALID_RESPONSE');
+      }
+    }
     finally { this.probing = false; }
   }
 

@@ -64,3 +64,43 @@ test('Plan approval bridge allows the same bounded startup window as Run start',
     await rm(root, { recursive:true, force:true });
   }
 });
+
+test('a timed-out heartbeat recovers against the same live Python Host', async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'forge-heartbeat-recovery-')));
+  const controller = new PythonHostController(interpreter, '0.0.1',
+    join(root, 'Forge', 'production'), () => undefined);
+  try {
+    await controller.start();
+    assert.equal(controller.status.state, 'connected');
+    const { hostId, pid } = controller.pythonStatus.info;
+    clearInterval(controller.heartbeat);
+    controller.heartbeat = null;
+    const call = controller.call.bind(controller);
+    let timedOut = false;
+    controller.call = (method, params, timeout) => {
+      if (method === 'system.health' && !timedOut) {
+        timedOut = true;
+        return Promise.reject(new Error('TRANSPORT_TIMEOUT'));
+      }
+      return call(method, params, timeout);
+    };
+
+    await controller.probe();
+    assert.equal(controller.status.state, 'unavailable');
+    assert.equal(controller.pythonStatus.info?.hostId, hostId);
+    assert.equal(controller.pythonStatus.info?.pid, pid);
+    assert.equal(controller.status.error?.code, 'TRANSPORT_TIMEOUT');
+    assert.equal(controller.status.error?.retryable, true);
+    assert.equal((await controller.health()).error?.code, 'TRANSPORT_TIMEOUT');
+
+    await controller.probe();
+    assert.equal(controller.status.state, 'connected');
+    assert.equal(controller.pythonStatus.info?.hostId, hostId);
+    assert.equal(controller.pythonStatus.health?.pid, pid);
+    assert.equal((await controller.health()).ok, true);
+  } finally {
+    await controller.stop();
+    assert.equal(controller.ownedProcessStopped, true);
+    await rm(root, { recursive: true, force: true });
+  }
+});
