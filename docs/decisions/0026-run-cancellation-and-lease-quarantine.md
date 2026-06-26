@@ -1,6 +1,6 @@
 # ADR 0026 · Run cancellation and lease quarantine
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for the P2-08 Host-internal scheduler
 
 ## Context

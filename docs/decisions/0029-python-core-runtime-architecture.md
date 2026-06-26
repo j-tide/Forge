@@ -1,6 +1,6 @@
 # ADR 0029 · Python Core Runtime Architecture
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted by explicit user architecture decision; macOS arm64 development cutover completed in ADR 0035
 
 ## Decision and authority

@@ -1,6 +1,6 @@
 # ADR 0051 · Plugin schema form and read-only inspection
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for canonical P4-04
 
 ## Decision

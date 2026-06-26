@@ -1,6 +1,6 @@
 # ADR 0045 · Approved Task revisions and safe-point invalidation
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for P3-10 on the Python Core path
 
 ## Decision

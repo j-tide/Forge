@@ -1,6 +1,6 @@
 # ADR 0037 · Reviewer Profile and fail-closed result contract
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for P3-02 under the approved Python Core architecture
 
 ## Decision

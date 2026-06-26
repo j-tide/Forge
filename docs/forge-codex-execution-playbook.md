@@ -1,9 +1,9 @@
 # Forge Codex Execution Playbook
 
-> **用途**：Forge 后续开发的单一可执行实施文档。  
-> **当前基线**：MIG-PY-01～09 在当前 macOS arm64 开发环境完成；Desktop 的唯一业务 Host 已切到 Python。P2-10 的 Python Host 纵向真实 Demo 与 P2 Phase Gate 已在 macOS arm64 开发路径通过；历史 Node 结果只作对照，跨平台与安装包仍未验证。  
-> **执行模型**：一次只实施一个权威 Task；Autopilot 启用时完成后由 `docs/forge-codex-autopilot-protocol.md` 决定自动继续。  
-> **项目边界**：ProofRun 与 Forge 当前完全独立，ProofRun 不进入 Forge 仓库、数据库、工作流或默认插件。未来如需接入，只能通过稳定的公开插件接口。  
+> **用途**：Forge 后续开发的单一可执行实施文档。<br>
+> **当前基线**：MIG-PY-01～09 在当前 macOS arm64 开发环境完成；Desktop 的唯一业务 Host 已切到 Python。P2-10 的 Python Host 纵向真实 Demo 与 P2 Phase Gate 已在 macOS arm64 开发路径通过；历史 Node 结果只作对照，跨平台与安装包仍未验证。<br>
+> **执行模型**：一次只实施一个权威 Task；Autopilot 启用时完成后由 `docs/forge-codex-autopilot-protocol.md` 决定自动继续。<br>
+> **项目边界**：ProofRun 与 Forge 当前完全独立，ProofRun 不进入 Forge 仓库、数据库、工作流或默认插件。未来如需接入，只能通过稳定的公开插件接口。<br>
 > **工程规格优先级**：
 >
 > 1. 产品语义、架构、安全、契约：`forge_spec_v1.0/`
@@ -2604,9 +2604,9 @@ Host 重启后 Project 仍存在。
 
 真实向导：
 
-Step 1：Choose Project  
-Step 2：Project Detected  
-Step 3：Trust This Project  
+Step 1：Choose Project<br>
+Step 2：Project Detected<br>
+Step 3：Trust This Project<br>
 Step 4：Connected
 
 显示：

@@ -1,6 +1,6 @@
 # ADR 0046 · WAL backup, artifact import and disk-fault boundary
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for P3-11 on the Python Core path
 
 ## Decision

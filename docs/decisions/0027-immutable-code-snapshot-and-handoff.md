@@ -1,6 +1,6 @@
 # ADR 0027 · Immutable CodeSnapshot and development handoff
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for P2-09 Host-internal publication
 
 ## Decision

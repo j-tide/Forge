@@ -1,6 +1,6 @@
 # ADR 0047 · P3 delivery acceptance and M24 test ownership
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for P3-12 scope reconciliation
 
 ## Decision

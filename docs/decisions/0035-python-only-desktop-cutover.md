@@ -1,6 +1,6 @@
 # ADR 0035 · Python-only Desktop business Host cutover
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted under the user's Python Core architecture approval
 
 ## Decision

@@ -1,6 +1,6 @@
 # ADR 0031 · Python P1 domain and read-only refiner parity
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for MIG-PY-05; production cutover remains MIG-PY-09
 
 ## Decision

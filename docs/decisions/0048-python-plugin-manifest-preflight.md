@@ -1,6 +1,6 @@
 # ADR 0048 · Python plugin manifest preflight and API ranges
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for canonical P4-01
 
 ## Decision

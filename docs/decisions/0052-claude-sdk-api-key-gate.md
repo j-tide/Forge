@@ -1,6 +1,6 @@
 # ADR 0052 · Claude Agent SDK preflight and API-key gate
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for the offline portion of P4-05; live Executor decision pending
 
 ## Context and decision

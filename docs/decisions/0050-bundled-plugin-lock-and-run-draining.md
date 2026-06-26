@@ -1,6 +1,6 @@
 # ADR 0050 · Bundled plugin lock and Run draining
 
-Date: 2026-09-24  
+Date: 2026-09-24<br>
 Status: Accepted for canonical P4-03
 
 ## Decision
