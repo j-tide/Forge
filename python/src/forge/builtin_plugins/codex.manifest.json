@@ -1,13 +1,13 @@
 {
   "schemaVersion": "1.0",
   "id": "forge.executor.codex",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "forgeApiRange": "^1.0.0",
   "entry": "codex.py",
   "execution": "bundled-trusted",
   "contributes": {
     "executors": ["executor.codex"],
-    "modelProviders": [],
+    "modelProviders": ["model.codex"],
     "contextProviders": [],
     "tools": [],
     "verifiers": [],

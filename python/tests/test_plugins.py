@@ -103,10 +103,13 @@ async def test_builtin_activation_resolution_and_dispose() -> None:
     await registry.activate(manifest.id)
     adapter = registry.resolve_executor("executor.codex")
     assert adapter is not None and adapter.id == "executor.codex"
+    provider = registry.resolve_model_provider("model.codex")
+    assert provider is not None and provider.id == "model.codex"
     with pytest.raises(PluginError, match="PLUGIN_ALREADY_ACTIVE"):
         await registry.activate(manifest.id)
     await registry.dispose()
     assert registry.resolve_executor("executor.codex") is None
+    assert registry.resolve_model_provider("model.codex") is None
     await registry.dispose()
 
 
@@ -123,6 +126,20 @@ async def test_failed_activation_registers_nothing() -> None:
     with pytest.raises(PluginError, match="PLUGIN_CONTRIBUTION_INVALID"):
         await registry.activate(manifest.id)
     assert not registry.activated and not registry.executors
+    assert not registry.model_providers
+
+
+@pytest.mark.asyncio
+async def test_model_provider_can_be_disabled_without_disabling_coding_executor() -> None:
+    registry = PluginRegistry(granted_permissions=GRANTS, model_provider_enabled=False)
+    manifest = registry.discover_builtin("forge.executor.codex")
+    registry.register_service("process.v1", ProcessController(uuid4()))
+    if _platform_id() != "darwin-arm64":
+        return
+    await registry.activate(manifest.id)
+    assert registry.resolve_model_provider("model.codex") is None
+    assert registry.resolve_executor("executor.codex") is not None
+    await registry.dispose()
 
 
 @pytest.mark.asyncio

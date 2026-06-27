@@ -31,7 +31,14 @@ export const bundledPluginInspectionSchema = z.strictObject({
   forgeApiRange: z.string().nullable(),
   compatible: z.boolean(),
   active: z.boolean(),
+  enabled: z.boolean(),
+  restartRequired: z.boolean(),
   issues: z.array(z.strictObject({ code: z.string().min(1), path: z.string(), message: z.string() })),
   configSchema: pluginConfigSchemaSchema.nullable(),
+  faults: z.array(z.strictObject({
+    pluginId: z.string().min(1), phase: z.enum(['activation', 'runtime', 'disposal', 'probe']),
+    code: z.string().regex(/^[A-Z][A-Z0-9_]{1,79}$/), runId: z.string().nullable(),
+    recordedAt: z.iso.datetime({ offset: true }),
+  })),
 });
 export type BundledPluginInspection = z.infer<typeof bundledPluginInspectionSchema>;

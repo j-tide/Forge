@@ -69,7 +69,7 @@ def test_builtin_manifest_preflight_is_read_only_and_compatible() -> None:
     report = registry.inspect_builtin(_ID)
     assert report.valid == (_platform_id() == "darwin-arm64")
     assert report.manifest is not None
-    assert report.manifest.version == "0.0.1"
+    assert report.manifest.version == "0.0.2"
     assert registry.manifests == {} and registry.activated == {}
 
 

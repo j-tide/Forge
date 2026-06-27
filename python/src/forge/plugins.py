@@ -5,11 +5,15 @@ from __future__ import annotations
 import importlib
 import json
 import platform
+import re
 import sys
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from forge.executor_contracts import ExecutorAdapter, ExecutorCapabilities
+from forge.model_provider import ModelProvider
 from forge.plugin_api import (
     PLUGIN_API_VERSION,
     Disposable,
@@ -22,6 +26,7 @@ from forge.plugin_lock import PluginPackageLock, verify_builtin_lock
 from forge.plugin_manifest import ManifestIssue, ManifestReport, inspect_manifest
 from forge.plugin_scope import DisposableScope, Registration
 from forge.plugin_storage import PluginStorageBroker
+from forge.tool_registry import ToolDefinition, ToolRegistry
 
 _BUILTINS = {
     "forge.executor.codex": ("codex.manifest.json", "forge.builtin_plugins.codex"),
@@ -42,6 +47,8 @@ class _ActivationContext(PluginContext):
         self.registry = registry
         self.manifest = manifest
         self.executors: dict[str, ExecutorAdapter] = {}
+        self.model_providers: dict[str, ModelProvider] = {}
+        self.tools: dict[str, tuple[ToolDefinition, Callable[[Any], Awaitable[Any]]]] = {}
         self.scope = DisposableScope()
 
     def require_service(self, service_id: str) -> object:
@@ -71,26 +78,76 @@ class _ActivationContext(PluginContext):
         self.executors[adapter.id] = adapter
         return registration
 
+    def register_model_provider(self, provider: ModelProvider) -> Disposable:
+        if (provider.id not in self.manifest.contributes.modelProviders
+                or provider.id in self.model_providers
+                or provider.id in self.registry.model_providers):
+            raise PluginError("PLUGIN_CONTRIBUTION_INVALID")
+
+        def release() -> None:
+            if self.model_providers.get(provider.id) is provider:
+                self.model_providers.pop(provider.id)
+            if self.registry.model_providers.get(provider.id) is provider:
+                self.registry.model_providers.pop(provider.id)
+
+        registration = Registration(release)
+        self.scope.track(registration)
+        self.model_providers[provider.id] = provider
+        return registration
+
+    def register_tool(
+        self, definition: ToolDefinition, handler: Callable[[Any], Awaitable[Any]],
+    ) -> Disposable:
+        if (definition.id not in self.manifest.contributes.tools
+                or definition.requiredGrant not in self.manifest.requestedPermissions
+                or definition.id in self.tools
+                or self.registry.tool_registry.has_tool(definition.id)):
+            raise PluginError("PLUGIN_CONTRIBUTION_INVALID")
+
+        def release() -> None:
+            self.tools.pop(definition.id, None)
+
+        registration = Registration(release)
+        self.scope.track(registration)
+        self.tools[definition.id] = (definition, handler)
+        return registration
+
     def track_disposable(self, disposable: Disposable) -> Disposable:
         return self.scope.track(disposable)
 
 
 class PluginRegistry:
-    def __init__(self, *, granted_permissions: frozenset[str]) -> None:
+    def __init__(self, *, granted_permissions: frozenset[str],
+                 model_provider_enabled: bool = True) -> None:
         if not granted_permissions.issubset(_PERMISSIONS):
             raise PluginError("PLUGIN_PERMISSION_UNKNOWN")
         self.granted_permissions = granted_permissions
+        self.model_provider_disabled = not model_provider_enabled
         self.services: dict[str, object] = {}
         self.service_requires: dict[str, tuple[str, ...]] = {}
         self.manifests: dict[str, PluginManifest] = {}
         self.bundle_locks: dict[str, PluginPackageLock] = {}
         self.executors: dict[str, ExecutorAdapter] = {}
+        self.model_providers: dict[str, ModelProvider] = {}
+        self.tool_registry = ToolRegistry()
         self.executor_owner: dict[str, str] = {}
         self.activated: dict[str, ForgePlugin] = {}
         self.scopes: dict[str, DisposableScope] = {}
         self.run_leases: dict[str, set[str]] = {}
         self.draining: set[str] = set()
         self.activation_order: list[str] = []
+        self.faults: list[dict[str, object]] = []
+
+    def record_fault(self, plugin_id: str, phase: str, code: str,
+                     run_id: str | None = None) -> None:
+        """Store bounded, non-secret diagnostics; never retain exception text."""
+        safe_code = code if re.fullmatch(r"[A-Z][A-Z0-9_]{1,79}", code) else "PLUGIN_FAILURE"
+        if phase not in ("activation", "runtime", "disposal", "probe"):
+            phase = "runtime"
+        self.faults.append({"pluginId": plugin_id, "phase": phase,
+                            "code": safe_code, "runId": run_id,
+                            "recordedAt": datetime.now(UTC).isoformat()})
+        del self.faults[:-50]
 
     def register_service(
         self, service_id: str, service: object, *, requires: tuple[str, ...] = (),
@@ -190,9 +247,19 @@ class PluginRegistry:
             "active": plugin_id in self.activated,
             "issues": [issue.__dict__ for issue in report.issues],
             "configSchema": schema,
+            "faults": [fault.copy() for fault in self.faults if fault["pluginId"] == plugin_id],
         }
 
     async def activate(self, plugin_id: str) -> None:
+        try:
+            await self._activate(plugin_id)
+        except Exception as error:
+            self.record_fault(plugin_id, "activation",
+                              error.code if isinstance(error, PluginError)
+                              else "PLUGIN_ACTIVATION_FAILED")
+            raise
+
+    async def _activate(self, plugin_id: str) -> None:
         manifest = self.manifests.get(plugin_id)
         builtin = _BUILTINS.get(plugin_id)
         if manifest is None or builtin is None:
@@ -213,7 +280,8 @@ class PluginRegistry:
         if plugin_id in self.draining:
             raise PluginError("PLUGIN_DRAINING")
         self.resolve_service_order(tuple(manifest.requires))
-        if set(manifest.contributes.executors).intersection(self.executors):
+        if (set(manifest.contributes.executors).intersection(self.executors)
+                or set(manifest.contributes.modelProviders).intersection(self.model_providers)):
             raise PluginError("PLUGIN_CONTRIBUTION_DUPLICATE")
         # Module names are fixed in _BUILTINS; manifest.entry is never imported as code.
         module = importlib.import_module(builtin[1])
@@ -228,6 +296,12 @@ class PluginRegistry:
                 context.track_disposable(returned)
             if set(context.executors) != set(manifest.contributes.executors):
                 raise PluginError("PLUGIN_CONTRIBUTION_INVALID")
+            if set(context.model_providers) != set(manifest.contributes.modelProviders):
+                raise PluginError("PLUGIN_CONTRIBUTION_INVALID")
+            if set(context.tools) != set(manifest.contributes.tools):
+                raise PluginError("PLUGIN_CONTRIBUTION_INVALID")
+            for definition, handler in context.tools.values():
+                context.scope.track(self.tool_registry.register(definition, plugin_id, handler))
         except BaseException as error:
             failures = 0
             try:
@@ -242,6 +316,7 @@ class PluginRegistry:
                 raise PluginError("PLUGIN_ACTIVATION_ROLLBACK_FAILED") from error
             raise
         self.executors.update(context.executors)
+        self.model_providers.update(context.model_providers)
         for executor_id in context.executors:
             self.executor_owner[executor_id] = plugin_id
         self.activated[plugin_id] = plugin
@@ -250,6 +325,11 @@ class PluginRegistry:
 
     def resolve_executor(self, executor_id: str) -> ExecutorAdapter | None:
         return self.executors.get(executor_id)
+
+    def resolve_model_provider(self, provider_id: str) -> ModelProvider | None:
+        if provider_id == "model.codex" and self.model_provider_disabled:
+            return None
+        return self.model_providers.get(provider_id)
 
     def lock_for_executor(self, executor_id: str) -> PluginPackageLock:
         owner = self.executor_owner.get(executor_id)
@@ -293,14 +373,25 @@ class PluginRegistry:
         for executor_id in manifest.contributes.executors:
             self.executors.pop(executor_id, None)
             self.executor_owner.pop(executor_id, None)
+        for provider_id in manifest.contributes.modelProviders:
+            self.model_providers.pop(provider_id, None)
         self.activation_order.remove(plugin_id)
         self.draining.discard(plugin_id)
         self.run_leases.pop(plugin_id, None)
         scope = self.scopes.pop(plugin_id)
         try:
             await plugin.dispose()
+        except Exception as error:
+            self.record_fault(plugin_id, "disposal",
+                              error.code if isinstance(error, PluginError)
+                              else "PLUGIN_DISPOSE_FAILED")
+            raise
         finally:
-            await scope.dispose()
+            try:
+                await scope.dispose()
+            except Exception:
+                self.record_fault(plugin_id, "disposal", "PLUGIN_DISPOSE_FAILED")
+                raise
         return "inactive"
 
     async def dispose(self) -> None:

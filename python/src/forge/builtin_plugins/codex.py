@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from forge.codex_executor import CodexExecutorAdapter
+from forge.codex_model_provider import CodexModelProvider
 from forge.plugin_api import PluginContext, PluginError
 from forge.processes import ProcessController
 
@@ -17,6 +18,7 @@ class CodexPlugin:
             raise PluginError("PLUGIN_SERVICE_UNAVAILABLE")
         adapter = CodexExecutorAdapter(service)
         context.register_executor(adapter)
+        context.register_model_provider(CodexModelProvider())
         self.adapter = adapter
 
     async def dispose(self) -> None:
