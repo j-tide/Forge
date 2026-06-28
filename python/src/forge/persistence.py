@@ -691,6 +691,8 @@ CREATE TABLE plan_continuations(
   reason TEXT,
   CHECK((state='rejected')=(development_run_id IS NULL))
 );"""
+_REFINER_PRESENTATION_SQL = """ALTER TABLE task_drafts ADD COLUMN model_id TEXT;
+ALTER TABLE task_drafts ADD COLUMN assistant_reply TEXT;"""
 MIGRATIONS = (
     *_legacy_migrations(),
     Migration(
@@ -741,6 +743,8 @@ MIGRATIONS = (
               hashlib.sha256(_RUN_RECOVERY_MIGRATION_SQL.encode()).hexdigest()),
     Migration(37, _PLAN_ARTIFACT_MIGRATION_SQL,
               hashlib.sha256(_PLAN_ARTIFACT_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(38, _REFINER_PRESENTATION_SQL,
+              hashlib.sha256(_REFINER_PRESENTATION_SQL.encode()).hexdigest()),
 )
 CURRENT_COMPATIBLE_SCHEMA = 15
 LATEST_SCHEMA = MIGRATIONS[-1].version

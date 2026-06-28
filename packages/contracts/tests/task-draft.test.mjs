@@ -44,3 +44,35 @@ test('Draft and generation inputs reject invalid identities and extra fields', (
   assert.equal(draftGenerationRequestSchema.safeParse({ ...ids, approval: true }).success, false);
   assert.equal(taskDraftSchema.safeParse({ ...ids, draftId: crypto.randomUUID() }).success, false);
 });
+
+test('generation pins an optional model and rejects empty or overlong identifiers', () => {
+  const request = { projectId: crypto.randomUUID(), conversationId: crypto.randomUUID(),
+    sourceMessageId: crypto.randomUUID(), idempotencyKey: crypto.randomUUID() };
+  assert.equal(draftGenerationRequestSchema.parse({ ...request,
+    modelId: 'provider-selected-model' }).modelId, 'provider-selected-model');
+  assert.equal(draftGenerationRequestSchema.safeParse({ ...request, modelId: '' }).success, false);
+  assert.equal(draftGenerationRequestSchema.safeParse({ ...request,
+    modelId: 'm'.repeat(129) }).success, false);
+  assert.equal(draftGenerationRequestSchema.safeParse({ ...request, modelId: null }).success, false);
+});
+
+test('draft responses retain provider model and assistant reply while accepting legacy records', () => {
+  const draft = { draftId: crypto.randomUUID(), projectId: crypto.randomUUID(),
+    conversationId: crypto.randomUUID(), sourceMessageId: crypto.randomUUID(), revision: 1,
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    intent: 'query', status: 'needs_clarification', contract: null, editableText: '你好',
+    errorCode: null, modelProvider: 'model.codex' };
+  const current = taskDraftSchema.parse({ ...draft, modelId: 'provider-selected-model',
+    assistantReply: '你想在当前项目中修改什么？' });
+  assert.equal(current.modelId, 'provider-selected-model');
+  assert.equal(current.assistantReply, '你想在当前项目中修改什么？');
+  assert.equal(current.contract, null);
+  const legacy = taskDraftSchema.parse(draft);
+  assert.equal(legacy.modelId, undefined);
+  assert.equal(legacy.assistantReply, undefined);
+  assert.equal(taskDraftSchema.parse({ ...draft, modelId: null, assistantReply: null }).modelId, null);
+  assert.equal(taskDraftSchema.safeParse({ ...draft, modelId: '' }).success, false);
+  assert.equal(taskDraftSchema.safeParse({ ...draft,
+    assistantReply: 'x'.repeat(4001) }).success, false);
+  assert.equal(taskDraftSchema.safeParse({ ...draft, modelId: 'm'.repeat(129) }).success, false);
+});

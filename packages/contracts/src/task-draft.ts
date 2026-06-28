@@ -25,11 +25,14 @@ export const taskDraftSchema = z.strictObject({
   contract: taskContractSchema.nullable(), editableText: z.string().max(100_000),
   errorCode: z.enum(['REFINER_UNAVAILABLE', 'REFINER_INVALID_OUTPUT', 'REFINER_FAILED']).nullable(),
   modelProvider: z.string().min(1).nullable(),
+  modelId: z.string().min(1).max(128).nullable().optional(),
+  assistantReply: z.string().max(4000).nullable().optional(),
 });
 
 export const draftGenerationRequestSchema = z.strictObject({
   projectId: z.uuid(), conversationId: z.uuid(), sourceMessageId: z.uuid(),
   idempotencyKey: z.string().min(16).max(128),
+  modelId: z.string().min(1).max(128).optional(),
 });
 
 export const draftRevisionSchema = z.strictObject({

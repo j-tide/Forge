@@ -26,7 +26,7 @@ from forge.drafts import (
     TaskDraft,
     prepare_revision,
 )
-from forge.persistence import ForgePersistence
+from forge.persistence import LATEST_SCHEMA, ForgePersistence
 from forge.projects import TRUST_VERSION, ProjectService
 
 
@@ -73,6 +73,90 @@ def test_clarification_must_change_the_contract_used_by_future_runs() -> None:
     assert "goal" in changed and "openQuestions" in changed
 
 
+def test_model_question_blocks_approval_until_answer_is_applied(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "repo"
+    source.mkdir()
+    storage = ForgePersistence(tmp_path / "data")
+    storage.open()
+    storage.migrate(LATEST_SCHEMA)
+    projects = ProjectService(storage)
+    probe = projects.probe(str(source))
+    project = projects.create(str(source), probe.fingerprint, TRUST_VERSION, True, 0)
+    conversation = ConversationService(storage).create(str(project.projectId), "Email", 0)
+    sent = ConversationService(storage).send(ConversationSend(
+        projectId=project.projectId, conversationId=conversation.conversationId,
+        idempotencyKey="clarification-message-key", text="Reject empty email",
+        attachmentIds=[],
+    ))
+    message = sent["message"]
+    assert isinstance(message, ConversationMessage)
+    drafts = DraftService(storage)
+    generating = drafts.begin(DraftRequest(
+        projectId=project.projectId, conversationId=conversation.conversationId,
+        sourceMessageId=message.messageId, idempotencyKey="clarification-draft-key",
+    ), "generating", "codex")
+    question = "Should whitespace-only email also be rejected?"
+    message_ref = f"message:{message.messageId}"
+    contract = TaskContract(
+        schemaVersion="1.0", taskId=str(generating.draftId),
+        projectId=str(project.projectId), revision=1, title="Validate email",
+        type="bug", goal="Reject empty email",
+        acceptance=[AcceptanceCriterion(
+            id="AC-1", statement="Empty email fails", method="automated",
+            required=True, sourceRefs=[message_ref],
+        )], constraints=[], scope=[], outOfScope=[], dependencies=[],
+        openQuestions=[question], assumptions=[], sourceRefs=[message_ref],
+        workflowRef="standard", priority="normal",
+    )
+    proposed = drafts.finish(str(project.projectId), str(generating.draftId),
+                             "new_task", contract, None)
+    assert proposed.status == "needs_clarification"
+    approvals = ApprovalService(storage, drafts)
+    with pytest.raises(ApprovalError, match="APPROVAL_NOT_READY"):
+        approvals.request(ApprovalRequestInput(
+            projectId=project.projectId, draftId=generating.draftId,
+            expectedRevision=1,
+        ))
+    decision_id = uuid4()
+    decision_ref = f"decision:{decision_id}"
+    revision = contract.model_copy(update={
+        "revision": 2, "openQuestions": [],
+        "sourceRefs": [message_ref, decision_ref],
+    })
+    request = DraftReviseInput(
+        projectId=project.projectId, draftId=generating.draftId,
+        expectedRevision=1, contract=revision, decisionId=decision_id,
+        decisionSummary="Reject whitespace-only email too",
+        resolvedQuestions=[ResolvedQuestion(question=question, answer="Yes")],
+        removedAcceptanceIds=[], confirmScopeChange=False,
+    )
+    with pytest.raises(DraftError, match="DRAFT_CLARIFICATION_NOT_APPLIED"):
+        drafts.revise(request)
+    assert drafts.get(str(project.projectId), str(generating.draftId)) == proposed
+    criterion = contract.acceptance[0].model_copy(update={
+        "statement": "Empty or whitespace-only email fails",
+        "sourceRefs": [message_ref, decision_ref],
+    })
+    applied = revision.model_copy(update={
+        "goal": "Reject empty and whitespace-only email",
+        "acceptance": [criterion],
+    })
+    revised = drafts.revise(request.model_copy(update={"contract": applied}))
+    assert revised.status == "proposed" and revised.contract == applied
+    history = drafts.history(str(project.projectId), str(generating.draftId))
+    assert history[0].resolvedQuestions == request.resolvedQuestions
+    assert {"goal", "acceptance", "openQuestions"}.issubset(history[0].changedFields)
+    pending = approvals.request(ApprovalRequestInput(
+        projectId=project.projectId, draftId=generating.draftId,
+        expectedRevision=2,
+    ))
+    assert pending.status == "pending"
+    assert BoardService(storage).snapshot(str(project.projectId)).tasks == []
+    storage.close()
+
+
 def test_task_contract_rejects_untrusted_text_and_invalid_dependency() -> None:
     valid = {
         "schemaVersion": "1.0", "taskId": "task-1", "projectId": "project-1",
@@ -95,7 +179,7 @@ def test_manual_draft_revision_history_and_source_protection(tmp_path: Path) -> 
     source.mkdir()
     storage = ForgePersistence(tmp_path / "data")
     storage.open()
-    storage.migrate()
+    storage.migrate(LATEST_SCHEMA)
     projects = ProjectService(storage)
     probe = projects.probe(str(source))
     project = projects.create(str(source), probe.fingerprint, TRUST_VERSION, True, 0)

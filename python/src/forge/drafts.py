@@ -70,6 +70,8 @@ class TaskDraft(BaseModel):
     editableText: str = Field(max_length=100_000)
     errorCode: Literal["REFINER_UNAVAILABLE", "REFINER_INVALID_OUTPUT", "REFINER_FAILED"] | None
     modelProvider: str | None
+    modelId: str | None = None
+    assistantReply: str | None = None
 
 
 class DraftRequest(BaseModel):
@@ -79,6 +81,7 @@ class DraftRequest(BaseModel):
     conversationId: UUID
     sourceMessageId: UUID
     idempotencyKey: str = Field(min_length=16, max_length=128)
+    modelId: str | None = Field(default=None, min_length=1, max_length=128)
 
 
 class ResolvedQuestion(BaseModel):
@@ -120,6 +123,7 @@ CONTRACT_FIELDS = (
     "title", "type", "goal", "acceptance", "constraints", "scope", "outOfScope",
     "dependencies", "openQuestions", "assumptions", "sourceRefs", "workflowRef", "priority",
 )
+REFINER_PRESENTATION_SCHEMA = 38
 
 
 def changed_fields(before: TaskContract | None, after: TaskContract) -> list[str]:
@@ -200,6 +204,7 @@ class DraftService:
 
     @staticmethod
     def _draft(row: Any) -> TaskDraft:
+        columns = row.keys()
         return TaskDraft.model_validate_json(
             json.dumps(
                 {
@@ -210,6 +215,9 @@ class DraftService:
                     "contract": json.loads(row["contract_json"]) if row["contract_json"] else None,
                     "editableText": row["editable_text"], "errorCode": row["error_code"],
                     "modelProvider": row["model_provider"],
+                    "modelId": row["model_id"] if "model_id" in columns else None,
+                    "assistantReply": row["assistant_reply"]
+                    if "assistant_reply" in columns else None,
                     "createdAt": row["created_at"], "updatedAt": row["updated_at"],
                 }
             )
@@ -299,6 +307,9 @@ class DraftService:
     def begin(
         self, request: DraftRequest, mode: Literal["generating", "manual"], provider: str | None
     ) -> TaskDraft:
+        has_presentation = self.storage.schema_version() >= REFINER_PRESENTATION_SCHEMA
+        if request.modelId is not None and not has_presentation:
+            raise DraftError("DRAFT_INVALID_MODEL")
         project_id = str(request.projectId)
         conversation_id = str(request.conversationId)
         source_id = str(request.sourceMessageId)
@@ -322,20 +333,25 @@ class DraftService:
                 if (
                     existing["idempotency_key"] != request.idempotencyKey
                     or existing["source_message_id"] != source_id
+                    or (request.modelId is not None and existing["model_id"] != request.modelId)
                 ):
                     raise DraftError("IDEMPOTENCY_CONFLICT")
                 return self._draft(existing)
             text = json.loads(source["content_json"])["text"]
             now = timestamp()
             draft_id = str(uuid4())
+            model_column = ",model_id" if has_presentation else ""
+            model_placeholder = ",?" if has_presentation else ""
+            params = (draft_id, project_id, conversation_id, source_id,
+                      request.idempotencyKey, mode, text,
+                      "REFINER_UNAVAILABLE" if mode == "manual" else None,
+                      provider, now, now)
             db.execute(
                 "INSERT INTO task_drafts(draft_id,project_id,conversation_id,source_message_id,"
                 "idempotency_key,revision,intent,status,contract_json,editable_text,error_code,"
-                "model_provider,created_at,updated_at) "
-                "VALUES(?,?,?,?,?,1,'new_task',?,NULL,?,?,?, ?,?)",
-                (draft_id, project_id, conversation_id, source_id, request.idempotencyKey,
-                 mode, text, "REFINER_UNAVAILABLE" if mode == "manual" else None,
-                 provider, now, now),
+                f"model_provider,created_at,updated_at{model_column}) "
+                f"VALUES(?,?,?,?,?,1,'new_task',?,NULL,?,?,?,?,?{model_placeholder})",
+                (*params, request.modelId) if has_presentation else params,
             )
             draft = self.get(project_id, draft_id)
             if draft is None:
@@ -344,6 +360,8 @@ class DraftService:
             return draft
 
     def manual(self, request: DraftRequest) -> TaskDraft:
+        if request.modelId is not None:
+            raise DraftError("DRAFT_INVALID_MODEL")
         return self.begin(request, "manual", None)
 
     def create_contract_in_transaction(
@@ -411,7 +429,11 @@ class DraftService:
         error_code: Literal[
             "REFINER_UNAVAILABLE", "REFINER_INVALID_OUTPUT", "REFINER_FAILED"
         ] | None,
+        *, model_id: str | None = None, assistant_reply: str | None = None,
     ) -> TaskDraft:
+        has_presentation = self.storage.schema_version() >= REFINER_PRESENTATION_SCHEMA
+        if not has_presentation and (model_id is not None or assistant_reply is not None):
+            raise DraftError("DRAFT_INVALID_MODEL")
         with self.storage.transaction() as db:
             before = self.get(project_id, draft_id)
             if before is None:
@@ -422,12 +444,21 @@ class DraftService:
                 "invalid_output" if error_code else
                 "proposed" if contract and not contract.openQuestions else "needs_clarification"
             )
-            db.execute(
-                "UPDATE task_drafts SET intent=?,status=?,contract_json=?,error_code=?,"
-                "updated_at=? WHERE draft_id=? AND project_id=? AND status='generating'",
-                (intent, status, contract.model_dump_json() if contract else None,
-                 error_code, timestamp(), draft_id, project_id),
-            )
+            values = (intent, status, contract.model_dump_json() if contract else None,
+                      error_code, timestamp())
+            if has_presentation:
+                db.execute(
+                    "UPDATE task_drafts SET intent=?,status=?,contract_json=?,error_code=?,"
+                    "updated_at=?,model_id=COALESCE(?,model_id),assistant_reply=? "
+                    "WHERE draft_id=? AND project_id=? AND status='generating'",
+                    (*values, model_id, assistant_reply, draft_id, project_id),
+                )
+            else:
+                db.execute(
+                    "UPDATE task_drafts SET intent=?,status=?,contract_json=?,error_code=?,"
+                    "updated_at=? WHERE draft_id=? AND project_id=? AND status='generating'",
+                    (*values, draft_id, project_id),
+                )
             updated = self.get(project_id, draft_id)
             assert updated is not None
             self._snapshot(updated, ["contract"] if contract else [])

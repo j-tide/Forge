@@ -23,6 +23,10 @@ from forge.model_provider import (
 class FixtureSession(ModelSession):
     def __init__(self, *, invalid: bool = False) -> None:
         self.invalid = invalid
+        self.classification: dict[str, Any] = {
+            "intent": "new_task", "reply": "我会先为你整理一份可审阅的任务草稿。",
+        }
+        self.model_ids = ["fixture-model"]
         self.requests: list[ModelRequest] = []
         self.closed = False
 
@@ -33,12 +37,12 @@ class FixtureSession(ModelSession):
         self.closed = True
 
     async def models(self) -> list[str]:
-        return ["fixture-model"]
+        return self.model_ids
 
     async def generate(self, request: ModelRequest) -> ModelGeneration:
         self.requests.append(request)
         if len(self.requests) == 1:
-            structured: Any = {"intent": "new_task"}
+            structured: Any = self.classification
         elif self.invalid:
             structured = {"title": "missing required fields"}
         else:
@@ -138,3 +142,73 @@ async def test_missing_provider_does_not_generate_draft_or_open_session() -> Non
     )
     assert (intent, contract, error) == ("new_task", None, "REFINER_UNAVAILABLE")
     assert provider.fixture.requests == []
+
+
+@pytest.mark.asyncio
+async def test_requested_model_is_used_for_classification_and_proposal() -> None:
+    provider = FixtureProvider()
+    provider.fixture.model_ids = ["gpt-6-luna", "fixture-selected"]
+    refiner = CodexReadOnlyRefiner(provider)
+    intent, contract, error = await refiner.refine(
+        str(uuid4()), str(uuid4()), str(uuid4()), "Improve validation", "Project summary",
+        requested_model_id="fixture-selected",
+    )
+    assert (intent, error) == ("new_task", None)
+    assert contract is not None
+    assert [request.modelId for request in provider.fixture.requests] == [
+        "fixture-selected", "fixture-selected",
+    ]
+    assert refiner.selected_model_id == "fixture-selected"
+    assert refiner.reply_text == provider.fixture.classification["reply"]
+    assert provider.fixture.closed
+
+
+@pytest.mark.asyncio
+async def test_unavailable_requested_model_is_rejected_without_paid_fallback() -> None:
+    provider = FixtureProvider()
+    provider.fixture.model_ids = ["gpt-6-luna", "fixture-other"]
+    refiner = CodexReadOnlyRefiner(provider)
+    result = await refiner.refine(
+        str(uuid4()), str(uuid4()), str(uuid4()), "Improve validation", "Project summary",
+        requested_model_id="fixture-unavailable",
+    )
+    assert result == ("new_task", None, "REFINER_UNAVAILABLE")
+    assert provider.fixture.requests == []
+    assert refiner.selected_model_id is None
+    assert refiner.reply_text is None
+    assert provider.fixture.closed
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("intent", ["query", "control", "revision"])
+async def test_non_task_intent_preserves_real_reply_without_generating_a_task(intent: str) -> None:
+    provider = FixtureProvider()
+    provider.fixture.classification = {"intent": intent, "reply": "你想在当前项目中修改什么？"}
+    refiner = CodexReadOnlyRefiner(provider)
+    result = await refiner.refine(
+        str(uuid4()), str(uuid4()), str(uuid4()), "你好", "Project summary",
+        requested_model_id="fixture-model",
+    )
+    assert result == (intent, None, None)
+    assert refiner.reply_text == "你想在当前项目中修改什么？"
+    assert refiner.selected_model_id == "fixture-model"
+    assert len(provider.fixture.requests) == 1
+    assert provider.fixture.closed
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("classification", [{"intent": "query"}, {"intent": "query", "reply": ""}])
+async def test_empty_or_missing_reply_is_invalid_output_not_silent_success(
+    classification: dict[str, str],
+) -> None:
+    provider = FixtureProvider()
+    provider.fixture.classification = classification
+    refiner = CodexReadOnlyRefiner(provider)
+    _, contract, error = await refiner.refine(
+        str(uuid4()), str(uuid4()), str(uuid4()), "你好", "Project summary",
+    )
+    assert error == "REFINER_INVALID_OUTPUT"
+    assert contract is None
+    assert refiner.reply_text is None
+    assert len(provider.fixture.requests) == 1
+    assert provider.fixture.closed

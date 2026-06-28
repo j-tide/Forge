@@ -111,6 +111,7 @@ from forge.protocol import (
     parse_frame,
 )
 from forge.recovery import RecoveryError, RecoveryService
+from forge.refiner_project_context import current_project_summary
 from forge.remote_auth import RemoteAuthDispatcher
 from forge.remote_commands import RemoteCommandDispatcher
 from forge.remote_events import RemoteEventFeed
@@ -1584,24 +1585,21 @@ class HostRuntime:
             )
             if project is None or message is None:
                 raise DraftError("DRAFT_SOURCE_NOT_FOUND")
-            summary = json.dumps({
-                "name": project.name, "projectType": project.probe.projectType,
-                "packageManager": project.probe.packageManager,
-                "branch": project.probe.currentBranch,
-                "workingTree": project.probe.workingTree,
-                "declaredScripts": [
-                    name for name, value in project.probe.scripts.model_dump().items() if value
-                ],
-            })
+            summary = current_project_summary(self.projects, project_id)
             provider = self.plugins.resolve_model_provider(self.model_provider_id)
             if provider is None:
                 self.drafts.finish(project_id, draft_id, "new_task", None,
                                    "REFINER_UNAVAILABLE")
                 return
-            intent, contract, error = await CodexReadOnlyRefiner(provider).refine(
-                project_id, draft_id, row["source_message_id"], message.content, summary
+            refiner = CodexReadOnlyRefiner(provider)
+            stored_draft = self.drafts.get(project_id, draft_id)
+            intent, contract, error = await refiner.refine(
+                project_id, draft_id, row["source_message_id"], message.content, summary,
+                requested_model_id=stored_draft.modelId if stored_draft else None,
             )
-            self.drafts.finish(project_id, draft_id, intent, contract, error)
+            self.drafts.finish(project_id, draft_id, intent, contract, error,
+                               model_id=refiner.selected_model_id,
+                               assistant_reply=refiner.reply_text)
         except asyncio.CancelledError:
             raise
         except Exception:

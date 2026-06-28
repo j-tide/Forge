@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+import sqlite3
 import sys
 import tempfile
 from pathlib import Path
@@ -28,7 +29,10 @@ async def main() -> None:
         )
         assert process.stdin and process.stdout
 
-        async def call(method: str, params: dict[str, object] | None = None) -> dict[str, object]:
+        async def call(
+            method: str, params: dict[str, object] | None = None,
+            expected_error: str | None = None,
+        ) -> dict[str, object]:
             request_id = str(uuid4())
             process.stdin.write(encode_frame({
                 "jsonrpc": "2.0", "id": request_id, "method": method,
@@ -38,6 +42,10 @@ async def main() -> None:
             raw = await asyncio.wait_for(process.stdout.readline(), timeout=10)
             answer: dict[str, object] = json.loads(raw)
             assert answer["id"] == request_id, answer
+            if expected_error is not None:
+                error = answer.get("error")
+                assert isinstance(error, dict) and error.get("code") == expected_error, answer
+                return error
             assert "result" in answer, answer
             return answer["result"]  # type: ignore[return-value]
 
@@ -82,45 +90,27 @@ async def main() -> None:
             assert draft["status"] in ("proposed", "needs_clarification"), draft
             assert draft["contract"]["taskId"] == draft["draftId"]
             assert draft["contract"]["acceptance"]
+            assert isinstance(draft["modelId"], str) and draft["modelId"]
+            assert isinstance(draft["assistantReply"], str) and draft["assistantReply"].strip()
             assert not (source / "should-not-run").exists()
-            decision_id = str(uuid4())
-            contract = dict(draft["contract"])
-            contract["revision"] = draft["revision"] + 1
-            contract["sourceRefs"] = [*contract["sourceRefs"], f"decision:{decision_id}"]
-            questions = list(contract["openQuestions"])
-            contract["openQuestions"] = []
-            revised = (await call("draft.revise", {
-                "projectId": project["projectId"], "draftId": draft["draftId"],
-                "expectedRevision": draft["revision"], "contract": contract,
-                "decisionId": decision_id, "decisionSummary": "Human resolved scope",
-                "resolvedQuestions": [
-                    {"question": question, "answer": "Confirmed for fixture scope"}
-                    for question in questions
-                ],
-                "removedAcceptanceIds": [], "confirmScopeChange": False,
-            }))["data"]
-            assert revised["status"] == "proposed"
-            approval = (await call("approval.request", {
-                "projectId": project["projectId"], "draftId": draft["draftId"],
-                "expectedRevision": revised["revision"],
-            }))["data"]
-            accepted = (await call("approval.decide", {
-                "projectId": project["projectId"], "decision": {
-                    "schemaVersion": "1.0", "approvalId": approval["request"]["approvalId"],
-                    "decision": "approve", "expectedRevision": revised["revision"],
-                    "scopeHash": approval["request"]["scopeHash"],
-                    "reason": "Human reviewed online draft",
-                },
-            }))["data"]
-            assert accepted["status"] == "approved" and accepted["taskState"] == "todo"
+            questions = list(draft["contract"]["openQuestions"])
+            if questions:
+                assert draft["status"] == "needs_clarification"
+                # Model questions require a real user decision applied to the Task Contract.
+                # This automated probe cannot truthfully supply that decision.
+                await call("approval.request", {
+                    "projectId": project["projectId"], "draftId": draft["draftId"],
+                    "expectedRevision": draft["revision"],
+                }, expected_error="APPROVAL_NOT_READY")
+            else:
+                assert draft["status"] == "proposed"
+                approval = (await call("approval.request", {
+                    "projectId": project["projectId"], "draftId": draft["draftId"],
+                    "expectedRevision": draft["revision"],
+                }))["data"]
+                assert approval["status"] == "pending" and approval["taskState"] is None
             board = (await call("board.snapshot", {"projectId": project["projectId"]}))["data"]
-            assert len(board["tasks"]) == 1 and board["tasks"][0]["state"] == "todo"
-            print(json.dumps({
-                "hostPid": process.pid, "draftStatus": draft["status"],
-                "acceptanceCount": len(draft["contract"]["acceptance"]),
-                "questionCount": len(draft["contract"]["openQuestions"]),
-                "approvedState": accepted["taskState"], "boardRevision": board["boardRevision"],
-            }))
+            assert board["tasks"] == [], board
             await call("system.shutdown")
             assert await asyncio.wait_for(process.wait(), timeout=12) == 0
             reopened = await asyncio.create_subprocess_exec(
@@ -152,9 +142,29 @@ async def main() -> None:
                 restored = await reopened_call("board.snapshot", {
                     "projectId": project["projectId"]
                 })
-                assert restored["data"]["tasks"][0]["id"] == draft["draftId"]
+                assert restored["data"]["tasks"] == board["tasks"]
+                assert restored["data"]["boardRevision"] == board["boardRevision"]
+                restored_draft = await reopened_call("draft.get", {
+                    "projectId": project["projectId"], "draftId": draft["draftId"],
+                })
+                assert restored_draft["data"] == draft
                 await reopened_call("system.shutdown", {})
                 assert await asyncio.wait_for(reopened.wait(), 12) == 0
+                database = root / "data" / "forge.sqlite"
+                with sqlite3.connect(f"{database.as_uri()}?mode=ro", uri=True) as db:
+                    task_count = db.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
+                    run_count = db.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
+                assert task_count == run_count == 0
+                print(json.dumps({
+                    "hostPid": process.pid, "draftStatus": draft["status"],
+                    "modelId": draft["modelId"],
+                    "assistantReplyLength": len(draft["assistantReply"]),
+                    "acceptanceCount": len(draft["contract"]["acceptance"]),
+                    "questionCount": len(questions), "questions": questions,
+                    "approvalState": "blocked" if questions else "pending",
+                    "taskCount": task_count, "runCount": run_count,
+                    "boardRevision": board["boardRevision"],
+                }))
             finally:
                 if reopened.returncode is None:
                     reopened.kill()
