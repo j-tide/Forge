@@ -1,4 +1,4 @@
-"""One-node development entry; provider-neutral Host orchestration, no workflow engine."""
+"""Development entry for the standard path and admitted linear Workflow nodes."""
 
 from __future__ import annotations
 
@@ -13,17 +13,27 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from forge.agent_profiles import AgentProfile, AgentProfileService, availability
 from forge.approvals import canonical_json
 from forge.board import BoardError, BoardService
-from forge.context import ContextItem, ContextService, build_context_bundle, executor_context
+from forge.context import (
+    ContextError,
+    ContextItem,
+    ContextService,
+    build_context_bundle,
+    executor_context,
+)
+from forge.context_builder import StageContextBuilder, StageContextInput
 from forge.conversations import timestamp
 from forge.environments import EnvironmentService
 from forge.executor_contracts import AttemptRequest, ExecutorAdapter, ScheduledExecutorRequest
 from forge.handoffs import DevelopmentHandoff, HostSnapshotService
+from forge.knowledge_ingestion import KnowledgeError
 from forge.persistence import ForgePersistence
 from forge.plugin_api import PluginError
 from forge.plugin_lock import PluginPackageLock
 from forge.plugins import PluginRegistry
+from forge.project_memory import MemoryError
 from forge.projects import TRUST_VERSION, ProjectService
 from forge.rework import ReworkCycle
 from forge.run_config import (
@@ -35,6 +45,9 @@ from forge.run_config import (
 )
 from forge.run_scheduler import HostRunScheduler
 from forge.runs import RunService, RunStartIntent, RunView
+from forge.workflow_compiler import WorkflowCatalog
+from forge.workflow_drafts import WorkflowDraftError, WorkflowDraftService
+from forge.workflow_runtime import WorkflowRuntimeError, admit_linear_workflow
 from forge.workspaces import WorkspaceManager
 
 LOGGER = logging.getLogger("forge.development")
@@ -61,6 +74,9 @@ class RunLaunchInput(BaseModel):
     expectedTaskRevision: int = Field(ge=1)
     modelId: str = Field(min_length=1, max_length=128)
     idempotencyKey: UUID
+    profileId: str | None = None
+    profileRevision: int | None = Field(default=None, ge=1)
+    contextQuery: str | None = Field(default=None, min_length=1, max_length=160)
 
 
 class RunLaunchCapabilities(BaseModel):
@@ -109,6 +125,8 @@ class HostDevelopmentService:
         runs: RunService, workspaces: WorkspaceManager,
         scheduler: HostRunScheduler, snapshots: HostSnapshotService,
         adapter: ExecutorAdapter, plugins: PluginRegistry | None = None,
+        profiles: AgentProfileService | None = None,
+        stage_contexts: StageContextBuilder | None = None,
     ) -> None:
         self.storage = storage
         self.projects = projects
@@ -122,6 +140,10 @@ class HostDevelopmentService:
         self.snapshots = snapshots
         self.adapter = adapter
         self.plugins = plugins
+        self.profiles = profiles
+        self.stage_contexts = stage_contexts
+        self.workflow_drafts = WorkflowDraftService(storage)
+        self.workflow_catalog: Callable[[], Awaitable[WorkflowCatalog]] | None = None
         self.starting: dict[UUID, tuple[str, asyncio.Task[RunView]]] = {}
         self.running: dict[UUID, asyncio.Task[None]] = {}
         self.delivering: set[UUID] = set()
@@ -160,14 +182,26 @@ class HostDevelopmentService:
             "AND state='awaiting_safe_point' LIMIT 1", (str(task_id),),
         ).fetchone():
             raise DevelopmentError("RUN_CONFLICT")
-        if detail.contract.workflowRef not in _WORKFLOW_REFS:
+        if (detail.contract.workflowRef not in _WORKFLOW_REFS and
+                not detail.contract.workflowRef.startswith("workflow.")):
             raise DevelopmentError("RUN_START_FAILED")
         return detail.contract.workflowRef
 
     async def capabilities(self, project_id: UUID, task_id: UUID) -> RunLaunchCapabilities:
         self._project(project_id)
-        self._task(project_id, task_id, require_todo=False)
+        workflow_ref = self._task(project_id, task_id, require_todo=False)
         probed = await self.adapter.probe()
+        workflow_ready = True
+        if workflow_ref.startswith("workflow."):
+            try:
+                if self.workflow_catalog is None:
+                    raise WorkflowRuntimeError("WORKFLOW_RUNTIME_UNAVAILABLE")
+                admit_linear_workflow(
+                    self.workflow_drafts.published(workflow_ref),
+                    await self.workflow_catalog(),
+                )
+            except (WorkflowDraftError, WorkflowRuntimeError):
+                workflow_ready = False
         plugin_ready = True
         if self.plugins is not None:
             try:
@@ -176,13 +210,16 @@ class HostDevelopmentService:
                 plugin_ready = False
         return RunLaunchCapabilities(
             available=bool(
-                plugin_ready and probed.available and probed.workspaceControl and probed.streaming
+                workflow_ready and plugin_ready and probed.available
+                and probed.workspaceControl and probed.streaming
                 and probed.interrupt and probed.modelIds
             ),
             executorId=self.adapter.id, adapterVersion=probed.adapterVersion,
             upstreamVersion=probed.upstreamVersion, modelIds=probed.modelIds,
             workspaceControl=probed.workspaceControl, streaming=probed.streaming,
-            interrupt=probed.interrupt, warnings=probed.warnings,
+            interrupt=probed.interrupt,
+            warnings=[*probed.warnings,
+                      *([] if workflow_ready else ["WORKFLOW_RUNTIME_UNAVAILABLE"])],
         )
 
     async def start(self, input_value: RunLaunchInput) -> RunView:
@@ -241,7 +278,12 @@ class HostDevelopmentService:
         if source_config is None or source_run is None:
             raise DevelopmentError("REWORK_SOURCE_STALE")
         available = await self.capabilities(cycle.projectId, cycle.taskId)
-        model_id = next((model for model in available.modelIds if
+        selected = self.profiles.get(
+            source_config.profile.id, int(source_config.profile.version)
+        ) if self.profiles is not None and source_config.profile.version.isdecimal() else None
+        model_id = selected.modelId if selected is not None and (
+            _hash(selected.model_dump(mode="json")) == source_config.profile.contentHash
+        ) else next((model for model in available.modelIds if
             _hash({**_node(self.adapter.id, source_config.workflow.id),
                    "modelId": model}) == source_config.profile.contentHash), None)
         if model_id is None:
@@ -250,6 +292,8 @@ class HostDevelopmentService:
             projectId=cycle.projectId, taskId=cycle.taskId,
             expectedTaskRevision=source_config.taskRevision,
             modelId=model_id, idempotencyKey=cycle.nextRunId,
+            profileId=selected.id if selected is not None else None,
+            profileRevision=selected.revision if selected is not None else None,
         )
         return await self._start_owned(value, cycle, feedback)
 
@@ -257,22 +301,74 @@ class HostDevelopmentService:
                            cycle: ReworkCycle | HumanReworkOrigin | None = None,
                            feedback: list[ContextItem] | None = None) -> RunView:
         source = self._project(value.projectId)
+        selected: AgentProfile | None = None
+        if value.profileId is not None or value.profileRevision is not None:
+            if not value.profileId or value.profileRevision is None or self.profiles is None:
+                raise DevelopmentError("PROFILE_INVALID")
+            selected = self.profiles.get(value.profileId, value.profileRevision)
+            if (selected is None or selected.role != "developer"
+                    or selected.modelId != value.modelId):
+                raise DevelopmentError("PROFILE_UNAVAILABLE")
         previous = self.runs.get(value.projectId, value.idempotencyKey)
         if previous:
             config = self.configs.get(value.projectId, previous.runId)
+            expected_profile_hash = _hash(selected.model_dump(mode="json")) if selected else None
             if (
                 previous.taskId != value.taskId or config is None
                 or config.taskRevision != value.expectedTaskRevision
-                or config.profile.contentHash != _hash({
+                or config.profile.contentHash != (expected_profile_hash or _hash({
                     **_node(self.adapter.id, config.workflow.id), "modelId": value.modelId,
-                })
+                }))
             ):
                 raise DevelopmentError("RUN_CONFLICT")
             return previous
+        if selected is not None:
+            decision = availability(selected, await self.adapter.probe())
+            if not decision.runnable:
+                raise DevelopmentError(decision.reason or "PROFILE_UNAVAILABLE")
         workflow_ref = self._task(
             value.projectId, value.taskId, value.expectedTaskRevision,
             require_todo=cycle is None,
         )
+        workflow_lock: VersionLock | None = None
+        stage_locks: list[ProfileLock] = []
+        if workflow_ref.startswith("workflow."):
+            if self.workflow_catalog is None or self.profiles is None:
+                raise DevelopmentError("WORKFLOW_RUNTIME_UNAVAILABLE")
+            try:
+                cycle_config = (self.configs.get(value.projectId, cycle.sourceRunId)
+                                if cycle else None)
+                workflow_version = int(cycle_config.workflow.version) if cycle_config else None
+                publication = self.workflow_drafts.published(workflow_ref, workflow_version)
+                catalog = await self.workflow_catalog()
+                binding = admit_linear_workflow(publication, catalog)
+            except (WorkflowDraftError, WorkflowRuntimeError, ValueError) as error:
+                code = getattr(error, "code", "WORKFLOW_RUNTIME_UNAVAILABLE")
+                raise DevelopmentError(code) from error
+            if selected is not None and selected.id != binding:
+                raise DevelopmentError("WORKFLOW_PROFILE_MISMATCH")
+            bound_profile = self.profiles.get(
+                binding, int(cycle_config.profile.version) if cycle_config else None,
+            )
+            if (bound_profile is None or bound_profile.modelId != value.modelId or
+                    selected is not None and selected.revision != bound_profile.revision):
+                raise DevelopmentError("WORKFLOW_PROFILE_UNAVAILABLE")
+            selected = bound_profile
+            reviewer_binding = next(node.binding for node in publication.definition.nodes
+                                    if node.id == "review")
+            reviewer = self.profiles.get(reviewer_binding)
+            if reviewer is None or reviewer.role != "reviewer":
+                raise DevelopmentError("WORKFLOW_PROFILE_UNAVAILABLE")
+            stage_locks = [ProfileLock(
+                id=reviewer.id, version=str(reviewer.revision),
+                contentHash=_hash(reviewer.model_dump(mode="json")),
+                executorPluginId=reviewer.executorId,
+            )]
+            workflow_lock = VersionLock(
+                id=publication.workflowId, version=str(publication.revision),
+                contentHash=publication.contentHash,
+            )
+        expected_profile_hash = _hash(selected.model_dump(mode="json")) if selected else None
         available = await self.capabilities(value.projectId, value.taskId)
         if not available.available or value.modelId not in available.modelIds:
             raise DevelopmentError("MODEL_UNAVAILABLE")
@@ -329,22 +425,54 @@ class HostDevelopmentService:
         config = self.configs.create(RunConfigSelection(
             runId=value.idempotencyKey, projectId=value.projectId, taskId=value.taskId,
             expectedTaskRevision=value.expectedTaskRevision,
-            workflow=source_config.workflow if source_config else VersionLock(
+            workflow=source_config.workflow if source_config else workflow_lock or VersionLock(
                 id=workflow_ref, version=_WORKFLOW_VERSION, contentHash=_hash(node)
             ),
             profile=source_config.profile if source_config else ProfileLock(
-                id=_PROFILE_ID, version=_WORKFLOW_VERSION,
-                contentHash=_hash({**node, "modelId": value.modelId}),
+                id=selected.id if selected else _PROFILE_ID,
+                version=str(selected.revision) if selected else _WORKFLOW_VERSION,
+                contentHash=expected_profile_hash or _hash({**node, "modelId": value.modelId}),
                 executorPluginId=self.adapter.id,
             ),
             plugins=frozen_plugins,
+            stageProfiles=source_config.stageProfiles if source_config else stage_locks,
             budget=source_config.budget if source_config else _BUDGET,
             environmentId=environment.environmentId,
             expectedEnvironmentRevision=environment.revision,
         ))
-        bundle = self.contexts.save_bundle(
-            build_context_bundle(config, rework_feedback=feedback), feedback,
+        retrieval: list[ContextItem] = []
+        if value.contextQuery is not None:
+            if self.stage_contexts is None:
+                raise DevelopmentError("CONTEXT_UNAVAILABLE")
+            try:
+                preview = self.stage_contexts.preview(StageContextInput(
+                    projectId=value.projectId, runId=config.runId,
+                    query=value.contextQuery,
+                ))
+            except (ContextError, KnowledgeError, MemoryError) as error:
+                raise DevelopmentError("CONTEXT_UNAVAILABLE") from error
+            if preview.conflicts:
+                raise DevelopmentError("CONTEXT_REQUIRES_HUMAN")
+            if preview.status != "ready":
+                raise DevelopmentError("CONTEXT_NO_SOURCE")
+            retrieval = [ContextItem(
+                kind="validated_memory" if item.kind == "validated_memory"
+                     else "retrieved_knowledge",
+                authority="validated_memory" if item.kind == "validated_memory"
+                          else "untrusted_project",
+                text=item.text[:2000], sourceRef=item.sourceRef,
+            ) for item in preview.items if item.kind in (
+                "validated_memory", "retrieved_knowledge",
+            )]
+            if not retrieval:
+                raise DevelopmentError("CONTEXT_NO_SOURCE")
+        prepared = build_context_bundle(
+            config, rework_feedback=feedback, retrieval_items=retrieval,
         )
+        if retrieval and sum(item.kind in ("validated_memory", "retrieved_knowledge")
+                             for item in prepared.items) != len(retrieval):
+            raise DevelopmentError("CONTEXT_BUDGET_EXCEEDED")
+        bundle = self.contexts.save_bundle(prepared, feedback, retrieval)
         workspace_id: UUID | None = None
         lease_id: UUID | None = None
         plugin_acquired = False
@@ -380,16 +508,20 @@ class HostDevelopmentService:
             )
             request = ScheduledExecutorRequest(
                 runId=str(value.idempotencyKey), taskId=str(value.taskId),
-                workspace=workspace.rootPath, goal=bundle.goal,
+                workspace=workspace.rootPath,
+                goal=f"{selected.promptTemplate}\n\n{bundle.goal}" if selected else bundle.goal,
                 context=executor_context(bundle), permission="workspace-write",
-                approval="never", model=value.modelId,
+                approval=("on-request" if selected and
+                          selected.policyProfile == "approval-required" else "never"),
+                model=value.modelId,
                 maxDurationMs=config.budget.maxDurationMs,
                 attempt=AttemptRequest(
                     attemptId=str(attempt_id), leaseEpoch=workspace.leaseEpoch,
                     workspaceLeaseId=str(workspace.activeLeaseId),
                     contractRevision=config.taskRevision,
                     contextBundleId=str(bundle.bundleId),
-                    profileRevision=1, outputSchemaId="plain-text-v1",
+                    profileRevision=selected.revision if selected else 1,
+                    outputSchemaId="plain-text-v1",
                 ),
             )
             queued: asyncio.Future[RunView] = asyncio.get_running_loop().create_future()
@@ -438,7 +570,21 @@ class HostDevelopmentService:
         bundle_id: UUID, executing: asyncio.Task[RunView],
     ) -> None:
         try:
-            run = await executing
+            try:
+                run = await executing
+            except Exception:
+                if self.plugins is not None:
+                    owner = self.plugins.executor_owner.get(self.adapter.id)
+                    if owner is not None:
+                        self.plugins.record_fault(owner, "runtime", "PLUGIN_RUNTIME_FAILED",
+                                                  str(run_id))
+                raise
+            if run.state in ("failed", "interrupted") and self.plugins is not None:
+                owner = self.plugins.executor_owner.get(self.adapter.id)
+                if owner is not None:
+                    self.plugins.record_fault(owner, "runtime",
+                                              "EXECUTOR_RUN_FAILED" if run.state == "failed"
+                                              else "EXECUTOR_RUN_INTERRUPTED", str(run_id))
             if run.state == "succeeded":
                 self.delivering.add(run_id)
                 handoff = await self.snapshots.freeze(

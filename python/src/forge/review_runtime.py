@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 from collections.abc import Awaitable, Callable
@@ -12,6 +13,8 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from forge.agent_profiles import AgentProfileService, availability
+from forge.approvals import canonical_json
 from forge.conversations import timestamp
 from forge.executor_contracts import (
     AttemptRequest,
@@ -35,6 +38,7 @@ from forge.review_copies import ReviewCopyError, ReviewCopyManager
 from forge.review_issues import ReviewIssueService, ReviewReport
 from forge.run_config import RunConfigService
 from forge.run_inspection import RunInspectionService
+from forge.workflow_drafts import WorkflowDraftError, WorkflowDraftService
 
 LOGGER = logging.getLogger("forge.review")
 
@@ -54,6 +58,8 @@ class ReviewStartInput(BaseModel):
     expectedSnapshotId: UUID
     modelId: str = Field(min_length=1, max_length=128)
     idempotencyKey: UUID
+    profileId: str | None = None
+    profileRevision: int | None = Field(default=None, ge=1)
 
 
 class ReviewJob(BaseModel):
@@ -80,6 +86,7 @@ class HostReviewService:
         handoffs: HandoffService, configs: RunConfigService,
         inspections: RunInspectionService, copies: ReviewCopyManager,
         issues: ReviewIssueService, adapter: ExecutorAdapter,
+        profiles: AgentProfileService | None = None,
     ) -> None:
         self.storage = storage
         self.projects = projects
@@ -89,6 +96,7 @@ class HostReviewService:
         self.copies = copies
         self.issues = issues
         self.adapter = adapter
+        self.profiles = profiles
         self.on_rework: Callable[[ReviewReport], Awaitable[None]] | None = None
         self.running: dict[UUID, asyncio.Task[None]] = {}
         self.handles: dict[UUID, ExecutorRunHandle] = {}
@@ -143,6 +151,21 @@ class HostReviewService:
                         or job.snapshotId != value.expectedSnapshotId
                         or job.modelId != value.modelId):
                     raise ReviewRuntimeError("REVIEW_CONFLICT")
+                prior_profile = self.storage.session().execute(
+                    "SELECT profile_id,profile_revision FROM review_jobs WHERE review_run_id=?",
+                    (str(job.reviewRunId),),
+                ).fetchone()
+                expected_profile = (value.profileId, value.profileRevision)
+                if value.profileId is None and value.profileRevision is None:
+                    frozen = self.configs.get(value.projectId, value.developmentRunId)
+                    if frozen is not None and frozen.workflow.id.startswith("workflow."):
+                        if len(frozen.stageProfiles) != 1:
+                            raise ReviewRuntimeError("WORKFLOW_PROFILE_UNAVAILABLE")
+                        lock = frozen.stageProfiles[0]
+                        expected_profile = (lock.id, int(lock.version))
+                if prior_profile is None or (prior_profile["profile_id"],
+                    prior_profile["profile_revision"]) != expected_profile:
+                    raise ReviewRuntimeError("REVIEW_CONFLICT")
                 return job
             project = self.projects.get(str(value.projectId))
             active = self.projects.active()
@@ -160,6 +183,34 @@ class HostReviewService:
             config = self.configs.get(value.projectId, value.developmentRunId)
             if handoff is None or config is None or config.taskId != value.taskId:
                 raise ReviewRuntimeError("REVIEW_SOURCE_MISSING")
+            review_lock = None
+            workflow_review_timeout = 3_600_000
+            if config.workflow.id.startswith("workflow."):
+                try:
+                    publication = WorkflowDraftService(self.storage).published(
+                        config.workflow.id, int(config.workflow.version),
+                    )
+                except (WorkflowDraftError, ValueError) as error:
+                    raise ReviewRuntimeError("WORKFLOW_RUNTIME_UNAVAILABLE") from error
+                if publication.contentHash != config.workflow.contentHash:
+                    raise ReviewRuntimeError("WORKFLOW_RUNTIME_UNAVAILABLE")
+                binding = next((node.binding for node in publication.definition.nodes
+                                if node.id == "review"), None)
+                workflow_review_timeout = next((
+                    node.timeoutSeconds * 1000 for node in publication.definition.nodes
+                    if node.id == "review"
+                ), 0)
+                if workflow_review_timeout <= 0:
+                    raise ReviewRuntimeError("WORKFLOW_RUNTIME_UNAVAILABLE")
+                review_lock = next((profile for profile in config.stageProfiles
+                                    if profile.id == binding), None)
+                if review_lock is None:
+                    raise ReviewRuntimeError("WORKFLOW_PROFILE_UNAVAILABLE")
+                if value.profileId is not None and (
+                    value.profileId != review_lock.id
+                    or value.profileRevision != int(review_lock.version)
+                ):
+                    raise ReviewRuntimeError("WORKFLOW_PROFILE_MISMATCH")
             current_revision = self.storage.session().execute(
                 "SELECT current_revision FROM tasks WHERE project_id=? AND task_id=?",
                 (str(value.projectId), str(value.taskId)),
@@ -192,6 +243,31 @@ class HostReviewService:
                     or not caps.structuredOutput or value.modelId not in caps.modelIds):
                 raise ReviewRuntimeError("REVIEW_READ_ONLY_UNAVAILABLE")
             profile, prompt = load_reviewer_profile()
+            selected = None
+            if value.profileId is not None or value.profileRevision is not None:
+                if not value.profileId or value.profileRevision is None or self.profiles is None:
+                    raise ReviewRuntimeError("PROFILE_INVALID")
+                selected = self.profiles.get(value.profileId, value.profileRevision)
+                if (selected is None or selected.role != "reviewer"
+                        or selected.modelId != value.modelId):
+                    raise ReviewRuntimeError("PROFILE_UNAVAILABLE")
+                decision = availability(selected, caps)
+                if not decision.runnable:
+                    raise ReviewRuntimeError(decision.reason or "PROFILE_UNAVAILABLE")
+                prompt = selected.promptTemplate
+            if review_lock is not None:
+                if self.profiles is None:
+                    raise ReviewRuntimeError("WORKFLOW_PROFILE_UNAVAILABLE")
+                selected = self.profiles.get(review_lock.id, int(review_lock.version))
+                if (selected is None or selected.role != "reviewer"
+                    or selected.modelId != value.modelId
+                    or hashlib.sha256(canonical_json(selected.model_dump(mode="json")).encode()
+                                      ).hexdigest() != review_lock.contentHash):
+                    raise ReviewRuntimeError("WORKFLOW_PROFILE_UNAVAILABLE")
+                decision = availability(selected, caps)
+                if not decision.runnable:
+                    raise ReviewRuntimeError(decision.reason or "PROFILE_UNAVAILABLE")
+                prompt = selected.promptTemplate
             copy = await self.copies.create(Path(project.rootPath), handoff.snapshot, caps)
             attempt_id = uuid4()
             request = ScheduledExecutorRequest(
@@ -202,13 +278,17 @@ class HostReviewService:
                       "If evidence is insufficient, return inconclusive. Do not modify files."),
                 context=[], permission="read-only", approval="never", model=value.modelId,
                 outputSchema=ReviewResult.model_json_schema(),
-                maxDurationMs=min(profile.limits.maxSeconds * 1000, 3_600_000),
+                maxDurationMs=min(
+                    (selected.limits if selected else profile.limits).maxSeconds * 1000,
+                    workflow_review_timeout,
+                ),
                 attempt=AttemptRequest(
                     attemptId=str(attempt_id), leaseEpoch=1,
                     contractRevision=context.contractRevision,
                     workspaceLeaseId=str(copy.ownershipId),
                     contextBundleId=str(handoff.bundle.contextBundleId),
-                    profileRevision=profile.revision, outputSchemaId="review-result/v1",
+                    profileRevision=selected.revision if selected else profile.revision,
+                    outputSchemaId="review-result/v1",
                 ),
             )
             try:
@@ -218,12 +298,17 @@ class HostReviewService:
                     db.execute(
                         "INSERT INTO review_jobs(review_run_id,idempotency_key,project_id,"
                         "task_id,development_run_id,snapshot_id,review_copy_id,"
-                        "review_attempt_id,model_id,state,created_at,updated_at) "
-                        "VALUES(?,?,?,?,?,?,?,?,?,'running',?,?)",
+                        "review_attempt_id,model_id,state,created_at,updated_at,"
+                        "profile_id,profile_revision,profile_hash) "
+                        "VALUES(?,?,?,?,?,?,?,?,?,'running',?,?,?,?,?)",
                         (str(copy.ownerReviewRunId), str(value.idempotencyKey),
                          str(value.projectId), str(value.taskId),
                          str(value.developmentRunId), str(context.snapshotId),
-                         str(copy.reviewCopyId), str(attempt_id), value.modelId, now, now),
+                         str(copy.reviewCopyId), str(attempt_id), value.modelId, now, now,
+                         selected.id if selected else None,
+                         selected.revision if selected else None,
+                         hashlib.sha256(selected.model_dump_json().encode()).hexdigest()
+                         if selected else None),
                     )
             except Exception:
                 await self.copies.release(copy.reviewCopyId)

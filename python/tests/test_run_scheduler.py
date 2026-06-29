@@ -11,6 +11,7 @@ from uuid import uuid4
 
 import pytest
 
+from forge.agent_profiles import AgentProfile, AgentProfileService, ProfileSave
 from forge.approvals import (
     ApprovalDecideInput,
     ApprovalDecision,
@@ -20,7 +21,7 @@ from forge.approvals import (
 from forge.board import BoardService
 from forge.context import ContextService, build_context_bundle, executor_context
 from forge.conversations import ConversationSend, ConversationService, timestamp
-from forge.development import HostDevelopmentService, RunLaunchInput
+from forge.development import DevelopmentError, HostDevelopmentService, RunLaunchInput
 from forge.drafts import (
     AcceptanceCriterion,
     DraftRequest,
@@ -39,7 +40,7 @@ from forge.executor_contracts import (
     ScheduledExecutorRequest,
 )
 from forge.handoffs import HostSnapshotService
-from forge.persistence import ForgePersistence
+from forge.persistence import LATEST_SCHEMA, ForgePersistence
 from forge.processes import ProcessController
 from forge.projects import TRUST_VERSION, ProjectService
 from forge.protocol import encode_frame
@@ -317,6 +318,10 @@ async def test_scheduler_real_process_success_then_durable_cancel(tmp_path: Path
     assert checkpoint.objective.text == "Write result file"
     assert checkpoint.budget.toolCallsUsed == 0
     assert redact("Authorization: Bearer secret-value") == "[REDACTED]"
+    assert "fixture-secret" not in redact(
+        "+-----BEGIN OPENSSH PRIVATE KEY-----\n+fixture-secret\n"
+        "+-----END OPENSSH PRIVATE KEY-----"
+    )
     host = await asyncio.create_subprocess_exec(
         sys.executable, "-m", "forge.host", stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
@@ -410,17 +415,35 @@ async def test_scheduler_real_process_success_then_durable_cancel(tmp_path: Path
             runs, configs, contexts, workspaces, processes,
             FixtureAdapter(processes, script, "short"),
         )
+        storage.migrate(LATEST_SCHEMA)
+        profiles = AgentProfileService(storage)
+        selected_profile = AgentProfile(
+            schemaVersion="1.0", id="profile.fixture.developer", revision=1,
+            name="Fixture Developer", role="developer", executorId="fixture.executor",
+            modelId="fixture-model", promptTemplate="Work inside the isolated fixture.",
+            contextProviders=["task-contract"], policyProfile="workspace-write",
+            limits={"maxTurns": 10, "maxSeconds": 180, "maxOutputTokens": 12000},
+        )
+        profiles.save(ProfileSave(profile=selected_profile, expectedRevision=0))
         development = HostDevelopmentService(
             storage, projects, BoardService(storage),
             environments, configs, contexts, runs, workspaces, developed_scheduler,
             HostSnapshotService(storage, workspaces, processes, runs, configs, contexts),
-            developed_scheduler.adapter,
+            developed_scheduler.adapter, profiles=profiles,
         )
+        with pytest.raises(DevelopmentError, match="PROFILE_UNAVAILABLE"):
+            await development.start(RunLaunchInput(
+                projectId=project.projectId, taskId=draft.draftId,
+                expectedTaskRevision=2, modelId="unsupported-model",
+                idempotencyKey=uuid4(), profileId=selected_profile.id,
+                profileRevision=selected_profile.revision,
+            ))
         run_key = uuid4()
         launched = await development.start(RunLaunchInput(
             projectId=project.projectId, taskId=draft.draftId,
             expectedTaskRevision=2, modelId="fixture-model",
             idempotencyKey=run_key,
+            profileId=selected_profile.id, profileRevision=selected_profile.revision,
         ))
         assert launched.runId == run_key and launched.state in ("queued", "running", "succeeded")
         for _ in range(100):
@@ -434,6 +457,7 @@ async def test_scheduler_real_process_success_then_durable_cancel(tmp_path: Path
         assert (await development.start(RunLaunchInput(
             projectId=project.projectId, taskId=draft.draftId,
             expectedTaskRevision=2, modelId="fixture-model", idempotencyKey=run_key,
+            profileId=selected_profile.id, profileRevision=selected_profile.revision,
         ))).runId == run_key
         await development.shutdown()
 

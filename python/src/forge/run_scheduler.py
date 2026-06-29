@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID, uuid4
 
+from forge.agent_profiles import AgentProfileError, AgentProfileService
+from forge.approvals import canonical_json
 from forge.context import (
     CheckpointBudget,
     ContextEntry,
@@ -100,6 +103,33 @@ class HostRunScheduler:
             raise SchedulerError("RUN_SNAPSHOT_MISMATCH") from error
         bundle = self.contexts.get_bundle(intent.projectId, bundle_id)
         current = self.workspaces.inspect(workspace.workspaceId)
+        expected_goal = bundle.goal if bundle else None
+        if (config is not None and bundle is not None
+                and config.profile.id.startswith("profile.")
+                and config.profile.version.isdecimal()):
+            try:
+                profile = AgentProfileService(self.configs.storage).get(
+                    config.profile.id, int(config.profile.version)
+                )
+            except AgentProfileError as error:
+                raise SchedulerError("RUN_SNAPSHOT_MISMATCH") from error
+            if profile is None:
+                raise SchedulerError("RUN_SNAPSHOT_MISMATCH")
+            digest = hashlib.sha256(
+                canonical_json(profile.model_dump(mode="json")).encode()
+            ).hexdigest()
+            if (
+                digest != config.profile.contentHash
+                or profile.executorId != config.profile.executorPluginId
+                or profile.modelId != request.model
+                or profile.revision != request.attempt.profileRevision
+                or profile.role != "developer"
+                or request.approval != (
+                    "on-request" if profile.policyProfile == "approval-required" else "never"
+                )
+            ):
+                raise SchedulerError("RUN_SNAPSHOT_MISMATCH")
+            expected_goal = f"{profile.promptTemplate}\n\n{bundle.goal}"
         if (
             config is None or config.snapshotHash != intent.configHash
             or request.runId != str(intent.runId) or request.taskId != str(intent.taskId)
@@ -119,7 +149,7 @@ class HostRunScheduler:
             or bundle.taskId != intent.taskId
             or bundle.configHash != config.snapshotHash
             or bundle.taskRevision != config.taskRevision
-            or request.goal != bundle.goal
+            or request.goal != expected_goal
             or request.context != executor_context(bundle)
         ):
             raise SchedulerError("RUN_SNAPSHOT_MISMATCH")

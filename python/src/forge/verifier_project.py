@@ -27,6 +27,7 @@ from forge.processes import ProcessController, ProcessError, minimal_environment
 from forge.projects import TRUST_VERSION, ProjectError, ProjectService, probe_project
 from forge.run_config import RunConfigService
 from forge.run_inspection import redact
+from forge.workflow_drafts import WorkflowDraftError, WorkflowDraftService
 from forge.workspaces import WorkspaceDescriptor, WorkspaceError, WorkspaceManager
 
 LOGGER = logging.getLogger("forge.verifier")
@@ -340,6 +341,21 @@ class ProjectCommandVerifier:
                     raise VerifierError("VERIFY_PRESET_UNAPPROVED")
                 if preset.envRefs or config.environment.config.envRefs:
                     raise VerifierError("VERIFY_ENV_UNAVAILABLE")
+            if config.workflow.id.startswith("workflow."):
+                try:
+                    publication = WorkflowDraftService(self.storage).published(
+                        config.workflow.id, int(config.workflow.version),
+                    )
+                except (WorkflowDraftError, ValueError) as error:
+                    raise VerifierError("WORKFLOW_RUNTIME_UNAVAILABLE") from error
+                if publication.contentHash != config.workflow.contentHash:
+                    raise VerifierError("WORKFLOW_RUNTIME_UNAVAILABLE")
+                limit = next((node.timeoutSeconds for node in publication.definition.nodes
+                              if node.id == "verify"), 0)
+                if limit <= 0:
+                    raise VerifierError("WORKFLOW_RUNTIME_UNAVAILABLE")
+                if preset is not None and preset.timeoutSeconds > limit:
+                    raise VerifierError("WORKFLOW_BUDGET_UNSUPPORTED")
             verification_id = uuid4()
             workspace: WorkspaceDescriptor | None = None
             if preset is not None:
