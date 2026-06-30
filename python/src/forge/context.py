@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+from datetime import UTC, datetime
+from sqlite3 import Row
 from typing import Annotated, Literal, cast
 from uuid import UUID, uuid4
 
@@ -60,9 +63,11 @@ class ContextItem(ContextEntry):
     kind: Literal[
         "goal", "acceptance", "constraint", "scope", "out_of_scope",
         "checkpoint_action", "checkpoint_issue", "rework_feedback",
+        "retrieved_knowledge", "validated_memory",
     ]
     authority: Literal["approved_task", "run_observation", "review_evidence",
-                       "verify_evidence", "human_decision"]
+                       "verify_evidence", "human_decision", "untrusted_project",
+                       "validated_memory"]
 
 
 class ContextBundle(BaseModel):
@@ -83,6 +88,20 @@ class ContextBundle(BaseModel):
     contentHash: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
+class ContextSourceStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    sourceRef: str
+    kind: Literal["retrieved_knowledge", "validated_memory"]
+    status: Literal["current", "revoked", "superseded", "expired", "missing"]
+
+
+_KNOWLEDGE_REF = re.compile(r"^knowledge:([0-9a-f-]{36})@(\d+)#(\d+)$")
+_MEMORY_REF = re.compile(r"^memory:([0-9a-f-]{36})@(\d+)$")
+_TASK_REF = re.compile(r"^task:([0-9a-f-]{36})@(\d+)$")
+_SNAPSHOT_REF = re.compile(r"^snapshot:([0-9a-f-]{36})$")
+
+
 def _digest(value: object) -> str:
     return hashlib.sha256(canonical_json(value).encode()).hexdigest()
 
@@ -100,6 +119,7 @@ def build_context_bundle(
     max_chars: int = 16_000, bundle_id: UUID | None = None,
     created_at: str | None = None,
     rework_feedback: list[ContextItem] | None = None,
+    retrieval_items: list[ContextItem] | None = None,
 ) -> ContextBundle:
     config = verify_snapshot(raw_config)
     if not 1000 <= max_chars <= 32_000:
@@ -143,6 +163,15 @@ def build_context_bundle(
                 for item in rework_feedback):
             raise ContextError("CONTEXT_INVALID")
         required.extend(rework_feedback)
+    if retrieval_items:
+        if len(retrieval_items) > 40 or any(
+            (item.kind, item.authority) not in (
+                ("retrieved_knowledge", "untrusted_project"),
+                ("validated_memory", "validated_memory"),
+            ) for item in retrieval_items
+        ):
+            raise ContextError("CONTEXT_INVALID")
+        optional.extend(retrieval_items)
     used = sum(_size(item) for item in required)
     if len(required) > 96 or used > max_chars:
         raise ContextError("CONTEXT_BUDGET_EXCEEDED")
@@ -209,6 +238,99 @@ class ContextService:
         ).fetchone()
         return verify_context_bundle(json.loads(row["bundle_json"])) if row else None
 
+    def _memory_sources_current(self, project_id: UUID, memory: Row) -> bool:
+        source_json = memory["source_json"]
+        environment_id = memory["environment_id"]
+        for evidence in json.loads(source_json):
+            ref, content_hash = evidence["sourceRef"], evidence["sourceHash"]
+            knowledge = _KNOWLEDGE_REF.fullmatch(ref)
+            task = _TASK_REF.fullmatch(ref)
+            snapshot = _SNAPSHOT_REF.fullmatch(ref)
+            if knowledge:
+                row = self.storage.session().execute(
+                    "SELECT c.content_hash FROM knowledge_chunks c JOIN knowledge_sources s "
+                    "ON s.source_id=c.source_id WHERE s.project_id=? AND s.environment_id=? "
+                    "AND s.status='active' AND s.source_id=? AND s.current_version=? "
+                    "AND c.version=? AND c.ordinal=? AND length(c.text)>0",
+                    (str(project_id), environment_id, knowledge[1], int(knowledge[2]),
+                     int(knowledge[2]), int(knowledge[3])),
+                ).fetchone()
+            elif task:
+                row = self.storage.session().execute(
+                    "SELECT r.content_hash FROM task_revisions r JOIN tasks t "
+                    "ON t.task_id=r.task_id WHERE t.project_id=? AND t.task_id=? "
+                    "AND t.current_revision=? AND r.revision=?",
+                    (str(project_id), task[1], int(task[2]), int(task[2])),
+                ).fetchone()
+            elif snapshot:
+                row = self.storage.session().execute(
+                    "SELECT content_hash FROM code_snapshots WHERE project_id=? AND snapshot_id=?",
+                    (str(project_id), snapshot[1]),
+                ).fetchone()
+            else:
+                return False
+            if row is None or row["content_hash"] != content_hash:
+                return False
+        return True
+
+    def run_sources(self, project_id: UUID, run_id: UUID) -> list[ContextSourceStatus]:
+        row = self.storage.session().execute(
+            "SELECT b.bundle_json FROM context_bundles b JOIN runs r ON r.run_id=b.run_id "
+            "WHERE r.project_id=? AND b.project_id=? AND b.run_id=? "
+            "ORDER BY b.created_at DESC,b.bundle_id DESC LIMIT 1",
+            (str(project_id), str(project_id), str(run_id)),
+        ).fetchone()
+        if row is None:
+            raise ContextError("CONTEXT_RUN_NOT_FOUND")
+        bundle = verify_context_bundle(json.loads(row["bundle_json"]))
+        result: list[ContextSourceStatus] = []
+        for item in bundle.items:
+            if item.kind == "retrieved_knowledge":
+                ref = _KNOWLEDGE_REF.fullmatch(item.sourceRef)
+                source = None
+                if ref is not None:
+                    source = self.storage.session().execute(
+                        "SELECT s.status,s.current_version,c.text FROM knowledge_sources s "
+                        "LEFT JOIN knowledge_chunks c ON c.source_id=s.source_id "
+                        "AND c.version=? AND c.ordinal=? "
+                        "WHERE s.project_id=? AND s.source_id=?",
+                        (int(ref[2]), int(ref[3]), str(project_id), ref[1]),
+                    ).fetchone()
+                status: Literal["current", "revoked", "superseded", "expired", "missing"] = (
+                    "missing" if source is None else
+                    "revoked" if source["status"] == "revoked" else
+                    "superseded" if ref is not None and
+                    source["current_version"] != int(ref[2]) else
+                    "missing" if not source["text"] else "current"
+                )
+            elif item.kind == "validated_memory":
+                memory_ref = _MEMORY_REF.fullmatch(item.sourceRef)
+                memory = None
+                if memory_ref is not None:
+                    memory = self.storage.session().execute(
+                        "SELECT status,revision,expires_at,text,source_json,environment_id "
+                        "FROM project_memory "
+                        "WHERE project_id=? AND memory_id=?",
+                        (str(project_id), memory_ref[1]),
+                    ).fetchone()
+                status = (
+                    "missing" if memory is None else
+                    "revoked" if memory["status"] == "revoked" else
+                    "superseded" if (
+                        memory_ref is not None and memory["revision"] != int(memory_ref[2])
+                        or memory["status"] != "validated"
+                    ) else
+                    "expired" if memory["expires_at"] and datetime.fromisoformat(
+                        memory["expires_at"].replace("Z", "+00:00")) <= datetime.now(UTC)
+                    else "superseded" if not self._memory_sources_current(project_id, memory)
+                    else "current"
+                )
+            else:
+                continue
+            result.append(ContextSourceStatus(sourceRef=item.sourceRef,
+                                              kind=item.kind, status=status))
+        return result
+
     def latest_checkpoint(self, project_id: UUID, run_id: UUID) -> WorkingCheckpoint | None:
         row = self.storage.session().execute(
             "SELECT state_json FROM working_checkpoints WHERE project_id=? AND run_id=? "
@@ -227,7 +349,8 @@ class ContextService:
         return WorkingCheckpoint.model_validate_json(row["state_json"]) if row else None
 
     def save_bundle(self, value: ContextBundle,
-                    rework_feedback: list[ContextItem] | None = None) -> ContextBundle:
+                    rework_feedback: list[ContextItem] | None = None,
+                    retrieval_items: list[ContextItem] | None = None) -> ContextBundle:
         bundle = verify_context_bundle(value)
         with self.storage.transaction() as db:
             config = self.configs.get(bundle.projectId, bundle.runId)
@@ -246,7 +369,7 @@ class ContextService:
                 raise ContextError("CONTEXT_CONFLICT")
             derived = build_context_bundle(
                 config, checkpoint, bundle.maxChars, bundle.bundleId, bundle.createdAt,
-                rework_feedback,
+                rework_feedback, retrieval_items,
             )
             if derived.contentHash != bundle.contentHash:
                 raise ContextError("CONTEXT_CONFLICT")
