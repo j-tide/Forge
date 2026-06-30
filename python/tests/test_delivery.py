@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -19,7 +20,7 @@ from forge.approvals import (
 )
 from forge.board import BoardReorderInput, BoardService
 from forge.conversations import ConversationSend, ConversationService, timestamp
-from forge.delivery import DeliveryError, DeliveryService, MergeRequest
+from forge.delivery import DeliveryError, DeliveryService, DeliverySummary, MergeRequest
 from forge.drafts import DraftRequest, DraftReviseInput, DraftService
 from forge.environments import EnvironmentService
 from forge.executor_contracts import RunCompleted
@@ -121,6 +122,17 @@ async def test_delivery_merge_is_explicit_once_and_restart_reconciles(tmp_path: 
     summary = service.get(project_id, task_id)
     assert summary.snapshotId == snapshot_id
     assert summary.planStatus == "not_configured"
+    historical = summary.model_dump(mode="json")
+    historical.pop("planRunId")
+    historical.pop("planArtifactId")
+    assert (
+        DeliverySummary.model_validate_json(json.dumps(historical)).contentHash
+        == summary.contentHash
+    )
+    with pytest.raises(ValueError, match="Plan evidence"):
+        DeliverySummary.model_validate_json(json.dumps({
+            **historical, "planStatus": "completed", "planRunId": str(uuid4()),
+        }))
     assert summary.attemptRunIds and summary.reviewReportIds and summary.verifyReportIds
     assert service.get(project_id, task_id).contentHash == summary.contentHash
     preview = service.preview(project_id, task_id)

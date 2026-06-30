@@ -266,7 +266,7 @@ async def test_scheduler_real_process_success_then_durable_cancel(
     script.write_text(SCRIPT)
     storage = ForgePersistence(tmp_path / "data")
     storage.open()
-    storage.migrate()
+    storage.migrate(LATEST_SCHEMA)
     projects = ProjectService(storage)
     probe = projects.probe(str(source))
     project = projects.create(str(source), probe.fingerprint, TRUST_VERSION, True, 0)

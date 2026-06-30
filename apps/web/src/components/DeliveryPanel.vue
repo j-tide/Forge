@@ -87,11 +87,13 @@ watch(() => [props.projectId,props.taskId,props.connected,props.refreshKey], () 
     <p v-if="error" role="alert">{{ error }}</p>
     <template v-if="summary">
       <p>交付 {{ summary.deliveryId.slice(0,8) }} · Contract v{{ summary.contractRevision }}
-        · 开发 Attempt {{ summary.attemptRunIds.length }} 次 · Review {{ summary.reviewReportIds.length }} 份
+        · 运行记录 {{ summary.attemptRunIds.length }} 条 · Review {{ summary.reviewReportIds.length }} 份
         · Verify {{ summary.verifyReportIds.length }} 份 · AC 决定 {{ summary.criterionDecisionIds.length }} 条</p>
       <p>快照 {{ summary.snapshotId.slice(0,8) }} · Commit {{ summary.snapshotCommit.slice(0,12) }}
         · 最终验收已记录 · 尚未自动推送或部署。</p>
-      <p v-if="summary.planStatus === 'not_configured'">Plan：当前阶段未配置正式 Plan 产物。</p>
+      <p v-if="summary.planStatus === 'completed' && summary.planRunId && summary.planArtifactId">
+        只读 Plan {{ summary.planArtifactId.slice(0,8) }} · Run {{ summary.planRunId.slice(0,8) }}，已与本次开发快照绑定。</p>
+      <p v-else-if="summary.planStatus === 'not_configured'">此交付记录未包含独立 Plan 来源；可查看 Run 历史。</p>
       <p v-if="summary.unresolvedRisks.length">明确接受的风险：{{ summary.unresolvedRisks.join('；') }}。</p>
     </template>
     <template v-if="preview">

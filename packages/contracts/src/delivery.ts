@@ -7,13 +7,22 @@ const digest = z.string().regex(/^[a-f0-9]{64}$/);
 export const deliverySummarySchema = z.strictObject({
   deliveryId: id, projectId: id, taskId: id, acceptanceDecisionId: id,
   contractRevision: z.int().positive(), contractHash: digest,
-  planStatus: z.literal('not_configured'), attemptRunIds: z.array(id).max(100),
+  planStatus: z.enum(['not_configured', 'completed']),
+  // Optional for delivery records written before Planner provenance was recorded.
+  planRunId: id.nullable().optional(), planArtifactId: id.nullable().optional(),
+  attemptRunIds: z.array(id).max(100),
   snapshotId: id, snapshotCommit: sha, baseRevision: sha,
   reviewReportIds: z.array(id).max(100), verifyReportIds: z.array(id).max(100),
   criterionDecisionIds: z.array(id).max(100), advisoryWaiverIds: z.array(id).max(100),
   unresolvedRisks: z.array(z.string().max(160)).max(100),
   finalStatus: z.literal('accepted'), acceptedAt: z.iso.datetime(),
   createdAt: z.iso.datetime(), contentHash: digest,
+}).superRefine((value, context) => {
+  const hasRun = value.planRunId != null;
+  const hasArtifact = value.planArtifactId != null;
+  if (hasRun !== hasArtifact || (value.planStatus === 'completed') !== hasRun) {
+    context.addIssue({code:'custom',message:'Plan evidence does not match delivery status',path:['planStatus']});
+  }
 });
 export const mergePreviewSchema = z.strictObject({
   deliveryId: id, targetBranch: z.string().max(240), targetHead: sha.nullable(),

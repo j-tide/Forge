@@ -13,12 +13,13 @@ from pathlib import Path
 from typing import Literal
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from forge.conversations import timestamp
 from forge.final_acceptance import FinalAcceptanceService
 from forge.handoffs import CodeSnapshot
 from forge.persistence import ForgePersistence
+from forge.planner import PlanArtifactService, PlannerError
 from forge.projects import ProjectService
 
 SHA = re.compile(r"^[0-9a-f]{40,64}$")
@@ -39,7 +40,10 @@ class DeliverySummary(BaseModel):
     acceptanceDecisionId: UUID
     contractRevision: int = Field(ge=1)
     contractHash: str = Field(pattern=r"^[a-f0-9]{64}$")
-    planStatus: Literal["not_configured"]
+    planStatus: Literal["not_configured", "completed"]
+    # Defaults preserve immutable delivery records created before Planner existed.
+    planRunId: UUID | None = None
+    planArtifactId: UUID | None = None
     attemptRunIds: list[UUID]
     snapshotId: UUID
     snapshotCommit: str = Field(pattern=r"^[0-9a-f]{40,64}$")
@@ -53,6 +57,16 @@ class DeliverySummary(BaseModel):
     acceptedAt: str
     createdAt: str
     contentHash: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+    @model_validator(mode="after")
+    def plan_identity_matches_status(self) -> DeliverySummary:
+        present = self.planRunId is not None and self.planArtifactId is not None
+        if (self.planStatus == "completed") != present or (
+            self.planStatus == "not_configured"
+            and (self.planRunId is not None or self.planArtifactId is not None)
+        ):
+            raise ValueError("Plan evidence does not match delivery status")
+        return self
 
 
 class MergePreview(BaseModel):
@@ -131,6 +145,35 @@ def _receipt(row: sqlite3.Row) -> MergeReceipt:
     )
 
 
+def _plan_evidence(
+    storage: ForgePersistence, project_id: UUID, task_id: UUID,
+    development_run_id: UUID, task_revision: int, contract_hash: str,
+    base_revision: str,
+) -> tuple[Literal["not_configured", "completed"], UUID | None, UUID | None]:
+    """Resolve only the immutable Plan that actually launched this Developer Run."""
+    row = storage.session().execute(
+        "SELECT c.plan_run_id,c.artifact_hash FROM plan_continuations c "
+        "JOIN plan_artifacts a ON a.run_id=c.plan_run_id "
+        "WHERE c.development_run_id=? AND a.project_id=? AND a.task_id=? "
+        "AND c.state IN ('automatic','approved')",
+        (str(development_run_id), str(project_id), str(task_id)),
+    ).fetchone()
+    if row is None:
+        return "not_configured", None, None
+    plan_run_id = UUID(row["plan_run_id"])
+    try:
+        artifact = PlanArtifactService(storage).get(project_id, plan_run_id)
+    except PlannerError as error:
+        raise DeliveryError("DELIVERY_SOURCE_STALE") from error
+    if (artifact is None or artifact.taskId != task_id
+            or artifact.taskRevision != task_revision
+            or artifact.taskContractHash != contract_hash
+            or artifact.baseRevision != base_revision
+            or artifact.contentHash != row["artifact_hash"]):
+        raise DeliveryError("DELIVERY_SOURCE_STALE")
+    return "completed", plan_run_id, artifact.artifactId
+
+
 class DeliveryService:
     def __init__(self, storage: ForgePersistence, projects: ProjectService,
                  final: FinalAcceptanceService) -> None:
@@ -162,6 +205,10 @@ class DeliveryService:
         if contract is None or snapshot_row is None:
             raise DeliveryError("DELIVERY_SOURCE_STALE")
         snapshot = CodeSnapshot.model_validate_json(snapshot_row["snapshot_json"])
+        plan_status, plan_run_id, plan_artifact_id = _plan_evidence(
+            self.storage, project_id, task_id, snapshot.runId,
+            view.contractRevision, contract["content_hash"], snapshot.baseRevision,
+        )
         params = (str(project_id), str(task_id))
         attempts = db.execute(
             "SELECT r.run_id FROM runs r JOIN run_attempts a ON a.run_id=r.run_id "
@@ -190,7 +237,10 @@ class DeliveryService:
             "deliveryId": str(uuid4()), "projectId": str(project_id), "taskId": str(task_id),
             "acceptanceDecisionId": str(view.decision.decisionId),
             "contractRevision": view.contractRevision, "contractHash": contract["content_hash"],
-            "planStatus": "not_configured", "attemptRunIds": [row["run_id"] for row in attempts],
+            "planStatus": plan_status,
+            "planRunId": str(plan_run_id) if plan_run_id else None,
+            "planArtifactId": str(plan_artifact_id) if plan_artifact_id else None,
+            "attemptRunIds": [row["run_id"] for row in attempts],
             "snapshotId": str(snapshot.snapshotId), "snapshotCommit": snapshot.commitSha,
             "baseRevision": snapshot.baseRevision,
             "reviewReportIds": [row["review_id"] for row in reviews],

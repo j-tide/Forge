@@ -20,6 +20,7 @@ from forge.board import BoardService
 from forge.context import ContextItem, ContextService
 from forge.context_builder import StageContextBuilder
 from forge.conversations import timestamp
+from forge.delivery import _plan_evidence
 from forge.development import (
     DevelopmentError,
     HostDevelopmentService,
@@ -28,7 +29,8 @@ from forge.development import (
 )
 from forge.environments import EnvironmentService
 from forge.executor_contracts import ExecutorCapabilities, ExecutorEvent, ScheduledExecutorRequest
-from forge.handoffs import HostSnapshotService
+from forge.handoffs import HandoffService, HostSnapshotService
+from forge.host import HostRuntime
 from forge.knowledge_ingestion import (
     KnowledgeImportInput,
     KnowledgeIngestionService,
@@ -39,6 +41,10 @@ from forge.planner import PlanArtifactService
 from forge.processes import ProcessController
 from forge.project_memory import ProjectMemoryService
 from forge.projects import ProjectService
+from forge.protocol import RpcRequest
+from forge.review_copies import ReviewCopyManager
+from forge.review_issues import ReviewIssueService
+from forge.review_runtime import HostReviewService, ReviewRuntimeError, ReviewStartInput
 from forge.rework import ReworkCycle, frozen_rework_limit
 from forge.run_config import RunConfigService
 from forge.run_inspection import RunInspectionService
@@ -57,10 +63,12 @@ def git(repo: Path, *args: str) -> str:
 
 class _Handle:
     def __init__(self, request: ScheduledExecutorRequest,
-                 event: Callable[[ExecutorEvent], None], plan_mode: str) -> None:
+                 event: Callable[[ExecutorEvent], None], plan_mode: str,
+                 review_result: dict[str, object] | None = None) -> None:
         self.request = request
         self.event = event
         self.plan_mode = plan_mode
+        self.review_result = review_result
         self.run_id = request.runId
         self.provider_session_id = f"fixture-{request.runId}"
         self.sequence = 0
@@ -85,22 +93,26 @@ class _Handle:
             return "cancelled"
         if self.request.permission == "read-only":
             assert self.request.outputSchema is not None
-            if self.plan_mode == "workspace-write":
-                Path(self.request.workspace, "unauthorized.txt").write_text("changed")
-            result: object = {
-                "schemaVersion": "1.0", "runId": self.run_id,
-                "attemptId": self.request.attempt.attemptId,
-                "nodeId": "plan",
-                "contractRevision": self.request.attempt.contractRevision,
-                "snapshotId": None, "outcome": "ready", "artifactIds": [],
-                "unresolved": [], "acceptanceResults": [],
-                "summary": "Add the requested input validation.",
-                "plan": [{"id": "guard", "description": "Guard invalid values",
-                          "paths": ["src/add.py"], "dependsOn": [],
-                          "checks": ["Run the tests"]}],
-            }
-            if self.plan_mode == "invalid-output":
-                result = {**result, "runId": "unknown"}
+            if self.request.attempt.outputSchemaId == "review-result/v1":
+                assert self.review_result is not None
+                result = self.review_result
+            else:
+                if self.plan_mode == "workspace-write":
+                    Path(self.request.workspace, "unauthorized.txt").write_text("changed")
+                result = {
+                    "schemaVersion": "1.0", "runId": self.run_id,
+                    "attemptId": self.request.attempt.attemptId,
+                    "nodeId": "plan",
+                    "contractRevision": self.request.attempt.contractRevision,
+                    "snapshotId": None, "outcome": "ready", "artifactIds": [],
+                    "unresolved": [], "acceptanceResults": [],
+                    "summary": "Add the requested input validation.",
+                    "plan": [{"id": "guard", "description": "Guard invalid values",
+                              "paths": ["src/add.py"], "dependsOn": [],
+                              "checks": ["Run the tests"]}],
+                }
+                if self.plan_mode == "invalid-output":
+                    result = {**result, "runId": "unknown"}
         else:
             Path(self.request.workspace, "result.txt").write_text("developed")
             result = None
@@ -121,6 +133,7 @@ class _Executor:
     def __init__(self, plan_mode: str = "valid") -> None:
         self.requests: list[ScheduledExecutorRequest] = []
         self.plan_mode = plan_mode
+        self.review_result: dict[str, object] | None = None
         self.caps = ExecutorCapabilities(
             executorId=self.id, adapterVersion="1", upstreamVersion="fixture-1",
             platform="test", available=True, streaming=True, resume=False,
@@ -138,7 +151,7 @@ class _Executor:
     async def start(self, request: ScheduledExecutorRequest,
                     on_event: Callable[[ExecutorEvent], None]) -> _Handle:
         self.requests.append(request)
-        return _Handle(request, on_event, self.plan_mode)
+        return _Handle(request, on_event, self.plan_mode, self.review_result)
 
     async def dispose(self) -> None:
         return None
@@ -151,12 +164,14 @@ class _Executor:
     ("standard", "invalid-output"), ("standard", "workspace-write"),
     ("standard", "context"), ("strict", "context-revoked"),
     ("standard", "context-rework"), ("standard", "context-rework-revoked"),
+    ("strict", "role-models"),
 ])
 @pytest.mark.asyncio
 async def test_published_standard_runs_read_only_plan_then_uses_its_artifact(
     tmp_path: Path,
     preset: str,
     action: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source = tmp_path / "source repo 空格"
     source.mkdir()
@@ -178,6 +193,14 @@ async def test_published_standard_runs_read_only_plan_then_uses_its_artifact(
     adapter = _Executor(action if action in ("invalid-output", "workspace-write") else "valid")
     profiles = AgentProfileService(storage)
     bindings: dict[str, str] = {}
+    role_models = {
+        role: f"fixture-{role}-model" if action == "role-models" else "fixture-model"
+        for role in ("planner", "developer", "reviewer")
+    }
+    if action == "role-models":
+        adapter.caps = adapter.caps.model_copy(update={
+            "modelIds": [*role_models.values(), "fixture-edited-model"],
+        })
     for role, policy, context in (
         ("planner", "read-only", ["task-contract", "project-context"]
          if action.startswith("context") else ["task-contract"]),
@@ -188,7 +211,7 @@ async def test_published_standard_runs_read_only_plan_then_uses_its_artifact(
         profile = AgentProfile.model_validate({
             "schemaVersion": "1.0", "id": f"profile.fixture.{role}",
             "revision": 1, "name": role, "role": role,
-            "executorId": adapter.id, "modelId": "fixture-model",
+            "executorId": adapter.id, "modelId": role_models[role],
             "promptTemplate": f"{role} only", "contextProviders": context,
             "policyProfile": policy,
             "limits": {"maxTurns": 10, "maxSeconds": 300,
@@ -257,6 +280,7 @@ async def test_published_standard_runs_read_only_plan_then_uses_its_artifact(
         )
 
     development.workflow_catalog = catalog
+    reviewer_service: HostReviewService | None = None
     try:
         if action in ("recover", "strict-recover"):
             original_handoff = development._start_after_plan
@@ -277,7 +301,7 @@ async def test_published_standard_runs_read_only_plan_then_uses_its_artifact(
         plan_run_id = uuid4()
         launched = await development.start(RunLaunchInput(
             projectId=project.projectId, taskId=draft.draftId,
-            expectedTaskRevision=2, modelId="fixture-model",
+            expectedTaskRevision=2, modelId=role_models["developer"],
             idempotencyKey=plan_run_id,
             contextQuery="start_date" if action.startswith("context") else None,
         ))
@@ -329,7 +353,9 @@ async def test_published_standard_runs_read_only_plan_then_uses_its_artifact(
                     current = profiles.get(bindings[role])
                     assert current is not None
                     profiles.save(ProfileSave(profile=current.model_copy(update={
-                        "revision": 2, "modelId": "unavailable-future-model",
+                        "revision": 2,
+                        "modelId": ("fixture-edited-model" if action == "role-models"
+                                    else "unavailable-future-model"),
                         "promptTemplate": f"New {role} instructions for future runs",
                     }), expectedRevision=1))
             approval = PlanActionInput(
@@ -337,7 +363,7 @@ async def test_published_standard_runs_read_only_plan_then_uses_its_artifact(
                 runId=plan_run_id, expectedArtifactHash=gate.artifact.contentHash,
                 expectedTaskRevision=2,
                 action="approve" if action in (
-                    "rework", "strict-recover", "context-revoked"
+                    "rework", "strict-recover", "context-revoked", "role-models"
                 ) else action,
                 reason="The plan needs a different approach" if action == "reject" else None,
                 confirmed=True,
@@ -391,6 +417,9 @@ async def test_published_standard_runs_read_only_plan_then_uses_its_artifact(
                 break
             await asyncio.sleep(.03)
         assert len(adapter.requests) == 2, scheduler_errors
+        assert [request.model for request in adapter.requests] == [
+            role_models["planner"], role_models["developer"],
+        ]
         assert adapter.requests[0].permission == "read-only"
         assert adapter.requests[0].approval == "never"
         assert adapter.requests[1].permission == "workspace-write"
@@ -409,6 +438,10 @@ async def test_published_standard_runs_read_only_plan_then_uses_its_artifact(
         assert frozen is not None and frozen.workflow.contentHash == (
             configs.get(project.projectId, plan_run_id).workflow.contentHash
         )
+        assert _plan_evidence(
+            storage, project.projectId, draft.draftId, UUID(dev_run_id),
+            2, artifact.taskContractHash, baseline,
+        ) == ("completed", plan_run_id, artifact.artifactId)
         assert frozen_rework_limit(storage, frozen, "review") == (
             2 if preset == "strict" else 3
         )
@@ -428,6 +461,137 @@ async def test_published_standard_runs_read_only_plan_then_uses_its_artifact(
             assert len(contexts.run_sources(project.projectId, UUID(dev_run_id))) == 1
         developer_handoff = development.handoff(project.projectId, UUID(dev_run_id))
         assert developer_handoff is not None
+        if action == "role-models":
+            assert adapter.requests[0].attempt.profileRevision == 1
+            assert adapter.requests[1].attempt.profileRevision == 1
+            assert adapter.requests[1].goal.startswith("developer only\n\n")
+            plan_config = configs.get(project.projectId, plan_run_id)
+            assert plan_config is not None
+            assert plan_config.profile.id == bindings["planner"]
+            assert [lock.id for lock in plan_config.stageProfiles] == [
+                bindings["developer"], bindings["reviewer"],
+            ]
+            assert frozen.profile == plan_config.stageProfiles[0]
+            assert frozen.stageProfiles == [plan_config.stageProfiles[1]]
+            original_hashes = (plan_config.snapshotHash, frozen.snapshotHash)
+            for role, lock in zip(
+                ("planner", "developer", "reviewer"),
+                (plan_config.profile, *plan_config.stageProfiles), strict=True,
+            ):
+                locked = profiles.get_locked(
+                    lock.id, lock.version, lock.contentHash, lock.executorPluginId,
+                )
+                assert locked is not None and locked.modelId == role_models[role]
+            for role in ("planner", "developer", "reviewer"):
+                current = profiles.get(bindings[role])
+                assert current is not None
+                if role == "planner":
+                    assert current.revision == 1
+                    profiles.save(ProfileSave(profile=current.model_copy(update={
+                        "revision": 2, "modelId": "fixture-edited-model",
+                        "promptTemplate": "New planner instructions for future runs",
+                    }), expectedRevision=1))
+                else:
+                    assert current.revision == 2
+                latest = profiles.get(bindings[role])
+                assert latest is not None and latest.modelId == "fixture-edited-model"
+            reread_plan = configs.get(project.projectId, plan_run_id)
+            reread_develop = configs.get(project.projectId, UUID(dev_run_id))
+            assert reread_plan is not None and reread_plan.snapshotHash == original_hashes[0]
+            assert reread_develop is not None and reread_develop.snapshotHash == original_hashes[1]
+            with monkeypatch.context() as patched:
+                patched.setenv("FORGE_HOST_DATA_DIR", str(tmp_path / "data"))
+                host = HostRuntime()
+                try:
+                    host.storage.open()
+                    for run_id, actual_role, expected_roles in (
+                        (plan_run_id, "planner", ("planner", "developer", "reviewer")),
+                        (dev_run_id, "developer", ("developer", "reviewer")),
+                    ):
+                        public = host.run_command(RpcRequest(
+                            jsonrpc="2.0", id="profile-details", method="run.config",
+                            params={"projectId": str(project.projectId),
+                                    "runId": str(run_id)},
+                            transportVersion="forge-local-jsonrpc/v1",
+                        ))["data"]
+                        assert public["developerProfile"]["id"] == bindings[actual_role]
+                        assert [
+                            (detail["id"], detail["role"], detail["modelId"])
+                            for detail in public["stageProfileDetails"]
+                        ] == [
+                            (bindings[role], role, role_models[role])
+                            for role in expected_roles
+                        ]
+                    saturated = plan_config.model_copy(update={
+                        "stageProfiles": [
+                            plan_config.stageProfiles[0],
+                            *([plan_config.stageProfiles[1]] * 7),
+                        ],
+                    })
+                    with patched.context() as saturated_patch:
+                        saturated_patch.setattr(
+                            host.configs, "get", lambda _project_id, _run_id: saturated,
+                        )
+                        public = host.run_command(RpcRequest(
+                            jsonrpc="2.0", id="saturated-details", method="run.config",
+                            params={"projectId": str(project.projectId),
+                                    "runId": str(plan_run_id)},
+                            transportVersion="forge-local-jsonrpc/v1",
+                        ))["data"]
+                    assert len(public["stageProfiles"]) == 8
+                    assert [detail["role"] for detail in public["stageProfileDetails"]] == [
+                        "developer", *(["reviewer"] * 7),
+                    ]
+                finally:
+                    host.storage.close()
+            adapter.review_result = {
+                "schemaVersion": "1.0",
+                "snapshotId": str(developer_handoff.snapshot.snapshotId),
+                "taskId": str(draft.draftId), "contractRevision": 2,
+                "profileRevision": 1, "outcome": "approved",
+                "blockingIssues": [], "suggestions": [], "unknowns": [],
+                "summary": "The fixture change meets the task contract.",
+            }
+            handoffs = HandoffService(storage)
+            inspections = RunInspectionService(storage, runs)
+            copies = ReviewCopyManager(
+                tmp_path / "review-copies", processes.runtime_id, lambda _run: False,
+            )
+            await copies.open()
+            issues = ReviewIssueService(storage, handoffs, configs, inspections, copies)
+            reviewer_service = HostReviewService(
+                storage, ProjectService(storage), handoffs, configs, inspections,
+                copies, issues, adapter, profiles,
+            )
+            review_input = ReviewStartInput(
+                projectId=project.projectId, taskId=draft.draftId,
+                developmentRunId=UUID(dev_run_id),
+                expectedSnapshotId=developer_handoff.snapshot.snapshotId,
+                modelId=role_models["reviewer"], idempotencyKey=uuid4(),
+            )
+            with pytest.raises(ReviewRuntimeError, match="WORKFLOW_PROFILE_UNAVAILABLE"):
+                await reviewer_service.start(review_input.model_copy(update={
+                    "modelId": "fixture-edited-model",
+                }))
+            assert len(adapter.requests) == 2
+            review = await reviewer_service.start(review_input)
+            for _ in range(200):
+                review = reviewer_service.get(project.projectId, review.reviewRunId)
+                if review.state != "running":
+                    break
+                await asyncio.sleep(.03)
+            assert review.state == "completed", review.errorCode
+            assert review.modelId == role_models["reviewer"]
+            assert len(adapter.requests) == 3
+            assert [request.model for request in adapter.requests] == list(role_models.values())
+            assert adapter.requests[2].attempt.profileRevision == 1
+            assert adapter.requests[2].goal.startswith("reviewer only\n")
+            assert adapter.requests[2].permission == "read-only"
+            assert adapter.requests[2].approval == "never"
+            reports = issues.list_for_task(project.projectId, draft.draftId)
+            assert len(reports) == 1 and reports[0].status == "approved"
+            assert reports[0].result is not None
+            assert reports[0].result.profileRevision == 1
         assert BoardService(storage).detail(
             str(project.projectId), str(draft.draftId)
         ).detail.task.state != "done"
@@ -479,5 +643,7 @@ async def test_published_standard_runs_read_only_plan_then_uses_its_artifact(
         assert git(source, "status", "--porcelain") == ""
         assert git(source, "rev-parse", "HEAD") == baseline
     finally:
+        if reviewer_service is not None:
+            await reviewer_service.shutdown()
         await development.shutdown()
         storage.close()

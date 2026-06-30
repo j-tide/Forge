@@ -1666,10 +1666,22 @@ class HostRuntime:
                 run = self.runs.get(config_input.projectId, config_input.runId)
                 if config is None or run is None:
                     raise ProtocolError("RUN_NOT_FOUND", "Run configuration is unavailable")
+                developer_profile = self.agent_profiles.get_locked(
+                    config.profile.id, config.profile.version,
+                    config.profile.contentHash, config.profile.executorPluginId,
+                )
+                # Keep all historical stage details when their contract array is full.
+                include_active = len(config.stageProfiles) < 8
+                detail_locks = (
+                    [config.profile, *config.stageProfiles] if include_active
+                    else config.stageProfiles
+                )
                 stage_details = []
-                for lock in config.stageProfiles:
-                    profile = self.agent_profiles.get_locked(
-                        lock.id, lock.version, lock.contentHash, lock.executorPluginId,
+                for index, lock in enumerate(detail_locks):
+                    profile = developer_profile if include_active and index == 0 else (
+                        self.agent_profiles.get_locked(
+                            lock.id, lock.version, lock.contentHash, lock.executorPluginId,
+                        )
                     )
                     if profile is None:
                         continue
@@ -1678,10 +1690,6 @@ class HostRuntime:
                         "role": profile.role, "modelId": profile.modelId,
                         "policyProfile": profile.policyProfile,
                     })
-                developer_profile = self.agent_profiles.get_locked(
-                    config.profile.id, config.profile.version,
-                    config.profile.contentHash, config.profile.executorPluginId,
-                )
                 result = {
                     "projectId": config.projectId, "runId": config.runId,
                     "taskId": config.taskId, "taskRevision": config.taskRevision,

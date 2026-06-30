@@ -24,7 +24,7 @@ from forge.drafts import (
     TaskContract,
 )
 from forge.environments import EnvironmentService
-from forge.persistence import ForgePersistence
+from forge.persistence import LATEST_SCHEMA, ForgePersistence
 from forge.projects import TRUST_VERSION, ProjectService
 from forge.run_config import (
     ProfileLock,
@@ -113,7 +113,7 @@ def test_published_revisions_freeze_old_and_new_run_configs(tmp_path: Path) -> N
     source.mkdir()
     storage = ForgePersistence(tmp_path / "data")
     storage.open()
-    storage.migrate(26)
+    storage.migrate(LATEST_SCHEMA)
     workflows = WorkflowDraftService(storage)
     base = load_template("quick").model_copy(update={"id": "workflow.versioned"})
     workflows.save(WorkflowSaveInput(template=base, expectedRevision=0))
@@ -181,7 +181,7 @@ def test_published_revisions_freeze_old_and_new_run_configs(tmp_path: Path) -> N
     storage.close()
     reopened = ForgePersistence(tmp_path / "data")
     reopened.open()
-    reopened.migrate(26)
+    reopened.migrate(LATEST_SCHEMA)
     assert WorkflowDraftService(reopened).published_lock(base.id, 1) == lock_one
     assert WorkflowDraftService(reopened).published_lock(base.id, 2) == lock_two
     restored = RunConfigService(reopened, EnvironmentService(reopened))
@@ -203,7 +203,7 @@ def test_stage_profile_lock_round_trips_without_changing_legacy_snapshot_hash(
     source.mkdir()
     storage = ForgePersistence(tmp_path / "data")
     storage.open()
-    storage.migrate(29)
+    storage.migrate(LATEST_SCHEMA)
     workflows = WorkflowDraftService(storage)
     template = load_template("quick").model_copy(update={"id": "workflow.profile-lock"})
     workflows.save(WorkflowSaveInput(template=template, expectedRevision=0))
@@ -229,7 +229,7 @@ def test_same_task_switches_published_workflow_and_agent_only_after_human_change
     source.mkdir()
     storage = ForgePersistence(tmp_path / "data")
     storage.open()
-    storage.migrate(29)
+    storage.migrate(LATEST_SCHEMA)
     workflows = WorkflowDraftService(storage)
     for workflow_id in ("workflow.first", "workflow.second"):
         template = load_template("quick").model_copy(update={"id": workflow_id})

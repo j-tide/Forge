@@ -32,7 +32,7 @@ from forge.drafts import (
 )
 from forge.environments import EnvironmentService
 from forge.handoffs import HandoffService, HostSnapshotService
-from forge.persistence import ForgePersistence
+from forge.persistence import LATEST_SCHEMA, ForgePersistence
 from forge.processes import ProcessController
 from forge.projects import TRUST_VERSION, ProjectService
 from forge.run_config import (
@@ -65,7 +65,7 @@ async def test_run_config_freeze_replay_and_restart(tmp_path: Path) -> None:
     git("commit", "-m", "base")
     storage = ForgePersistence(tmp_path / "data")
     storage.open()
-    storage.migrate()
+    storage.migrate(LATEST_SCHEMA)
     projects = ProjectService(storage)
     probe = projects.probe(str(source))
     project = projects.create(str(source), probe.fingerprint, TRUST_VERSION, True, 0)

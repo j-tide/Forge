@@ -32,22 +32,55 @@ afterEach(()=>{app?.unmount();root?.remove();app=null;root=null;});
 it('starts a published Plan node explicitly with an opted-in retrieval query', async () => {
   const binding = { workflowId:'workflow.fixture.standard', workflowRevision:1,
     profileId:'profile.fixture.developer', profileRevision:1,
-    modelId:'gpt-6-luna', entryNode:'plan' };
-  const developer = { id:binding.profileId, revision:1, role:'developer',
-    modelId:binding.modelId, policyProfile:'workspace-write',
+    modelId:'fixture-developer-model', entryNode:'plan' };
+  const planner = { id:'profile.fixture.planner', revision:2, name:'Fixture Planner',
+    role:'planner', executorId:'executor.codex', modelId:'fixture-planner-model',
+    policyProfile:'read-only', contextProviders:['task-contract','project-context'] };
+  const developer = { id:binding.profileId, revision:1, name:'Fixture Developer',
+    role:'developer', executorId:'executor.codex', modelId:binding.modelId,
+    policyProfile:'workspace-write',
     contextProviders:['task-contract','project-context'] };
+  const reviewer = { id:'profile.fixture.reviewer', revision:3, name:'Fixture Reviewer',
+    role:'reviewer', executorId:'executor.codex', modelId:'fixture-reviewer-model',
+    policyProfile:'read-only', contextProviders:['task-contract'] };
+  const published = {workflowId:binding.workflowId,revision:1,contentHash:'a'.repeat(64),
+    createdAt:now,definition:{schemaVersion:'1.0',id:binding.workflowId,revision:1,
+      name:'Fixture Standard',start:'plan',nodes:[
+        {id:'plan',kind:'agent',label:'Plan',boardColumn:'development',
+          binding:planner.id,requiredCapabilities:[],inputs:['task'],
+          outputSchema:'plan-result',timeoutSeconds:60,retryLimit:0,readOnly:true},
+        {id:'develop',kind:'agent',label:'Develop',boardColumn:'development',
+          binding:developer.id,requiredCapabilities:[],inputs:['plan'],
+          outputSchema:'development-step-result',timeoutSeconds:60,retryLimit:0,readOnly:false},
+        {id:'review',kind:'agent',label:'Review',boardColumn:'review',
+          binding:reviewer.id,requiredCapabilities:[],inputs:['snapshot'],
+          outputSchema:'review-result',timeoutSeconds:60,retryLimit:0,readOnly:true},
+      ],edges:[],rework:[],maxTotalAttempts:3,onUnmatched:'escalate',
+      finalAcceptance:'human'}};
   const call = vi.fn(async (command:{type:string}) => command.type === 'run.capabilities' ?
     {ok:true,data:{available:true,executorId:'executor.codex',adapterVersion:'fixture/1',
-      upstreamVersion:'fixture/1',modelIds:['gpt-6-luna'],workspaceControl:true,
+      upstreamVersion:'fixture/1',modelIds:[planner.modelId,developer.modelId,reviewer.modelId],
+      workspaceControl:true,
       streaming:true,interrupt:true,warnings:[],workflowBinding:binding}} :
     command.type === 'run.start' ? {ok:false,error:{code:'FIXTURE_STOP',message:'No run'}} :
       {ok:true,data:[]});
+  const getPublishedWorkflow=vi.fn(async()=>published);
   root=document.createElement('div');document.body.append(root);
-  app=createApp(RunInspector,{client:{run:call,agentProfileCatalog:async()=>({
-    profiles:[developer],availability:[{profileId:developer.id,runnable:true}],executors:[],
-  })} as unknown as ForgeClient,
+  app=createApp(RunInspector,{client:{run:call,getPublishedWorkflow,
+    agentProfileCatalog:async()=>({profiles:[planner,developer,reviewer],
+      availability:[{profileId:developer.id,runnable:true}],executors:[],
+    })} as unknown as ForgeClient,
   projectId,taskId,taskRevision:1,taskState:'todo',connected:true});app.mount(root);
   await vi.waitFor(()=>expect(root?.textContent).toContain('明确启动只读计划'));
+  await vi.waitFor(()=>expect(root?.textContent).toContain('fixture-planner-model'));
+  expect(getPublishedWorkflow).toHaveBeenCalledWith(binding.workflowId,binding.workflowRevision);
+  const stages=[...root.querySelectorAll('[aria-label="启动前阶段角色与模型"] li')]
+    .map((item)=>item.textContent?.replace(/\s+/g,' ').trim());
+  expect(stages).toEqual([
+    'Planner：Fixture Planner（profile.fixture.planner） · 当前 v2 · 执行器 executor.codex · 模型 fixture-planner-model',
+    'Developer：Fixture Developer（profile.fixture.developer） · 绑定 v1 · 执行器 executor.codex · 模型 fixture-developer-model',
+    'Reviewer：Fixture Reviewer（profile.fixture.reviewer） · 当前 v3 · 执行器 executor.codex · 模型 fixture-reviewer-model',
+  ]);
   const contextLabel=[...root.querySelectorAll<HTMLLabelElement>('label')].find((entry)=>
     entry.textContent?.includes('运行时资料检索词'));
   const context=contextLabel?.htmlFor ? root.querySelector<HTMLInputElement>(`#${contextLabel.htmlFor}`) : null;
@@ -108,6 +141,82 @@ it.each([
       expectedArtifactHash:'d'.repeat(64),expectedTaskRevision:1,
       action:scenario.action,confirmed:true},
   })));
+});
+
+it('shows distinct frozen Planner, Developer, and Reviewer models from Run config', async () => {
+  const planRun={...run,attempt:{...run.attempt,nodeId:'plan'}};
+  const profiles=[
+    {id:'profile.fixture.planner',version:'2',name:'Frozen Planner',role:'planner',
+      modelId:'frozen-planner-model',policyProfile:'read-only'},
+    {id:'profile.fixture.developer',version:'1',name:'Frozen Developer',role:'developer',
+      modelId:'frozen-developer-model',policyProfile:'workspace-write'},
+    {id:'profile.fixture.reviewer',version:'3',name:'Frozen Reviewer',role:'reviewer',
+      modelId:'frozen-reviewer-model',policyProfile:'read-only'},
+  ];
+  const locks=profiles.map((profile)=>({id:profile.id,version:profile.version,
+    contentHash:'c'.repeat(64),executorPluginId:'executor.codex'}));
+  const call=vi.fn(async(command:{type:string})=>({ok:true,data:
+    command.type==='run.capabilities' ? {available:false,executorId:'executor.codex',
+      adapterVersion:'fixture/1',upstreamVersion:'fixture/1',modelIds:[],
+      workspaceControl:false,streaming:false,interrupt:false,warnings:[]} :
+    command.type==='run.list' ? [planRun] :
+    command.type==='run.config' ? {projectId,runId,taskId,taskRevision:1,
+      configHash:'a'.repeat(64),workflow:{id:'workflow.fixture.standard',version:'1',
+        contentHash:'b'.repeat(64)},developerProfile:locks[0],
+      stageProfiles:locks.slice(1),stageProfileDetails:profiles,
+      environmentId:projectId,environmentRevision:1,actualNodeId:'plan'} :
+    command.type==='run.inspect' ? {run:planRun,observations:[],nextCursor:0,
+      hasMore:false,diff:null,contextSources:[],usage:null} :
+    ['run.reviewReports','run.issueHistory','run.reviewJobs'].includes(command.type) ? [] : null,
+  }));
+  root=document.createElement('div');document.body.append(root);
+  app=createApp(RunInspector,{client:{run:call,
+    agentProfileCatalog:async()=>null} as unknown as ForgeClient,
+    projectId,taskId,taskRevision:1,taskState:'active',connected:true});app.mount(root);
+  await vi.waitFor(()=>expect(root?.querySelector('[aria-label="本次 Run 冻结角色与模型"]'))
+    .not.toBeNull());
+  const stages=[...root.querySelectorAll('[aria-label="本次 Run 冻结角色与模型"] li')]
+    .map((item)=>item.textContent?.replace(/\s+/g,' ').trim());
+  expect(stages).toEqual([
+    'Planner · 实际节点： Frozen Planner（profile.fixture.planner） · v2 · 执行器 executor.codex · 模型 frozen-planner-model',
+    'Developer · 后续绑定： Frozen Developer（profile.fixture.developer） · v1 · 执行器 executor.codex · 模型 frozen-developer-model',
+    'Reviewer · 后续绑定： Frozen Reviewer（profile.fixture.reviewer） · v3 · 执行器 executor.codex · 模型 frozen-reviewer-model',
+  ]);
+});
+
+it('disables planned retrieval when the published Planner lacks project context permission', async () => {
+  const binding={workflowId:'workflow.fixture.standard',workflowRevision:1,
+    profileId:'profile.fixture.developer',profileRevision:1,
+    modelId:'fixture-developer-model',entryNode:'plan'};
+  const planner={id:'profile.fixture.planner',revision:1,role:'planner',
+    modelId:'fixture-planner-model',contextProviders:['task-contract']};
+  const developer={id:binding.profileId,revision:1,role:'developer',
+    modelId:binding.modelId,contextProviders:['task-contract','project-context']};
+  const call=vi.fn(async(command:{type:string;payload?:Record<string,unknown>})=>
+    command.type==='run.capabilities' ?
+    {ok:true,data:{available:true,executorId:'executor.codex',adapterVersion:'fixture/1',
+      upstreamVersion:'fixture/1',modelIds:[planner.modelId,developer.modelId],
+      workspaceControl:true,streaming:true,interrupt:true,warnings:[],workflowBinding:binding}} :
+    command.type==='run.start' ? {ok:false,error:{code:'FIXTURE_STOP',message:'No run'}} :
+      {ok:true,data:[]});
+  root=document.createElement('div');document.body.append(root);
+  app=createApp(RunInspector,{client:{run:call,
+    getPublishedWorkflow:async()=>({workflowId:binding.workflowId,revision:1,
+      definition:{nodes:[{id:'plan',binding:planner.id},{id:'develop',binding:developer.id}]} }),
+    agentProfileCatalog:async()=>({profiles:[planner,developer],
+      availability:[{profileId:developer.id,runnable:true}],executors:[]}),
+    } as unknown as ForgeClient,
+    projectId,taskId,taskRevision:1,taskState:'todo',connected:true});app.mount(root);
+  await vi.waitFor(()=>expect(root?.textContent).toContain('当前 Planner Profile 未允许项目知识与记忆检索'));
+  const contextLabel=[...root.querySelectorAll<HTMLLabelElement>('label')].find((entry)=>
+    entry.textContent?.includes('运行时资料检索词'));
+  const context=contextLabel?.htmlFor ? root.querySelector<HTMLInputElement>(`#${contextLabel.htmlFor}`) : null;
+  expect(context?.disabled).toBe(true);
+  [...root.querySelectorAll<HTMLButtonElement>('button')].find((entry)=>
+    entry.textContent?.includes('明确启动只读计划'))?.click();
+  await vi.waitFor(()=>expect(call).toHaveBeenCalledWith(expect.objectContaining({type:'run.start'})));
+  const launch=call.mock.calls.find(([command])=>command.type==='run.start')?.[0];
+  expect(launch?.payload).not.toHaveProperty('contextQuery');
 });
 
 it('shows the persisted Planner failure instead of treating a failed Plan as a handoff', async () => {
@@ -273,6 +382,7 @@ it('shows the persisted budget failure and frozen limits without calling the exe
   [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((button) =>
     button.textContent === 'context')?.click();
   await vi.waitFor(() => expect(root?.textContent).toContain('总 Token 观测上限：5000'));
+  expect(root?.textContent).toContain('当前冻结配置未提供模型 ID');
   expect(root.textContent).toContain('输出 Token 观测上限：1000');
   expect(call).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'run.start' }));
 });
@@ -687,6 +797,7 @@ it('shows the frozen Workflow Reviewer and sends its model and revision to Host'
     onRunChanged});app.mount(root);
   await vi.waitFor(()=>expect(root?.textContent).toContain('本次 Workflow 冻结 Reviewer'));
   expect(root?.textContent).toContain('Fixture Reviewer v1 · v1');
+  expect(root?.textContent).toContain('模型 gpt-6-sol');
   expect(root?.textContent).not.toContain('内置只读 Reviewer 配置');
   expect(root?.textContent).toContain('当前任务状态为 active');
   expect(root?.textContent).not.toContain('Codex 开发当前不可用');

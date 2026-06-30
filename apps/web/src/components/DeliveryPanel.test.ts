@@ -31,6 +31,18 @@ function mount(client: ForgeClient): void {
 afterEach(() => {app?.unmount();root?.remove();app=null;root=null;});
 
 describe('delivery and local merge', () => {
+  it('shows the frozen Plan artifact on a planned delivery without calling it a Developer attempt', async () => {
+    const planned = {...summary,planStatus:'completed',
+      planRunId:crypto.randomUUID(),planArtifactId:crypto.randomUUID()};
+    const run = vi.fn(async (command: {type:string}) => ({ok:true,data:
+      command.type === 'deliveries.get' ? planned : preview}));
+    mount({run} as unknown as ForgeClient);
+    await vi.waitFor(() => expect(document.body.textContent).toContain(
+      planned.planArtifactId.slice(0,8)));
+    expect(document.body.textContent).toContain('运行记录 1 条');
+    expect(document.body.textContent).not.toContain('未配置正式 Plan 产物');
+  });
+
   it('does not merge until the user confirms the exact target', async () => {
     const run = vi.fn(async (command: {type:string}) => ({ok:true,data:
       command.type === 'deliveries.get' ? summary : command.type === 'deliveries.preview' ? preview : {

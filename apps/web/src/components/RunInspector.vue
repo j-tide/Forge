@@ -14,7 +14,7 @@ import { developmentHandoffSchema, planGateSchema, runInspectionSchema, runRecov
   type RunView, type PlanGate, type StageContextPreview,
   type ContextSourceStatus } from '@forge/contracts';
 import type { RunConfigurationSource } from '@forge/contracts';
-import type { AgentProfileCatalog } from '@forge/contracts';
+import type { AgentProfileCatalog, PublishedWorkflow } from '@forge/contracts';
 import { ForgeBadge, ForgeButton, ForgeInput, ForgeSelect, ForgeTabs } from '@forge/ui';
 import { filePatch } from '../run-code-browser';
 
@@ -90,19 +90,53 @@ const maxTokens = ref('50000');
 const selectedMaxTokens = computed<50_000 | 100_000 | 200_000>(() =>
   maxTokens.value === '200000' ? 200_000 : maxTokens.value === '100000' ? 100_000 : 50_000);
 const agentCatalog = ref<AgentProfileCatalog | null>(null);
+const publishedWorkflow = ref<PublishedWorkflow | null>(null);
 const profileId = ref('');
 const reviewProfileId = ref('');
 const selectedProfile = computed(() => agentCatalog.value?.profiles.find((item) => item.id === profileId.value));
 const workflowBinding = computed(() => capabilities.value?.workflowBinding ?? null);
 const plannedWorkflow = computed(() => workflowBinding.value?.entryNode === 'plan');
+const launchStages = computed(() => {
+  const binding = workflowBinding.value;
+  if (!binding) return [];
+  const stages = plannedWorkflow.value ? ['plan', 'develop', 'review'] as const :
+    ['develop', 'review'] as const;
+  return stages.map((nodeId) => {
+    const profileId = nodeId === 'develop' ? binding.profileId :
+      publishedWorkflow.value?.definition.nodes.find((node) => node.id === nodeId)?.binding ?? null;
+    const profile = agentCatalog.value?.profiles.find((item) =>
+      item.id === profileId && item.role === ({ plan:'planner', develop:'developer',
+        review:'reviewer' } as const)[nodeId]);
+    const developer = nodeId === 'develop';
+    return {
+      nodeId, label: ({ plan:'Planner', develop:'Developer', review:'Reviewer' } as const)[nodeId],
+      profileId, name: profile?.name ?? null,
+      revision: developer ? binding.profileRevision : profile?.revision ?? null,
+      executorId: developer && profile?.revision !== binding.profileRevision ?
+        capabilities.value?.executorId ?? null : profile?.executorId ?? null,
+      modelId: developer ? binding.modelId : profile?.modelId ?? null,
+      versionSource: developer ? '绑定' : '当前',
+    };
+  });
+});
 const boundProfileReady = computed(() => !workflowBinding.value || Boolean(
   selectedProfile.value?.id === workflowBinding.value.profileId &&
   selectedProfile.value.revision === workflowBinding.value.profileRevision &&
   selectedProfile.value.modelId === workflowBinding.value.modelId &&
   agentCatalog.value?.availability.find((item) => item.profileId === workflowBinding.value?.profileId)?.runnable,
 ));
-const allowsProjectContext = computed(() => !selectedProfile.value ||
+const plannerProfile = computed(() => {
+  if (!plannedWorkflow.value) return null;
+  const binding = publishedWorkflow.value?.definition.nodes.find((node) => node.id === 'plan')?.binding;
+  return agentCatalog.value?.profiles.find((item) =>
+    item.id === binding && item.role === 'planner') ?? null;
+});
+const developerAllowsProjectContext = computed(() => !selectedProfile.value ||
   selectedProfile.value.contextProviders.includes('project-context'));
+const plannerAllowsProjectContext = computed(() => !plannedWorkflow.value ||
+  plannerProfile.value?.contextProviders.includes('project-context') === true);
+const allowsProjectContext = computed(() => developerAllowsProjectContext.value &&
+  plannerAllowsProjectContext.value);
 const selectedReviewProfile = computed(() => agentCatalog.value?.profiles.find((item) => item.id === reviewProfileId.value));
 const profileOptions = computed(() => workflowBinding.value ? [{
   value: workflowBinding.value.profileId,
@@ -138,6 +172,23 @@ const historicalSourcesError = ref('');
 const historicalSourcesBusy = ref(false);
 const runConfig = ref<RunConfigurationSource | null>(null);
 const runConfigError = ref('');
+const frozenStages = computed(() => {
+  const config = runConfig.value;
+  if (!config) return [];
+  return [config.developerProfile, ...config.stageProfiles].map((lock, index) => {
+    const detail = config.stageProfileDetails?.find((item) =>
+      item.id === lock.id && item.version === lock.version);
+    const role = detail?.role ?? (index === 0 ?
+      config.actualNodeId === 'plan' ? 'planner' : 'developer' : null);
+    return {
+      id: lock.id, version: lock.version, executorId: lock.executorPluginId,
+      label: role === 'planner' ? 'Planner' : role === 'developer' ? 'Developer' :
+        role === 'reviewer' ? 'Reviewer' : '后续阶段',
+      name: detail?.name ?? null, modelId: detail?.modelId ?? null,
+      actual: index === 0,
+    };
+  });
+});
 const boundReviewerLock = computed(() => {
   const config = runConfig.value;
   if (!config) return null;
@@ -393,7 +444,8 @@ async function load(): Promise<void> {
   historicalSources.value = []; historicalSourcesError.value = '';
   runConfig.value = null; runConfigError.value = '';
   handoff.value = null; deliveryError.value = ''; capabilities.value = null;
-  modelId.value = ''; reviewerModelChoice.value = '';
+  publishedWorkflow.value = null;
+  modelId.value = ''; reviewerModelChoice.value = ''; launchContextQuery.value = '';
   capabilityError.value = '';
   agentCatalog.value = null; profileId.value = ''; reviewProfileId.value = '';
   reviewReports.value = []; issueHistory.value = []; reviewJobs.value = []; reviewError.value = '';
@@ -412,8 +464,16 @@ async function load(): Promise<void> {
         reviewerModelChoice.value = parsed.data.modelIds[0] ?? '';
       }
     } else capabilityError.value = support.error.code;
-    try { agentCatalog.value = await props.client.agentProfileCatalog(); }
-    catch { agentCatalog.value = null; }
+    const binding = capabilities.value?.workflowBinding;
+    const [catalog, published] = await Promise.all([
+      Promise.resolve().then(() => props.client.agentProfileCatalog()).catch(() => null),
+      binding ? Promise.resolve().then(() => props.client.getPublishedWorkflow(
+        binding.workflowId, binding.workflowRevision)).catch(() => null) : Promise.resolve(null),
+    ]);
+    if (token !== serial) return;
+    agentCatalog.value = catalog;
+    if (binding && published?.workflowId === binding.workflowId &&
+      published.revision === binding.workflowRevision) publishedWorkflow.value = published;
     if (capabilities.value?.workflowBinding) {
       profileId.value = capabilities.value.workflowBinding.profileId;
       modelId.value = capabilities.value.workflowBinding.modelId;
@@ -521,7 +581,8 @@ async function startRun(): Promise<void> {
       maxTokens: selectedMaxTokens.value,
       ...(selectedProfile.value ? { profileId: selectedProfile.value.id,
         profileRevision: selectedProfile.value.revision } : {}),
-      ...(launchContextQuery.value.trim() ? { contextQuery: launchContextQuery.value.trim() } : {}),
+      ...(allowsProjectContext.value && launchContextQuery.value.trim() ?
+        { contextQuery: launchContextQuery.value.trim() } : {}),
     } });
     if (!result.ok) {
       if (result.error.code !== 'TRANSPORT_TIMEOUT' && result.error.code !== 'HOST_EXITED') {
@@ -638,6 +699,16 @@ onUnmounted(() => { serial++; stopPolling(); });
         :options="profileOptions" :disabled="starting || !!workflowBinding" />
       <p v-if="workflowBinding" role="status">此任务使用已发布工作流 {{ workflowBinding.workflowId }} v{{ workflowBinding.workflowRevision }}；
         {{ plannedWorkflow ? '首节点为只读 Planner；' : '' }}Developer Profile 与模型由 Host 的发布版本绑定，新 Run 将冻结当前版本。</p>
+      <section v-if="workflowBinding" aria-label="启动前阶段角色与模型">
+        <p>启动前阶段绑定；Planner 与 Reviewer 显示当前 Profile，实际版本由 Host 启动时校验并冻结。</p>
+        <ul><li v-for="stage in launchStages" :key="stage.nodeId">
+          <strong>{{ stage.label }}</strong>：{{ stage.name && stage.profileId ?
+            `${stage.name}（${stage.profileId}）` : stage.profileId ?? '已发布阶段绑定未读取' }}
+          <template v-if="stage.revision"> · {{ stage.versionSource }} v{{ stage.revision }}</template>
+          · 执行器 {{ stage.executorId ?? '未读取' }}
+          · 模型 {{ stage.modelId ?? '未读取；请在工作流中核对已发布阶段绑定' }}
+        </li></ul>
+      </section>
       <p v-if="workflowBinding && !boundProfileReady" role="alert">绑定的 Developer Profile 版本或执行能力已变化；当前不能启动，请刷新或到工作流与 Agents 核对。</p>
       <p v-if="selectedProfile">{{ selectedProfile.policyProfile }} · 保存的角色版本会在启动前重新校验。</p>
       <p v-else-if="capabilities?.available">内置 Developer 配置；启动前 Host 会再次检查模型与执行权限。</p>
@@ -646,8 +717,11 @@ onUnmounted(() => { serial++; stopPolling(); });
       <p v-else role="status">{{ executorUnavailableReason }}</p>
       <ForgeInput v-model="launchContextQuery" label="运行时资料检索词（可选）"
         placeholder="例如 start_date（可留空）" :disabled="starting || !allowsProjectContext" />
-      <p v-if="plannedWorkflow" role="status">计划流程检索需要已发布版本中的 Planner 与 Developer 都允许项目资料。Host 会将来源冻结到 Plan 和后续 Developer；来源失效会阻止交接。</p>
-      <p v-if="!allowsProjectContext" role="status">所选 Developer Profile 未允许项目知识与记忆检索；可在 Agents 中保存新版本后用于新 Run。</p>
+      <p v-if="plannedWorkflow" role="status">计划流程检索需要 Planner 与 Developer 都允许项目资料。Host 会将来源冻结到 Plan 和后续 Developer；来源失效会阻止交接。</p>
+      <p v-if="plannedWorkflow && !publishedWorkflow" role="status">未读取已发布 Planner 阶段绑定，暂不能输入资料检索词；请在工作流中核对已发布阶段绑定。</p>
+      <p v-else-if="plannedWorkflow && !plannerProfile" role="status">Planner 绑定的当前 Profile 未读取，暂不能输入资料检索词；请在工作流和 Agents 中核对。</p>
+      <p v-else-if="plannedWorkflow && !plannerAllowsProjectContext" role="status">当前 Planner Profile 未允许项目知识与记忆检索；可在 Agents 中保存新版本后重新发布工作流。</p>
+      <p v-if="!developerAllowsProjectContext" role="status">所选 Developer Profile 未允许项目知识与记忆检索；可在 Agents 中保存新版本后用于新 Run。</p>
       <p>填写时，Host 只接受当前项目/环境的有效来源；冲突或无结果会拒绝启动。资料标为低信任，不会替代批准合同。留空沿用原始开发路径。</p>
       <ForgeButton variant="primary" size="sm" :disabled="taskState !== 'todo' || !!acceptanceBlockReason || !capabilities?.available || !boundProfileReady || !modelId || starting"
         :loading="starting" @click="startRun">{{ plannedWorkflow ? '明确启动只读计划' : '明确启动开发' }}</ForgeButton>
@@ -680,6 +754,15 @@ onUnmounted(() => { serial++; stopPolling(); });
         <div class="run-head"><ForgeBadge>{{ active ? `${inspection.run.state} · 进程未验证` : inspection.run.state }}</ForgeBadge>
           <span>Attempt {{ inspection.run.attempt.attemptNo }}</span>
           <span>{{ inspection.run.createdAt }}</span></div>
+        <section v-if="runConfig" aria-label="本次 Run 冻结角色与模型">
+          <p>本次 Run 的 Profile 版本与执行器已冻结；其他阶段是否执行，以各自运行记录为准。</p>
+          <ul><li v-for="stage in frozenStages" :key="`${stage.id}@${stage.version}`">
+            <strong>{{ stage.label }}</strong> · {{ stage.actual ? '实际节点' : '后续绑定' }}：
+            {{ stage.name && stage.id ? `${stage.name}（${stage.id}）` : stage.id }}
+            · v{{ stage.version }} · 执行器 {{ stage.executorId }}
+            · 模型 {{ stage.modelId ?? '当前冻结配置未提供模型 ID' }}
+          </li></ul>
+        </section>
         <ForgeButton v-if="active && !readOnly && inspection.run.state !== 'canceling'" variant="danger" size="sm"
           :loading="cancelling" :disabled="cancelling" @click="cancelRun">停止此 Run</ForgeButton>
         <p v-if="active" class="run-caveat">这是 Host 持久记录；当前执行进程尚未核验。页面会轮询最新状态。</p>
@@ -753,6 +836,7 @@ onUnmounted(() => { serial++; stopPolling(); });
           <ForgeButton v-if="runConfigError" variant="ghost" size="sm" @click="refreshRunConfig">重试</ForgeButton></p>
         <p v-if="handoff && boundReviewerLock" role="status">本次 Workflow 冻结 Reviewer：
           {{ boundReviewerDetail?.name ?? boundReviewerLock.id }} · v{{ boundReviewerLock.version }} ·
+          模型 {{ boundReviewerDetail?.modelId ?? '当前冻结配置未提供模型 ID' }} ·
           {{ boundReviewerAvailable ? '能力可用' : '当前不可用或旧版本校验失败，不能启动 Review' }}。
           新发布的 Profile 不会改变此 Run。</p>
         <ForgeSelect v-if="handoff && capabilities?.available && runConfig && !boundReviewerLock && !acceptanceBlockReason" v-model="reviewProfileId"
