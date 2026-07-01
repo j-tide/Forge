@@ -45,12 +45,44 @@ describe('plugin config form', () => {
     expect(unavailable.textContent).toContain('本地插件需要 Forge Desktop');
     app?.unmount(); root?.remove();
     const inspect = vi.fn().mockResolvedValue({ pluginId: 'forge.executor.codex', version: '0.0.1',
-      forgeApiRange: '^1.0.0', compatible: true, active: true, issues: [],
+      forgeApiRange: '^1.0.0', compatible: true, active: true, enabled: true, restartRequired: false, issues: [], faults: [],
       configSchema: { type: 'object', additionalProperties: false, required: [], properties: {} } });
     const desktop = mount(PluginsView, { client: { inspectBundledPlugin: inspect }, desktop: true, connected: true });
     await vi.waitFor(() => expect(desktop.textContent).toContain('当前插件没有可编辑配置项'));
     expect(inspect).toHaveBeenCalledOnce();
     expect(desktop.textContent).toContain('已装配');
     expect(desktop.querySelector('form')).toBeNull();
+  });
+
+  it('keeps the plugin view readable and shows sanitized fault with Run impact', async () => {
+    const inspect = vi.fn().mockResolvedValue({ pluginId: 'forge.executor.codex', version: '0.0.2',
+      forgeApiRange: '^1.0.0', compatible: true, active: false, enabled: true, restartRequired: true, issues: [], configSchema: null,
+      faults: [{ pluginId: 'forge.executor.codex', phase: 'runtime', code: 'PLUGIN_RUNTIME_FAILED',
+        runId: 'run-42', recordedAt: '2026-09-24T00:00:00+00:00' }] });
+    const desktop = mount(PluginsView, { client: { inspectBundledPlugin: inspect }, desktop: true, connected: true });
+    await vi.waitFor(() => expect(desktop.textContent).toContain('PLUGIN_RUNTIME_FAILED'));
+    expect(desktop.textContent).toContain('run-42');
+    expect(desktop.textContent).toContain('不可用');
+  });
+
+  it('uses the fixed Desktop capability and displays persisted disabled and restart states', async () => {
+    const base = { pluginId: 'forge.executor.codex', version: '0.0.2', forgeApiRange: '^1.0.0',
+      compatible: true, active: true, enabled: true, restartRequired: false,
+      issues: [], faults: [], configSchema: { type: 'object', additionalProperties: false,
+        required: [], properties: {} } };
+    const setEnabled = vi.fn().mockResolvedValueOnce({ ...base, active: false, enabled: false })
+      .mockResolvedValueOnce({ ...base, active: false, restartRequired: true });
+    const desktop = mount(PluginsView, { client: {
+      inspectBundledPlugin: vi.fn().mockResolvedValue(base), setBundledPluginEnabled: setEnabled,
+    }, desktop: true, connected: true });
+    await vi.waitFor(() => expect(desktop.textContent).toContain('已装配'));
+    const disable = [...desktop.querySelectorAll('button')].find((button) => button.textContent?.includes('停用 Codex'))!;
+    disable.click();
+    await vi.waitFor(() => expect(desktop.textContent).toContain('已停用'));
+    expect(setEnabled).toHaveBeenCalledWith(false);
+    const enable = [...desktop.querySelectorAll('button')].find((button) => button.textContent?.includes('启用并在重启后生效'))!;
+    enable.click();
+    await vi.waitFor(() => expect(desktop.textContent).toContain('启用偏好已保存'));
+    expect(setEnabled).toHaveBeenCalledWith(true);
   });
 });
