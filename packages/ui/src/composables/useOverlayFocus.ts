@@ -1,27 +1,54 @@
 import { nextTick, onBeforeUnmount, watch, type Ref } from 'vue';
 
 const focusable = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const overlayStack: symbol[] = [];
+const inertCounts = new WeakMap<HTMLElement, number>();
 
-export function useOverlayFocus(open: Ref<boolean>, panel: Ref<HTMLElement | null>, close: () => void): void {
+export function useOverlayFocus(open: Ref<boolean>, panel: Ref<HTMLElement | null>, close: () => void,
+  initialFocus?: string): void {
   let returnTo: HTMLElement | null = null;
   const background = typeof document === 'undefined' ? null : document.querySelector<HTMLElement>('#app');
+  const identity = Symbol('forge-overlay');
+  let active = false;
+  function release(): void {
+    if (!active) return;
+    active = false;
+    const position = overlayStack.lastIndexOf(identity);
+    if (position !== -1) overlayStack.splice(position, 1);
+    if (background) {
+      const count = Math.max(0, (inertCounts.get(background) ?? 1) - 1);
+      if (count) inertCounts.set(background, count);
+      else { inertCounts.delete(background); background.inert = false; }
+    }
+  }
   watch(open, async (isOpen) => {
     if (isOpen) {
       returnTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      if (background) background.inert = true;
+      if (!active) {
+        active = true;
+        overlayStack.push(identity);
+        if (background) {
+          inertCounts.set(background, (inertCounts.get(background) ?? 0) + 1);
+          background.inert = true;
+        }
+      }
       await nextTick();
+      if (!open.value || overlayStack.at(-1) !== identity) return;
       const candidates = [...(panel.value?.querySelectorAll<HTMLElement>(focusable) ?? [])];
-      (candidates[0] ?? panel.value)?.focus();
+      ((initialFocus ? panel.value?.querySelector<HTMLElement>(initialFocus) : null) ??
+        candidates[0] ?? panel.value)?.focus();
     } else {
-      if (background) background.inert = false;
+      if (!active && returnTo === null) return;
+      release();
       await nextTick();
+      if (open.value) return;
       if (returnTo?.isConnected) returnTo.focus();
       returnTo = null;
     }
-  }, { flush: 'post' });
+  }, { flush: 'post', immediate: true });
 
   function onKeyDown(event: KeyboardEvent): void {
-    if (!open.value) return;
+    if (!open.value || overlayStack.at(-1) !== identity) return;
     if (event.key === 'Escape') {
       event.preventDefault();
       close();
@@ -39,7 +66,7 @@ export function useOverlayFocus(open: Ref<boolean>, panel: Ref<HTMLElement | nul
   }
 
   function onFocusIn(event: FocusEvent): void {
-    if (open.value && panel.value && !panel.value.contains(event.target as Node)) {
+    if (open.value && overlayStack.at(-1) === identity && panel.value && !panel.value.contains(event.target as Node)) {
       (panel.value.querySelector<HTMLElement>(focusable) ?? panel.value).focus();
     }
   }
@@ -51,6 +78,8 @@ export function useOverlayFocus(open: Ref<boolean>, panel: Ref<HTMLElement | nul
   onBeforeUnmount(() => {
     document.removeEventListener('keydown', onKeyDown);
     document.removeEventListener('focusin', onFocusIn);
-    if (background) background.inert = false;
+    const restore = active && overlayStack.at(-1) === identity;
+    release();
+    if (restore && returnTo?.isConnected) returnTo.focus();
   });
 }

@@ -9,10 +9,10 @@
 .forge-button--sm { min-height: 30px; padding: var(--forge-space-6) var(--forge-space-12); font-size: var(--forge-font-caption); }
 .forge-button--md { min-height: 36px; padding: var(--forge-space-8) var(--forge-space-16); font-size: var(--forge-font-small); }
 .forge-button--lg { min-height: 44px; padding: var(--forge-space-12) var(--forge-space-24); font-size: var(--forge-font-body); }
-.forge-button--primary { background: var(--forge-color-action); border-color: var(--forge-color-action); color: var(--forge-surface-reading); box-shadow: var(--forge-shadow-action); }
+.forge-button--primary { background: var(--forge-color-action); border-color: var(--forge-color-action); color: var(--forge-color-on-action); box-shadow: var(--forge-shadow-action); }
 .forge-button--secondary { background: var(--forge-surface-reading); color: var(--forge-color-text); }
 .forge-button--ghost { background: transparent; border-color: transparent; color: var(--forge-color-accent-text); }
-.forge-button--danger { background: var(--forge-color-danger); border-color: var(--forge-color-danger); color: var(--forge-surface-reading); }
+.forge-button--danger { background: var(--forge-color-danger); border-color: var(--forge-color-danger); color: var(--forge-color-on-danger); }
 .forge-button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--forge-shadow-surface); }
 .forge-button:active:not(:disabled) { transform: translateY(0); }
 .forge-button:disabled, .forge-icon-button:disabled { cursor: not-allowed; opacity: .58; box-shadow: none; }
@@ -67,7 +67,7 @@
 .forge-tab-list button[aria-selected='true'] { color: var(--forge-color-text); border-bottom-color: var(--forge-color-accent); font-weight: var(--forge-font-weight-semibold); }
 .forge-tab-list button:disabled { opacity: .5; cursor: not-allowed; }
 .forge-tooltip { position: relative; display: inline-flex; }
-.forge-tooltip-text { position: absolute; bottom: calc(100% + var(--forge-space-8)); left: 50%; z-index: var(--forge-z-popover); width: max-content; max-width: 220px; padding: var(--forge-space-6) var(--forge-space-8); border-radius: var(--forge-radius-sm); background: var(--forge-color-action); color: var(--forge-surface-reading); font-size: var(--forge-font-caption); transform: translateX(-50%); visibility: hidden; pointer-events: none; }
+.forge-tooltip-text { position: absolute; bottom: calc(100% + var(--forge-space-8)); left: 50%; z-index: var(--forge-z-popover); width: max-content; max-width: 220px; padding: var(--forge-space-6) var(--forge-space-8); border-radius: var(--forge-radius-sm); background: var(--forge-color-action); color: var(--forge-color-on-action); font-size: var(--forge-font-caption); transform: translateX(-50%); visibility: hidden; pointer-events: none; }
 .forge-tooltip:hover .forge-tooltip-text, .forge-tooltip:focus-within .forge-tooltip-text { visibility: visible; }
 .forge-popover-root { position: relative; display: inline-block; }
 .forge-popover-trigger { border: 0; background: transparent; color: inherit; }
@@ -92,7 +92,7 @@
 .forge-empty-state p { max-width: 290px; margin: 0; color: var(--forge-color-text-secondary); font-size: var(--forge-font-small); line-height: var(--forge-line-body); }
 .forge-spinner-wrap { display: inline-flex; align-items: center; gap: var(--forge-space-8); color: var(--forge-color-text-secondary); }
 .forge-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--forge-surface-control); border-top-color: var(--forge-color-accent); border-radius: 50%; animation: forge-spin 700ms linear infinite; }
-.forge-spinner--button { border-color: var(--forge-color-text-secondary); border-top-color: var(--forge-surface-reading); }
+.forge-spinner--button { border-color: var(--forge-color-text-secondary); border-top-color: var(--forge-color-on-action); }
 .forge-skeleton { height: 20px; border-radius: var(--forge-radius-sm); background: var(--forge-surface-control); }
 @keyframes forge-spin { to { transform: rotate(1turn); } }
 @keyframes forge-dialog-enter { from { opacity: 0; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: none; } }
