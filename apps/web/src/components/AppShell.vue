@@ -18,20 +18,20 @@ const props = defineProps<{
   reduceMotion: boolean;
   theme: 'light' | 'dark';
 }>();
-const emit = defineEmits<{ navigate: [view: ForgeView]; refreshHealth: []; restartHost: [] }>();
+const emit = defineEmits<{ navigate: [view: ForgeView]; chooseProject: []; newTask: []; refreshHealth: []; restartHost: [] }>();
 const diagnosticsOpen = ref(false);
 const commandOpen = ref(false);
 const commandQuery = ref('');
 const railItems = [
-  { id: 'home', label: '工作台', icon: 'home' },
-  { id: 'board', label: '研发看板', icon: 'board' },
+  { id: 'board', label: '看板', icon: 'board' },
   { id: 'workflows', label: '工作流', icon: 'workflow' },
-  { id: 'agents', label: 'Agents', icon: 'agents' },
+  { id: 'agents', label: '角色', icon: 'agents' },
   { id: 'plugins', label: '插件', icon: 'plugins' },
-  { id: 'projects', label: '项目', icon: 'projects' },
   { id: 'knowledge', label: '项目资料', icon: 'knowledge' },
+  { id: 'projects', label: '项目管理', icon: 'projects' },
   { id: 'settings', label: '设置', icon: 'settings' },
 ];
+const currentPage = computed(() => railItems.find((item) => item.id === props.view)?.label ?? '看板');
 const hostLabel = computed(() => {
   switch (props.hostStatus.state) {
     case 'starting': return 'Host starting…';
@@ -61,14 +61,27 @@ onUnmounted(() => window.removeEventListener('keydown', onShortcut));
 
 <template>
   <ForgeAppShell class="app-shell" :data-theme="theme" :data-reduce-transparency="reduceTransparency" :data-reduce-motion="reduceMotion">
-    <template #rail><ForgeIconRail :items="railItems" :selected="view" @select="navigate" /></template>
+    <template #rail>
+      <ForgeIconRail :items="railItems" :selected="view" @select="navigate">
+        <template #footer>
+          <button v-if="!hostStatus.health?.storage.readOnly" class="sidebar-new-task" type="button"
+            aria-label="新建任务" title="新建任务" @click="emit('newTask')">
+            <span aria-hidden="true">＋</span>
+          </button>
+        </template>
+      </ForgeIconRail>
+    </template>
     <template #header>
       <ForgeWorkspaceHeader>
-        <div class="topbar-brand"><strong>Forge</strong><span>研发工作台</span></div>
-        <button class="project-picker" type="button" :title="projectName ?? '未选择项目'" @click="emit('navigate', 'projects')"><span class="project-dot" aria-hidden="true" /><span class="project-picker-name">{{ projectName ?? '未选择项目' }}</span><span class="project-chevron" aria-hidden="true">⌄</span></button>
+        <div class="topbar-brand"><strong>{{ currentPage }}</strong></div>
+        <span class="topbar-separator" aria-hidden="true" />
+        <button class="project-picker" type="button" :title="projectName ?? '选择项目'" @click="emit('chooseProject')">
+          <svg class="project-picker-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h6l2 2h9v9.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z" /></svg>
+          <span class="project-picker-name">{{ projectName ?? '选择项目' }}</span>
+          <span class="project-chevron" aria-hidden="true">⌄</span>
+        </button>
         <div class="topbar-spacer" />
-        <button class="quick-nav-trigger" type="button" aria-label="快速导航" title="快速导航 · Cmd/Ctrl+K" @click="commandOpen = true">⌕ <span>⌘/Ctrl K</span></button>
-        <span class="runtime-badge">{{ runtimeLabel }}</span>
+        <button class="quick-nav-trigger" type="button" aria-label="快速导航" title="快速导航 · Cmd/Ctrl+K" @click="commandOpen = true"><span aria-hidden="true">⌕</span> <span>⌘/Ctrl K</span></button>
         <div class="host-area">
           <ForgePopover v-model:open="diagnosticsOpen" label="Host 诊断" trigger-class="host-badge" panel-class="host-diagnostics" panel-id="host-diagnostics" :state="hostStatus.state">
             <template #trigger><span aria-hidden="true" />{{ hostLabel }}</template>
@@ -102,7 +115,6 @@ onUnmounted(() => window.removeEventListener('keydown', onShortcut));
       </p>
       <slot />
     </ForgeContentArea>
-    <template #footer><footer class="shell-footer" :title="projectName ?? undefined">{{ projectName ? `${projectName} · 仅执行已批准的任务` : '当前为空工作区' }}</footer></template>
     <ForgeDialog v-model:open="commandOpen" title="快速导航" initial-focus="input.forge-text-input">
       <div class="quick-nav">
         <ForgeInput v-model="commandQuery" label="搜索页面" description="Cmd/Ctrl+K 打开；Esc 关闭。" />

@@ -1,4 +1,4 @@
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { createApp, nextTick, type App as VueApp } from 'vue';
 import { hostProtocolVersion, type HostConnectionSnapshot } from '@forge/contracts';
 import AppShell from './AppShell.vue';
@@ -21,12 +21,16 @@ it('identifies the installed historical Host as read-only in the shell and diagn
       storage: { status: 'ready', readOnly: true, schemaVersion: 35,
         sqliteVersion: '3.50.4', journalMode: 'wal', error: null } },
   };
+  const chooseProject = vi.fn();
+  const newTask = vi.fn();
+  const navigate = vi.fn();
   root = document.createElement('div'); document.body.append(root);
   app = createApp(AppShell, {
     view: 'home', runtimeLabel: 'Desktop · macOS', webRuntime: false,
     hostStatus: snapshot, canRestartHost: false, hostRestartBusy: false,
     hostRestartError: '', projectName: 'Historical fixture',
     reduceTransparency: false, reduceMotion: false, theme: 'light',
+    onChooseProject: chooseProject, onNewTask: newTask, onNavigate: navigate,
   });
   app.mount(root);
   expect(root.querySelector('.historical-read-only-banner')?.textContent)
@@ -35,4 +39,14 @@ it('identifies the installed historical Host as read-only in the shell and diagn
   root.querySelector<HTMLButtonElement>('.host-badge')?.click();
   await nextTick();
   expect(root.querySelector('#host-diagnostics')?.textContent).toContain('StorageRead-only');
+  expect(root.querySelectorAll('.project-picker')).toHaveLength(1);
+  expect(root.querySelector('.topbar .project-picker')).not.toBeNull();
+  expect(root.querySelector('.forge-rail-link[aria-label="看板"]')).not.toBeNull();
+  root.querySelector<HTMLButtonElement>('.project-picker')?.click();
+  expect(chooseProject).toHaveBeenCalledOnce();
+  expect(root.querySelector('.sidebar-new-task')).toBeNull();
+  expect(newTask).not.toHaveBeenCalled();
+  root.querySelector<HTMLButtonElement>('.forge-brand-mark')?.click();
+  expect(navigate).toHaveBeenCalledWith('board');
+  expect(root.querySelector('.forge-rail-link[aria-label="工作台"]')).toBeNull();
 });

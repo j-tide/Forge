@@ -1,31 +1,20 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { ForgeClient } from '@forge/client';
-import { boardSnapshotSchema, conversationMessageSchema, conversationSchema,
-  taskDraftSchema, type BoardColumn, type BoardSnapshot, type BoardTask,
-  type ConversationMessage, type TaskDraft } from '@forge/contracts';
+import { boardSnapshotSchema, type BoardColumn, type BoardSnapshot, type BoardTask } from '@forge/contracts';
 import { boardColumns, boardCounts, filterBoardTasks, type BoardFilters } from '@forge/core/task-projection';
-import { ForgeBadge, ForgeButton, ForgeDialog, ForgeEmptyState, ForgeInput,
-  ForgeTextarea } from '@forge/ui';
-import DraftSheet from './DraftSheet.vue';
+import { ForgeBadge, ForgeButton, ForgeEmptyState, ForgeInput } from '@forge/ui';
 import TaskDetailDrawer from './TaskDetailDrawer.vue';
 
 const props = defineProps<{ client: ForgeClient; projectId: string | null;
   connected: boolean; readOnly?: boolean; refreshKey: number }>();
-const emit = defineEmits<{ chooseProject: [] }>();
+const emit = defineEmits<{ 'choose-project': []; 'new-task': [] }>();
 const snapshot = ref<BoardSnapshot | null>(null);
 const loading = ref(false);
 const saving = ref(false);
 const error = ref('');
 const notice = ref('');
 const filters = ref<BoardFilters>({ search: '', priority: 'all', state: 'all', executorId: 'all' });
-const manualOpen = ref(false);
-const manualTitle = ref('');
-const manualGoal = ref('');
-const manualAcceptance = ref('');
-const selectedDraft = ref<TaskDraft | null>(null);
-const sourceMessages = ref<ConversationMessage[]>([]);
-const draftOpen = ref(false);
 const selectedTaskId = ref<string | null>(null);
 const detailOpen = ref(false);
 function readTaskHash(): string | null {
@@ -52,8 +41,13 @@ const scrollTop = ref<Record<BoardColumn, number>>({ todo: 0, development: 0,
 let dragged: { taskId: string; column: BoardColumn } | null = null;
 let requestNumber = 0;
 
-const labels: Record<BoardColumn, string> = { todo: 'TODO', development: '开发中',
-  review: 'Review', verify: '验证', done: 'Done' };
+const labels: Record<BoardColumn, string> = { todo: '待办', development: '开发',
+  review: '审查', verify: '验证与验收', done: '完成' };
+const emptyLabels: Record<BoardColumn, string> = { todo: '暂无待办任务',
+  development: '没有开发中的任务', review: '没有待审查任务', verify: '没有待验证任务', done: '暂无已完成任务' };
+const priorityLabels: Record<BoardTask['priority'], string> = {
+  low: '低优先级', normal: '普通', high: '高优先级', urgent: '紧急',
+};
 const visible = computed(() => filterBoardTasks(snapshot.value?.tasks ?? [], filters.value));
 const totalCounts = computed(() => boardCounts(snapshot.value?.tasks ?? []));
 const visibleCounts = computed(() => boardCounts(visible.value));
@@ -63,7 +57,36 @@ const anyTasks = computed(() => (snapshot.value?.tasks.length ?? 0) > 0);
 const filtersActive = computed(() => filters.value.search.trim() !== '' ||
   filters.value.priority !== 'all' || filters.value.state !== 'all' ||
   filters.value.executorId !== 'all');
-const itemHeight = 132;
+function clearFilters(): void {
+  filters.value = { search: '', priority: 'all', state: 'all', executorId: 'all' };
+}
+function taskCaption(task: BoardTask): string {
+  if (task.blockReason) return task.blockReason;
+  if (task.state === 'blocked') return '等待处理';
+  if (task.state === 'awaiting_acceptance') return '等待你验收';
+  if (task.state === 'done') return '已完成验收';
+  const stageLabels: Record<BoardColumn, string> = {
+    todo: '已批准 · 待开始', development: '开发阶段', review: '审查阶段',
+    verify: '验证阶段', done: '已完成验收',
+  };
+  return stageLabels[task.boardColumn];
+}
+function taskStatus(task: BoardTask): string {
+  if (task.state === 'blocked') return '需处理';
+  if (task.state === 'awaiting_acceptance') return '待验收';
+  if (task.state === 'done') return '已完成';
+  if (task.state === 'todo') return '待开始';
+  return labels[task.boardColumn];
+}
+function nextAction(task: BoardTask): string {
+  if (task.state === 'blocked') return '处理阻塞';
+  if (task.state === 'awaiting_acceptance') return '查看验收';
+  if (task.state === 'done') return '查看交付';
+  if (task.state === 'todo') return '查看并启动';
+  return task.boardColumn === 'review' ? '查看审查' :
+    task.boardColumn === 'verify' ? '查看验证' : '查看运行';
+}
+const itemHeight = 164;
 const viewportItems = 5;
 const overscan = 2;
 function columnTasks(column: BoardColumn): BoardTask[] {
@@ -82,7 +105,9 @@ function onScroll(column: BoardColumn, event: Event): void {
 async function load(): Promise<void> {
   const projectId = props.projectId;
   const serial = ++requestNumber;
-  if (!projectId || !props.connected) { snapshot.value = null; error.value = ''; return; }
+  if (!projectId || !props.connected) {
+    snapshot.value = null; error.value = ''; loading.value = false; return;
+  }
   snapshot.value = null; loading.value = true; error.value = '';
   try {
     const result = await props.client.board({ type: 'board.snapshot', payload: { projectId } });
@@ -149,104 +174,95 @@ function dropColumn(column: BoardColumn): void {
   }
 }
 
-async function createManual(): Promise<void> {
-  const projectId = props.projectId;
-  if (!projectId || !props.connected || props.readOnly || saving.value || !manualTitle.value.trim() ||
-    !manualGoal.value.trim() || !manualAcceptance.value.trim()) return;
-  saving.value = true; error.value = '';
-  try {
-    const title = manualTitle.value.trim();
-    const goal = manualGoal.value.trim();
-    const acceptance = manualAcceptance.value.trim();
-    const created = await props.client.conversation({ type: 'conversation.create', payload: {
-      projectId, title: `手工任务 · ${title}`.slice(0, 160), expectedRevision: 0,
-    } });
-    if (!created.ok) throw new Error(created.error.message);
-    const conversation = conversationSchema.parse(created.data);
-    const text = `${title}\n\n${goal}\n\n验收：${acceptance}`;
-    const sent = await props.client.conversation({ type: 'conversation.send', payload: {
-      projectId, conversationId: conversation.conversationId, idempotencyKey: crypto.randomUUID(),
-      text, attachmentIds: [],
-    } });
-    if (!sent.ok) throw new Error(sent.error.message);
-    const message = conversationMessageSchema.parse((sent.data as { message: unknown }).message);
-    const begun = await props.client.draft({ type: 'draft.manual', payload: {
-      projectId, conversationId: conversation.conversationId, sourceMessageId: message.messageId,
-      idempotencyKey: crypto.randomUUID(),
-    } });
-    if (!begun.ok) throw new Error(begun.error.message);
-    const draft = taskDraftSchema.parse(begun.data);
-    const decisionId = crypto.randomUUID();
-    const refs = [`message:${message.messageId}`, `decision:${decisionId}`];
-    const revised = await props.client.draft({ type: 'draft.revise', payload: {
-      projectId, draftId: draft.draftId, expectedRevision: draft.revision,
-      decisionId, decisionSummary: '用户从看板手工建立任务草稿',
-      resolvedQuestions: [], removedAcceptanceIds: [], confirmScopeChange: false,
-      contract: { schemaVersion: '1.0', taskId: draft.draftId, projectId,
-        revision: draft.revision + 1, title, type: 'feature', goal,
-        acceptance: [{ id: 'ac1', statement: acceptance, method: 'manual', required: true,
-          sourceRefs: refs }], constraints: [], scope: [], outOfScope: [], dependencies: [],
-        openQuestions: [], assumptions: [], sourceRefs: refs,
-        workflowRef: 'standard', priority: 'normal',
-      },
-    } });
-    if (!revised.ok) throw new Error(revised.error.message);
-    selectedDraft.value = taskDraftSchema.parse(revised.data);
-    sourceMessages.value = [message];
-    manualOpen.value = false; draftOpen.value = true;
-    manualTitle.value = ''; manualGoal.value = ''; manualAcceptance.value = '';
-    notice.value = '手工草稿已保存。请审阅并单独批准，才会进入 TODO。';
-  } catch (cause) { error.value = cause instanceof Error ? cause.message : '手工草稿创建失败。'; }
-  finally { saving.value = false; }
-}
-function onApproved(): void { void load(); }
 </script>
 
 <template>
   <section class="board-view" aria-labelledby="board-title">
-    <header class="board-heading"><div><p class="eyebrow">WORKSPACE / BOARD</p>
-      <h2 id="board-title">研发看板</h2>
-      <p>只有真实批准的任务会进入 TODO；批准不会自动开工。</p></div>
-      <ForgeBadge>{{ snapshot?.tasks.length ?? 0 }} 项任务</ForgeBadge></header>
-    <div v-if="!projectId" class="empty-board"><ForgeEmptyState title="先选择项目"
-      description="连接真实项目后，才会显示该项目的任务。" />
-      <ForgeButton variant="primary" @click="emit('chooseProject')">选择项目</ForgeButton></div>
-    <div v-else-if="!connected" class="empty-board"><ForgeEmptyState title="Host 不可用"
-      description="当前无法读取任务；不会把旧快照显示为在线状态。" /></div>
-    <template v-else>
-      <div class="board-toolbar">
-        <ForgeInput v-model="filters.search" label="搜索任务" placeholder="标题或 Task ID" />
-        <label>状态 <select v-model="filters.state" aria-label="按状态筛选"><option value="all">全部</option>
+    <header class="board-heading">
+      <div class="board-title-group"><h2 id="board-title">研发看板</h2>
+        <ForgeBadge v-if="connected && snapshot">{{ snapshot.tasks.length }} 项任务</ForgeBadge>
+      </div>
+    </header>
+    <section v-if="!projectId" class="board-empty-workspace board-empty-workspace--project"
+      aria-labelledby="board-empty-project-title">
+      <div class="board-empty-workspace-body">
+        <p class="board-empty-workspace-kicker">FORGE / WORKSPACE</p>
+        <h3 id="board-empty-project-title" class="board-empty-workspace-title">{{ connected ? '选择项目，开始工作' : 'Host 不可用' }}</h3>
+        <p class="board-empty-workspace-description">{{ connected
+          ? '选择本地项目后，这里会显示它的真实任务与待处理事项。'
+          : '连接恢复后即可选择项目并查看任务。' }}</p>
+        <div class="board-empty-workspace-actions">
+          <ForgeButton variant="primary" :disabled="!connected" @click="emit('choose-project')">选择项目</ForgeButton>
+        </div>
+      </div>
+      <svg class="board-empty-workspace-mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false">
+        <g transform="translate(24 20) skewX(-18)">
+          <rect x="8" y="0" width="43" height="12" rx="2" />
+          <rect x="4" y="20" width="35" height="12" rx="2" />
+          <rect x="0" y="40" width="14" height="12" rx="2" />
+        </g>
+      </svg>
+    </section>
+    <div v-if="projectId && !connected" class="empty-board"><ForgeEmptyState title="Host 不可用"
+      description="连接恢复后即可查看任务。" /></div>
+    <template v-if="projectId && connected">
+      <div v-if="anyTasks" class="board-toolbar">
+        <ForgeInput v-model="filters.search" label="搜索任务" placeholder="搜索标题或任务编号" />
+        <label>状态 <select v-model="filters.state" aria-label="按状态筛选"><option value="all">全部状态</option>
           <option v-for="column in boardColumns" :key="column" :value="column">{{ labels[column] }}</option></select></label>
-        <label>优先级 <select v-model="filters.priority" aria-label="按优先级筛选"><option value="all">全部</option>
-          <option value="urgent">Urgent</option><option value="high">High</option>
-          <option value="normal">Normal</option><option value="low">Low</option></select></label>
-        <label>Executor <select v-model="filters.executorId" aria-label="按 Executor 筛选"><option value="all">全部</option>
+        <label>优先级 <select v-model="filters.priority" aria-label="按优先级筛选"><option value="all">全部优先级</option>
+          <option v-for="(label, priority) in priorityLabels" :key="priority" :value="priority">{{ label }}</option></select></label>
+        <label v-if="agents.length">执行器 <select v-model="filters.executorId" aria-label="按 Executor 筛选"><option value="all">全部执行器</option>
           <option value="">未分配</option><option v-for="agent in agents" :key="agent" :value="agent">{{ agent }}</option></select></label>
-        <ForgeButton v-if="!readOnly" variant="primary" :disabled="!connected" @click="manualOpen = true">手工创建任务</ForgeButton>
+        <ForgeButton v-if="filtersActive" variant="ghost" size="sm" @click="clearFilters">清除筛选</ForgeButton>
       </div>
-      <p v-if="loading" role="status" class="board-feedback">正在读取 Host 看板…</p>
+      <p v-if="loading" role="status" class="board-feedback">正在加载任务…</p>
       <p v-if="error" role="alert" class="board-feedback board-error">{{ error }}</p>
+      <ForgeButton v-if="error && !snapshot && !loading" class="board-retry" variant="secondary" @click="load">重试</ForgeButton>
       <p v-if="notice" role="status" class="board-feedback">{{ notice }}</p>
-      <div v-if="!loading && !error && !anyTasks" class="board-empty-inline">
-        <ForgeEmptyState title="还没有任务" description="从一条想法或手工草稿开始；经你批准后才会进入 TODO。" />
-        <ForgeButton v-if="!readOnly" variant="secondary" @click="manualOpen = true">新建手工草稿</ForgeButton>
+      <p v-if="!loading && !visible.length && anyTasks" role="status" class="board-feedback">没有符合筛选条件的任务。</p>
+    </template>
+    <section v-if="projectId && connected && snapshot && !anyTasks"
+      class="board-empty-workspace board-empty-workspace--tasks" aria-labelledby="board-empty-tasks-title">
+      <div class="board-empty-workspace-body">
+        <p class="board-empty-workspace-kicker">FORGE / PROJECT</p>
+        <h3 id="board-empty-tasks-title" class="board-empty-workspace-title">这个项目还没有任务</h3>
+        <p class="board-empty-workspace-description">{{ readOnly
+          ? '当前数据集为只读，暂无任务记录。'
+          : '描述你想完成的工作。Forge 会先生成可编辑草稿；只有经你批准的任务才会进入待办。' }}</p>
+        <div v-if="!readOnly" class="board-empty-workspace-actions">
+          <ForgeButton variant="primary" @click="emit('new-task')">新建任务</ForgeButton>
+        </div>
       </div>
-      <p v-else-if="!loading && !visible.length && anyTasks" class="board-feedback">没有符合筛选条件的任务；原任务状态未改变。</p>
-      <div class="board-columns" aria-label="五列任务看板">
-        <section v-for="column in boardColumns" :key="column" class="board-column" :aria-label="`${labels[column]} 列`">
-          <header><strong>{{ labels[column] }}</strong><span>{{ visibleCounts[column] }} / {{ totalCounts[column] }}</span></header>
-          <div class="board-column-scroll" @scroll="onScroll(column, $event)" @dragover.prevent
-            @drop.prevent="dropColumn(column)">
+      <svg class="board-empty-workspace-mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false">
+        <g transform="translate(24 20) skewX(-18)">
+          <rect x="8" y="0" width="43" height="12" rx="2" />
+          <rect x="4" y="20" width="35" height="12" rx="2" />
+          <rect x="0" y="40" width="14" height="12" rx="2" />
+        </g>
+      </svg>
+    </section>
+      <div v-if="projectId && connected && anyTasks" class="board-columns" aria-label="五列任务看板">
+        <section v-for="column in boardColumns" :key="column" class="board-column" :data-column="column" :aria-label="`${labels[column]} 列`">
+          <header class="board-column-heading"><strong>{{ labels[column] }}</strong>
+            <span v-if="projectId && snapshot" class="board-column-count" :aria-label="`${visibleCounts[column]} 项${labels[column]}任务`">{{ filtersActive ? `${visibleCounts[column]} / ${totalCounts[column]}` : totalCounts[column] }}</span>
+          </header>
+          <div class="board-column-scroll" @scroll="onScroll(column, $event)" @dragover.prevent @drop.prevent="dropColumn(column)">
             <div :style="{ height: `${windowStart(column) * itemHeight}px` }" aria-hidden="true" />
             <article v-for="(task, offset) in columnTasks(column).slice(windowStart(column), windowEnd(column))"
-              :key="task.id" :data-task-id="task.id" :title="task.title" class="board-task" tabindex="0"
+              :key="task.id" :data-task-id="task.id" :data-state="task.state" :title="task.title" class="board-task" tabindex="0"
+              :aria-label="`${task.title} · ${taskStatus(task)}`"
               :draggable="!readOnly && column === 'todo' && !filtersActive" @dragstart="dragStart(task)" @dragend="dragged = null"
               @drop.stop.prevent="drop(task)" @click="openDetail(task.id, $event)"
               @keydown.enter.self.prevent="openDetail(task.id)" @keydown.space.self.prevent="openDetail(task.id)">
-              <small>{{ task.id.slice(0, 8) }} · {{ task.priority }}</small>
-              <h3>{{ task.title }}</h3>
-              <p>{{ task.blockReason ?? (task.boardColumn === 'todo' ? '已批准 · 尚未开工' : '真实开发运行中') }}</p>
+              <div class="board-task-heading"><h3>{{ task.title }}</h3>
+                <span class="board-task-status">{{ taskStatus(task) }}</span></div>
+              <p class="board-task-caption">{{ taskCaption(task) }}</p>
+              <div class="board-task-footer">
+                <span class="board-task-priority" :data-priority="task.priority">{{ priorityLabels[task.priority] }}</span>
+                <button class="board-task-next" type="button" :aria-label="`${readOnly ? '查看记录' : nextAction(task)}：${task.title}`"
+                  @click.stop="openDetail(task.id, $event)">{{ readOnly ? '查看记录' : nextAction(task) }} <span aria-hidden="true">→</span></button>
+              </div>
               <div v-if="column === 'todo' && !readOnly" class="board-card-actions">
                 <button type="button" :disabled="saving || filtersActive || offset + windowStart(column) === 0"
                   :aria-label="`上移 ${task.title}`" @click.stop="reorder(task, offset + windowStart(column) - 1)">↑</button>
@@ -255,28 +271,15 @@ function onApproved(): void { void load(); }
               </div>
             </article>
             <div :style="{ height: `${Math.max(0, columnTasks(column).length - windowEnd(column)) * itemHeight}px` }" aria-hidden="true" />
-            <p v-if="!columnTasks(column).length" class="board-column-empty">{{ column === 'todo' ? '暂无待办' : '当前无真实任务' }}</p>
+            <div v-if="!columnTasks(column).length" class="board-column-empty">
+              <span class="board-column-empty-icon" aria-hidden="true">{{ column === 'done' ? '✓' : '—' }}</span>
+              <p>{{ filtersActive ? '没有匹配任务' : emptyLabels[column] }}</p>
+            </div>
           </div>
         </section>
       </div>
-      <p class="board-footnote">跨列状态由 Review、Verify 和人工验收门禁决定；这里不能直接拖成 Done。</p>
-    </template>
-    <ForgeDialog v-model:open="manualOpen" title="手工创建任务草稿">
-      <div class="board-manual-form"><p>先保存手工草稿，再单独审阅并批准；不会运行项目代码。</p>
-        <ForgeInput v-model="manualTitle" label="任务标题" />
-        <ForgeTextarea v-model="manualGoal" label="目标" :rows="3" />
-        <ForgeTextarea v-model="manualAcceptance" label="验收条件" :rows="2" />
-        <p v-if="error" role="alert">{{ error }}</p>
-        <ForgeButton variant="primary" :disabled="saving || !manualTitle.trim() || !manualGoal.trim() || !manualAcceptance.trim()"
-          @click="createManual">保存手工草稿</ForgeButton></div>
-    </ForgeDialog>
-    <DraftSheet v-if="selectedDraft && projectId" v-model:open="draftOpen" :item="selectedDraft" :client="client"
-      :project-id="projectId" :messages="sourceMessages" @saved="selectedDraft = $event"
-      @approval-changed="onApproved" />
     <TaskDetailDrawer v-if="selectedTaskId && projectId" :open="detailOpen" :client="client"
       :project-id="projectId" :task-id="selectedTaskId" :connected="connected"
-      :read-only="readOnly"
-      @run-changed="load"
-      @update:open="detailOpenChanged" />
+      :read-only="readOnly" @run-changed="load" @update:open="detailOpenChanged" />
   </section>
 </template>

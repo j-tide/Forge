@@ -34,6 +34,31 @@ function mount(client: ForgeClient): void {
 afterEach(() => { app?.unmount(); root?.remove(); app = null; root = null; });
 
 describe('approved task detail', () => {
+  it('keeps the real task state and next step prominent without starting a Run on tab navigation', async () => {
+    const run = vi.fn(async (command: { type: string }) => ({ ok: true,
+      data: command.type === 'run.finalAcceptance' ? {
+        projectId, taskId, snapshotId: null, contractRevision: 2,
+        basisHash: 'a'.repeat(64), readAt: now, reviewReportId: null,
+        advisoryIssues: [], verifyReportIds: [], criterionDecisionIds: [],
+        blockers: [], status: 'unavailable', decision: null,
+      } : [],
+    }));
+    mount({ board: vi.fn(async () => ({ ok: true, data: detail })), run } as unknown as ForgeClient);
+    await vi.waitFor(() => expect(document.querySelector('.task-detail-summary')).not.toBeNull());
+    expect(document.querySelector('.task-detail-summary')?.textContent).toContain('待开始');
+    expect(document.querySelector('.task-detail-summary')?.textContent).toContain('等待你明确启动');
+    expect([...document.querySelectorAll('[role="tab"]')].map((button) => button.textContent))
+      .toEqual(['概览', '运行', '变更', '审查与验收']);
+    expect((document.querySelector('.task-detail-activity') as HTMLElement).style.display).toBe('none');
+    [...document.querySelectorAll<HTMLButtonElement>('.task-detail-actions button')]
+      .find((button) => button.textContent?.includes('配置并启动'))!.click();
+    await vi.waitFor(() => expect((document.querySelector('.task-detail-activity') as HTMLElement)
+      .style.display).not.toBe('none'));
+    expect(document.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe('运行');
+    expect(document.activeElement).toBe(document.querySelector('[role="tab"][aria-selected="true"]'));
+    expect(run).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'run.start' }));
+  });
+
   it('loads the Host projection and opens the exact AC source', async () => {
     const board = vi.fn(async () => ({ commandId: crypto.randomUUID(), ok: true, data: detail,
       durationMs: 1, hostTimestamp: now }));
@@ -75,5 +100,34 @@ describe('approved task detail', () => {
     expect([...document.querySelectorAll<HTMLButtonElement>('button')].some((button) =>
       button.textContent?.includes('明确启动开发'))).toBe(false);
     expect(run).not.toHaveBeenCalledWith(expect.objectContaining({type:'run.start'}));
+  });
+
+  it('routes a completed task to its real acceptance and delivery evidence', async () => {
+    const completed: TaskDetailView = { ...detail, detail: { ...detail.detail,
+      task: { ...detail.detail.task, state: 'done', boardColumn: 'done' } } };
+    const snapshotId = '80cb23df-a080-4647-83d8-0558be4b4d97';
+    const run = vi.fn(async (command: { type: string }) => ({ ok: true,
+      data: command.type === 'run.finalAcceptance' ? {
+        projectId, taskId, snapshotId, contractRevision: 2,
+        basisHash: 'a'.repeat(64), readAt: now, reviewReportId: null,
+        advisoryIssues: [], verifyReportIds: [], criterionDecisionIds: [],
+        blockers: [], status: 'accepted',
+        decision: { decisionId: crypto.randomUUID(), projectId, taskId, snapshotId,
+          contractRevision: 2, basisHash: 'a'.repeat(64), decision: 'accept',
+          reason: 'Owner accepted this exact evidence', nextRunId: null,
+          actor: 'local-owner', createdAt: now },
+      } : [],
+    }));
+    mount({ board: vi.fn(async () => ({ ok: true, data: completed })), run } as unknown as ForgeClient);
+    await vi.waitFor(() => expect(document.querySelector('.task-detail-summary')?.textContent)
+      .toContain('已交付'));
+    const action = document.querySelector<HTMLButtonElement>('.task-detail-actions button')!;
+    expect(action.textContent).toContain('查看交付');
+    action.click();
+    await vi.waitFor(() => expect((document.querySelector('.task-detail-review') as HTMLElement)
+      .style.display).not.toBe('none'));
+    expect(document.querySelector('.task-detail-review [aria-label="交付记录与显式合并"]'))
+      .not.toBeNull();
+    expect(run).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'run.start' }));
   });
 });

@@ -1,16 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApp, nextTick, type App as VueApp } from 'vue';
-import { forgeError, hostProtocolVersion, type ForgeDesktopBridge } from '@forge/contracts';
+import { forgeError, hostProtocolVersion, type ForgeDesktopBridge,
+  type ForgeProject, type TaskApproval } from '@forge/contracts';
 import App from './App.vue';
+import ConversationPanel from './components/ConversationPanel.vue';
 import { appearanceStorageKey } from './appearance-preferences';
 
 let container: HTMLDivElement | undefined;
 let mountedApp: VueApp | undefined;
 
-function mountApp(): HTMLDivElement {
+function mountApp(beforeMount?: (application: VueApp) => void): HTMLDivElement {
   container = document.createElement('div');
   document.body.append(container);
   mountedApp = createApp(App);
+  beforeMount?.(mountedApp);
   mountedApp.mount(container);
   return container;
 }
@@ -25,6 +28,87 @@ afterEach(() => {
 });
 
 describe('shared Forge shell', () => {
+  it('keeps the new-task composer open for pending approval and closes only after approval', async () => {
+    const now = new Date().toISOString();
+    const projectId = crypto.randomUUID();
+    const draftId = crypto.randomUUID();
+    const probe: ForgeProject['probe'] = {
+      rootPath: '/fixture/approval', name: 'Approval fixture', repositoryType: 'git',
+      gitRoot: '/fixture/approval', currentBranch: 'main', defaultBranch: 'main', workingTree: 'clean',
+      remoteConfigured: false, packageManager: 'pnpm', packageManagerEvidence: ['pnpm-lock.yaml'],
+      projectType: 'node', detectedRuntime: ['Node.js (manifest)'],
+      scripts: { dev: null, build: null, test: 'node --test', lint: null, typecheck: null },
+      capabilities: { gitWorktree: true, declaredScripts: true }, fingerprint: 'a'.repeat(64), probedAt: now,
+    };
+    const project: ForgeProject = { projectId, environmentId: crypto.randomUUID(),
+      name: 'Approval fixture', rootPath: probe.rootPath, repositoryType: 'git', gitRoot: probe.gitRoot,
+      defaultBranch: 'main', trusted: true, trustVersion: 'project-trust/v1', trustApprovedAt: now,
+      environmentSummaryHash: probe.fingerprint, createdAt: now, updatedAt: now, lastOpenedAt: now,
+      revision: 1, archivedAt: null, probe };
+    const info = { status: 'ready', hostId: crypto.randomUUID(), pid: 4321,
+      version: '0.0.1', productVersion: '0.0.1', protocolVersion: hostProtocolVersion, startedAt: now,
+      runtime: { version: 'v24.21.0', node: '24.21.0', modules: '149', electron: '44.4.3', platform: 'darwin', arch: 'arm64' } };
+    const health = { ...info, uptimeMs: 1, timestamp: now, storage: { status: 'ready',
+      schemaVersion: 38, sqliteVersion: '3.53.4', journalMode: 'wal', error: null } };
+    const response = (commandId: string, data: unknown) => ({ commandId, ok: true, data,
+      durationMs: 0, hostTimestamp: now });
+    let approved = false;
+    const invokeBoard = vi.fn(async (command: { commandId: string }) => response(command.commandId, {
+      projectId, tasks: approved ? [{ id: draftId, projectId, title: 'Approved date filter', state: 'todo',
+        boardColumn: 'todo', revision: 1, contractRevision: 1, approvedRevision: 1, activeRunId: null,
+        blockReason: null, allowedCommands: ['tasks.reorder'], priority: 'normal', executorId: null,
+        position: 0, createdAt: now }] : [], eventCursor: approved ? '1' : '0',
+      boardRevision: approved ? 1 : 0, serverTime: now,
+    }));
+    const invokeRun = vi.fn();
+    window.forge = {
+      platform: 'darwin',
+      hostStatus: async () => ({ revision: 1, state: 'connected', info, health, lastHealthCheck: now, error: null }),
+      hostHealth: async () => response('health', health),
+      onHostStatus: () => () => {}, onConversationEvent: () => () => {},
+      invokeProject: async (command: { commandId: string }) => response(command.commandId, project),
+      invokeConversation: async (command: { commandId: string }) => response(command.commandId, []),
+      invokeDraft: async (command: { commandId: string }) => response(command.commandId, []),
+      agentProfileCatalog: async () => ({ profiles: [], availability: [], executors: [], modelProviders: [] }),
+      invokeBoard, invokeRun,
+    } as unknown as ForgeDesktopBridge;
+    let emitApproval: ((approval: TaskApproval) => void) | undefined;
+    const root = mountApp((application) => application.mixin({
+      mounted() {
+        if (this.$.type === ConversationPanel) {
+          emitApproval = (approval) => this.$emit('approvalChanged', approval);
+        }
+      },
+    }));
+    await vi.waitFor(() => expect(invokeBoard).toHaveBeenCalled());
+    root.querySelector<HTMLButtonElement>('.sidebar-new-task')!.click();
+    await vi.waitFor(() => expect(document.querySelector('.new-work-content .conversation-panel')).not.toBeNull());
+    expect(emitApproval).toBeDefined();
+    const pending: TaskApproval = {
+      request: { schemaVersion: '1.0', approvalId: crypto.randomUUID(), projectId, taskId: draftId,
+        kind: 'task', expectedRevision: 1, scopeHash: 'b'.repeat(64), snapshotId: null,
+        actionDigest: 'c'.repeat(64), requestedBy: 'local-user',
+        expiresAt: new Date(Date.now() + 60_000).toISOString(), summary: 'Approve date filter',
+        risk: 'low', requiredScope: 'task:approve' },
+      draftId, status: 'pending', decision: null, taskState: null, createdAt: now, decidedAt: null,
+    };
+    emitApproval!(pending);
+    await nextTick();
+    expect(document.querySelector('.new-work-content .conversation-panel')).not.toBeNull();
+    expect(root.querySelectorAll('.board-task')).toHaveLength(0);
+    const beforeApproval = invokeBoard.mock.calls.length;
+    approved = true;
+    emitApproval!({ ...pending, status: 'approved', taskState: 'todo',
+      decision: { schemaVersion: '1.0', approvalId: pending.request.approvalId,
+        decision: 'approve', expectedRevision: 1, scopeHash: pending.request.scopeHash, reason: 'Reviewed' },
+      decidedAt: now } satisfies TaskApproval);
+    await vi.waitFor(() => expect(document.querySelector('.new-work-content .conversation-panel')).toBeNull());
+    await vi.waitFor(() => expect(root.querySelector('.board-task')?.textContent).toContain('Approved date filter'));
+    expect(invokeBoard.mock.calls.length).toBeGreaterThan(beforeApproval);
+    expect(root.querySelector('.board-task')?.textContent).toContain('待开始');
+    expect(invokeRun).not.toHaveBeenCalled();
+  });
+
   it('keeps appearance choices after remount without changing Host state', async () => {
     const first = mountApp();
     first.querySelector<HTMLButtonElement>('button[aria-label="设置"]')?.click();
@@ -67,22 +151,27 @@ describe('shared Forge shell', () => {
   it('mounts in an ordinary Web environment without Electron APIs', async () => {
     delete window.forge;
     const root = mountApp();
-    expect(root.querySelector('h1')?.textContent).toBe('What do you want to build?');
-    expect(root.textContent).toContain('Web');
+    expect(root.querySelector('#board-title')?.textContent).toBe('研发看板');
+    expect(root.querySelector('.runtime-badge')).toBeNull();
     expect(root.textContent).toContain('Local Host unavailable');
-    expect(root.textContent).toContain('先选择项目');
-    expect(root.textContent).toContain('普通 Web 尚未连接远程 Host');
-    const input = root.querySelector<HTMLTextAreaElement>('textarea');
-    expect(input).not.toBeNull();
-    input!.value = '给订单列表添加日期筛选';
-    input!.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(root.querySelector('.board-empty-workspace--project')?.textContent).toContain('Host 不可用');
+    expect(root.querySelector('textarea')).toBeNull();
+    expect(root.querySelector('.compose-title')).toBeNull();
+    const newTask = root.querySelector<HTMLButtonElement>('.sidebar-new-task');
+    expect(newTask).not.toBeNull();
+    newTask!.click();
     await nextTick();
-    expect(input!.value).toBe('给订单列表添加日期筛选');
-    expect(root.textContent).toContain('本地项目选择只在 Forge Desktop 中提供');
-    root.querySelector<HTMLButtonElement>('button[aria-label="项目"]')?.click();
+    expect(document.querySelector('.forge-drawer')?.textContent).toContain('本地项目任务需要 Forge Desktop');
+    expect(document.querySelector('.forge-drawer textarea')).toBeNull();
+    document.querySelector<HTMLButtonElement>('button[aria-label="关闭抽屉"]')?.click();
     await nextTick();
-    expect(root.textContent).toContain('本地项目需要 Forge Desktop');
-    expect(root.textContent).not.toContain('Choose folder');
+    root.querySelector<HTMLButtonElement>('.project-picker')?.click();
+    await nextTick();
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('本地项目需要 Forge Desktop');
+    expect(document.querySelector('[role="dialog"]')?.textContent).not.toContain('选择文件夹');
+    document.querySelector<HTMLButtonElement>('button[aria-label="关闭对话框"]')?.click();
+    await nextTick();
+    expect(root.querySelector('#board-title')?.textContent).toBe('研发看板');
     root.querySelector<HTMLButtonElement>('button[aria-label="设置"]')?.click();
     await nextTick();
     expect(root.querySelector('#settings-title')?.textContent).toBe('设置');
@@ -174,7 +263,7 @@ describe('shared Forge shell', () => {
       onHostStatus: () => () => {},
     } satisfies ForgeDesktopBridge);
     const root = mountApp();
-    expect(root.textContent).toContain('Desktop · macOS');
+    expect(root.querySelector('.runtime-badge')).toBeNull();
     await vi.waitFor(() => expect(root.textContent).toContain('Host connected'));
     root.querySelector<HTMLButtonElement>('.host-badge')?.click();
     await nextTick();
@@ -216,10 +305,10 @@ describe('shared Forge shell', () => {
 
   it('shows the real board entry without inventing tasks when no project is selected', async () => {
     const root = mountApp();
-    root.querySelector<HTMLButtonElement>('button[aria-label="研发看板"]')?.click();
+    root.querySelector<HTMLButtonElement>('button[aria-label="看板"]')?.click();
     await nextTick();
     expect(root.querySelector('#board-title')?.textContent).toBe('研发看板');
-    expect(root.textContent).toContain('先选择项目');
+    expect(root.querySelector('.board-empty-workspace--project')?.textContent).toContain('Host 不可用');
     expect(root.querySelectorAll('.board-task')).toHaveLength(0);
   });
 
@@ -277,6 +366,8 @@ describe('shared Forge shell', () => {
     const health = { ...info, uptimeMs: 10, timestamp: now, storage: { status: 'ready' as const,
       schemaVersion: 5, sqliteVersion: '3.53.4', journalMode: 'wal' as const, error: null } };
     let createCalls = 0;
+    let cancelFolderSelection = true;
+    let folderSelectionCalls = 0;
     const pairingCommands: unknown[] = [];
     const loopbackActions: string[] = [];
     let loopbackRunning = false;
@@ -321,7 +412,10 @@ describe('shared Forge shell', () => {
           origin: loopbackRunning ? 'http://127.0.0.1:58231' : null,
           hostId: info.hostId };
       },
-      chooseProjectFolder: async () => probe.rootPath,
+      chooseProjectFolder: async () => {
+        folderSelectionCalls += 1;
+        return cancelFolderSelection ? null : probe.rootPath;
+      },
       invokeProject: async (command) => {
         if (command.type === 'project.create') createCalls += 1;
         return { commandId: command.commandId, ok: true as const,
@@ -341,17 +435,53 @@ describe('shared Forge shell', () => {
     } satisfies ForgeDesktopBridge);
     const root = mountApp();
     await vi.waitFor(() => expect(root.textContent).toContain('Host connected'));
-    root.querySelector<HTMLButtonElement>('button[aria-label="项目"]')?.click();
-    await vi.waitFor(() => expect(root.textContent).toContain('Choose folder'));
-    [...root.querySelectorAll('button')].find((button) => button.textContent?.includes('Choose folder'))?.click();
-    await vi.waitFor(() => expect(root.textContent).toContain('Working tree has uncommitted changes'));
+    const previousHeading = root.querySelector('#board-title')?.textContent;
+    expect(previousHeading).toBe('研发看板');
+    root.querySelector<HTMLButtonElement>('.project-picker')?.click();
+    await nextTick();
+    await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')?.textContent)
+      .toContain('还没有项目'));
+    await vi.waitFor(() => expect(folderSelectionCalls).toBe(1));
+    // Cancelling the native folder picker keeps the project chooser available.
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('选择文件夹');
+    [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')]
+      .find((button) => button.textContent?.trim() === '取消')?.click();
+    await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
+    expect(root.querySelector('#board-title')?.textContent).toBe(previousHeading);
     expect(createCalls).toBe(0);
-    [...root.querySelectorAll('button')].find((button) => button.textContent?.includes('继续查看信任范围'))?.click();
+    cancelFolderSelection = false;
+    root.querySelector<HTMLButtonElement>('.sidebar-new-task')?.click();
+    await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')?.textContent)
+      .toContain('工作区有未提交修改'));
+    document.querySelector<HTMLButtonElement>('button[aria-label="关闭对话框"]')?.click();
+    await nextTick();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(createCalls).toBe(0);
+    root.querySelector<HTMLButtonElement>('.project-picker')?.click();
+    await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')?.textContent)
+      .toContain('工作区有未提交修改'));
+    const projectDialog = document.querySelector('[role="dialog"]')!;
+    expect(root.querySelector('#board-title')?.textContent).toBe(previousHeading);
+    expect(createCalls).toBe(0);
+    [...projectDialog.querySelectorAll('button')].find((button) => button.textContent?.trim() === '继续')?.click();
     await nextTick();
     expect(createCalls).toBe(0);
-    [...root.querySelectorAll('button')].find((button) => button.textContent?.includes('Trust this project'))?.click();
+    [...projectDialog.querySelectorAll('button')].find((button) => button.textContent?.includes('信任并打开'))?.click();
     await vi.waitFor(() => expect(createCalls).toBe(1));
-    await vi.waitFor(() => expect(root.textContent).toContain('PROJECT CONNECTED'));
+    await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
+    expect(root.querySelector('#board-title')?.textContent).toBe(previousHeading);
+    expect(root.querySelector('.project-picker')?.textContent).toContain('fixture');
+    expect(root.querySelector('.conversation-panel')).toBeNull();
+    root.querySelector<HTMLButtonElement>('.sidebar-new-task')?.click();
+    await vi.waitFor(() => expect(document.querySelector('.forge-drawer textarea')).not.toBeNull());
+    const newTaskDrawer = document.querySelector('.forge-drawer')!;
+    expect(newTaskDrawer.querySelector('h2')?.textContent).toBe('新建任务');
+    expect(newTaskDrawer.textContent).toContain('需求整理模型');
+    expect(root.querySelector('#board-title')?.textContent).toBe(previousHeading);
+    newTaskDrawer.querySelector<HTMLButtonElement>('button[aria-label="关闭抽屉"]')?.click();
+    await vi.waitFor(() => expect(document.querySelector('.forge-drawer')).toBeNull());
+    expect(root.querySelector('#board-title')?.textContent).toBe(previousHeading);
     root.querySelector<HTMLButtonElement>('button[aria-label="设置"]')?.click();
     await vi.waitFor(() => expect(root.textContent).toContain('创建一次性配对'));
     expect(loopbackActions.every((action) => action === 'inspect')).toBe(true);

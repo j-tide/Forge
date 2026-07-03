@@ -4,7 +4,17 @@ const emit = defineEmits<{ select: [id: string] }>();
 </script>
 <template>
   <nav class="forge-icon-rail" aria-label="主导航">
-    <button class="forge-brand-mark" type="button" aria-label="Forge 首页" title="Forge 首页" @click="emit('select', 'home')"><span aria-hidden="true">F</span></button>
+    <button class="forge-brand-mark" type="button" aria-label="Forge 看板" title="Forge 看板" @click="emit('select', 'board')">
+      <svg class="forge-brand-glyph" viewBox="0 0 96 96" aria-hidden="true" focusable="false">
+        <g transform="translate(24 20) skewX(-18)">
+          <rect x="8" y="0" width="43" height="12" rx="2" />
+          <rect x="4" y="20" width="35" height="12" rx="2" />
+          <rect x="0" y="40" width="14" height="12" rx="2" />
+        </g>
+      </svg><span class="forge-brand-name">Forge</span>
+    </button>
+    <div class="forge-rail-project"><slot name="project" /></div>
+    <p class="forge-rail-section-label">工作区</p>
     <div class="forge-rail-links">
       <button v-for="item in items" :key="item.id" type="button" class="forge-rail-link" :class="{ 'is-active': selected === item.id }" :aria-current="selected === item.id ? 'page' : undefined" :aria-label="item.label" :title="item.label" :disabled="item.disabled" @click="emit('select', item.id)">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -17,7 +27,9 @@ const emit = defineEmits<{ select: [id: string] }>();
           <template v-else-if="item.icon === 'knowledge'"><path d="M4 4.5h6a3 3 0 0 1 3 3v12a3 3 0 0 0-3-3H4z" /><path d="M20 4.5h-4a3 3 0 0 0-3 3v12a3 3 0 0 1 3-3h4z" /></template>
           <template v-else-if="item.icon === 'settings'"><path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="2" /><circle cx="16" cy="17" r="2" /></template>
         </svg>
+        <span class="forge-rail-label">{{ item.label }}</span>
       </button>
     </div>
+    <div class="forge-rail-footer"><slot name="footer" /></div>
   </nav>
 </template>
