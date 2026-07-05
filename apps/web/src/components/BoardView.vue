@@ -37,7 +37,8 @@ function syncTaskHash(): void {
   selectedTaskId.value = id;
   detailOpen.value = id !== null;
 }
-function openDetail(taskId: string): void {
+function openDetail(taskId: string, trigger?: Event): void {
+  if (trigger?.currentTarget instanceof HTMLElement) trigger.currentTarget.focus();
   location.hash = `#/tasks/${taskId}`;
   syncTaskHash();
 }
@@ -237,9 +238,9 @@ function onApproved(): void { void load(); }
             @drop.prevent="dropColumn(column)">
             <div :style="{ height: `${windowStart(column) * itemHeight}px` }" aria-hidden="true" />
             <article v-for="(task, offset) in columnTasks(column).slice(windowStart(column), windowEnd(column))"
-              :key="task.id" :data-task-id="task.id" class="board-task" tabindex="0"
+              :key="task.id" :data-task-id="task.id" :title="task.title" class="board-task" tabindex="0"
               :draggable="column === 'todo' && !filtersActive" @dragstart="dragStart(task)" @dragend="dragged = null"
-              @drop.stop.prevent="drop(task)" @click="openDetail(task.id)"
+              @drop.stop.prevent="drop(task)" @click="openDetail(task.id, $event)"
               @keydown.enter.self.prevent="openDetail(task.id)" @keydown.space.self.prevent="openDetail(task.id)">
               <small>{{ task.id.slice(0, 8) }} · {{ task.priority }}</small>
               <h3>{{ task.title }}</h3>

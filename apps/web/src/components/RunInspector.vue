@@ -2,11 +2,18 @@
 import { computed, onUnmounted, ref, watch } from 'vue';
 import type { ForgeClient } from '@forge/client';
 import { developmentHandoffSchema, runInspectionSchema, runLaunchCapabilitiesSchema,
+  stageContextPreviewSchema,
+  contextSourceStatusSchema,
+  runConfigurationSourceSchema,
   runViewSchema, reviewReportSchema, reviewIssueOccurrenceSchema,
   reviewJobSchema, type ReviewJob, type ReviewReport, type ReviewIssueOccurrence,
   type DevelopmentHandoff, type RunInspection,
-  type RunLaunchCapabilities, type RunView } from '@forge/contracts';
-import { ForgeBadge, ForgeButton, ForgeSelect, ForgeTabs } from '@forge/ui';
+  type RunLaunchCapabilities, type RunView, type StageContextPreview,
+  type ContextSourceStatus } from '@forge/contracts';
+import type { RunConfigurationSource } from '@forge/contracts';
+import type { AgentProfileCatalog } from '@forge/contracts';
+import { ForgeBadge, ForgeButton, ForgeInput, ForgeSelect, ForgeTabs } from '@forge/ui';
+import { filePatch } from '../run-code-browser';
 
 const props = defineProps<{ client: ForgeClient; projectId: string; taskId: string;
   taskRevision: number; taskState: 'todo' | 'active' | 'blocked' | 'awaiting_acceptance' | 'done';
@@ -16,12 +23,49 @@ const runs = ref<RunView[]>([]);
 const selected = ref<string | null>(null);
 const inspection = ref<RunInspection | null>(null);
 const tab = ref<'activity' | 'files' | 'diff' | 'context' | 'usage'>('activity');
+const selectedDiffFile = ref<string | null>(null);
+const selectedPatch = computed(() => selectedDiffFile.value && inspection.value?.diff ?
+  filePatch(inspection.value.diff.text, selectedDiffFile.value) : null);
+const previewUrl = ref('');
+const previewError = ref('');
+const previewNotice = ref('');
+const previewBusy = ref(false);
+async function openLocalPreview(): Promise<void> {
+  previewError.value = ''; previewNotice.value = '';
+  if (!props.client.canOpenAppPreview) { previewError.value = '应用预览仅在 Forge Desktop 可用。'; return; }
+  previewBusy.value = true;
+  try {
+    const result = await props.client.openAppPreview(previewUrl.value.trim());
+    previewNotice.value = `已在隔离窗口打开 ${result.origin}。Forge 不会启动项目脚本。`;
+  } catch (error) {
+    previewError.value = error instanceof Error && error.message === 'PREVIEW_LOAD_FAILED' ?
+      '本地预览地址无法加载；请先自行启动受信项目的服务。' :
+      '仅允许明确输入的 http://127.0.0.1:端口 地址。';
+  } finally { previewBusy.value = false; }
+}
 const error = ref('');
 const loading = ref(false);
 const starting = ref(false);
 const cancelling = ref(false);
 const capabilities = ref<RunLaunchCapabilities | null>(null);
 const modelId = ref('');
+const agentCatalog = ref<AgentProfileCatalog | null>(null);
+const profileId = ref('');
+const reviewProfileId = ref('');
+const selectedProfile = computed(() => agentCatalog.value?.profiles.find((item) => item.id === profileId.value));
+const selectedReviewProfile = computed(() => agentCatalog.value?.profiles.find((item) => item.id === reviewProfileId.value));
+const profileOptions = computed(() => [{ value: '', label: '内置 Developer 配置' },
+  ...(agentCatalog.value?.profiles.filter((item) => item.role === 'developer').map((item) => ({
+    value: item.id, label: `${item.name} · v${item.revision}`,
+    disabled: !agentCatalog.value?.availability.find((entry) => entry.profileId === item.id)?.runnable,
+  })) ?? []),
+]);
+const reviewProfileOptions = computed(() => [{ value: '', label: '内置只读 Reviewer 配置' },
+  ...(agentCatalog.value?.profiles.filter((item) => item.role === 'reviewer').map((item) => ({
+    value: item.id, label: `${item.name} · v${item.revision}`,
+    disabled: !agentCatalog.value?.availability.find((entry) => entry.profileId === item.id)?.runnable,
+  })) ?? []),
+]);
 const handoff = ref<DevelopmentHandoff | null>(null);
 const deliveryError = ref('');
 const reviewReports = ref<ReviewReport[]>([]);
@@ -30,6 +74,16 @@ const reviewJobs = ref<ReviewJob[]>([]);
 const startingReview = ref(false);
 let pendingReviewId: string | null = null;
 const reviewError = ref('');
+const contextQuery = ref('');
+const launchContextQuery = ref('');
+const contextPreview = ref<StageContextPreview | null>(null);
+const contextPreviewError = ref('');
+const contextPreviewBusy = ref(false);
+const historicalSources = ref<ContextSourceStatus[]>([]);
+const historicalSourcesError = ref('');
+const historicalSourcesBusy = ref(false);
+const runConfig = ref<RunConfigurationSource | null>(null);
+const runConfigError = ref('');
 const currentIssues = computed(() => {
   const latest = new Map<string, ReviewIssueOccurrence>();
   for (const item of issueHistory.value) if (!latest.has(item.issueId)) latest.set(item.issueId, item);
@@ -126,7 +180,11 @@ async function refreshActiveReview(token: number): Promise<void> {
 async function load(): Promise<void> {
   const token = ++serial;
   stopPolling(); runs.value = []; selected.value = null; inspection.value = null; error.value = '';
+  contextPreview.value = null; contextPreviewError.value = ''; contextQuery.value = '';
+  historicalSources.value = []; historicalSourcesError.value = '';
+  runConfig.value = null; runConfigError.value = '';
   handoff.value = null; deliveryError.value = ''; capabilities.value = null; modelId.value = '';
+  agentCatalog.value = null; profileId.value = ''; reviewProfileId.value = '';
   reviewReports.value = []; issueHistory.value = []; reviewJobs.value = []; reviewError.value = '';
   if (!props.connected) return;
   loading.value = true;
@@ -139,6 +197,8 @@ async function load(): Promise<void> {
       const parsed = runLaunchCapabilitiesSchema.safeParse(support.data);
       if (parsed.success) { capabilities.value = parsed.data; modelId.value = parsed.data.modelIds[0] ?? ''; }
     }
+    try { agentCatalog.value = await props.client.agentProfileCatalog(); }
+    catch { agentCatalog.value = null; }
     const result = await props.client.run({ type:'run.list',payload:{projectId:props.projectId,taskId:props.taskId} });
     if (token !== serial) return;
     if (!result.ok) { error.value = result.error.message; return; }
@@ -157,7 +217,71 @@ async function load(): Promise<void> {
 }
 async function selectRun(runId: string): Promise<void> {
   serial++; selected.value = runId; inspection.value = null; handoff.value = null;
+  selectedDiffFile.value = null;
+  contextPreview.value = null; contextPreviewError.value = '';
+  historicalSources.value = []; historicalSourcesError.value = '';
+  runConfig.value = null; runConfigError.value = '';
   deliveryError.value = ''; await refresh();
+}
+async function refreshRunConfig(): Promise<void> {
+  if (!selected.value || !props.connected) return;
+  const runId = selected.value;
+  try {
+    const result = await props.client.run({ type: 'run.config', payload: {
+      projectId: props.projectId, runId,
+    } });
+    if (selected.value !== runId) return;
+    if (!result.ok) { runConfigError.value = result.error.code; return; }
+    const parsed = runConfigurationSourceSchema.safeParse(result.data);
+    if (!parsed.success || parsed.data.projectId !== props.projectId ||
+      parsed.data.taskId !== props.taskId || parsed.data.runId !== runId) {
+      runConfigError.value = 'Host 返回了无效的冻结配置。'; return;
+    }
+    runConfig.value = parsed.data; runConfigError.value = '';
+  } catch { if (selected.value === runId) runConfigError.value = '冻结配置读取失败。'; }
+}
+async function refreshHistoricalSources(): Promise<void> {
+  if (!selected.value || !props.connected || historicalSourcesBusy.value) return;
+  const runId = selected.value;
+  historicalSourcesBusy.value = true;
+  historicalSourcesError.value = '';
+  try {
+    const result = await props.client.run({ type: 'context.sources', payload: {
+      projectId: props.projectId, runId,
+    } });
+    if (selected.value !== runId) return;
+    if (!result.ok || !Array.isArray(result.data)) {
+      historicalSourcesError.value = result.ok ? '来源状态格式无效。' : result.error.code;
+      return;
+    }
+    const parsed = contextSourceStatusSchema.array().max(40).safeParse(result.data);
+    if (!parsed.success) { historicalSourcesError.value = '来源状态格式无效。'; return; }
+    historicalSources.value = parsed.data;
+  } catch { if (selected.value === runId) historicalSourcesError.value = '来源状态读取失败。'; }
+  finally { historicalSourcesBusy.value = false; }
+}
+watch([tab, selected], () => {
+  if (tab.value === 'context') {
+    void refreshRunConfig(); void refreshHistoricalSources();
+  }
+});
+async function previewStageContext(): Promise<void> {
+  if (!selected.value || !contextQuery.value.trim() || contextPreviewBusy.value) return;
+  contextPreviewBusy.value = true;
+  contextPreview.value = null; contextPreviewError.value = '';
+  try {
+    const result = await props.client.run({ type: 'context.preview', payload: {
+      projectId: props.projectId, runId: selected.value, query: contextQuery.value.trim(),
+    } });
+    if (!result.ok) { contextPreviewError.value = result.error.code; return; }
+    const checked = stageContextPreviewSchema.safeParse(result.data);
+    if (!checked.success || checked.data.projectId !== props.projectId ||
+      checked.data.runId !== selected.value) {
+      contextPreviewError.value = 'Host 返回无效的上下文预览。'; return;
+    }
+    contextPreview.value = checked.data;
+  } catch { contextPreviewError.value = '上下文预览不可用。'; }
+  finally { contextPreviewBusy.value = false; }
 }
 async function startRun(): Promise<void> {
   if (!props.connected || props.taskState !== 'todo' || !capabilities.value?.available ||
@@ -168,6 +292,9 @@ async function startRun(): Promise<void> {
       projectId: props.projectId, taskId: props.taskId,
       expectedTaskRevision: props.taskRevision, modelId: modelId.value,
       idempotencyKey: pendingStartId ??= crypto.randomUUID(),
+      ...(selectedProfile.value ? { profileId: selectedProfile.value.id,
+        profileRevision: selectedProfile.value.revision } : {}),
+      ...(launchContextQuery.value.trim() ? { contextQuery: launchContextQuery.value.trim() } : {}),
     } });
     if (!result.ok) {
       if (result.error.code !== 'TRANSPORT_TIMEOUT' && result.error.code !== 'HOST_EXITED') {
@@ -185,6 +312,12 @@ async function startRun(): Promise<void> {
   } catch { error.value = '启动失败；请检查 Host 连接与项目状态。'; }
   finally { starting.value = false; }
 }
+watch(profileId, () => {
+  if (selectedProfile.value?.modelId) modelId.value = selectedProfile.value.modelId;
+});
+watch(reviewProfileId, () => {
+  if (selectedReviewProfile.value?.modelId) modelId.value = selectedReviewProfile.value.modelId;
+});
 async function cancelRun(): Promise<void> {
   const runId = inspection.value?.run.runId;
   if (!runId || !props.connected || cancelling.value) return;
@@ -210,6 +343,8 @@ async function startReview(): Promise<void> {
       developmentRunId: source.snapshot.runId,
       expectedSnapshotId: source.snapshot.snapshotId,
       modelId: modelId.value, idempotencyKey: pendingReviewId ??= crypto.randomUUID(),
+      ...(selectedReviewProfile.value ? { profileId: selectedReviewProfile.value.id,
+        profileRevision: selectedReviewProfile.value.revision } : {}),
     } });
     if (!result.ok) {
       if (result.error.code !== 'TRANSPORT_TIMEOUT' && result.error.code !== 'HOST_EXITED') {
@@ -252,10 +387,28 @@ onUnmounted(() => { serial++; stopPolling(); });
       <p>已批准任务不会自动开工。启动后 Codex 可在 Forge 创建的隔离 Git 工作区修改文件并运行项目命令；工作区不是恶意代码沙箱。</p>
       <ForgeSelect v-if="capabilities?.available" v-model="modelId" label="Codex 模型"
         :options="capabilities.modelIds.map((id) => ({ value:id,label:id }))" :disabled="starting" />
+      <ForgeSelect v-if="capabilities?.available" v-model="profileId" label="Developer Profile"
+        :options="profileOptions" :disabled="starting" />
+      <p v-if="selectedProfile">{{ selectedProfile.policyProfile }} · 保存的角色版本会在启动前重新校验。</p>
       <p v-else>Codex 开发当前不可用；请检查本机安装、认证和能力探测。</p>
+      <ForgeInput v-model="launchContextQuery" label="运行时资料检索词（可选）"
+        placeholder="例如 start_date（可留空）" :disabled="starting" />
+      <p>填写时，Host 只接受当前项目/环境的有效来源；冲突或无结果会拒绝启动。资料标为低信任，不会替代批准合同。留空沿用原始开发路径。</p>
       <ForgeButton variant="primary" size="sm" :disabled="taskState !== 'todo' || !capabilities?.available || !modelId || starting"
         :loading="starting" @click="startRun">明确启动开发</ForgeButton>
     </div>
+    <details class="run-preview-entry">
+      <summary>应用预览（独立隔离窗口）</summary>
+      <p>只接受你明确输入的 127.0.0.1 本地开发地址。Forge 不启动项目脚本，也不分享 Host bridge。</p>
+      <p v-if="!client.canOpenAppPreview">普通 Web 无本地预览能力；请使用 Forge Desktop。</p>
+      <template v-else>
+        <ForgeInput v-model="previewUrl" label="本地预览 URL" description="例如 http://127.0.0.1:3000/；只允许同一 origin 的资源。" />
+        <ForgeButton variant="secondary" :disabled="!previewUrl.trim() || previewBusy" :loading="previewBusy"
+          @click="openLocalPreview">打开隔离预览</ForgeButton>
+        <p v-if="previewError" role="alert">{{ previewError }}</p>
+        <p v-if="previewNotice" role="status">{{ previewNotice }}</p>
+      </template>
+    </details>
     <p v-if="!connected" role="alert">Host 不可用；无法读取当前 Run 状态。</p>
     <p v-else-if="loading" role="status">正在读取真实 Run…</p>
     <p v-else-if="error" role="alert">{{ error }}</p>
@@ -281,6 +434,8 @@ onUnmounted(() => { serial++; stopPolling(); });
           {{ snapshotReview?.status === 'approved' ? 'Review 已批准；Verify 与人工验收尚未完成。' :
             snapshotReview?.status === 'changes_requested' ? 'Review 请求修改；需新的开发 Attempt。' :
             '验收尚未由 Review/Verify 确认。' }}</p>
+        <ForgeSelect v-if="handoff && capabilities?.available" v-model="reviewProfileId"
+          label="Reviewer Profile" :options="reviewProfileOptions" :disabled="startingReview" />
         <ForgeButton v-if="handoff && capabilities?.available" variant="secondary" size="sm"
           :disabled="historicalHandoff || startingReview || reviewJobs.some((item) => item.state === 'running')"
           :loading="startingReview" @click="startReview">明确启动只读 Review</ForgeButton>
@@ -299,8 +454,16 @@ onUnmounted(() => { serial++; stopPolling(); });
           <template v-else-if="tab === 'files'">
             <p v-if="!inspection.diff">Diff 预览尚未捕获；运行中没有冻结的文件快照。</p>
             <p v-else-if="!inspection.diff.files.length">没有可展示的文件变更。</p>
-            <ul v-else><li v-for="file in inspection.diff.files" :key="file.path">
-              {{ file.status }} · {{ file.path }}</li></ul>
+            <template v-else>
+              <p>只读浏览 Host 捕获的变更文件；这里不会读取或执行项目文件。</p>
+              <ul class="run-code-files"><li v-for="file in inspection.diff.files" :key="file.path">
+                <button type="button" :aria-pressed="selectedDiffFile === file.path"
+                  @click="selectedDiffFile = file.path">{{ file.status }} · {{ file.path }}</button></li></ul>
+              <template v-if="selectedDiffFile">
+                <p>{{ selectedDiffFile }} · {{ selectedPatch ? '已保存的只读补丁' : '独立补丁不可用，请查看完整 Diff' }}</p>
+                <pre v-if="selectedPatch" class="run-diff">{{ selectedPatch }}</pre>
+              </template>
+            </template>
           </template>
           <template v-else-if="tab === 'diff'">
             <p>只读 Diff 预览；只有上方显示 CodeSnapshot 时才形成冻结交接。</p>
@@ -310,8 +473,44 @@ onUnmounted(() => { serial++; stopPolling(); });
           </template>
           <template v-else-if="tab === 'context'">
             <p>仅显示输入来源标识，不展示原始 provider payload。</p>
+            <p v-if="runConfigError" role="alert">{{ runConfigError }}</p>
+            <div v-if="runConfig" aria-label="冻结运行配置">
+              <p>实际执行节点：{{ runConfig.actualNodeId }} · Task v{{ runConfig.taskRevision }}</p>
+              <p>Workflow：{{ runConfig.workflow.id }} @{{ runConfig.workflow.version }} ·
+                Hash {{ runConfig.workflow.contentHash.slice(0, 12) }}</p>
+              <p>Developer：{{ runConfig.developerProfile.id }} @{{ runConfig.developerProfile.version }}</p>
+              <p v-for="profile in runConfig.stageProfiles" :key="profile.id">
+                后续阶段 Profile 锁：{{ profile.id }} @{{ profile.version }}</p>
+              <p>这里仅说明冻结配置与已执行的节点；其他节点须以真实 Review、Verify 和人工验收记录为准。</p>
+            </div>
             <ul><li v-for="source in inspection.contextSources" :key="source.sourceRef">
               {{ source.sourceKind }} · {{ source.sourceRef }}</li></ul>
+            <ForgeButton variant="ghost" size="sm" :disabled="historicalSourcesBusy"
+              @click="refreshHistoricalSources">刷新冻结来源状态</ForgeButton>
+            <p v-if="historicalSourcesError" role="alert">{{ historicalSourcesError }}</p>
+            <p v-if="historicalSourcesBusy" role="status">正在核对当前来源状态…</p>
+            <ul v-if="historicalSources.length"><li v-for="source in historicalSources" :key="source.sourceRef"
+              :role="source.status === 'current' ? undefined : 'alert'">
+              {{ source.kind }} · {{ source.sourceRef }} · {{ source.status }}
+            </li></ul>
+            <p v-if="historicalSources.some((source) => source.status !== 'current')" role="alert">
+              历史 Run 输入已冻结；来源现已失效或变化。新 Run 必须重新检索，旧结果不可冒充当前证据。
+            </p>
+            <p>以下为只读 Stage Context 预览，不会自动送入当前 Run 或替代已冻结输入。</p>
+            <ForgeInput v-model="contextQuery" label="资料检索词" placeholder="日期筛选 start_date" />
+            <ForgeButton variant="secondary" :disabled="contextPreviewBusy || !contextQuery.trim()"
+              @click="previewStageContext">预览上下文</ForgeButton>
+            <p v-if="contextPreviewError" role="alert">{{ contextPreviewError }}</p>
+            <div v-if="contextPreview" aria-label="Stage Context 预览">
+              <p>状态：{{ contextPreview.status }} · {{ contextPreview.usedChars }}/{{ contextPreview.maxChars }} 字符预算
+                · 省略 {{ contextPreview.omittedItems }} 项{{ contextPreview.truncated ? '（已截断）' : '' }}</p>
+              <p v-if="contextPreview.status === 'insufficient_sources'">当前项目/环境没有匹配资料；不会编造来源。</p>
+              <p v-if="contextPreview.status === 'budget_exceeded'">批准合同超过预算，不能生成部分上下文。</p>
+              <p v-for="conflict in contextPreview.conflicts" :key="`${conflict.currentSourceRef}:${conflict.otherSourceRef}`"
+                role="alert">{{ conflict.question }} · {{ conflict.currentSourceRef }} / {{ conflict.otherSourceRef }}</p>
+              <ol><li v-for="(item, index) in contextPreview.items" :key="`${item.sourceRef}:${index}`">
+                P{{ item.priority }} · {{ item.kind }} / {{ item.trust }} · {{ item.sourceRef }} · {{ item.text }}</li></ol>
+            </div>
           </template>
           <template v-else>
             <p v-if="!inspection.usage">Token 用量：未知 · 费用：未知</p>
