@@ -5,7 +5,7 @@ import { buildPluginConfig } from '../schema-form';
 import ForgeButton from './ForgeButton.vue';
 
 const props = defineProps<{ schema: SchemaFormDefinition; disabled?: boolean; submitLabel?: string;
-  initialValues?: Record<string, string | number | boolean> }>();
+  initialValues?: Record<string, string | number | boolean>; unsetValueHints?: Record<string, string> }>();
 const emit = defineEmits<{ submit: [config: Record<string, string | number | boolean>] }>();
 const values = ref<Record<string, string | number | boolean>>({ ...props.initialValues });
 const error = ref('');
@@ -35,8 +35,11 @@ function submit(): void {
         :step="field.type === 'integer' ? '1' : field.type === 'number' ? 'any' : undefined"
         :min="field.minimum" :max="field.maximum"
         :autocomplete="field.format === 'forge-credential-ref' ? 'off' : undefined"
+        :aria-describedby="unsetValueHints?.[key] && values[key] === undefined && !schema.required.includes(key) ? `forge-plugin-${key}-unset-hint` : undefined"
         :value="values[key] ?? ''" :disabled="disabled"
         @input="update(key, ($event.target as HTMLInputElement).value, field.type)" />
+      <p v-if="unsetValueHints?.[key] && values[key] === undefined && !schema.required.includes(key)"
+        :id="`forge-plugin-${key}-unset-hint`">{{ unsetValueHints[key] }}</p>
     </div>
     <p v-if="error" role="alert">{{ error }}</p>
     <ForgeButton v-if="fields.length" type="submit" variant="primary" :disabled="disabled">{{ submitLabel ?? '检查配置' }}</ForgeButton>
@@ -48,7 +51,7 @@ function submit(): void {
 .forge-schema-field { display: grid; gap: var(--forge-space-6); min-width: 0; }
 .forge-schema-field label { font-weight: 650; overflow-wrap: anywhere; }
 .forge-schema-field p { margin: 0; color: var(--forge-color-text-secondary); overflow-wrap: anywhere; }
-.forge-schema-field input:not([type='checkbox']) { width: 100%; min-width: 0; padding: var(--forge-space-12); border: var(--forge-border-highlight); border-radius: var(--forge-radius-md); background: var(--forge-surface-reading); color: var(--forge-color-text); }
+.forge-schema-field input:not([type='checkbox']) { width: 100%; min-width: 0; min-height: 42px; padding: var(--forge-space-12); border: var(--forge-border-subtle); border-radius: var(--forge-radius-md); background: var(--forge-surface-reading); color: var(--forge-color-text); }
 .forge-schema-field input:focus-visible { outline: 2px solid var(--forge-color-accent); outline-offset: 2px; }
 .forge-schema-form [role='alert'] { color: var(--forge-color-danger); overflow-wrap: anywhere; }
 </style>
