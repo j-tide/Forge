@@ -64,6 +64,8 @@ describe('plugin config form', () => {
     await vi.waitFor(() => expect(desktop.textContent).toContain('Codex 启动握手等待'));
     expect(inspect).toHaveBeenCalledOnce();
     expect(desktop.textContent).toContain('已装配');
+    expect(desktop.querySelector('.plugin-list-state')?.textContent).toBe('待核验');
+    expect(desktop.querySelector('[aria-label="Codex 执行能力"]')?.textContent).toContain('执行能力尚未核验');
     expect(desktop.textContent).toContain('executor.codex');
     expect(desktop.textContent).toContain('model.codex');
     expect(desktop.textContent).toContain('未声明');
@@ -83,7 +85,7 @@ describe('plugin config form', () => {
     await vi.waitFor(() => expect(desktop.textContent).toContain('PLUGIN_RUNTIME_FAILED'));
     expect(desktop.textContent).toContain('run-42');
     expect(desktop.textContent).toContain('正在等待运行释放');
-    expect(desktop.textContent).toContain('不可用');
+    expect(desktop.querySelector('[aria-label="Codex 执行能力"]')?.textContent).toContain('当前不可启动');
   });
 
   it('separates a loaded plugin from the real executor capability probe', async () => {
@@ -102,14 +104,58 @@ describe('plugin config form', () => {
     await vi.waitFor(() => expect(desktop.querySelector('[aria-label="Codex 执行能力"]')?.textContent)
       .toContain('当前执行器不可启动'));
     expect(desktop.textContent).toContain('已装配');
+    expect(desktop.querySelector('.plugin-list-state')?.textContent).toBe('不可启动');
+    expect(desktop.querySelector('.plugin-list-state')?.getAttribute('data-ready')).toBe('false');
     expect(desktop.querySelector('[aria-label="Codex 执行能力"]')?.textContent)
       .toContain('设置 → 本机依赖');
     const refresh = [...desktop.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('刷新诊断'))!;
+      button.textContent?.includes('刷新状态'))!;
     refresh.click();
     await vi.waitFor(() => expect(desktop.querySelector('[aria-label="Codex 执行能力"]')?.textContent)
       .toContain('均已通过'));
+    expect(desktop.querySelector('.plugin-list-state')?.textContent).toBe('可启动');
+    expect(desktop.querySelector('.plugin-list-state')?.getAttribute('data-ready')).toBe('true');
     expect(probe).toHaveBeenCalledTimes(2);
+  });
+
+  it('offers the real dependency settings entry only when the executor probe fails', async () => {
+    const inspection = { pluginId: 'forge.executor.codex', version: '0.0.3',
+      forgeApiRange: '^1.0.0', compatible: true, active: true, enabled: true,
+      configRevision: 0, configValues: {}, configApplied: true,
+      manifest: declaration, activeRunRefs: [], draining: false,
+      restartRequired: false, issues: [], faults: [], configSchema: { type: 'object',
+        additionalProperties: false, required: [], properties: {} } };
+    const openSettings = vi.fn();
+    const desktop = mount(PluginsView, { client: {
+      inspectBundledPlugin: vi.fn().mockResolvedValue(inspection),
+      agentProfileCatalog: vi.fn().mockResolvedValue({ executors: [{ executorId: 'executor.codex',
+        available: false }] }),
+    }, desktop: true, connected: true, onOpenSettings: openSettings });
+    const button = await vi.waitFor(() => {
+      const entry = [...desktop.querySelectorAll('button')].find((item) =>
+        item.textContent?.includes('检查本机依赖'));
+      expect(entry).toBeDefined();
+      return entry!;
+    });
+    button.click();
+    expect(openSettings).toHaveBeenCalledOnce();
+    expect(desktop.querySelector('[aria-label="Codex 执行能力"]')?.textContent).toContain('不可启动');
+  });
+
+  it('does not advertise contributions when the Host has no validated manifest', async () => {
+    const desktop = mount(PluginsView, { client: {
+      inspectBundledPlugin: vi.fn().mockResolvedValue({
+        pluginId: 'forge.executor.codex', version: null, forgeApiRange: null,
+        compatible: false, active: false, enabled: true, restartRequired: false,
+        configRevision: 0, configValues: {}, configApplied: false,
+        manifest: null, activeRunRefs: [], draining: false, issues: [], faults: [],
+        configSchema: null,
+      }),
+      agentProfileCatalog: vi.fn().mockResolvedValue({ executors: [] }),
+    }, desktop: true, connected: true });
+    await vi.waitFor(() => expect(desktop.textContent).toContain('声明不可用'));
+    expect(desktop.textContent).not.toContain('Model Provider');
+    expect(desktop.querySelector('[aria-label="Codex 执行能力"]')?.textContent).toContain('当前不可启动');
   });
 
   it('uses the fixed Desktop capability and displays persisted disabled and restart states', async () => {
@@ -124,8 +170,12 @@ describe('plugin config form', () => {
     const desktop = mount(PluginsView, { client: {
       inspectBundledPlugin: vi.fn().mockResolvedValue(base), setBundledPluginEnabled: setEnabled,
     }, desktop: true, connected: true });
-    await vi.waitFor(() => expect(desktop.textContent).toContain('已装配'));
-    const disable = [...desktop.querySelectorAll('button')].find((button) => button.textContent?.includes('停用 Codex'))!;
+    const disable = await vi.waitFor(() => {
+      const button = [...desktop.querySelectorAll('button')].find((item) => item.textContent?.includes('停用 Codex'));
+      expect(button).toBeDefined();
+      return button!;
+    });
+    expect(desktop.textContent).toContain('已装配');
     disable.click();
     await vi.waitFor(() => expect(desktop.textContent).toContain('已停用'));
     expect(desktop.querySelector('[aria-label="Codex 执行能力"]')?.textContent)
@@ -165,5 +215,37 @@ describe('plugin config form', () => {
     await vi.waitFor(() => expect(desktop.textContent).toContain('配置已保存到 Host'));
     expect(desktop.textContent).toContain('请重启 Forge');
     expect(desktop.textContent).toContain('配置待重启');
+  });
+
+  it('explains an unset timeout without adding a default override to saved config', async () => {
+    const configSchema = { type: 'object', additionalProperties: false, required: [], properties: {
+      appServerInitializationTimeoutSeconds: { type: 'integer', minimum: 1, maximum: 60,
+        description: '1–60 秒，默认 15 秒。' },
+    } };
+    const inspection = { pluginId: 'forge.executor.codex', version: '0.0.3', forgeApiRange: '^1.0.0',
+      compatible: true, active: true, enabled: true, restartRequired: false,
+      configRevision: 0, configValues: {}, configApplied: true,
+      manifest: declaration, activeRunRefs: [], draining: false,
+      issues: [], faults: [], configSchema };
+    const save = vi.fn().mockResolvedValue({ ...inspection, configRevision: 1,
+      restartRequired: true });
+    const desktop = mount(PluginsView, { client: {
+      inspectBundledPlugin: vi.fn().mockResolvedValue(inspection), saveBundledPluginConfig: save,
+    }, desktop: true, connected: true });
+    const input = await vi.waitFor(() => {
+      const field = desktop.querySelector<HTMLInputElement>('#forge-plugin-appServerInitializationTimeoutSeconds');
+      expect(field).not.toBeNull();
+      return field!;
+    });
+    expect(input.value).toBe('');
+    expect(input.parentElement?.textContent).toContain('留空使用默认值 15 秒；保存时不写入覆盖值。');
+    input.value = '25'; input.dispatchEvent(new Event('input', { bubbles: true }));
+    await nextTick();
+    expect(input.parentElement?.textContent).not.toContain('留空使用默认值 15 秒');
+    input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true }));
+    await nextTick();
+    expect(input.parentElement?.textContent).toContain('留空使用默认值 15 秒');
+    desktop.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(save).toHaveBeenCalledWith({ expectedRevision: 0, config: {} }));
   });
 });

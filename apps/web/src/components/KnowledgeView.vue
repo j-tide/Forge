@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import type { ForgeClient } from '@forge/client';
 import type { KnowledgeChunk, KnowledgeSource, KnowledgeSearchResult,
   ProjectMemory, MemorySearchResult } from '@forge/contracts';
-import { ForgeButton, ForgeCard, ForgeDialog, ForgeEmptyState, ForgeInput, StatusTag } from '@forge/ui';
+import { ForgeButton, ForgeCard, ForgeDialog, ForgeEmptyState, ForgeInput, ForgeTextarea, StatusTag } from '@forge/ui';
 
 const props = defineProps<{
   client: ForgeClient; desktop: boolean; connected: boolean; projectId: string | null;
@@ -29,6 +29,16 @@ const decisionAction = ref<'validate' | 'deprecate' | 'revoke'>('validate');
 const decisionReason = ref('');
 const decisionOpen = ref(false);
 const replacement = ref<ProjectMemory | null>(null);
+const activeTab = ref<'documents' | 'memories'>('documents');
+const importOpen = ref(false);
+const proposalOpen = ref(false);
+const activeSources = computed(() => sources.value.filter((item) => item.status === 'active'));
+const validatedMemories = computed(() => memories.value.filter((item) => item.status === 'validated'));
+
+function sourceLabel(sourceRef: string): string {
+  const source = sources.value.find((item) => sourceRef.includes(item.sourceId));
+  return source?.relativePath ?? sourceRef;
+}
 
 async function refreshMemories(): Promise<void> {
   if (!props.projectId) return;
@@ -36,6 +46,7 @@ async function refreshMemories(): Promise<void> {
 }
 
 async function load(): Promise<void> {
+  notice.value = '';
   selected.value = null;
   searchResult.value = null;
   memoryResult.value = null;
@@ -60,6 +71,7 @@ async function importSource(): Promise<void> {
     await refreshMemories();
     searchResult.value = null;
     relativePath.value = '';
+    importOpen.value = false;
     notice.value = `已只读导入 ${source.relativePath} · v${source.version}。没有执行项目代码。`;
     if (source.chunkCount > 0) await openSource(source);
   } catch {
@@ -113,6 +125,8 @@ function startProposal(): void {
   memoryText.value = selected.value.text.trim().slice(0, 2000);
   memoryExpiry.value = '';
   editing.value = null;
+  activeTab.value = 'memories';
+  proposalOpen.value = true;
 }
 function startEdit(item: ProjectMemory): void {
   if (props.readOnly) return;
@@ -120,6 +134,8 @@ function startEdit(item: ProjectMemory): void {
   memorySubject.value = item.subjectKey;
   memoryText.value = item.text;
   memoryExpiry.value = item.expiresAt?.slice(0, 10) ?? '';
+  activeTab.value = 'memories';
+  proposalOpen.value = true;
 }
 function expiryIso(): string | null {
   if (!memoryExpiry.value) return null;
@@ -146,6 +162,7 @@ async function saveMemory(): Promise<void> {
     }
     await refreshMemories();
     editing.value = null; memoryText.value = ''; memorySubject.value = ''; memoryExpiry.value = '';
+    proposalOpen.value = false;
   } catch { notice.value = '记忆保存失败：检查来源是否仍有效、字段格式及修订版本。'; }
   finally { busy.value = false; }
 }
@@ -188,106 +205,172 @@ watch(() => [props.desktop, props.connected, props.projectId], () => { void load
 
 <template>
   <section class="knowledge-view" aria-labelledby="knowledge-title">
-    <p class="eyebrow">FORGE / KNOWLEDGE</p><h1 id="knowledge-title">项目资料</h1>
-    <p>只读导入资料、检索原文，并由人确认或撤销项目记忆。记忆是指导信息，不是验收标准；当前运行的冻结输入不会自动改变。</p>
+    <header class="knowledge-header">
+      <div>
+        <p class="knowledge-kicker">PROJECT KNOWLEDGE</p>
+        <h1 id="knowledge-title">项目知识</h1>
+        <p class="knowledge-lead">把项目文档和已确认的经验带入后续任务。</p>
+      </div>
+      <div v-if="desktop && connected && projectId" class="knowledge-totals" aria-label="项目知识概况">
+        <span><strong>{{ activeSources.length }}</strong> 份资料</span>
+        <span><strong>{{ validatedMemories.length }}</strong> 条已确认记忆</span>
+      </div>
+    </header>
+
     <ForgeEmptyState v-if="!desktop" title="需要 Forge Desktop" description="普通 Web 不访问本机项目资料。" />
     <ForgeEmptyState v-else-if="!connected" title="Host unavailable" description="连接 Python Host 后才能查看项目资料。" />
     <ForgeEmptyState v-else-if="!projectId" title="请先选择项目" description="信任并激活一个真实项目后才能导入其文档。" />
     <template v-else>
-      <ForgeCard v-if="!readOnly" tone="reading" class="knowledge-panel">
-        <h2>导入来源</h2>
-        <p>仅接受项目根目录的 README/OpenAPI，或 docs、spec、specs、knowledge 目录下的 .md/.txt/OpenAPI。单文件最多 1 MiB；不会执行脚本。</p>
-        <div class="knowledge-actions">
-          <ForgeInput v-model="relativePath" label="项目内相对路径" placeholder="docs/architecture.md" />
-          <ForgeButton variant="primary" :disabled="busy || !relativePath.trim()" @click="importSource">只读导入</ForgeButton>
-          <ForgeButton variant="secondary" :disabled="busy" @click="load">刷新</ForgeButton>
-        </div>
-        <p v-if="notice" role="status">{{ notice }}</p>
-      </ForgeCard>
-      <ForgeCard tone="reading" class="knowledge-panel">
-        <h2>检索已导入资料</h2>
-        <p>关键词检索返回真实片段和引用；空结果不会生成答案。索引：forge-knowledge-search/v1。</p>
-        <div class="knowledge-actions">
-          <ForgeInput v-model="query" label="关键词" placeholder="日期筛选 start_date" />
-          <ForgeButton variant="secondary" :disabled="busy || !query.trim() || !environmentId" @click="search">检索</ForgeButton>
-          <ForgeButton variant="ghost" :disabled="busy || !query.trim() || !environmentId" @click="searchMemory">检索记忆</ForgeButton>
-        </div>
-        <p v-if="searchResult" role="status">{{ searchResult.results.length }} 个片段 · {{ searchResult.indexVersion }}</p>
-        <ForgeEmptyState v-if="searchResult && !searchResult.results.length" title="没有匹配的资料" description="当前项目与环境中未找到匹配片段；不会生成答案。" />
-        <ul v-else-if="searchResult?.results.length" class="knowledge-list">
-          <li v-for="result in searchResult.results" :key="result.sourceRef">
-            <div><strong>{{ result.sourceRef }}</strong><p>第 {{ result.startLine }}–{{ result.endLine }} 行 · SHA-256 {{ result.contentHash.slice(0, 12) }}…</p><pre>{{ result.text }}</pre></div>
-          </li>
-        </ul>
-      </ForgeCard>
-      <ForgeCard tone="reading" class="knowledge-panel">
-        <h2>来源</h2>
-        <p v-if="busy" role="status">正在读取资料…</p>
-        <ForgeEmptyState v-if="!sources.length && !busy" title="尚无资料来源" description="导入不会修改项目文件。" />
-        <ul v-else class="knowledge-list">
-          <li v-for="source in sources" :key="source.sourceId">
-            <div><strong>{{ source.relativePath }}</strong><p>v{{ source.version }} · {{ source.chunkCount }} 个片段 · SHA-256 {{ source.contentHash.slice(0, 12) }}…</p></div>
-            <StatusTag :tone="source.status === 'active' ? 'success' : 'neutral'"
-              :label="source.status === 'active' ? '已导入' : '已撤销'" />
-            <ForgeButton v-if="source.status === 'active'" variant="secondary" @click="openSource(source)">查看原文定位</ForgeButton>
-            <ForgeButton v-if="!readOnly && source.status === 'active'" variant="danger" @click="revokeTarget = source; revokeOpen = true">撤销来源</ForgeButton>
-          </li>
-        </ul>
-      </ForgeCard>
-      <ForgeCard v-if="selected" tone="reading" class="knowledge-panel" aria-label="原文定位">
-        <h2>原文定位</h2>
-        <p>{{ selected.sourceRef }} · 第 {{ selected.startLine }}–{{ selected.endLine }} 行 · {{ selected.status }}</p>
-        <pre>{{ selected.text }}</pre>
-        <p>此处显示 Host 保存的原文片段；不是模型生成结果，也未运行检索。</p>
-        <ForgeButton v-if="!readOnly" variant="secondary" :disabled="!environmentId" @click="startProposal">从此来源提议记忆</ForgeButton>
-      </ForgeCard>
-      <ForgeCard v-if="!readOnly && (editing || (selected && memoryText))" tone="reading" class="knowledge-panel">
-        <h2>{{ editing ? '编辑候选记忆' : '提议候选记忆' }}</h2>
-        <p>来源：{{ editing ? editing.sources.map((item) => item.sourceRef).join('，') : selected?.sourceRef }}。只有人工确认且来源有效的记忆才可检索。</p>
-        <ForgeInput v-model="memorySubject" label="主题键（小写字母开头）" placeholder="api.date_filter" :disabled="!!editing" />
-        <ForgeInput v-model="memoryText" label="记忆内容" placeholder="基于原文描述当前事实" />
-        <label class="memory-expiry">到期日（可选）<input v-model="memoryExpiry" type="date" /></label>
-        <div class="knowledge-actions">
-          <ForgeButton variant="primary" :disabled="busy || !memoryText.trim() || (!editing && !memorySubject.trim())" @click="saveMemory">保存候选</ForgeButton>
-          <ForgeButton variant="ghost" @click="editing = null; memoryText = ''">取消</ForgeButton>
-        </div>
-      </ForgeCard>
-      <ForgeCard tone="reading" class="knowledge-panel" aria-label="项目记忆">
-        <h2>项目记忆</h2>
-        <p>候选仅供审阅；已确认记忆仍受来源、环境和到期时间约束。撤销会清空 Forge 的记忆正文与检索索引，保留审计墓碑。已有 Run 的来源引用不会被伪装为当前有效。</p>
-        <p v-if="memoryResult" role="status">当前查询返回 {{ memoryResult.items.length }} 条有效记忆；{{ memoryResult.conflicts.length }} 个冲突。</p>
-        <ul v-if="memoryResult?.conflicts.length" class="knowledge-list">
-          <li v-for="conflict in memoryResult.conflicts" :key="conflict.candidateMemoryId" role="alert">{{ conflict.question }} · {{ conflict.subjectKey }}</li>
-        </ul>
-        <ForgeEmptyState v-if="!memories.length" title="尚无项目记忆" description="先从真实来源片段提议候选，再由人确认。" />
-        <ul v-else class="knowledge-list">
-          <li v-for="item in memories" :key="item.memoryId">
-            <div>
-              <strong>{{ item.subjectKey }}</strong>
-              <p>v{{ item.revision }} · {{ item.scope }} · 来源 {{ item.sources.map((source) => source.sourceRef).join('，') }} · SHA-256 {{ item.contentHash.slice(0, 12) }}…</p>
-              <p v-if="item.expiresAt">到期 {{ item.expiresAt.slice(0, 10) }}</p>
-              <pre v-if="item.text">{{ item.text }}</pre><p v-else>正文已撤销</p>
+      <div class="knowledge-toolbar">
+        <nav class="knowledge-tabs" aria-label="项目知识视图">
+          <button type="button" :aria-current="activeTab === 'documents' ? 'page' : undefined"
+            @click="activeTab = 'documents'">资料 <span>{{ activeSources.length }}</span></button>
+          <button type="button" :aria-current="activeTab === 'memories' ? 'page' : undefined"
+            @click="activeTab = 'memories'">记忆 <span>{{ validatedMemories.length }}</span></button>
+        </nav>
+        <ForgeButton v-if="activeTab === 'documents' && !readOnly" variant="primary"
+          @click="importOpen = !importOpen">{{ importOpen ? '收起导入' : '导入资料' }}</ForgeButton>
+        <ForgeButton variant="ghost" :disabled="busy" @click="load">刷新</ForgeButton>
+      </div>
+      <p v-if="notice" class="knowledge-notice" role="status">{{ notice }}</p>
+
+      <template v-if="activeTab === 'documents'">
+        <ForgeCard v-if="importOpen && !readOnly" tone="reading" class="knowledge-import">
+          <div class="knowledge-section-heading"><div><h2>导入项目文件</h2>
+            <p>输入项目内的相对路径。仅读取受支持的文档，不运行项目命令。</p></div></div>
+          <div class="knowledge-actions">
+            <ForgeInput v-model="relativePath" label="文件路径" placeholder="docs/architecture.md"
+              description="支持 README、docs / spec / specs / knowledge 中的 Markdown、文本与 OpenAPI；单文件不超过 1 MiB。" />
+            <ForgeButton variant="primary" :disabled="busy || !relativePath.trim()" @click="importSource">只读导入</ForgeButton>
+          </div>
+        </ForgeCard>
+
+        <form class="knowledge-search" @submit.prevent="search">
+          <ForgeInput v-model="query" label="搜索项目资料" placeholder="搜索文档内容或术语" />
+          <ForgeButton type="submit" variant="secondary" :disabled="busy || !query.trim() || !environmentId">检索</ForgeButton>
+        </form>
+        <p v-if="!environmentId" class="knowledge-hint">当前环境不可用，暂时无法检索；已导入的来源仍可查看。</p>
+        <ForgeCard v-if="searchResult" tone="reading" class="knowledge-results">
+          <div class="knowledge-section-heading"><h2>检索结果</h2><span>{{ searchResult.results.length }} 个片段</span></div>
+          <ForgeEmptyState v-if="!searchResult.results.length" title="没有匹配的资料"
+            description="试试文档中出现的词；Forge 不会编造检索结果。" />
+          <ul v-else class="knowledge-result-list">
+            <li v-for="result in searchResult.results" :key="result.sourceRef">
+              <div class="knowledge-result-header"><strong>{{ result.heading || sourceLabel(result.sourceRef) }}</strong>
+                <span>{{ sourceLabel(result.sourceRef) }} · 第 {{ result.startLine }}–{{ result.endLine }} 行</span></div>
+              <p>{{ result.text }}</p>
+              <code>{{ result.sourceRef }}</code>
+            </li>
+          </ul>
+        </ForgeCard>
+
+        <div class="knowledge-workspace">
+          <ForgeCard tone="reading" class="knowledge-sources" aria-label="已导入资料">
+            <div class="knowledge-section-heading"><div><h2>已导入资料</h2><p>当前项目的文件来源</p></div></div>
+            <p v-if="busy" class="knowledge-hint" role="status">正在读取资料…</p>
+            <ForgeEmptyState v-if="!sources.length && !busy" title="尚无资料来源"
+              description="导入项目文档后，在这里查看原文和引用。" />
+            <ul v-else class="knowledge-source-list">
+              <li v-for="source in sources" :key="source.sourceId"
+                :class="{ 'knowledge-source-selected': selected?.sourceId === source.sourceId }">
+                <div class="knowledge-source-main">
+                  <strong>{{ source.relativePath }}</strong>
+                  <span>版本 {{ source.version }} · {{ source.chunkCount }} 个片段</span>
+                </div>
+                <StatusTag :tone="source.status === 'active' ? 'success' : 'neutral'"
+                  :label="source.status === 'active' ? '可用' : '已撤销'" />
+                <div v-if="source.status === 'active'" class="knowledge-source-actions">
+                  <ForgeButton variant="ghost" :disabled="busy || source.chunkCount === 0"
+                    @click="openSource(source)">查看原文定位</ForgeButton>
+                  <ForgeButton v-if="!readOnly" variant="ghost" :disabled="busy"
+                    @click="revokeTarget = source; revokeOpen = true">撤销来源</ForgeButton>
+                </div>
+              </li>
+            </ul>
+          </ForgeCard>
+          <ForgeCard tone="reading" class="knowledge-preview" aria-label="原文定位">
+            <template v-if="selected">
+              <div class="knowledge-section-heading"><div><h2>{{ selected.heading || sourceLabel(selected.sourceRef) }}</h2>
+                <p>{{ sourceLabel(selected.sourceRef) }} · 第 {{ selected.startLine }}–{{ selected.endLine }} 行</p></div>
+                <ForgeButton v-if="!readOnly" variant="secondary" :disabled="!environmentId"
+                  @click="startProposal">提议为项目记忆</ForgeButton></div>
+              <pre>{{ selected.text }}</pre>
+              <p class="knowledge-citation">原文引用 <code>{{ selected.sourceRef }}</code></p>
+            </template>
+            <div v-else class="knowledge-preview-empty">
+              <strong>选择资料查看原文</strong>
+              <p>从左侧打开文件片段。运行中实际使用的引用可在运行详情查看。</p>
             </div>
-            <StatusTag :tone="item.status === 'validated' ? 'success' : item.status === 'candidate' ? 'info' : 'neutral'"
-              :label="item.status === 'candidate' ? '候选' : item.status === 'validated' ? '已确认' : item.status === 'stale' ? '过时' : '已撤销'" />
-            <ForgeButton v-if="!readOnly && item.status === 'candidate'" variant="secondary" @click="startEdit(item)">编辑</ForgeButton>
-            <ForgeButton v-if="!readOnly && item.status === 'candidate'" variant="primary" @click="requestDecision(item, 'validate')">确认记忆</ForgeButton>
-            <ForgeButton v-if="!readOnly && item.status === 'validated'" variant="secondary" @click="requestDecision(item, 'deprecate')">标记过时</ForgeButton>
-            <ForgeButton v-if="!readOnly && item.status !== 'revoked'" variant="danger" @click="requestDecision(item, 'revoke')">撤销记忆</ForgeButton>
+          </ForgeCard>
+        </div>
+      </template>
+
+      <template v-else>
+        <form class="knowledge-search" @submit.prevent="searchMemory">
+          <ForgeInput v-model="query" label="搜索已确认记忆" placeholder="搜索项目约定或决策" />
+          <ForgeButton type="submit" variant="secondary" :disabled="busy || !query.trim() || !environmentId">检索记忆</ForgeButton>
+        </form>
+        <p v-if="!environmentId" class="knowledge-hint">当前环境不可用，暂时无法检索记忆。</p>
+        <div v-if="memoryResult" class="knowledge-memory-search" role="status">
+          <strong>{{ memoryResult.items.length }} 条有效记忆</strong>
+          <span v-if="memoryResult.conflicts.length">{{ memoryResult.conflicts.length }} 个待处理冲突</span>
+          <span v-else>没有冲突</span>
+        </div>
+        <ul v-if="memoryResult?.conflicts.length" class="knowledge-conflicts">
+          <li v-for="conflict in memoryResult.conflicts" :key="conflict.candidateMemoryId" role="alert">
+            {{ conflict.question }} · {{ conflict.subjectKey }}
           </li>
         </ul>
-      </ForgeCard>
+        <ForgeCard v-if="!readOnly && proposalOpen" tone="reading" class="knowledge-proposal">
+          <div class="knowledge-section-heading"><div><h2>{{ editing ? '编辑候选记忆' : '提议项目记忆' }}</h2>
+            <p>来源：{{ editing ? editing.sources.map((item) => sourceLabel(item.sourceRef)).join('，') : selected ? sourceLabel(selected.sourceRef) : '' }}</p></div></div>
+          <div class="knowledge-proposal-fields">
+            <ForgeInput v-model="memorySubject" label="主题标识" placeholder="api.date_filter" :disabled="!!editing" />
+            <ForgeTextarea v-model="memoryText" label="记忆内容" placeholder="根据原文写下可复用的项目约定" :rows="3" />
+            <label class="memory-expiry">到期日（可选）<input v-model="memoryExpiry" type="date" /></label>
+          </div>
+          <div class="knowledge-actions">
+            <ForgeButton variant="primary" :disabled="busy || !memoryText.trim() || (!editing && !memorySubject.trim())"
+              @click="saveMemory">保存候选</ForgeButton>
+            <ForgeButton variant="ghost" @click="proposalOpen = false; editing = null; memoryText = ''">取消</ForgeButton>
+          </div>
+          <p class="knowledge-hint">候选须经人工确认，才会进入后续检索。</p>
+        </ForgeCard>
+        <ForgeCard tone="reading" class="knowledge-memories" aria-label="项目记忆">
+          <div class="knowledge-section-heading"><div><h2>项目记忆</h2>
+            <p>经确认且来源仍有效的记忆，才会被后续运行检索。</p></div></div>
+          <ForgeEmptyState v-if="!memories.length" title="尚无项目记忆"
+            description="从资料原文提议一条候选，再确认是否适用于当前项目。" />
+          <ul v-else class="knowledge-memory-list">
+            <li v-for="item in memories" :key="item.memoryId">
+              <div class="knowledge-memory-top"><div><strong>{{ item.subjectKey }}</strong>
+                <p>{{ item.scope === 'environment' ? '当前环境' : '整个项目' }} · 修订 {{ item.revision }}
+                  <template v-if="item.expiresAt"> · 到期 {{ item.expiresAt.slice(0, 10) }}</template></p></div>
+                <StatusTag :tone="item.status === 'validated' ? 'success' : item.status === 'candidate' ? 'info' : 'neutral'"
+                  :label="item.status === 'candidate' ? '待确认' : item.status === 'validated' ? '已确认' : item.status === 'stale' ? '已过时' : '已撤销'" /></div>
+              <p class="knowledge-memory-text" v-if="item.text">{{ item.text }}</p><p v-else>正文已撤销</p>
+              <p class="knowledge-memory-source">来源 {{ item.sources.map((source) => sourceLabel(source.sourceRef)).join('，') }}</p>
+              <div v-if="!readOnly" class="knowledge-memory-actions">
+                <ForgeButton v-if="item.status === 'candidate'" variant="ghost" @click="startEdit(item)">编辑</ForgeButton>
+                <ForgeButton v-if="item.status === 'candidate'" variant="primary" @click="requestDecision(item, 'validate')">确认记忆</ForgeButton>
+                <ForgeButton v-if="item.status === 'validated'" variant="secondary" @click="requestDecision(item, 'deprecate')">标记过时</ForgeButton>
+                <ForgeButton v-if="item.status !== 'revoked'" variant="ghost" @click="requestDecision(item, 'revoke')">撤销记忆</ForgeButton>
+              </div>
+            </li>
+          </ul>
+        </ForgeCard>
+      </template>
     </template>
     <ForgeDialog v-model:open="revokeOpen" title="从 Forge 撤销此资料来源？">
-      <p>撤销后原文索引内容清空，引用保留墓碑；项目文件不会删除。</p>
+      <p>撤销会清除 Forge 中可检索的原文；项目文件不会删除。历史引用仍可审计。</p>
       <div class="knowledge-actions">
         <ForgeButton variant="secondary" @click="revokeOpen = false">取消</ForgeButton>
         <ForgeButton variant="danger" :disabled="busy" @click="revoke">确认撤销</ForgeButton>
       </div>
     </ForgeDialog>
     <ForgeDialog v-model:open="decisionOpen" title="确认项目记忆决定？">
-      <p>操作：{{ decisionAction }} · {{ decisionTarget?.subjectKey }}。这只管理 Forge 记忆，不授权 Agent 执行或更改已有 Run。</p>
-      <p v-if="replacement">将明确替换已确认记忆 {{ replacement.memoryId }}；旧版标为过时。</p>
+      <p>{{ decisionAction === 'validate' ? '确认记忆' : decisionAction === 'deprecate' ? '标记过时' : '撤销记忆' }} · {{ decisionTarget?.subjectKey }}。这不会更改已有 Run。</p>
+      <p v-if="replacement">将替换该主题的旧版已确认记忆。</p>
       <ForgeInput v-model="decisionReason" label="人工决定理由（至少 12 字符）" placeholder="说明为何当前来源适用" />
       <div class="knowledge-actions">
         <ForgeButton variant="secondary" @click="decisionOpen = false">取消</ForgeButton>
@@ -299,21 +382,56 @@ watch(() => [props.desktop, props.connected, props.projectId], () => { void load
 </template>
 
 <style scoped>
-.knowledge-view { width: 100%; min-width: 0; padding: var(--forge-space-32); display: grid; align-content: start; gap: var(--forge-space-20); }
-.knowledge-view h1, .knowledge-view > p { margin: 0; }
-.knowledge-view > p, .knowledge-panel p { color: var(--forge-color-text-secondary); }
-.knowledge-panel { max-width: 1000px; padding: var(--forge-space-24); }
-.knowledge-actions { display: flex; flex-wrap: wrap; gap: var(--forge-space-8); align-items: end; }
-.knowledge-actions > :first-child { flex: 1; min-width: 240px; }
-.knowledge-list { list-style: none; padding: 0; display: grid; gap: var(--forge-space-12); }
-.knowledge-list li { display: flex; flex-wrap: wrap; gap: var(--forge-space-12); align-items: center;
-  padding: var(--forge-space-16); border: 1px solid var(--forge-color-line);
-  border-radius: var(--forge-radius-lg); }
-.knowledge-list li > div { flex: 1; min-width: 240px; overflow-wrap: anywhere; }
-.knowledge-panel pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 400px;
-  overflow: auto; padding: var(--forge-space-16); background: var(--forge-surface-reading); }
-.memory-expiry { display: grid; gap: var(--forge-space-8); margin: var(--forge-space-12) 0; }
-.memory-expiry input { padding: var(--forge-space-12); border: 1px solid var(--forge-color-line);
-  border-radius: var(--forge-radius-md); background: var(--forge-surface-reading); color: var(--forge-color-text); }
-@media (max-width: 720px) { .knowledge-view { padding: var(--forge-space-16); } }
+.knowledge-view { width: 100%; min-width: 0; padding: 28px clamp(20px, 3vw, 42px) 42px; display: grid; align-content: start; gap: 20px; color: var(--forge-color-text); }
+.knowledge-view h1, .knowledge-view h2, .knowledge-view p { margin-top: 0; }
+.knowledge-header, .knowledge-section-heading, .knowledge-toolbar, .knowledge-result-header, .knowledge-memory-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.knowledge-header { align-items: end; padding-bottom: 18px; border-bottom: var(--forge-border-subtle); }
+.knowledge-kicker { margin-bottom: 6px; color: var(--forge-color-text-muted); font: 600 11px var(--forge-font-mono); letter-spacing: .12em; }
+.knowledge-header h1 { margin-bottom: 6px; font-size: clamp(24px, 2.2vw, 32px); font-weight: 700; letter-spacing: -.035em; }
+.knowledge-lead { margin-bottom: 0; color: var(--forge-color-text-secondary); font-size: 13px; }
+.knowledge-totals { display: flex; gap: 14px; white-space: nowrap; color: var(--forge-color-text-muted); font-size: 12px; }
+.knowledge-totals strong { color: var(--forge-color-text); font-size: 16px; }
+.knowledge-toolbar { min-height: 36px; }
+.knowledge-tabs { display: flex; gap: 4px; margin-right: auto; padding: 3px; border: var(--forge-border-subtle); border-radius: var(--forge-radius-md); background: var(--forge-surface-panel); }
+.knowledge-tabs button { border: 0; border-radius: 6px; padding: 7px 14px; background: transparent; color: var(--forge-color-text-secondary); font: inherit; font-size: 13px; cursor: pointer; }
+.knowledge-tabs button[aria-current='page'] { background: var(--forge-surface-elevated); color: var(--forge-color-text); box-shadow: var(--forge-shadow-surface); }
+.knowledge-tabs button span { margin-left: 7px; color: var(--forge-color-text-muted); font-size: 11px; }
+.knowledge-tabs button:focus-visible { outline: 2px solid var(--forge-color-accent); outline-offset: 2px; }
+.knowledge-notice, .knowledge-hint { margin: 0; color: var(--forge-color-text-secondary); font-size: 12px; line-height: 1.5; }
+.knowledge-notice { padding: 10px 12px; border: var(--forge-border-subtle); border-radius: var(--forge-radius-md); background: var(--forge-surface-panel); }
+.knowledge-search, .knowledge-actions { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.knowledge-search { max-width: 760px; }
+.knowledge-search > :first-child, .knowledge-actions > :first-child { flex: 1; min-width: 220px; }
+.knowledge-import, .knowledge-results, .knowledge-sources, .knowledge-preview, .knowledge-proposal, .knowledge-memories { min-width: 0; padding: 18px; border: var(--forge-border-subtle); border-radius: var(--forge-radius-lg); background: var(--forge-surface-panel); }
+.knowledge-section-heading { align-items: start; margin-bottom: 15px; }
+.knowledge-section-heading h2 { margin: 0; font-size: 15px; font-weight: 650; }
+.knowledge-section-heading p { margin: 5px 0 0; color: var(--forge-color-text-muted); font-size: 12px; line-height: 1.5; }
+.knowledge-section-heading > span { color: var(--forge-color-text-muted); font-size: 12px; white-space: nowrap; }
+.knowledge-workspace { display: grid; grid-template-columns: minmax(280px, 36%) minmax(0, 1fr); gap: 16px; min-height: 320px; }
+.knowledge-source-list, .knowledge-result-list, .knowledge-memory-list, .knowledge-conflicts { list-style: none; padding: 0; margin: 0; }
+.knowledge-source-list { display: grid; gap: 7px; }
+.knowledge-source-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 11px; border: var(--forge-border-subtle); border-radius: var(--forge-radius-md); background: var(--forge-surface-reading); }
+.knowledge-source-list li.knowledge-source-selected { border-color: var(--forge-color-accent); }
+.knowledge-source-main { display: grid; gap: 4px; flex: 1; min-width: 160px; overflow-wrap: anywhere; }
+.knowledge-source-main strong { font-size: 13px; font-weight: 600; }
+.knowledge-source-main span, .knowledge-memory-top p, .knowledge-memory-source { color: var(--forge-color-text-muted); font-size: 11px; }
+.knowledge-source-actions { width: 100%; display: flex; gap: 6px; }
+.knowledge-preview pre { max-height: min(48vh, 520px); min-height: 100px; margin: 0; padding: 16px; border: var(--forge-border-subtle); border-radius: var(--forge-radius-md); overflow: auto; background: var(--forge-surface-reading); color: var(--forge-color-text); font: 12px/1.7 var(--forge-font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.knowledge-preview-empty { display: grid; place-content: center; min-height: 220px; text-align: center; }
+.knowledge-preview-empty strong { font-size: 15px; }.knowledge-preview-empty p { max-width: 320px; margin: 8px auto 0; color: var(--forge-color-text-muted); font-size: 12px; line-height: 1.6; }
+.knowledge-citation { margin: 10px 0 0; color: var(--forge-color-text-muted); font-size: 11px; overflow-wrap: anywhere; }.knowledge-citation code { color: var(--forge-color-text-secondary); }
+.knowledge-result-list { display: grid; gap: 8px; }.knowledge-result-list li { padding: 12px; border: var(--forge-border-subtle); border-radius: var(--forge-radius-md); background: var(--forge-surface-reading); }
+.knowledge-result-header { align-items: baseline; }.knowledge-result-header strong { font-size: 13px; }.knowledge-result-header span { color: var(--forge-color-text-muted); font-size: 11px; text-align: right; }
+.knowledge-result-list p { margin: 9px 0; color: var(--forge-color-text-secondary); font-size: 12px; line-height: 1.6; white-space: pre-wrap; }.knowledge-result-list code { color: var(--forge-color-text-muted); font: 10px var(--forge-font-mono); overflow-wrap: anywhere; }
+.knowledge-memory-search { display: flex; gap: 12px; color: var(--forge-color-text-secondary); font-size: 12px; }.knowledge-memory-search strong { color: var(--forge-color-text); }
+.knowledge-conflicts { display: grid; gap: 8px; }.knowledge-conflicts li { padding: 12px; border-left: 2px solid var(--forge-color-warning); background: var(--forge-surface-panel); color: var(--forge-color-warning); }
+.knowledge-memories { max-width: 1120px; }.knowledge-memory-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 10px; }
+.knowledge-memory-list li { min-width: 0; padding: 14px; border: var(--forge-border-subtle); border-radius: var(--forge-radius-md); background: var(--forge-surface-reading); }
+.knowledge-memory-top { align-items: start; }.knowledge-memory-top strong { overflow-wrap: anywhere; font-size: 13px; }.knowledge-memory-top p { margin: 5px 0 0; }
+.knowledge-memory-text { margin: 14px 0 10px; color: var(--forge-color-text); font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.knowledge-memory-source { margin-bottom: 12px; overflow-wrap: anywhere; }.knowledge-memory-actions { display: flex; flex-wrap: wrap; gap: 7px; padding-top: 11px; border-top: var(--forge-border-subtle); }
+.knowledge-proposal-fields { display: grid; grid-template-columns: minmax(170px, 1fr) minmax(300px, 2fr) 180px; gap: 12px; align-items: start; }.knowledge-proposal > .knowledge-actions { margin: 14px 0 8px; }
+.memory-expiry { display: grid; gap: 8px; color: var(--forge-color-text); font-size: 12px; }.memory-expiry input { min-height: 40px; padding: 8px 10px; border: var(--forge-border-subtle); border-radius: var(--forge-radius-md); background: var(--forge-surface-control); color: var(--forge-color-text); color-scheme: inherit; }
+@media (max-width: 930px) { .knowledge-workspace { grid-template-columns: 1fr; }.knowledge-proposal-fields { grid-template-columns: 1fr 1fr; }.knowledge-proposal-fields > :nth-child(2) { grid-column: 1 / -1; grid-row: 2; } }
+@media (max-width: 640px) { .knowledge-view { padding: 18px; }.knowledge-header { align-items: start; flex-direction: column; }.knowledge-toolbar { flex-wrap: wrap; }.knowledge-totals { flex-wrap: wrap; }.knowledge-proposal-fields { grid-template-columns: 1fr; }.knowledge-proposal-fields > :nth-child(2) { grid-column: auto; grid-row: auto; }.knowledge-memory-list { grid-template-columns: 1fr; } }
 </style>

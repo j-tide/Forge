@@ -20,6 +20,34 @@ it('ordinary Web does not invoke the local knowledge bridge', () => {
   expect(listKnowledge).not.toHaveBeenCalled();
 });
 
+it('imports only after the user enters a project relative path and confirms', async () => {
+  const projectId = '22222222-2222-4222-8222-222222222222';
+  const source = { sourceId: '11111111-1111-4111-8111-111111111111', projectId,
+    relativePath: 'docs/architecture.md', version: 1, contentHash: 'a'.repeat(64),
+    status: 'active', byteSize: 26, chunkCount: 0,
+    createdAt: '2026-09-24T00:00:00Z', updatedAt: '2026-09-24T00:00:00Z' };
+  const listKnowledge = vi.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([source]);
+  const importKnowledge = vi.fn().mockResolvedValue(source);
+  const view = mount({ listKnowledge, importKnowledge, listMemories: async () => [] },
+    true, true, projectId);
+  await vi.waitFor(() => expect(listKnowledge).toHaveBeenCalledTimes(1));
+  expect(importKnowledge).not.toHaveBeenCalled();
+  [...view.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+    button.textContent?.trim() === '导入资料')?.click();
+  await vi.waitFor(() => expect(view.querySelector('input[placeholder="docs/architecture.md"]')).not.toBeNull());
+  const input = view.querySelector<HTMLInputElement>('input[placeholder="docs/architecture.md"]');
+  expect(input).not.toBeNull();
+  input!.value = 'docs/architecture.md';
+  input!.dispatchEvent(new Event('input', { bubbles: true }));
+  expect(importKnowledge).not.toHaveBeenCalled();
+  await vi.waitFor(() => expect([...view.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+    button.textContent?.trim() === '只读导入')?.disabled).toBe(false));
+  [...view.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+    button.textContent?.trim() === '只读导入')?.click();
+  await vi.waitFor(() => expect(importKnowledge).toHaveBeenCalledWith(projectId, 'docs/architecture.md'));
+  await vi.waitFor(() => expect(view.textContent).toContain('docs/architecture.md'));
+});
+
 it('shows actual Host source and its stored line citation without executing scripts', async () => {
   const source = {
     sourceId: '11111111-1111-4111-8111-111111111111',
@@ -64,7 +92,7 @@ it('shows scoped Host search citations and an honest empty result', async () => 
     listMemories: async () => [], searchKnowledge },
     desktop: true, connected: true, projectId, environmentId });
   app.mount(root);
-  const input = root.querySelector<HTMLInputElement>('input[placeholder="日期筛选 start_date"]');
+  const input = root.querySelector<HTMLInputElement>('input[placeholder="搜索文档内容或术语"]');
   expect(input).not.toBeNull();
   input!.value = '日期筛选 start_date'; input!.dispatchEvent(new Event('input', { bubbles: true }));
   await vi.waitFor(() => expect([...root!.querySelectorAll('button')].find((button) =>
@@ -97,6 +125,8 @@ it('requires an explicit reason before promoting and revoking real Host memory',
   app = createApp(KnowledgeView, { client: { listKnowledge: async () => [],
     listMemories, decideMemory }, desktop: true, connected: true, projectId, environmentId });
   app.mount(root);
+  [...root.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+    button.textContent?.includes('记忆'))?.click();
   await vi.waitFor(() => expect(root?.textContent).toContain('date.filtering'));
   const click = (label: string): void => {
     [...document.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
