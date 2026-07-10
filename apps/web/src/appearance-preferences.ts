@@ -8,7 +8,7 @@ export type AppearancePreferences = {
 };
 
 const defaults: AppearancePreferences = {
-  theme: 'system', reduceTransparency: false, reduceMotion: false,
+  theme: 'light', reduceTransparency: false, reduceMotion: false,
 };
 
 export function appearanceStorage(): Storage | null {

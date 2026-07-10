@@ -32,6 +32,26 @@ test('tokens provide solid surfaces and reduced motion fallbacks', () => {
   assert.match(componentCss, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
+test('component motion follows the reference timing without continuous surface animation', () => {
+  assert.equal(values['motion-hover'], `${motion.cardHover.ms}ms`);
+  assert.equal(values['motion-card-lift'], `${motion.cardHover.translateY}px`);
+  assert.equal(values['motion-dialog'], `${motion.dialog.ms}ms`);
+  assert.equal(values['motion-dialog-offset'], `${motion.dialog.translateY}px`);
+  assert.equal(values['motion-dialog-scale'], String(motion.dialog.scaleFrom));
+  assert.equal(values['motion-drawer'], `${motion.drawer.ms}ms`);
+  assert.equal(values['motion-drawer-offset'], `${motion.drawer.translateX}px`);
+  assert.match(componentCss, /\.forge-card--interactive:hover \{ transform: translateY\(var\(--forge-motion-card-lift\)\)/);
+  assert.match(componentCss, /\.forge-dialog \{[^\n]*animation: forge-dialog-enter var\(--forge-motion-dialog\)/);
+  assert.match(componentCss, /\.forge-drawer \{[^\n]*animation: forge-drawer-enter var\(--forge-motion-drawer\)/);
+  assert.doesNotMatch(componentCss, /(?:transition|animation):[^;]*backdrop-filter/);
+});
+
+test('user motion and transparency preferences reach teleported overlays', () => {
+  assert.match(componentCss, /body:has\(\[data-reduce-motion='true'\]\) \.forge-overlay \.forge-dialog/);
+  assert.match(componentCss, /body:has\(\[data-reduce-motion='true'\]\) \.forge-overlay \.forge-drawer/);
+  assert.match(componentCss, /body:has\(\[data-reduce-transparency='true'\]\) \.forge-overlay \{ backdrop-filter: none; \}/);
+});
+
 test('reading text and state labels meet 4.5:1 on their opaque surfaces', () => {
   const luminance = (hex) => {
     const channels = hex.slice(1).match(/../g).map((part) => parseInt(part, 16) / 255)

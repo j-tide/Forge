@@ -6,7 +6,7 @@ afterEach(() => window.localStorage.removeItem(appearanceStorageKey));
 describe('local appearance preferences', () => {
   it('restores valid display choices without a Host or Electron bridge', () => {
     expect(readAppearance(window.localStorage)).toEqual({
-      theme: 'system', reduceTransparency: false, reduceMotion: false,
+      theme: 'light', reduceTransparency: false, reduceMotion: false,
     });
     expect(writeAppearance(window.localStorage, {
       theme: 'dark', reduceTransparency: true, reduceMotion: true,
@@ -23,7 +23,7 @@ describe('local appearance preferences', () => {
       JSON.stringify({ theme: 'dark', reduceTransparency: 'yes', reduceMotion: true }),
     ]) {
       window.localStorage.setItem(appearanceStorageKey, invalid);
-      expect(readAppearance(window.localStorage).theme).toBe('system');
+      expect(readAppearance(window.localStorage).theme).toBe('light');
     }
     const blocked = {
       getItem: () => { throw new Error('blocked'); },
@@ -33,6 +33,6 @@ describe('local appearance preferences', () => {
     expect(writeAppearance(blocked, {
       theme: 'light', reduceTransparency: false, reduceMotion: true,
     })).toBe(false);
-    expect(readAppearance(null).theme).toBe('system');
+    expect(readAppearance(null).theme).toBe('light');
   });
 });
