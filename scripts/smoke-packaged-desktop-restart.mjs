@@ -179,7 +179,7 @@ try {
     `${artifactTag}-dependencies-1440x900.png`);
   await dependencyPanel.scrollIntoViewIfNeeded();
   await page.screenshot({ path:dependencyScreenshot });
-  await page.getByRole('button', { name:'研发看板' }).click();
+  await page.getByRole('button', { name:'看板', exact:true }).click();
   const taskCard = page.locator('.board-task').filter({ hasText:task.title });
   await taskCard.waitFor();
   const screenshot = join(root, 'output', 'playwright',
@@ -187,6 +187,7 @@ try {
   await taskCard.scrollIntoViewIfNeeded();
   await page.screenshot({ path:screenshot });
   await taskCard.click();
+  await page.getByRole('tab', {name:'运行',exact:true}).click();
   await page.getByRole('tab', {name:'context'}).click();
   await page.getByText('retrieved_knowledge', {exact:false}).first().waitFor();
   await page.getByText('validated_memory', {exact:false}).first().waitFor();
@@ -199,6 +200,7 @@ try {
   await page.getByText('Fixture Workflow Reviewer', { exact:false }).waitFor();
   await page.getByText('当前任务状态为 done', { exact:false }).waitFor();
   assert.equal(await page.getByText('Codex 开发当前不可用', { exact:false }).count(), 0);
+  await page.getByRole('tab', {name:'审查与验收',exact:true}).click();
   const verifyPanel = page.locator('section[aria-label="验证报告"]');
   try {
     await verifyPanel.getByText('test · passed · exit 0', { exact:false }).waitFor();
@@ -214,6 +216,7 @@ try {
   const verifyScreenshot = join(root, 'output', 'playwright',
     `${artifactTag}-verify-report-1440x900.png`);
   await page.screenshot({ path:verifyScreenshot });
+  await page.getByRole('tab', {name:'运行',exact:true}).click();
   await reviewerLabel.scrollIntoViewIfNeeded();
   const reviewerScreenshot = join(root, 'output', 'playwright',
     `${artifactTag}-frozen-reviewer-1440x900.png`);

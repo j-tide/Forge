@@ -73,8 +73,9 @@ try {
   assert.equal(board.tasks.length, 1);
   assert.equal(board.tasks[0].state, 'todo');
   const taskId = board.tasks[0].id;
-  await page.getByRole('button', { name: '研发看板' }).click();
+  await page.getByRole('button', { name: '看板', exact:true }).click();
   await page.locator('.board-task').first().click();
+  await page.getByRole('tab',{name:'运行',exact:true}).click();
   await page.getByText('Codex CLI 尚未登录', { exact: false }).waitFor({ timeout: 20_000 });
   const start = page.getByRole('button', { name: '明确启动开发' });
   assert.equal(await start.isDisabled(), true);
@@ -85,7 +86,7 @@ try {
   await page.locator('.run-start-controls').scrollIntoViewIfNeeded();
   await page.screenshot({ path: screenshot });
   await page.keyboard.press('Escape');
-  await page.locator('.forge-overlay--drawer').waitFor({ state: 'hidden' });
+  await page.locator('.forge-dialog:has(> .task-detail)').waitFor({ state: 'hidden' });
   await page.getByRole('button', { name: '插件', exact: true }).click();
   const pluginCapability = page.locator('[aria-label="Codex 执行能力"]');
   await pluginCapability.getByText('当前执行器不可启动', { exact: false }).waitFor();

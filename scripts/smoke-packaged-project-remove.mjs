@@ -79,39 +79,39 @@ try {
   let page=await app.firstWindow();
   await page.setViewportSize({width:1440,height:900});
   await page.getByRole('button',{name:'Host connected'}).waitFor({timeout:20_000});
-  await page.getByRole('button',{name:'项目',exact:true}).click();
-  await page.getByRole('heading',{name:'选择一个项目'}).waitFor();
+  await page.getByRole('button',{name:'项目管理',exact:true}).click();
+  await page.locator('#projects-title').waitFor();
   await page.screenshot({path:screenshot('choose')});
   await app.evaluate(({dialog})=>{ dialog.showOpenDialog=async()=>({
     canceled:true,filePaths:[],
   }); });
-  await page.getByRole('button',{name:'Choose folder'}).click();
+  await page.getByRole('button',{name:'选择文件夹'}).click();
   assert.deepEqual(await invoke(page,'project.list',{}),[]);
   await app.evaluate(({dialog},path)=>{ dialog.showOpenDialog=async()=>({
     canceled:false,filePaths:[path],
   }); },source);
-  await page.getByRole('button',{name:'Choose folder'}).click();
-  await page.getByText('Git repository').waitFor();
+  await page.getByRole('button',{name:'选择文件夹'}).click();
+  await page.locator('.project-overview-facts').getByText('Git',{exact:true}).waitFor();
   await page.getByText('main',{exact:true}).first().waitFor();
   assert.equal(command('git',['status','--porcelain']),'');
   await page.screenshot({path:screenshot('detected')});
-  await page.getByRole('button',{name:'继续查看信任范围'}).click();
-  await page.getByRole('heading',{name:'Trust this project?'}).waitFor();
+  await page.getByRole('button',{name:'继续'}).click();
+  await page.getByRole('heading',{name:'信任这个项目？'}).waitFor();
   assert.deepEqual(await invoke(page,'project.list',{}),[]);
   await page.screenshot({path:screenshot('trust')});
-  await page.getByRole('button',{name:'Trust this project'}).click();
-  await page.getByText('PROJECT CONNECTED').waitFor({timeout:15_000});
+  await page.getByRole('button',{name:'信任并打开'}).click();
+  await page.locator('.project-active-heading').getByRole('heading',
+    {name:'Forge 测试项目 01'}).waitFor({timeout:15_000});
   const saved=await invoke(page,'project.list',{});
   assert.equal(saved.length,1);
   assert.equal(saved[0].trusted,true);
   assert.equal(saved[0].rootPath,realpathSync(source));
-  await page.getByRole('button',{name:'连接其他项目'}).click();
   await app.evaluate(({dialog},path)=>{ dialog.showOpenDialog=async()=>({
     canceled:false,filePaths:[path],
   }); },secondSource);
-  await page.getByRole('button',{name:'Choose folder'}).click();
-  await page.getByRole('button',{name:'继续查看信任范围'}).click();
-  await page.getByRole('button',{name:'Trust this project'}).click();
+  await page.getByRole('button',{name:'选择文件夹'}).click();
+  await page.getByRole('button',{name:'继续'}).click();
+  await page.getByRole('button',{name:'信任并打开'}).click();
   const withTwo=await invoke(page,'project.list',{});
   assert.equal(withTwo.length,2);
   const second=withTwo.find((item)=>item.rootPath===realpathSync(secondSource));
@@ -119,22 +119,22 @@ try {
   assert.equal((await invoke(page,'project.active',{})).projectId,second.projectId);
   if (accessibility) {
     await page.setViewportSize({width:1280,height:900});
-    const longCard=page.locator('.saved-project').filter({hasText:'Forge 测试项目 02'});
+    const longCard=page.locator('.project-record').filter({hasText:'Forge 测试项目 02'});
     assert.equal(await longCard.locator('strong').textContent(),secondName);
-    assert.equal(await longCard.locator('p').getAttribute('title'),realpathSync(secondSource));
+    assert.equal(await longCard.locator('.project-path').getAttribute('title'),realpathSync(secondSource));
     const layout=await page.evaluate(()=>({
       documentWidth:globalThis.document.documentElement.scrollWidth,
       viewportWidth:globalThis.innerWidth,
     }));
     assert.ok(layout.documentWidth<=layout.viewportWidth,
       `Long project title overflows viewport: ${JSON.stringify(layout)}`);
-    const removeButton=longCard.getByRole('button',{name:'Remove from Forge'});
+    const removeButton=longCard.getByRole('button',{name:'从 Forge 移除'});
     assert.equal(await removeButton.isVisible(),true);
     assert.equal(await removeButton.isEnabled(),true);
     await page.screenshot({path:screenshot('long-project')});
     await page.setViewportSize({width:1440,height:900});
   }
-  await page.locator('.saved-project').filter({hasText:'Forge 测试项目 01'})
+  await page.locator('.project-record').filter({hasText:'Forge 测试项目 01'})
     .getByRole('button',{name:'切换'}).click();
   await page.getByRole('heading',{name:'Forge 测试项目 01'}).waitFor();
   assert.equal((await invoke(page,'project.active',{})).projectId,saved[0].projectId);
@@ -142,19 +142,22 @@ try {
   let accessibilityTaskId=null;
   if (accessibility) {
     const longTaskTitle='任务详情键盘与长标题验证'.repeat(10);
-    await page.getByRole('button',{name:'研发看板'}).click();
-    await page.getByRole('button',{name:'手工创建任务'}).click();
-    const manual=page.getByRole('dialog',{name:'手工创建任务草稿'});
-    await manual.getByRole('textbox',{name:'任务标题'}).fill(longTaskTitle);
-    await manual.getByRole('textbox',{name:'目标'}).fill('验证已安装应用的任务抽屉可读性与键盘操作；不启动执行器。');
-    await manual.getByRole('textbox',{name:'验收条件'}).fill('长标题完整可读，焦点留在抽屉并在关闭后回到任务卡片。');
-    await manual.getByRole('button',{name:'保存手工草稿'}).click();
-    const draft=page.getByRole('dialog',{name:'Task Draft · 编辑与澄清'});
+    await page.getByRole('button',{name:'看板', exact:true}).click();
+    await page.locator('.sidebar-new-task').click();
+    const composer=page.getByRole('dialog',{name:'新建任务'});
+    await composer.getByRole('textbox',{name:'描述你的想法'}).fill(longTaskTitle);
+    await composer.getByRole('button',{name:'手工填写',exact:true}).click();
+    const draft=composer.locator('.draft-sheet[aria-label="任务草稿编辑"]');
+    await draft.getByRole('textbox',{name:'标题'}).fill(longTaskTitle);
+    await draft.getByRole('textbox',{name:'目标'}).fill('验证已安装应用的任务抽屉可读性与键盘操作；不启动执行器。');
+    await draft.getByRole('textbox',{name:'验收条件 ac1'}).fill('长标题完整可读，焦点留在抽屉并在关闭后回到任务卡片。');
+    await draft.getByRole('textbox',{name:'本次用户决定 / 修改原因'}).fill('确认独立测试项目的任务详情键盘与长标题要求');
+    await draft.getByRole('button',{name:'保存新 revision'}).click();
+    await draft.getByText('修订 v2',{exact:false}).waitFor();
     await draft.getByRole('button',{name:'提交审批请求'}).click();
     await draft.getByLabel('我已审阅当前目标、验收和范围').check();
     await draft.getByRole('button',{name:'批准并加入 TODO'}).click();
-    await draft.getByText('已批准 · TODO · 尚未开工。', {exact:false}).waitFor();
-    await draft.getByRole('button',{name:'关闭抽屉'}).click();
+    await composer.waitFor({state:'hidden'});
     const card=page.locator('.board-task').filter({hasText:longTaskTitle});
     await card.waitFor();
     accessibilityTaskId=await card.getAttribute('data-task-id');
@@ -169,7 +172,7 @@ try {
     assert.deepEqual(runs.data,[],'Manual approval must not start an Executor Run');
     await card.focus();
     await page.keyboard.press('Enter');
-    const detail=page.getByRole('dialog',{name:'任务详情'});
+    const detail=page.locator('.forge-dialog:has(> .task-detail)');
     await detail.getByRole('heading',{name:longTaskTitle}).waitFor();
     await page.setViewportSize({width:1280,height:900});
     await detail.evaluate((element)=>Promise.all(element.getAnimations().map((animation)=>animation.finished)));
@@ -179,19 +182,19 @@ try {
         return {pageWidth:globalThis.document.documentElement.scrollWidth,
           viewportWidth:globalThis.innerWidth,panelWidth:element.clientWidth,
           panelScrollWidth:element.scrollWidth,
-          closeRight:element.querySelector('[aria-label="关闭抽屉"]')?.getBoundingClientRect().right};
+          closeRight:element.querySelector('[aria-label="关闭对话框"]')?.getBoundingClientRect().right};
       },zoom);
       assert.ok(layout.pageWidth<=layout.viewportWidth &&
         layout.panelScrollWidth<=layout.panelWidth && layout.closeRight<=layout.viewportWidth,
       `Task drawer clips content at ${zoom}: ${JSON.stringify(layout)}`);
     }
-    await detail.getByRole('button',{name:'关闭抽屉'}).focus();
+    await detail.getByRole('button',{name:'关闭对话框'}).focus();
     await page.keyboard.press('Shift+Tab');
     const lastFocus=await detail.evaluate((element)=>element.contains(globalThis.document.activeElement)
-      && globalThis.document.activeElement?.getAttribute('aria-label')!=='关闭抽屉');
+      && globalThis.document.activeElement?.getAttribute('aria-label')!=='关闭对话框');
     assert.equal(lastFocus,true,'Shift+Tab must wrap inside the real task drawer');
     await page.keyboard.press('Tab');
-    assert.equal(await detail.getByRole('button',{name:'关闭抽屉'}).evaluate((element)=>
+    assert.equal(await detail.getByRole('button',{name:'关闭对话框'}).evaluate((element)=>
       element===globalThis.document.activeElement),true);
     await page.screenshot({path:screenshot('long-task-drawer')});
     await page.keyboard.press('Escape');
@@ -201,23 +204,23 @@ try {
     await page.evaluate(()=>{globalThis.document.body.style.zoom='';});
     await page.setViewportSize({width:1440,height:900});
     assert.equal(command('git',['status','--porcelain']),'');
-    await page.getByRole('button',{name:'项目',exact:true}).click();
+    await page.getByRole('button',{name:'项目管理',exact:true}).click();
   }
-  await page.locator('.saved-project').filter({hasText:'Forge 测试项目 02'})
+  await page.locator('.project-record').filter({hasText:'Forge 测试项目 02'})
     .getByRole('button',{name:'切换'}).click();
   assert.equal((await invoke(page,'project.active',{})).projectId,second.projectId);
   assert.equal(command('git',['status','--porcelain'],secondSource),'');
-  const removeTrigger=page.locator('.saved-project').filter({hasText:'Forge 测试项目 02'})
-    .getByRole('button',{name:'Remove from Forge'});
+  const removeTrigger=page.locator('.project-record').filter({hasText:'Forge 测试项目 02'})
+    .getByRole('button',{name:'从 Forge 移除'});
   await removeTrigger.click();
-  const dialog=page.getByRole('dialog',{name:/Remove .* from Forge/});
-  await dialog.getByText('Your project files will not be deleted.').waitFor();
+  const dialog=page.getByRole('dialog',{name:/从 Forge 移除/});
+  await dialog.getByText('你的源码、Git 仓库和项目文件不会被删除。').waitFor();
   if (accessibility) {
     const close=dialog.getByRole('button',{name:'关闭对话框'});
     await page.waitForFunction(()=>globalThis.document.activeElement?.getAttribute('aria-label')==='关闭对话框');
     assert.equal(await page.locator('#app').evaluate((element)=>element.inert),true);
     await page.keyboard.press('Shift+Tab');
-    assert.equal(await dialog.getByRole('button',{name:'Remove from Forge'})
+    assert.equal(await dialog.getByRole('button',{name:'从 Forge 移除'})
       .evaluate((element)=>element===globalThis.document.activeElement),true);
     await page.keyboard.press('Tab');
     assert.equal(await close.evaluate((element)=>element===globalThis.document.activeElement),true);
@@ -227,12 +230,12 @@ try {
     assert.equal(await page.locator('#app').evaluate((element)=>element.inert),false);
     await removeTrigger.click();
   }
-  await dialog.getByRole('button',{name:'Cancel'}).click();
+  await dialog.getByRole('button',{name:'取消'}).click();
   assert.equal((await invoke(page,'project.list',{})).length,2);
-  await page.locator('.saved-project').filter({hasText:'Forge 测试项目 02'})
-    .getByRole('button',{name:'Remove from Forge'}).click();
-  await dialog.getByRole('button',{name:'Remove from Forge'}).click();
-  await page.getByRole('heading',{name:'Choose project'}).waitFor();
+  await page.locator('.project-record').filter({hasText:'Forge 测试项目 02'})
+    .getByRole('button',{name:'从 Forge 移除'}).click();
+  await dialog.getByRole('button',{name:'从 Forge 移除'}).click();
+  await page.locator('#projects-title').waitFor();
   assert.equal((await invoke(page,'project.list',{})).length,1);
   assert.equal(command('git',['rev-parse','HEAD'],secondSource),secondHead);
   assert.equal(command('git',['status','--porcelain'],secondSource),'');
@@ -247,12 +250,12 @@ try {
   page=await app.firstWindow();
   await page.getByRole('button',{name:'Host connected'}).waitFor({timeout:20_000});
   assert.equal((await invoke(page,'project.list',{})).length,1);
-  await page.getByRole('button',{name:'项目',exact:true}).click();
-  await page.locator('.saved-project').filter({hasText:'Forge 测试项目 01'})
+  await page.getByRole('button',{name:'项目管理',exact:true}).click();
+  await page.locator('.project-record').filter({hasText:'Forge 测试项目 01'})
     .getByRole('button',{name:'切换'}).click();
   assert.equal((await invoke(page,'project.active',{})).projectId,saved[0].projectId);
   if (accessibility) {
-    await page.getByRole('button',{name:'研发看板'}).click();
+    await page.getByRole('button',{name:'看板', exact:true}).click();
     const restoredCard=page.locator(`.board-task[data-task-id="${accessibilityTaskId}"]`);
     await restoredCard.waitFor();
     if (nativeRetinaScreenshot) {
@@ -263,7 +266,7 @@ try {
         `Expected native Mac Retina, received ${displayScale}/${viewport.ratio}`);
       await restoredCard.focus();
       await page.keyboard.press('Enter');
-      const nativeDetail=page.getByRole('dialog',{name:'任务详情'});
+      const nativeDetail=page.locator('.forge-dialog:has(> .task-detail)');
       await nativeDetail.waitFor();
       await nativeDetail.evaluate((element)=>Promise.all(element.getAnimations()
         .map((animation)=>animation.finished)));
@@ -271,7 +274,7 @@ try {
         pageWidth:globalThis.document.documentElement.scrollWidth,
         viewportWidth:window.innerWidth,panelWidth:element.clientWidth,
         panelScrollWidth:element.scrollWidth,
-        closeRight:element.querySelector('[aria-label="关闭抽屉"]')?.getBoundingClientRect().right,
+        closeRight:element.querySelector('[aria-label="关闭对话框"]')?.getBoundingClientRect().right,
       }));
       assert.ok(layout.pageWidth<=layout.viewportWidth &&
         layout.panelScrollWidth<=layout.panelWidth && layout.closeRight<=layout.viewportWidth,
@@ -283,11 +286,11 @@ try {
       await page.keyboard.press('Escape');
       await nativeDetail.waitFor({state:'hidden'});
     }
-    await page.getByRole('button',{name:'项目',exact:true}).click();
+    await page.getByRole('button',{name:'项目管理',exact:true}).click();
   }
-  await page.getByRole('button',{name:'Remove from Forge'}).first().click();
-  await page.getByRole('dialog',{name:/Remove .* from Forge/})
-    .getByRole('button',{name:'Remove from Forge'}).click();
+  await page.getByRole('button',{name:'从 Forge 移除'}).first().click();
+  await page.getByRole('dialog',{name:/从 Forge 移除/})
+    .getByRole('button',{name:'从 Forge 移除'}).click();
   assert.deepEqual(await invoke(page,'project.list',{}),[]);
   assert.equal(command('git',['rev-parse','HEAD']),originalHead);
   console.log(JSON.stringify({stage:'packaged-project-metadata-only-remove',

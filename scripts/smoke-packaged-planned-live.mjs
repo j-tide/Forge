@@ -124,18 +124,20 @@ try {
     profileIds[role] = saved.id;
   }
   await page.getByRole('button', { name:'工作流', exact:true }).click();
-  await page.getByRole('button', { name:`从${preset}模板新建` }).click();
+  await page.getByRole('button', { name:`从${preset === 'strict' ? '严格流程' : '标准流程'}新建` }).click();
   const nodes = page.locator('.workflow-node');
   const bindings = preset === 'strict' ? [
     [0, profileIds.planner], [2, profileIds.developer], [3, profileIds.reviewer],
   ] : [[0, profileIds.planner], [1, profileIds.developer], [2, profileIds.reviewer]];
   for (const [index, id] of bindings) {
-    await nodes.nth(index).getByLabel('Agent Profile').selectOption(id);
+    const details=nodes.nth(index).locator('details');
+    if (!await details.evaluate((element)=>element.open)) await details.locator('summary').click();
+    await details.getByLabel('角色配置').selectOption(id);
   }
-  await page.getByRole('button', { name:'检查结构与能力' }).click();
-  await page.getByText('可发布预检通过', { exact:false }).waitFor();
+  await page.getByRole('button', { name:'检查能力' }).click();
+  await page.getByText('发布预检通过', { exact:false }).waitFor();
   await page.getByRole('button', { name:'保存草稿' }).click();
-  await page.getByRole('button', { name:'发布当前草稿' }).click();
+  await page.getByRole('button', { name:'发布版本' }).click();
   await page.getByText('版本已发布', { exact:false }).waitFor();
   const workflows = await page.evaluate(() => window.forge.invokeWorkflow({
     type:'list', payload:{},
@@ -148,15 +150,15 @@ try {
   console.log(JSON.stringify({stage:'planned-workflow-published',preset,
     workflowId:published.workflowId,model}));
 
-  await page.getByRole('button', { name:'项目', exact:true }).click();
+  await page.getByRole('button', { name:'项目管理', exact:true }).click();
   await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () => ({
     canceled:false, filePaths:[path],
   }); }, source);
-  await page.getByRole('button', { name:'Choose folder' }).click();
-  await page.getByText('Git repository').waitFor();
-  await page.getByRole('button', { name:'继续查看信任范围' }).click();
-  await page.getByRole('button', { name:'Trust this project' }).click();
-  await page.getByText('PROJECT CONNECTED').waitFor();
+  await page.getByRole('button', { name:'选择文件夹' }).click();
+  await page.locator('.project-overview-facts').getByText('Git', { exact: true }).waitFor();
+  await page.getByRole('button', { name:'继续' }).click();
+  await page.getByRole('button', { name:'信任并打开' }).click();
+  await page.getByText('已切换到', { exact: false }).waitFor();
   const projects = await invoke(page, 'project', 'project.list', {});
   assert.equal(projects.length, 1);
   projectId = projects[0].projectId;
@@ -224,11 +226,12 @@ try {
   assert.deepEqual(await invoke(page, 'run', 'run.list', {
     projectId, taskId:draft.draftId,
   }), [], 'Approval must not start a Run');
-  await page.getByRole('button', { name:'研发看板' }).click();
+  await page.getByRole('button', { name:'看板', exact:true }).click();
   const taskCard = page.locator('.board-task').filter({hasText:contract.title});
   await taskCard.waitFor();
   await taskCard.click();
-  const drawer = page.getByRole('dialog', { name:'任务详情' });
+  const drawer = page.locator('.forge-dialog:has(> .task-detail)');
+  await drawer.getByRole('tab',{name:'运行',exact:true}).click();
   await drawer.getByLabel('运行时资料检索词（可选）').fill('non-numeric');
   await drawer.getByLabel('本次总 Token 观测上限').selectOption(maxTokens);
   await drawer.getByRole('button', { name:'明确启动只读计划' }).click();
@@ -330,8 +333,9 @@ try {
   }
   await page.reload();
   await page.getByRole('button', { name:'Host connected' }).waitFor();
-  await page.getByRole('button', { name:'研发看板' }).click();
+  await page.getByRole('button', { name:'看板', exact:true }).click();
   await page.locator('.board-task').filter({hasText:contract.title}).click();
+  await page.getByRole('tab',{name:'运行',exact:true}).click();
   await page.locator('nav.run-list').getByRole('button', {
     name:new RegExp(inspection.run.runId.slice(0,8)),
   }).click();

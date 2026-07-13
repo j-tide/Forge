@@ -74,42 +74,34 @@ try {
     await dialog.waitFor({ state: 'hidden' });
     assert.equal(await trigger.evaluate((button) => button === document.activeElement), true);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    assert.match(await page.locator('.compose-pane').evaluate(
+    assert.match(await page.locator('.board-pane').evaluate(
       (panel) => getComputedStyle(panel).animationDuration), /0s|1e-05s/);
   }
   const modelCatalog = await page.evaluate(() => globalThis.forge.agentProfileCatalog());
   assert.equal(modelCatalog.modelProviders[0].available, false);
   assert.equal(modelCatalog.modelProviders[0].reason, 'MODEL_PROVIDER_DISABLED');
-  await page.getByRole('button', { name: /未选择项目/ }).click();
   await app.evaluate(({ dialog }, path) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
   }, repo);
-  await page.getByRole('button', { name: 'Choose folder' }).click();
-  await page.getByText('Git repository', { exact: false }).waitFor();
-  await page.getByRole('button', { name: '继续查看信任范围' }).click();
-  await page.getByRole('button', { name: 'Trust this project' }).click();
-  await page.getByText('PROJECT CONNECTED').waitFor();
-  await page.getByRole('button', { name: '进入 Forge Workspace' }).click();
-  await page.getByRole('heading', { name: 'What do you want to build?' }).waitFor();
+  await page.locator('.project-picker').click();
+  await page.getByRole('heading', { name: basename(repo) }).waitFor();
+  await page.getByRole('button', { name: '继续', exact: true }).click();
+  await page.getByRole('button', { name: '信任并打开' }).click();
+  await page.getByRole('heading', { name: '研发看板' }).waitFor();
+  await page.locator('.sidebar-new-task').click();
   await page.locator('.conversation-panel textarea').fill('给离线项目增加明确的输入校验');
-  await page.getByRole('button', { name: '保存输入' }).click();
-  await page.getByText('输入已保存在本地会话。', { exact: false }).waitFor();
-  await page.getByRole('button', { name: '手工草稿', exact: true }).click();
-  await page.getByRole('heading', { name: '待完善草稿' }).waitFor();
-  await page.locator('.draft-manual-editor textarea').fill('给离线项目增加明确的输入校验');
-  await page.getByRole('button', { name: '保存草稿文字' }).click();
-  await page.getByRole('button', { name: /编辑草稿 · v2/ }).click();
-  await page.getByRole('textbox', { name: '标题' }).fill(taskTitle);
-  await page.getByRole('textbox', { name: '验收条件 ac1' }).fill('无效输入得到明确错误');
-  await page.getByRole('textbox', { name: '本次用户决定 / 修改原因' }).fill('用户确认离线任务范围');
-  await page.getByRole('button', { name: '保存新 revision' }).click();
-  await page.getByRole('button', { name: /编辑草稿 · v3/ }).click();
-  await page.getByRole('button', { name: '提交审批请求' }).click();
-  await page.getByLabel('我已审阅当前目标、验收和范围').check();
-  await page.getByRole('button', { name: '批准并加入 TODO' }).click();
-  await page.getByText('已批准 · TODO · 尚未开工。此草稿 revision 已冻结。').waitFor();
-  await page.getByRole('button', { name: '关闭抽屉' }).click();
-  await page.getByRole('button', { name: '研发看板' }).click();
+  await page.getByRole('button', { name: '手工填写', exact: true }).click();
+  const draftEditor = page.locator('.draft-sheet[aria-label="任务草稿编辑"]');
+  await draftEditor.waitFor();
+  await draftEditor.getByRole('textbox', { name: '标题' }).fill(taskTitle);
+  await draftEditor.getByRole('textbox', { name: '验收条件 ac1' }).fill('无效输入得到明确错误');
+  await draftEditor.getByRole('textbox', { name: '本次用户决定 / 修改原因' }).fill('用户确认离线任务范围');
+  await draftEditor.getByRole('button', { name: '保存新 revision' }).click();
+  await draftEditor.getByRole('button', { name: '提交审批请求' }).click();
+  await draftEditor.getByLabel('我已审阅当前目标、验收和范围', { exact: false }).check();
+  await draftEditor.getByRole('button', { name: '批准并加入 TODO' }).click();
+  await page.getByRole('dialog', { name: '新建任务' }).waitFor({ state: 'hidden' });
+  await page.getByRole('button', { name: '看板', exact: true }).click();
   await page.getByRole('heading', { name: taskTitle }).waitFor();
   assert.equal(await page.locator('.board-task').count(), 1);
   const taskId = await page.locator('.board-task').first().getAttribute('data-task-id');
@@ -123,7 +115,7 @@ try {
         const metrics = await page.evaluate((value) => {
           document.body.style.zoom = String(value);
           const picker = document.querySelector('.project-picker')?.getBoundingClientRect();
-          const manual = [...document.querySelectorAll('button')].find((item) => item.textContent === '手工创建任务')?.getBoundingClientRect();
+          const manual = document.querySelector('.sidebar-new-task')?.getBoundingClientRect();
           return { viewport: innerWidth, document: document.documentElement.scrollWidth,
             pickerRight: picker?.right, manualRight: manual?.right,
             cardWidth: document.querySelector('.board-task')?.getBoundingClientRect().width };
@@ -145,27 +137,28 @@ try {
   await assertSourceUntouched();
   await app.close(); app = null;
   page = await launch();
-  await page.getByRole('button', { name: '研发看板' }).click();
+  await page.getByRole('button', { name: '看板', exact: true }).click();
   await page.getByRole('heading', { name: taskTitle }).waitFor();
   assert.equal(await page.locator('.board-task').first().getAttribute('data-task-id'), taskId);
   await page.locator('.board-task').first().click();
   if (accessibilityMode) console.log(JSON.stringify({ stage: 'drawer-focus-before', active: await page.evaluate(() => ({
     tag: document.activeElement?.tagName, className: document.activeElement?.className,
   })) }));
-  await page.getByRole('dialog', { name: '任务详情' }).waitFor();
+  const taskDialog = page.getByRole('dialog').filter({ has: page.locator('.task-detail') });
+  await taskDialog.waitFor();
   await page.getByText('无效输入得到明确错误').waitFor();
   if (accessibilityMode) {
-    assert.equal(await page.getByRole('dialog', { name: '任务详情' }).locator('h3').textContent(), taskTitle);
-    const detailLayout = await page.getByRole('dialog', { name: '任务详情' }).evaluate((drawer) => ({
+    assert.equal(await taskDialog.locator('h2').first().textContent(), taskTitle);
+    const detailLayout = await taskDialog.evaluate((drawer) => ({
       width: drawer.clientWidth, scrollWidth: drawer.scrollWidth,
-      closeRight: drawer.querySelector('[aria-label="关闭抽屉"]')?.getBoundingClientRect().right,
+      closeRight: drawer.querySelector('[aria-label="关闭对话框"]')?.getBoundingClientRect().right,
       viewport: innerWidth,
     }));
     assert.ok(detailLayout.scrollWidth <= detailLayout.width && detailLayout.closeRight <= detailLayout.viewport,
       `long Chinese task clipped its drawer: ${JSON.stringify(detailLayout)}`);
     await page.screenshot({ path: join(output, 'p6-02-long-title-drawer-1440x900.png') });
     await page.keyboard.press('Escape');
-    await page.getByRole('dialog', { name: '任务详情' }).waitFor({ state: 'hidden' });
+    await taskDialog.waitFor({ state: 'hidden' });
     console.log(JSON.stringify({ stage: 'drawer-focus-after', active: await page.evaluate(() => ({
       tag: document.activeElement?.tagName, className: document.activeElement?.className,
     })) }));

@@ -81,14 +81,14 @@ try {
   }));
   assert.equal(beforeWorkflow.revision,1);
 
-  await page.getByRole('button',{name:'Agents'}).click();
-  const developerRow=page.locator('.agent-row')
+  await page.getByRole('button',{name:'角色'}).click();
+  const developerRow=page.locator('.agent-profile')
     .filter({hasText:'Fixture Workflow Developer'});
   await developerRow.getByRole('button',{name:'编辑'}).click();
   await page.getByLabel('角色职责与提示词').fill(
     'Develop in the isolated fixture workspace. For subtract(a,b), test subtract(10,4)=6 and run node test.js.');
   await page.getByRole('button',{name:'保存新版本'}).click();
-  await page.getByText('Profile 版本已保存',{exact:false}).waitFor({timeout:15_000});
+  await page.getByText('角色配置已保存',{exact:false}).waitFor({timeout:15_000});
   const catalog=await page.evaluate(() => window.forge.agentProfileCatalog());
   const developer=catalog.profiles.find((item)=>
     item.id==='profile.fixture.workflow.developer');
@@ -96,14 +96,27 @@ try {
   assert.equal(developer.modelId,modelId);
 
   await page.getByRole('button',{name:'工作流'}).click();
-  await page.getByLabel('已保存草稿').selectOption('workflow.fixture.quick');
+  const workflowRecords=await page.evaluate(() => window.forge.invokeWorkflow({
+    type:'list',payload:{},
+  }));
+  const workflowRecord=workflowRecords.find((item)=>item.workflowId==='workflow.fixture.quick');
+  assert.ok(workflowRecord);
+  await page.locator('.workflow-record').filter({hasText:workflowRecord.draft.name}).click();
+  const firstStage = page.locator('.workflow-node').first().locator('details');
+  if (!await firstStage.evaluate((element) => element.open)) {
+    await firstStage.locator('summary').click();
+  }
   await page.getByLabel('步骤 1 名称').fill('Develop arithmetic v2');
   await page.getByRole('button',{name:'保存草稿'}).click();
   await page.getByText('草稿已保存。',{exact:false}).waitFor({timeout:15_000});
-  await page.getByRole('button',{name:'发布当前草稿'}).click();
+  await page.getByRole('button',{name:'发布版本'}).click();
   await page.getByText('版本已发布；',{exact:false}).waitFor({timeout:15_000});
+  const impactPanel=page.locator('details.workflow-impact');
+  if (!await impactPanel.evaluate((element) => element.open)) {
+    await impactPanel.locator('summary').click();
+  }
   const diff=page.locator('section[aria-label="已发布版本差异"]');
-  await diff.getByText('比较 v1 与当前已发布 v2',{exact:false}).waitFor();
+  await diff.getByLabel('比较旧版').selectOption('1');
   await diff.getByText('Develop arithmetic v2',{exact:false}).waitFor();
   const impact=await page.evaluate(() => window.forge.invokeWorkflow({
     type:'impact',payload:{workflowId:'workflow.fixture.quick'},
@@ -196,8 +209,9 @@ try {
     {encoding:'utf8'}).trim(),sourceHead);
   assert.equal(execFileSync('git',['-C',source,'status','--porcelain'],
     {encoding:'utf8'}).trim(),'');
-  await page.getByRole('button',{name:'研发看板'}).click();
+  await page.getByRole('button',{name:'看板', exact:true}).click();
   await page.locator('.board-task').filter({hasText:'Add subtract'}).click();
+  await page.getByRole('tab',{name:'运行',exact:true}).click();
   await page.getByText('已冻结 CodeSnapshot',{exact:false}).waitFor({timeout:15_000});
   await page.screenshot({path:screenshotPath('v2-run')});
   await app.close();

@@ -90,8 +90,9 @@ try {
   assert.equal(reply.capabilities?.ok, true);
   assert.equal(reply.capabilities.data.available, true,
     'Reviewer model control requires a genuinely available local Codex capability');
-  await page.getByRole('button', { name:'研发看板' }).click();
+  await page.getByRole('button', { name:'看板', exact:true }).click();
   await page.locator('.board-task').first().click();
+  await page.getByRole('tab',{name:'运行',exact:true}).click();
   const reviewer = page.getByLabel('Reviewer 模型');
   await reviewer.waitFor({ timeout:20_000 });
   const modelIds = reply.capabilities.data.modelIds;
@@ -103,6 +104,7 @@ try {
   const reviewButton = page.getByRole('button', { name:'明确启动只读 Review' });
   assert.equal(await reviewButton.isDisabled(), true);
   await page.getByText('此快照已由 Owner 最终接受', { exact:false }).waitFor();
+  await page.getByRole('tab',{name:'审查与验收',exact:true}).click();
   await page.getByText('逐项判断作为历史保留', { exact:false }).waitFor();
   assert.equal(await page.getByRole('button', { name:'记录本快照的判断' }).count(), 0);
   const gate = await page.evaluate(async ({ projectId, taskId, runId, modelId }) => {
@@ -220,13 +222,15 @@ try {
   assert.equal(tampered.start?.ok, false);
   assert.equal(tampered.start.error.code, 'RUN_CONFLICT');
   assert.deepEqual(tampered.afterRuns?.data, tampered.beforeRuns?.data);
-  await tamperedPage.getByRole('button', { name:'研发看板' }).click();
+  await tamperedPage.getByRole('button', { name:'看板', exact:true }).click();
   await tamperedPage.locator('.board-task').first().click();
   await tamperedPage.getByRole('alert').filter({ hasText:'已接受交付的证据发生变化' })
     .first().scrollIntoViewIfNeeded();
   await tamperedPage.getByText('新运行和证据写入已暂停', { exact:false }).first().waitFor();
+  await tamperedPage.getByRole('tab',{name:'运行',exact:true}).click();
   const tamperedReview = tamperedPage.getByRole('button', { name:'明确启动只读 Review' });
   if (await tamperedReview.count()) assert.equal(await tamperedReview.isDisabled(), true);
+  await tamperedPage.getByRole('tab',{name:'审查与验收',exact:true}).click();
   assert.equal(await tamperedPage.getByRole('button', { name:'明确启动验证' }).count(), 0);
   assert.equal(await tamperedPage.getByRole('button', { name:'记录本快照的判断' }).count(), 0);
   assert.equal(await tamperedPage.getByRole('button', { name:'明确启动开发' }).count(), 0);

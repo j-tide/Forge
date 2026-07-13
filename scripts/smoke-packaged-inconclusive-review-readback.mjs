@@ -81,8 +81,9 @@ try {
   assert.equal(retained?.status, 'inconclusive');
   assert.equal(retained?.result, null);
   assert.equal(retained?.diagnosticCode, null); // Historical job predates the new code.
-  await page.getByRole('button', { name:'研发看板' }).click();
+  await page.getByRole('button', { name:'看板', exact:true }).click();
   await page.locator('.board-task').filter({ hasText:task.title }).click();
+  await page.getByRole('tab',{name:'运行',exact:true}).click();
   await page.getByText('审查结果不足以判定。任务保持未完成').waitFor({ timeout:15_000 });
   const screenshot = join(repository, 'output', 'playwright',
     `${screenshotTag}-inconclusive-1440x900.png`);

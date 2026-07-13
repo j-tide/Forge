@@ -90,7 +90,7 @@ try {
   await preview.evaluate(() => { window.location.href = 'file:///etc/passwd'; });
   await preview.waitForTimeout(300);
   assert.equal(new URL(preview.url()).origin, new URL(url).origin);
-  await manager.getByRole('heading', { name: 'What do you want to build?' }).waitFor();
+  await manager.getByRole('heading', { name: '研发看板' }).waitFor();
   const output = resolve('output/playwright'); mkdirSync(output, { recursive: true });
   await preview.screenshot({ path: join(output, 'p6-03-isolated-app-preview.png') });
   console.log(JSON.stringify({ result: 'pass', origin: result.origin,

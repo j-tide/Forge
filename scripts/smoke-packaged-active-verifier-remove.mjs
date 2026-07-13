@@ -96,11 +96,11 @@ try {
     }
     return null;
   }, 10_000);
-  await page.getByRole('button', { name: '项目', exact: true }).click();
-  const projectCard = page.locator('.saved-project').filter({ hasText: 'Forge 验证 fixture with spaces' });
-  await projectCard.getByRole('button', { name: 'Remove from Forge' }).click();
-  const dialog = page.getByRole('dialog', { name: /Remove .* from Forge/ });
-  await dialog.getByRole('button', { name: 'Remove from Forge' }).click();
+  await page.getByRole('button', { name: '项目管理', exact: true }).click();
+  const projectCard = page.locator('.project-record').filter({ hasText: 'Forge 验证 fixture with spaces' });
+  await projectCard.getByRole('button', { name: '从 Forge 移除' }).click();
+  const dialog = page.getByRole('dialog', { name: /从 Forge 移除/ });
+  await dialog.getByRole('button', { name: '从 Forge 移除' }).click();
   await dialog.getByText('项目还有正在进行的开发、审查、验证、返工或合并。',
     { exact: false }).waitFor();
   assert.equal(await dialog.isVisible(), true);

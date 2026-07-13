@@ -67,10 +67,13 @@ try {
   let page = await app.firstWindow();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'Host connected' }).waitFor({ timeout: 20_000 });
+  await page.getByRole('button', { name:'新建任务' }).click();
+  const composer = page.getByRole('dialog', { name:'新建任务' });
+  await composer.locator('.conversation-history button').first().click();
   let revision = initial.revision;
+  await composer.getByRole('button', { name:'审阅并编辑任务' }).click();
+  const editing = composer.locator('.draft-sheet[aria-label="任务草稿编辑"]');
   if (initial.status === 'needs_clarification') {
-    await page.getByRole('button', { name: `编辑草稿 · v${revision}` }).click();
-    const editing = page.getByRole('dialog', { name: 'Task Draft · 编辑与澄清' });
     const questions = editing.locator('.draft-question');
     const questionCount = await questions.count();
     assert.ok(questionCount >= 1, 'A needs_clarification draft must show a real question');
@@ -99,11 +102,10 @@ try {
     await editing.locator('.draft-criterion textarea').first().fill(
       '邮箱为空或仅包含空白字符时，登录校验均判定失败；tests/login.test.js 使用 node --test 覆盖这两种输入。');
     await editing.getByRole('button', { name: '保存新 revision' }).click();
-    await editing.waitFor({ state: 'hidden' });
+    await editing.getByText(`修订 v${revision + 1}`, { exact:false }).waitFor();
     revision += 1;
   }
-  await page.getByRole('button', { name: `编辑草稿 · v${revision}` }).click();
-  const drawer = page.getByRole('dialog', { name: 'Task Draft · 编辑与澄清' });
+  const drawer = editing;
   await drawer.getByText('0 项仍未回答；未解问题阻塞后续批准。').waitFor();
   await drawer.locator('.draft-history-entry summary').filter({ hasText: `v${revision} ·` }).click();
   await drawer.getByText('澄清：', { exact: false }).first().waitFor();
@@ -112,9 +114,8 @@ try {
   await drawer.getByText(`待确认：v${revision}`, { exact: false }).waitFor();
   await drawer.getByLabel('我已审阅当前目标、验收和范围').check();
   await drawer.getByRole('button', { name: '批准并加入 TODO' }).click();
-  await drawer.getByText('已批准 · TODO · 尚未开工。', { exact: false }).waitFor();
-  await page.getByRole('button', { name: '关闭抽屉' }).click();
-  await page.getByRole('button', { name: '研发看板' }).click();
+  await composer.waitFor({ state:'hidden' });
+  await page.getByRole('button', { name: '看板', exact:true }).click();
   await page.locator('.board-task').filter({ hasText: /邮箱|登录|校验/ }).waitFor();
   await page.screenshot({ path: screenshot('todo') });
   await app.close();
@@ -122,7 +123,7 @@ try {
   page = await app.firstWindow();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'Host connected' }).waitFor({ timeout: 20_000 });
-  await page.getByRole('button', { name: '研发看板' }).click();
+  await page.getByRole('button', { name: '看板', exact:true }).click();
   await page.locator('.board-task').filter({ hasText: /邮箱|登录|校验/ }).waitFor();
   await page.screenshot({ path: screenshot('todo-restored') });
   await app.close(); app = undefined;

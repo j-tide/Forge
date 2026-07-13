@@ -76,47 +76,61 @@ try {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'Host connected' }).waitFor({ timeout: 15000 });
   if (!resumeExisting) {
-    await page.getByRole('button', { name: /未选择项目/ }).click();
     await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () =>
       ({ canceled: false, filePaths: [path] }); }, repo);
-    await page.getByRole('button', { name: 'Choose folder' }).click();
-    await page.getByRole('button', { name: '继续查看信任范围' }).click();
-    await page.getByRole('button', { name: 'Trust this project' }).click();
-    await page.getByRole('button', { name: '进入 Forge Workspace' }).click();
+    await page.locator('.project-picker').click();
+    await page.getByRole('button', { name: '继续', exact: true }).click();
+    await page.getByRole('button', { name: '信任并打开' }).click();
+  }
+  await page.locator('.sidebar-new-task').click();
+  const selectedModelId = manualClarification ? null : await page.getByLabel('需求整理模型').inputValue();
+  if (!manualClarification) assert.ok(selectedModelId, 'The refiner must show its selected model before sending');
+  if (resumeExisting) {
+    await page.locator('.conversation-history button').first().click();
+  } else {
     await page.locator('.conversation-panel textarea').fill('修复空邮箱也能通过登录校验的 bug，补充回归测试');
-    await page.getByRole('button', { name: '保存输入' }).click();
   }
   if (manualClarification) {
-    await page.getByRole('button', { name: '手工草稿', exact: true }).click();
-    try {
-      await page.getByRole('button', { name: '编辑草稿 · v1' }).waitFor({ timeout: 10_000 });
-    } catch (error) {
-      console.error(JSON.stringify({ stage: 'manual-draft-missing',
-        conversation: await page.locator('.conversation-panel').innerText() }));
-      throw error;
-    }
-    await page.getByRole('button', { name: '编辑草稿 · v1' }).click();
-    const editor = page.getByRole('dialog', { name: 'Task Draft · 编辑与澄清' });
+    if (resumeExisting) await page.getByRole('button', { name: '手工填写草稿' }).click();
+    else await page.getByRole('button', { name: '手工填写', exact: true }).click();
+    const editor = page.locator('.draft-sheet[aria-label="任务草稿编辑"]');
+    await editor.waitFor();
     await editor.getByLabel('标题').fill('修复空邮箱通过登录校验的问题');
     await editor.getByLabel('验收条件 ac1').fill('空邮箱必须被登录校验拒绝。');
     await editor.getByLabel('新增问题').fill('是否也应拒绝仅包含空白字符的邮箱？');
     await editor.getByRole('button', { name: '添加问题' }).click();
     await editor.getByLabel('本次用户决定 / 修改原因').fill('手工建立待澄清合同');
     await editor.getByRole('button', { name: '保存新 revision' }).click();
-    await editor.waitFor({ state: 'hidden' });
-    await page.getByRole('button', { name: '编辑草稿 · v2' }).waitFor();
+    await page.getByRole('button', { name: '返回讨论' }).click();
+    await page.getByRole('button', { name: '审阅并编辑任务' }).waitFor();
   } else {
-    await page.getByRole('button', { name: '整理为草稿' }).click();
+    if (resumeExisting) await page.getByRole('button', { name: '用 AI 整理这条需求' }).click();
+    else await page.getByRole('button', { name: '发送并整理' }).click();
   }
   await page.waitForFunction(() => {
-    const text = globalThis.document.querySelector('.task-draft-card')?.textContent ?? '';
-    return text.includes('Task Draft · proposed') || text.includes('Task Draft · needs_clarification') ||
-      text.includes('Task Draft · invalid_output');
+    if (globalThis.document.querySelector('.conversation-editor-stage')) return true;
+    const card = globalThis.document.querySelector('.task-draft-card');
+    return !!card?.querySelector('h3') && !card.textContent?.includes('正在整理需求');
   }, null, { timeout: 240000 });
+  if (await page.locator('.conversation-editor-stage').isVisible()) {
+    if (selectedModelId) {
+      assert.equal(await page.locator('.conversation-editor-header small').textContent(),
+        `Codex · ${selectedModelId}`);
+      assert.ok((await page.locator('.conversation-editor-reply').innerText()).trim().length > 0,
+        'The selected Codex model must answer in the task editor');
+    }
+    await page.getByRole('button', { name: '返回讨论' }).click();
+  }
   const card = page.locator('.task-draft-card');
   await card.scrollIntoViewIfNeeded();
-  assert.match(await card.textContent(), /Task Draft · (proposed|needs_clarification)/);
+  assert.equal(await card.locator('h3').count(), 1);
   assert.match(await card.textContent(), /bug|校验|登录/i);
+  if (selectedModelId) {
+    assert.match(await card.locator('small').first().textContent(),
+      new RegExp(`Codex · ${selectedModelId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+    assert.ok((await card.locator('.assistant-reply').innerText()).trim().length > 0,
+      'The real Codex refiner must display an assistant reply');
+  }
   assert.equal(readFileSync(join(repo, 'package.json'), 'utf8'), before);
   assert.equal(git('status', '--porcelain'), '');
   const screenshot = join(output, artifactTag ?

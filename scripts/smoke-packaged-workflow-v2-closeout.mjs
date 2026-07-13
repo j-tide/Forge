@@ -72,19 +72,24 @@ async function until(read, done, attempts = 120) {
 const screenshot = (name) => join(root, 'output', 'playwright',
   `${tag}-${name}-1440x900.png`);
 async function openTask(page, title, id) {
-  const drawer = page.locator('.forge-overlay--drawer');
+  const drawer = page.locator('.forge-dialog:has(> .task-detail)');
   if (await page.evaluate(() => window.location.hash) === `#/tasks/${id}`) {
     await drawer.waitFor({state:'visible',timeout:20_000});
+    await drawer.getByRole('tab',{name:'审查与验收',exact:true}).click();
     return;
   }
   if (await drawer.isVisible()) {
     await page.keyboard.press('Escape');
     await drawer.waitFor({state:'hidden',timeout:10_000});
   }
-  await page.getByRole('button',{name:'研发看板'}).click();
+  await page.getByRole('button',{name:'看板', exact:true}).click();
   if (await drawer.isVisible() &&
-      await page.evaluate(() => window.location.hash) === `#/tasks/${id}`) return;
+      await page.evaluate(() => window.location.hash) === `#/tasks/${id}`) {
+    await drawer.getByRole('tab',{name:'审查与验收',exact:true}).click();
+    return;
+  }
   await page.locator('.board-task').filter({hasText:title}).click();
+  await drawer.getByRole('tab',{name:'审查与验收',exact:true}).click();
 }
 try {
   command('hdiutil', ['attach','-readonly','-nobrowse','-mountpoint',mount,dmg]);

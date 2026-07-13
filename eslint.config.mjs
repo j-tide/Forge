@@ -7,6 +7,7 @@ import tseslint from 'typescript-eslint';
 export default defineConfig(
   {
     ignores: ['forge_spec_v1.0/**', 'forge_glass_v1.1/**', 'build/macos/**',
+      'output/**',
       '**/dist/**', '**/node_modules/**'],
   },
   {

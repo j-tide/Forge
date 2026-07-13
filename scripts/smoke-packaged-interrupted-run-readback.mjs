@@ -132,8 +132,9 @@ try {
       'A copied database must not make a missing historical worktree look recoverable');
     assert.equal(missingWorkspace.error.code, 'RUN_RECOVERY_EVIDENCE_INVALID');
   }
-  await page.getByRole('button', { name:'研发看板' }).click();
+  await page.getByRole('button', { name:'看板', exact:true }).click();
   await page.locator('.board-task').first().click();
+  await page.getByRole('tab',{name:'运行',exact:true}).click();
   await page.getByText('本次 Run 在进程结果无法确认时中断', {
     exact:false }).waitFor({ timeout:12_000 });
   await page.getByText('工作区已隔离', { exact:false }).waitFor();
@@ -169,7 +170,7 @@ try {
       dialog.showMessageBox = async () => ({response:1,checkboxChecked:false});
     }, restoreBackup);
     await page.keyboard.press('Escape');
-    await page.locator('.forge-overlay--drawer').waitFor({state:'hidden'});
+    await page.locator('.forge-dialog:has(> .task-detail)').waitFor({state:'hidden'});
     await page.getByRole('button', {name:'设置'}).click();
     await page.getByRole('button', {name:'选择备份并恢复到独立数据集'}).click();
     await page.getByText('当前数据集仍有中断的开发、审查或验证记录', {exact:false})

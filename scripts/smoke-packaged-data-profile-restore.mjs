@@ -141,13 +141,13 @@ async function chooseAndTrust() {
   await app.evaluate(({dialog}, path) => { dialog.showOpenDialog = async () => ({
     canceled:false, filePaths:[path],
   }); }, source);
-  await page.getByRole('button',{name:'项目',exact:true}).click();
-  await page.getByRole('button',{name:/Choose folder|重新选择并探测/}).first().click();
-  await page.getByRole('button',{name:'继续查看信任范围'}).waitFor();
-  await page.getByRole('button',{name:'继续查看信任范围'}).click();
-  await page.getByRole('heading',{name:'Trust this project?'}).waitFor();
-  await page.getByRole('button',{name:'Trust this project'}).click();
-  await page.getByText('PROJECT CONNECTED').waitFor({timeout:15_000});
+  await page.getByRole('button',{name:'项目管理',exact:true}).click();
+  await page.getByRole('button',{name:/选择文件夹|重新选择并探测/}).first().click();
+  await page.getByRole('button',{name:'继续'}).waitFor();
+  await page.getByRole('button',{name:'继续'}).click();
+  await page.getByRole('heading',{name:'信任这个项目？'}).waitFor();
+  await page.getByRole('button',{name:'信任并打开'}).click();
+  await page.getByText('已切换到', { exact: false }).waitFor({timeout:15_000});
 }
 
 const screenshot = (name) => join(root,'output','playwright',
@@ -164,12 +164,12 @@ try {
   await chooseAndTrust();
   const original = (await project('project.list',{}))[0];
   assert.ok(original?.trusted);
-  const savedPath=page.locator('.saved-project p[title]').first();
+  const savedPath=page.locator('.project-record .project-path[title]').first();
   assert.equal(await savedPath.getAttribute('title'),source,
     'A truncated Unicode project path must retain its full value');
-  const removeTrigger=page.getByRole('button',{name:'Remove from Forge'}).first();
+  const removeTrigger=page.getByRole('button',{name:'从 Forge 移除'}).first();
   await removeTrigger.click();
-  const removeDialog=page.getByRole('dialog',{name:/Remove/});
+  const removeDialog=page.getByRole('dialog',{name:/从 Forge 移除/});
   await removeDialog.waitFor();
   const dialogButtons=removeDialog.getByRole('button');
   assert.ok(await dialogButtons.count()>=2);
@@ -190,8 +190,9 @@ try {
   assert.equal(originalBoard.data.tasks.find((item)=>item.id===taskId)?.state,'todo');
   assert.equal(originalBoard.data.tasks.find((item)=>item.id===taskId)?.latestRunId??null,null);
   if (checkRunBudget) {
-    await page.getByRole('button',{name:'工作台',exact:true}).click();
+    await page.getByRole('button',{name:'看板',exact:true}).click();
     await page.locator('.board-task').filter({hasText:'Restore history fixture'}).click();
+    await page.getByRole('tab',{name:'运行',exact:true}).click();
     const choice=page.getByLabel('本次总 Token 观测上限');
     await choice.waitFor({timeout:20_000});
     assert.equal(await choice.inputValue(),'50000');
@@ -203,7 +204,7 @@ try {
       projectId:original.projectId,taskId,
     })).data.length,0,'Choosing a budget must not start a Run');
     await page.keyboard.press('Escape');
-    await page.locator('.forge-overlay--drawer').waitFor({state:'hidden'});
+    await page.locator('.forge-dialog:has(> .task-detail)').waitFor({state:'hidden'});
   }
   assert.equal((await profile()).profileId,null);
   await page.getByRole('button',{name:'设置'}).click();
@@ -233,7 +234,7 @@ try {
   const restoredBoard=await invoke('board','board.snapshot',{projectId:original.projectId});
   assert.equal(restoredBoard.ok,true,JSON.stringify(restoredBoard));
   assert.equal(restoredBoard.data.tasks.find((item)=>item.id===taskId)?.state,'todo');
-  await page.getByRole('button',{name:'工作台',exact:true}).click();
+  await page.getByRole('button',{name:'看板',exact:true}).click();
   await page.getByRole('heading',{name:'Restore history fixture'}).waitFor();
   await page.screenshot({path:screenshot('restored-todo')});
   const blocked=await invoke('run','run.start',{
@@ -242,7 +243,7 @@ try {
   });
   assert.equal(blocked.ok,false,JSON.stringify(blocked));
   assert.match(JSON.stringify(blocked),/PROJECT_TRUST_REQUIRED/);
-  await page.getByRole('button',{name:'项目',exact:true}).click();
+  await page.getByRole('button',{name:'项目管理',exact:true}).click();
   await page.getByText('需重新信任').first().waitFor();
   await page.screenshot({path:screenshot('needs-trust')});
   await app.close(); app=undefined;

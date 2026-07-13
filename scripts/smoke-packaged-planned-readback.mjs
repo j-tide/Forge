@@ -109,8 +109,9 @@ try {
   assert.equal(frozen.actualNodeId,'plan');
   assert.equal(frozen.developerProfile.id,'profile.qa.planned.planner');
   assert.equal(frozen.workflow.version,'1');
-  await page.getByRole('button',{name:'研发看板'}).click();
+  await page.getByRole('button',{name:'看板', exact:true}).click();
   await page.locator('.board-task').filter({hasText:task.title}).click();
+  await page.getByRole('tab',{name:'运行',exact:true}).click();
   await page.locator('nav.run-list').getByRole('button',{
     name:new RegExp(run.runId.slice(0,8)),
   }).click();
@@ -197,8 +198,9 @@ try {
     assert.equal(developerConfig.developerProfile.id,'profile.qa.planned.developer');
     await page.reload();
     await page.getByRole('button',{name:'Host connected'}).waitFor();
-    await page.getByRole('button',{name:'研发看板'}).click();
+    await page.getByRole('button',{name:'看板', exact:true}).click();
     await page.locator('.board-task').filter({hasText:task.title}).click();
+    await page.getByRole('tab',{name:'运行',exact:true}).click();
     await page.locator('nav.run-list').getByRole('button',{
       name:new RegExp(developmentRunId.slice(0,8)),
     }).click();

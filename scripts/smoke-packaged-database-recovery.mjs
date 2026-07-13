@@ -66,7 +66,7 @@ try {
   const health = await page.evaluate(() => window.forge.hostHealth());
   assert.equal(health.ok,true);
   assert.equal(health.data.storage.status,'ready');
-  assert.equal(health.data.storage.schemaVersion,37);
+  assert.equal(health.data.storage.schemaVersion,38);
   const projects = await invoke(page,'project','project.list',{});
   assert.ok(projects.some((project) => project.projectId === projectId));
   const board = await invoke(page,'board','board.snapshot',{projectId});
@@ -75,7 +75,7 @@ try {
   assert.ok(detail.detail.runIds.includes(runId));
   const delivery = await invoke(page,'run','deliveries.get',{projectId,taskId});
   assert.ok(delivery?.deliveryId);
-  await page.getByRole('button', {name:'研发看板'}).click();
+  await page.getByRole('button', {name:'看板', exact:true}).click();
   await page.locator('.board-task').waitFor();
   const screenshot = join(root,'output','playwright','desktop-recovery-drill-20260926-1440x900.png');
   await page.screenshot({path:screenshot});

@@ -34,7 +34,8 @@ try {
   } });
   const page = await app.firstWindow();
   await page.getByRole('button', { name: 'Host connected' }).waitFor({ timeout: 30_000 });
-  await page.getByRole('heading', { name: 'What do you want to build?' }).waitFor();
+  await page.getByRole('heading', { name: '研发看板' }).waitFor();
+  await page.locator('.project-picker').waitFor();
   const health = await page.evaluate(() => globalThis.forge.hostHealth());
   assert.equal(health.ok, true);
   assert.equal(health.data.runtime.implementation, 'CPython');

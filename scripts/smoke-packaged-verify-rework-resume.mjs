@@ -129,8 +129,9 @@ try {
     {encoding:'utf8'}).trim(),sourceHead);
   assert.equal(execFileSync('git',['-C',source,'status','--porcelain'],
     {encoding:'utf8'}).trim(),'');
-  await page.getByRole('button',{name:'研发看板'}).click();
+  await page.getByRole('button',{name:'看板', exact:true}).click();
   await page.locator('.board-task').filter({hasText:task.title}).click();
+  await page.getByRole('tab',{name:'审查与验收',exact:true}).click();
   const panel = page.locator('section[aria-label="有限返工记录"]');
   await panel.getByText('已生成新快照',{exact:false}).waitFor({timeout:15_000});
   const reports = page.locator('section[aria-label="验证报告"]');

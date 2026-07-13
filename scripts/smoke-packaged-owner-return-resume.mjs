@@ -93,8 +93,9 @@ try {
   const review = reviews.find((item) => item.developmentRunId === runId &&
     item.snapshotId === handoff.snapshot.snapshotId);
   assert.equal(review?.status,'approved',JSON.stringify(reviews));
-  await page.getByRole('button',{name:'研发看板'}).click();
+  await page.getByRole('button',{name:'看板', exact:true}).click();
   await page.locator('.board-task').filter({hasText:task.title}).click();
+  await page.getByRole('tab',{name:'审查与验收',exact:true}).click();
   let accepted;
   let delivery;
   if (!verifyDone) {

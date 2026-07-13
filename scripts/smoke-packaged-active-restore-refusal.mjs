@@ -91,11 +91,11 @@ try {
   await app.evaluate(({ dialog }, path) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
   }, source);
-  await page.getByRole('button', { name: '项目', exact: true }).click();
-  await page.getByRole('button', { name: 'Choose folder' }).click();
-  await page.getByRole('button', { name: '继续查看信任范围' }).click();
-  await page.getByRole('button', { name: 'Trust this project' }).click();
-  await page.getByText('PROJECT CONNECTED').waitFor({ timeout: 15_000 });
+  await page.getByRole('button', { name: '项目管理', exact: true }).click();
+  await page.getByRole('button', { name: '选择文件夹' }).click();
+  await page.getByRole('button', { name: '继续' }).click();
+  await page.getByRole('button', { name: '信任并打开' }).click();
+  await page.getByText('已切换到', { exact: false }).waitFor({ timeout: 15_000 });
   const projects = await invoke('project', 'project.list', {});
   assert.equal(projects.length, 1);
   projectId = projects[0].projectId;

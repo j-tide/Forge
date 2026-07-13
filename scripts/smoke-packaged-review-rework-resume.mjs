@@ -174,11 +174,13 @@ print(json.dumps(c.execute('SELECT profile_id,profile_revision FROM review_jobs 
   assert.equal(git('rev-parse', 'HEAD'), sourceHead);
   assert.equal(git('status', '--porcelain'), '');
   await page.reload();
-  await page.getByRole('button', { name: '研发看板' }).click();
+  await page.getByRole('button', { name: '看板', exact:true }).click();
   await page.locator('.board-task').filter({ hasText: 'Validate add' }).click();
+  await page.getByRole('tab',{name:'运行',exact:true}).click();
   await page.getByText('Review 与问题历史').waitFor({ timeout: 15_000 });
   await page.getByText('最近报告：approved', { exact: false }).waitFor({ timeout: 15_000 });
   const reworkPanel = page.locator('section[aria-label="有限返工记录"]');
+  await page.getByRole('tab',{name:'审查与验收',exact:true}).click();
   await reworkPanel.getByText('第 1 次返工', { exact: false }).waitFor({ timeout: 15_000 });
   await reworkPanel.scrollIntoViewIfNeeded();
   const screenshot = join(repository, 'output', 'playwright',

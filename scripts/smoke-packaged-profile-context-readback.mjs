@@ -79,9 +79,9 @@ try {
   }
   const delivery = await invoke(page, 'run', 'deliveries.get', { projectId, taskId });
   assert.ok(delivery?.deliveryId);
-  await page.getByRole('button', { name:'Agents' }).click();
-  await page.getByRole('heading', { name:'Agent Profiles' }).waitFor();
-  await page.locator('.agent-row').filter({ hasText:'Fixture Developer' }).first()
+  await page.getByRole('button', { name:'角色' }).click();
+  await page.getByRole('heading', { name:'Agent 角色' }).waitFor();
+  await page.locator('.agent-profile').filter({ hasText:'Fixture Developer' }).first()
     .getByRole('button', { name:'编辑' }).click();
   assert.equal(await page.getByLabel('最长运行时间（秒）').inputValue(), '420');
   assert.equal(await page.getByLabel('允许启动新 Run 时显式检索项目知识与记忆').isChecked(), true);
@@ -89,8 +89,9 @@ try {
     `${artifactTag}-agents-1440x900.png`);
   await page.getByLabel('最长运行时间（秒）').scrollIntoViewIfNeeded();
   await page.screenshot({ path:agentsScreenshot });
-  await page.getByRole('button', { name:'研发看板' }).click();
+  await page.getByRole('button', { name:'看板', exact:true }).click();
   await page.locator('.board-task').filter({ hasText:'Validate add' }).click();
+  await page.getByRole('tab',{name:'运行',exact:true}).click();
   await page.getByRole('button', { name:new RegExp(`^${reworkRunId.slice(0, 8)}`) }).click();
   await page.getByRole('tab', { name:'context' }).click();
   await page.getByText('本次冻结最长运行时间：420 秒。').waitFor({ timeout:15_000 });

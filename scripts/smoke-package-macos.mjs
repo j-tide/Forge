@@ -71,27 +71,36 @@ try {
     console.error('Packaged Host state:', await page.evaluate(() => window.forge?.pythonHostStatus()));
     throw error;
   }
-  await page.getByRole('heading', { name: 'What do you want to build?' }).waitFor();
+  await page.getByRole('heading', { name: '研发看板' }).waitFor();
+  const initialShell = page.locator('.app-shell');
+  assert.equal(await initialShell.getAttribute('data-theme'), 'light',
+    'A fresh packaged profile must start in the light theme');
+  assert.equal(await initialShell.getAttribute('data-reduce-transparency'), 'false');
+  assert.equal(await initialShell.getAttribute('data-reduce-motion'), 'false');
+  await page.getByRole('button', { name: '设置' }).click();
+  assert.equal(await page.getByLabel('界面主题').inputValue(), 'light');
+  await page.getByRole('button', { name: '看板', exact: true }).click();
+  await page.getByRole('heading', { name: '研发看板' }).waitFor();
   const boardSpacingTag = process.env.FORGE_PACKAGE_BOARD_SPACING_TAG;
   if (boardSpacingTag) {
     assert.match(boardSpacingTag, /^[a-z0-9][a-z0-9-]{0,39}$/);
-    await page.getByRole('button', { name: '研发看板', exact: true }).click();
+    await page.getByRole('button', { name: '看板', exact: true }).click();
     for (const [width, height] of [[1440, 900], [1600, 1000]]) {
       await page.setViewportSize({ width, height });
       const spacing = await page.evaluate(() => {
         const content = globalThis.document.querySelector('.shell-content')?.getBoundingClientRect();
-        const card = globalThis.document.querySelector('.project-summary')?.getBoundingClientRect();
+        const card = globalThis.document.querySelector('.board-heading')?.getBoundingClientRect();
         return content && card ? card.top - content.top : null;
       });
-      assert.ok(spacing !== null && spacing >= 0 && spacing <= 32,
-        `Current project card must align with the workspace top, got ${spacing}px`);
+      assert.ok(spacing !== null && spacing >= 0 && spacing <= 80,
+        `Board heading must align with the workspace top, got ${spacing}px`);
       const path = join(root, 'output', 'playwright',
         `${boardSpacingTag}-board-top-${width}x${height}.png`);
       mkdirSync(dirname(path), { recursive: true });
       await page.screenshot({ path });
     }
-    await page.getByRole('button', { name: '工作台', exact: true }).click();
-    await page.getByRole('heading', { name: 'What do you want to build?' }).waitFor();
+    await page.getByRole('button', { name: '看板', exact: true }).click();
+    await page.getByRole('heading', { name: '研发看板' }).waitFor();
   }
   await page.keyboard.press('Meta+k');
   const quickNav = page.getByRole('dialog', { name: '快速导航' });
@@ -102,13 +111,13 @@ try {
   await quickNav.getByRole('textbox', { name: '搜索页面' }).fill('项目资料');
   await quickNav.getByRole('button', { name: '项目资料', exact: true }).click();
   await quickNav.waitFor({ state: 'hidden' });
-  await page.getByRole('heading', { name: '项目资料', exact: true }).waitFor();
+  await page.getByRole('heading', { name: '项目知识', exact: true }).waitFor();
   await page.keyboard.press('Meta+k');
   await quickNav.waitFor();
   await page.keyboard.press('Escape');
   await quickNav.waitFor({ state: 'hidden' });
-  await page.getByRole('button', { name: '工作台', exact: true }).click();
-  await page.getByRole('heading', { name: 'What do you want to build?' }).waitFor();
+  await page.getByRole('button', { name: '看板', exact: true }).click();
+  await page.getByRole('heading', { name: '研发看板' }).waitFor();
   const health = await page.evaluate(() => window.forge.hostHealth());
   assert.equal(health.ok, true);
   assert.equal(health.data.storage.status, 'ready');
@@ -159,22 +168,22 @@ try {
     assert.ok(displayScale >= 2 && ratio >= 2,
       `Expected this real Mac Retina display and Renderer to use 2x: ${displayScale}/${ratio}`);
     for (const [name, button, heading] of [
-      ['home', '工作台', 'What do you want to build?'],
+      ['board', '看板', '研发看板'],
       ['settings', '设置', '设置'],
-      ['projects', '项目', '选择一个项目'],
-      ['workflows', '工作流', '线性配置'],
-      ['agents', 'Agents', 'Agent Profiles'],
-      ['plugins', '插件', '插件'],
-      ['knowledge', '项目资料', '项目资料'],
+      ['projects', '项目管理', '项目'],
+      ['workflows', '工作流', '工作流'],
+      ['agents', '角色', 'Agent 角色'],
+      ['plugins', '插件', '插件与集成'],
+      ['knowledge', '项目资料', '项目知识'],
     ]) {
       await page.getByRole('button', { name: button, exact: true }).click();
       await page.getByRole('heading', { name: heading, exact: true }).waitFor();
-      if (name === 'projects') await page.getByRole('button', { name: 'Choose folder' }).waitFor();
-      if (name === 'workflows') await page.getByRole('button', { name: '从quick模板新建' }).waitFor();
-      if (name === 'agents') await page.getByRole('button', { name: '新建 Profile' }).waitFor();
+      if (name === 'projects') await page.getByRole('button', { name: '选择文件夹' }).waitFor();
+      if (name === 'workflows') await page.getByRole('button', { name: '从快速流程新建' }).waitFor();
+      if (name === 'agents') await page.getByRole('button', { name: '新建角色' }).first().waitFor();
       if (name === 'plugins') await page.getByText('Codex 启动握手等待（秒）', { exact: true }).waitFor();
       if (name === 'knowledge') await page.getByText('请先选择项目', { exact: true }).waitFor();
-      const animatedSelectors = name === 'home' ? ['.compose-pane', '.board-pane']
+      const animatedSelectors = name === 'board' ? ['.board-pane']
         : name === 'settings' ? ['.utility-view'] : [];
       for (const selector of animatedSelectors) {
         const settledOpacity = await page.locator(selector).evaluate(async (element) => {
@@ -204,22 +213,25 @@ try {
     assert.match(surfacesTag, /^[a-z0-9][a-z0-9-]{0,39}$/);
     await page.setViewportSize({ width: 1440, height: 900 });
     for (const surface of [
-      { button: '项目', heading: '选择一个项目', name: 'projects' },
-      { button: '工作流', heading: '线性配置', name: 'workflows' },
-      { button: 'Agents', heading: 'Agent Profiles', name: 'agents' },
-      { button: '插件', heading: '插件', name: 'plugins' },
-      { button: '项目资料', heading: '项目资料', name: 'knowledge' },
+      { button: '项目管理', heading: '项目', name: 'projects' },
+      { button: '工作流', heading: '工作流', name: 'workflows' },
+      { button: '角色', heading: 'Agent 角色', name: 'agents' },
+      { button: '插件', heading: '插件与集成', name: 'plugins' },
+      { button: '项目资料', heading: '项目知识', name: 'knowledge' },
     ]) {
       await page.getByRole('button', { name: surface.button, exact: true }).click();
       await page.getByRole('heading', { name: surface.heading, exact: true }).waitFor();
       if (surface.name === 'projects') {
-        await page.getByRole('button', { name: 'Choose folder' }).waitFor();
+        await page.getByRole('button', { name: '选择文件夹' }).waitFor();
       } else if (surface.name === 'workflows') {
-        await page.getByRole('button', { name: '从quick模板新建' }).waitFor();
+        await page.getByRole('button', { name: '从快速流程新建' }).waitFor();
       } else if (surface.name === 'agents') {
-        await page.getByRole('button', { name: '新建 Profile' }).waitFor();
+        await page.getByRole('button', { name: '新建角色' }).first().waitFor();
       } else if (surface.name === 'plugins') {
         await page.getByText('Codex 启动握手等待（秒）', { exact: true }).waitFor();
+        if (!(await page.getByText('model.codex', { exact: true }).isVisible())) {
+          await page.locator('.plugin-diagnostics summary').click();
+        }
         await page.getByText('model.codex', { exact: true }).waitFor();
         const control = page.getByRole('button', { name: '停用 Codex 插件' });
         await control.scrollIntoViewIfNeeded();
@@ -229,11 +241,11 @@ try {
           `${surfacesTag}-plugins-controls-1440x900.png`);
         mkdirSync(join(root, 'output', 'playwright'), { recursive: true });
         await page.screenshot({ path: controlsPath });
-        await page.locator('.plugins-view > .eyebrow').scrollIntoViewIfNeeded();
+        await page.locator('.plugins-page-header').scrollIntoViewIfNeeded();
       } else if (surface.name === 'knowledge') {
         await page.getByText('请先选择项目', { exact: true }).waitFor();
-        const eyebrow = await page.locator('.knowledge-view > .eyebrow').boundingBox();
-        const title = await page.getByRole('heading', { name: '项目资料', exact: true }).boundingBox();
+        const eyebrow = await page.locator('.knowledge-kicker').boundingBox();
+        const title = await page.getByRole('heading', { name: '项目知识', exact: true }).boundingBox();
         assert.ok(eyebrow && title && title.y - eyebrow.y < 80,
           'Knowledge heading must stay grouped with the page eyebrow');
       }
@@ -257,18 +269,19 @@ try {
     assert.match(plannerTag, /^[a-z0-9][a-z0-9-]{0,39}$/);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.getByRole('button', { name: '工作流', exact: true }).click();
-    await page.getByRole('button', { name: '从standard模板新建' }).click();
+    await page.getByRole('button', { name: '从标准流程新建' }).click();
     const firstNode = page.locator('.workflow-node').first();
+    await firstNode.locator('summary').click();
     assert.equal(await firstNode.locator('select').first().inputValue(), 'planner');
     await firstNode.scrollIntoViewIfNeeded();
     const plannerRoleImage = join(root, 'output', 'playwright',
       `${plannerTag}-standard-planner-role-1440x900.png`);
     mkdirSync(dirname(plannerRoleImage), { recursive: true });
     await page.screenshot({ path: plannerRoleImage });
-    await page.getByRole('button', { name: '检查结构与能力' }).click();
+    await page.getByRole('button', { name: '检查能力' }).click();
     await page.getByText('WORKFLOW_PROFILE_UNAVAILABLE', { exact: false }).first().waitFor();
     await page.locator('[aria-label="Workflow 编译诊断"] .forge-status-tag')
-      .filter({ hasText: '不可发布' }).waitFor();
+      .filter({ hasText: '需要调整后发布' }).waitFor();
     const plannerImage = join(root, 'output', 'playwright',
       `${plannerTag}-standard-planner-unavailable-1440x900.png`);
     mkdirSync(dirname(plannerImage), { recursive: true });
@@ -290,12 +303,12 @@ try {
     }), profile);
     assert.equal(saved.role, 'planner');
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.getByRole('button', { name: 'Agents', exact: true }).click();
-    const row = page.locator('.agent-row').filter({ hasText: 'QA Planner' });
+    await page.getByRole('button', { name: '角色', exact: true }).click();
+    const row = page.locator('.agent-profile').filter({ hasText: 'QA Planner' });
     await row.getByRole('button', { name: '编辑' }).click();
     const form = page.locator('.agent-form');
-    assert.equal(await form.locator('select').first().inputValue(), 'planner');
-    assert.equal(await form.locator('select').nth(3).inputValue(), 'read-only');
+    assert.equal(await form.getByLabel('角色', { exact: true }).inputValue(), 'planner');
+    assert.equal(await form.getByLabel('权限要求').inputValue(), 'read-only');
     assert.equal(await form.getByRole('button', { name: '保存新版本' }).isDisabled(), true);
     const after = await page.evaluate(() => window.forge.agentProfileCatalog());
     assert.equal(after.profiles.find((item) => item.id === 'profile.qa.planner')?.revision, 1);
@@ -312,7 +325,7 @@ try {
     assert.match(pluginConfigTag, /^[a-z0-9][a-z0-9-]{0,39}$/);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.getByRole('button', { name: '插件', exact: true }).click();
-    await page.getByRole('heading', { name: '插件', exact: true }).waitFor();
+    await page.getByRole('heading', { name: '插件与集成', exact: true }).waitFor();
     await page.locator('#forge-plugin-appServerInitializationTimeoutSeconds').fill('2');
     await page.getByRole('button', { name: '保存配置' }).click();
     await page.getByText('插件设置已保存。退出并重开 Forge 后', { exact: false }).waitFor();
@@ -323,7 +336,7 @@ try {
     assert.equal(pending.restartRequired, true);
     assert.match(await page.locator('.plugins-heading').first()
       .locator('.forge-status-tag').innerText(), /配置待重启/);
-    await page.locator('.plugins-view > .eyebrow').scrollIntoViewIfNeeded();
+    await page.locator('.plugins-page-header').scrollIntoViewIfNeeded();
     const pendingStatusImage = join(root, 'output', 'playwright',
       `${pluginConfigTag}-plugin-config-pending-status-1440x900.png`);
     mkdirSync(dirname(pendingStatusImage), { recursive: true });
@@ -348,7 +361,7 @@ try {
     assert.notEqual(restartedHealth.data.pid, originalHostPid);
     hostPid = restartedHealth.data.pid;
     await page.getByRole('button', { name: '插件', exact: true }).click();
-    await page.getByRole('heading', { name: '插件', exact: true }).waitFor();
+    await page.getByRole('heading', { name: '插件与集成', exact: true }).waitFor();
     await page.locator('#forge-plugin-appServerInitializationTimeoutSeconds')
       .waitFor({ state: 'visible' });
     assert.equal(await page.locator('#forge-plugin-appServerInitializationTimeoutSeconds')
@@ -406,13 +419,21 @@ try {
   assert.equal(await page.locator('.app-shell').getAttribute('data-reduce-motion'), 'true');
   const reducedAppearance = await page.locator('.app-shell').evaluate((element) => {
     const computed = globalThis.getComputedStyle(element);
+    const rail = element.querySelector('.forge-icon-rail');
+    const board = element.querySelector('.board-view');
     return {
       surface: computed.getPropertyValue('--forge-surface-panel').trim(),
+      blur: computed.getPropertyValue('--forge-blur-glass').trim(),
       motion: computed.getPropertyValue('--forge-motion-normal').trim(),
+      railBackdrop: rail && globalThis.getComputedStyle(rail).backdropFilter,
+      boardAnimation: board && globalThis.getComputedStyle(board).animationName,
     };
   });
   assert.equal(reducedAppearance.surface, '#1e2d44');
+  assert.equal(reducedAppearance.blur, '0px');
+  assert.equal(reducedAppearance.railBackdrop, 'none');
   assert.match(reducedAppearance.motion, /^0(?:s|ms)$/);
+  assert.equal(reducedAppearance.boardAnimation, 'none');
   await page.getByRole('button', { name: '设置' }).click();
   assert.equal(await page.getByLabel('界面主题').inputValue(), 'dark');
   if (process.env.FORGE_PACKAGE_APPEARANCE_SCREENSHOT) {
@@ -427,9 +448,9 @@ try {
     globalThis.getComputedStyle(element).getPropertyValue('--forge-motion-normal').trim()),
   /^0(?:s|ms)$/, 'The system reduced-motion preference must work without an app setting');
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.getByRole('button', { name: '工作台', exact: true }).click();
-  await page.getByText('先选择项目', { exact: false }).first().waitFor();
-  await page.locator('.board-pane').evaluate((element) =>
+  await page.getByRole('button', { name: '看板', exact: true }).click();
+  await page.getByRole('heading', { name: '选择项目，开始工作' }).waitFor();
+  await page.locator('.board-view').evaluate((element) =>
     Promise.all(element.getAnimations().map((animation) => animation.finished)));
   const screenshot = process.env.FORGE_PACKAGE_SMOKE_SCREENSHOT ||
     join(root, 'output', 'playwright', 'p6-06-packaged-home-1440x900.png');
@@ -478,8 +499,8 @@ try {
     if (profileSaveTag) {
       assert.match(profileSaveTag, /^[a-z0-9][a-z0-9-]{0,39}$/);
       await page.setViewportSize({ width: 1440, height: 900 });
-      await page.getByRole('button', { name: 'Agents', exact: true }).click();
-      await page.getByRole('button', { name: '新建 Profile' }).click();
+      await page.getByRole('button', { name: '角色', exact: true }).click();
+      await page.getByRole('button', { name: '新建角色' }).first().click();
       const form = page.locator('.agent-form');
       await form.getByLabel('角色', { exact: true }).selectOption('planner');
       await form.getByLabel('名称').fill('QA Planner role save');
@@ -488,13 +509,13 @@ try {
       assert.equal(await form.getByLabel('权限要求').inputValue(), 'read-only');
       assert.ok(await form.getByLabel('模型').inputValue());
       await form.getByRole('button', { name: '保存新版本' }).click();
-      await page.getByText('Profile 版本已保存', { exact: false }).waitFor();
+      await page.getByText('角色配置已保存。新运行会使用所选工作流绑定的版本。').waitFor();
       const firstCatalog = await page.evaluate(() => window.forge.agentProfileCatalog());
       savedPlanner = firstCatalog.profiles.find((item) => item.name === 'QA Planner role save');
       assert.equal(savedPlanner?.role, 'planner');
       assert.equal(savedPlanner.policyProfile, 'read-only');
       assert.equal(savedPlanner.revision, 1);
-      await page.locator('.agent-row').filter({ hasText: 'QA Planner role save' })
+      await page.locator('.agent-profile').filter({ hasText: 'QA Planner role save' })
         .getByRole('button', { name: '编辑' }).click();
       assert.equal(await form.getByLabel('角色', { exact: true }).inputValue(), 'planner');
       assert.equal(await form.getByLabel('角色', { exact: true }).isDisabled(), true);
@@ -508,7 +529,7 @@ try {
       }, savedPlanner.id);
       savedPlanner = (await page.evaluate(() => window.forge.agentProfileCatalog()))
         .profiles.find((item) => item.id === savedPlanner.id);
-      await page.locator('.agent-row').filter({ hasText: 'QA Planner role save v2' })
+      await page.locator('.agent-profile').filter({ hasText: 'QA Planner role save v2' })
         .getByRole('button', { name: '编辑' }).click();
       assert.equal(await form.getByLabel('角色', { exact: true }).inputValue(), 'planner');
       assert.equal(await form.getByLabel('权限要求').inputValue(), 'read-only');
@@ -540,19 +561,21 @@ try {
       }), makeProfile('reviewer', 'read-only', ['task-contract','snapshot-diff']));
       await page.getByRole('button', { name:'工作流', exact:true }).click();
       for (const preset of ['quick', 'standard', 'strict']) {
-        await page.getByRole('button', { name:`从${preset}模板新建` }).click();
+        const presetLabel = { quick:'快速流程', standard:'标准流程', strict:'严格流程' }[preset];
+        await page.getByRole('button', { name:`从${presetLabel}新建` }).click();
         const roles = preset === 'quick' ? [developer.id, reviewer.id]
           : [savedPlanner.id, developer.id, reviewer.id];
         const nodes = page.locator('.workflow-node');
         const positions = preset === 'strict' ? [0, 2, 3] : roles.map((_, index) => index);
         for (let index=0; index<roles.length; index+=1) {
-          await nodes.nth(positions[index]).getByLabel('Agent Profile')
+          await nodes.nth(positions[index]).locator('summary').click();
+          await nodes.nth(positions[index]).getByLabel('角色配置')
             .selectOption(roles[index]);
         }
-        await page.getByRole('button', { name:'检查结构与能力' }).click();
-        await page.getByText('可发布预检通过', { exact:false }).waitFor();
+        await page.getByRole('button', { name:'检查能力' }).click();
+        await page.getByText('发布预检通过', { exact:false }).waitFor();
         await page.getByRole('button', { name:'保存草稿' }).click();
-        await page.getByRole('button', { name:'发布当前草稿' }).click();
+        await page.getByRole('button', { name:'发布版本' }).click();
         await page.getByText('版本已发布', { exact:false }).waitFor();
         const records = await page.evaluate(() => window.forge.invokeWorkflow({
           type:'list', payload:{},
