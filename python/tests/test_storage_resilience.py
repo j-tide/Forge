@@ -19,7 +19,7 @@ from test_verifier_project import git
 
 import forge.persistence as persistence_module
 from forge.artifacts import ArtifactError, ArtifactStore
-from forge.persistence import ForgePersistence, Migration, PersistenceError
+from forge.persistence import LATEST_SCHEMA, ForgePersistence, Migration, PersistenceError
 from forge.plugin_storage import PluginStorage, PluginStorageError
 from forge.protocol import HOST_PROTOCOL_VERSION, TRANSPORT_VERSION
 
@@ -47,7 +47,7 @@ async def test_wal_backup_restores_approved_task_and_imported_artifact(tmp_path:
     shutil.copy2(backup, restore_dir / "forge.sqlite")
     restored = ForgePersistence(restore_dir)
     restored.open()
-    assert restored.schema_version() == 24
+    assert restored.schema_version() == LATEST_SCHEMA
     assert restored.get_metadata("wal.committed") == "latest"
     assert restored.session().execute(
         "SELECT current_revision FROM tasks WHERE task_id=?", (str(task_id),)
@@ -97,7 +97,7 @@ os._exit(71)
     assert crashed.returncode == 71
     restored = ForgePersistence(tmp_path / "data")
     restored.open()
-    assert restored.schema_version() == 24
+    assert restored.schema_version() == LATEST_SCHEMA
     assert restored.session().execute(
         "SELECT status FROM task_approvals WHERE approval_id=?",
         (approval["approval_id"],),
@@ -116,16 +116,17 @@ def test_failed_upgrade_keeps_backup_and_degrades_to_read_only_diagnostics(
 ) -> None:
     db = ForgePersistence(tmp_path)
     db.open()
-    assert db.migrate(24) == 24
+    assert db.migrate(29) == 29
     db.set_metadata("before.failed.upgrade", "preserved")
-    bad = Migration(25, "CREATE TABLE half_upgrade(id TEXT);\nINVALID SQL;", "fixture")
-    monkeypatch.setattr(persistence_module, "MIGRATIONS", (*persistence_module.MIGRATIONS, bad))
-    monkeypatch.setattr(persistence_module, "LATEST_SCHEMA", 25)
+    bad = Migration(31, "CREATE TABLE half_upgrade(id TEXT);\nINVALID SQL;", "fixture")
+    monkeypatch.setattr(
+        persistence_module, "MIGRATIONS", (*persistence_module.MIGRATIONS[:30], bad))
+    monkeypatch.setattr(persistence_module, "LATEST_SCHEMA", 31)
     with pytest.raises(PersistenceError, match="DATABASE_MIGRATION_FAILED"):
-        db.migrate(25)
+        db.migrate(31)
     assert db.health()["status"] == "unavailable"
     assert db.health()["error"]["code"] == "DATABASE_MIGRATION_FAILED"
-    assert db.schema_version() == 24
+    assert db.schema_version() == 30
     assert db.get_metadata("before.failed.upgrade") == "preserved"
     assert db.session().execute(
         "SELECT name FROM sqlite_master WHERE name='half_upgrade'"
@@ -141,7 +142,7 @@ def test_failed_upgrade_keeps_backup_and_degrades_to_read_only_diagnostics(
     shutil.copy2(original, restored_dir / "forge.sqlite")
     recovered = ForgePersistence(restored_dir)
     recovered.open()
-    assert recovered.schema_version() == 24
+    assert recovered.schema_version() == 29
     assert recovered.get_metadata("before.failed.upgrade") == "preserved"
     recovered.close()
 
@@ -214,7 +215,7 @@ async def test_real_host_upgrades_approved_task_with_pre_migration_backup(
         })
         assert handshake["result"]["status"] == "ready"
         health = await call("system.health", {})
-        assert health["result"]["storage"]["schemaVersion"] == 24
+        assert health["result"]["storage"]["schemaVersion"] == LATEST_SCHEMA
         detail = await call("task.detail", {
             "projectId": str(project_id), "taskId": str(task_id),
         })
@@ -282,6 +283,13 @@ async def test_artifact_import_confined_to_owned_root_and_mime(tmp_path: Path) -
     with pytest.raises(ArtifactError, match="ARTIFACT_MIME_INVALID"):
         store.import_file(project_id, verification_id, "bad.js",
                           kind="report", mime="text/plain")
+    owned.joinpath("private-report.txt").write_text(
+        "-----BEGIN OPENSSH PRIVATE KEY-----\nfixture-secret\n"
+        "-----END OPENSSH PRIVATE KEY-----\n"
+    )
+    with pytest.raises(ArtifactError, match="ARTIFACT_SENSITIVE"):
+        store.import_file(project_id, verification_id, "private-report.txt",
+                          kind="log", mime="text/plain")
     with pytest.raises(ArtifactError, match="ARTIFACT_OWNER_INVALID"):
         store.import_file(project_id, uuid4(), "report.txt", kind="log", mime="text/plain")
     with pytest.raises(ArtifactError, match="ARTIFACT_NOT_FOUND"):

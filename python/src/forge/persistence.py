@@ -64,6 +64,22 @@ class Migration:
     checksum: str
 
 
+def cjk_short_terms(text: str) -> set[str]:
+    """Bounded character/bigram postings for one and two Han-character queries."""
+    runs: list[str] = []
+    current = ""
+    for char in text:
+        if "\u3400" <= char <= "\u9fff":
+            current += char
+        elif current:
+            runs.append(current)
+            current = ""
+    if current:
+        runs.append(current)
+    return {run[index:index + width] for run in runs
+            for width in (1, 2) for index in range(len(run) - width + 1)}
+
+
 def _legacy_migrations() -> tuple[Migration, ...]:
     source = files("forge").joinpath("legacy_migrations.json").read_text()
     entries: list[dict[str, Any]] = json.loads(source)["migrations"]
@@ -351,6 +367,178 @@ CREATE TABLE plugin_storage_entries(
   updated_at TEXT NOT NULL,
   PRIMARY KEY(plugin_id,storage_key)
 );"""
+_ARTIFACT_RETENTION_MIGRATION_SQL = """CREATE TABLE imported_artifact_tombstones(
+  artifact_id TEXT PRIMARY KEY REFERENCES imported_artifacts(artifact_id),
+  purged_at TEXT NOT NULL,
+  reason TEXT NOT NULL CHECK(reason='expired-user-confirmed')
+);
+DROP TRIGGER imported_artifact_no_update;
+CREATE TRIGGER imported_artifact_no_update BEFORE UPDATE ON imported_artifacts
+WHEN NOT (
+  NEW.artifact_id=OLD.artifact_id AND NEW.project_id=OLD.project_id
+  AND NEW.verification_id=OLD.verification_id AND NEW.kind=OLD.kind
+  AND NEW.mime=OLD.mime AND NEW.byte_size=OLD.byte_size
+  AND NEW.content_hash=OLD.content_hash AND NEW.created_at=OLD.created_at
+  AND NEW.content_blob=X'' AND
+  EXISTS(SELECT 1 FROM imported_artifact_tombstones WHERE artifact_id=OLD.artifact_id)
+)
+  BEGIN SELECT RAISE(ABORT,'imported artifact is immutable'); END;"""
+_AGENT_PROFILE_MIGRATION_SQL = """CREATE TABLE agent_profiles(
+  profile_id TEXT NOT NULL,
+  revision INTEGER NOT NULL CHECK(revision>=1),
+  profile_json TEXT NOT NULL CHECK(json_valid(profile_json)),
+  content_hash TEXT NOT NULL CHECK(length(content_hash)=64),
+  created_at TEXT NOT NULL,
+  PRIMARY KEY(profile_id,revision)
+);
+CREATE TRIGGER agent_profile_no_update BEFORE UPDATE ON agent_profiles
+  BEGIN SELECT RAISE(ABORT,'agent profile revision is immutable'); END;
+CREATE TRIGGER agent_profile_no_delete BEFORE DELETE ON agent_profiles
+  BEGIN SELECT RAISE(ABORT,'agent profile revision is immutable'); END;
+ALTER TABLE review_jobs ADD COLUMN profile_id TEXT;
+ALTER TABLE review_jobs ADD COLUMN profile_revision INTEGER;
+ALTER TABLE review_jobs ADD COLUMN profile_hash TEXT;"""
+_WORKFLOW_DRAFT_MIGRATION_SQL = """CREATE TABLE workflow_drafts(
+  workflow_id TEXT PRIMARY KEY,
+  draft_revision INTEGER NOT NULL CHECK(draft_revision>=1),
+  draft_json TEXT NOT NULL CHECK(json_valid(draft_json)),
+  draft_hash TEXT NOT NULL CHECK(length(draft_hash)=64),
+  published_revision INTEGER,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE workflow_revisions(
+  id TEXT NOT NULL REFERENCES workflow_drafts(workflow_id),
+  revision INTEGER NOT NULL CHECK(revision>=1),
+  name TEXT NOT NULL,
+  definition_json TEXT NOT NULL CHECK(json_valid(definition_json)),
+  content_hash TEXT NOT NULL CHECK(length(content_hash)=64),
+  state TEXT NOT NULL CHECK(state IN ('draft','published','deprecated')),
+  created_at TEXT NOT NULL,
+  PRIMARY KEY(id,revision)
+);
+CREATE TRIGGER workflow_revision_no_update BEFORE UPDATE ON workflow_revisions
+  BEGIN SELECT RAISE(ABORT,'published workflow is immutable'); END;
+CREATE TRIGGER workflow_revision_no_delete BEFORE DELETE ON workflow_revisions
+  BEGIN SELECT RAISE(ABORT,'published workflow is immutable'); END;"""
+_KNOWLEDGE_INGESTION_MIGRATION_SQL = """CREATE TABLE knowledge_sources(
+  source_id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(project_id),
+  relative_path TEXT NOT NULL,
+  current_version INTEGER NOT NULL CHECK(current_version>=1),
+  content_hash TEXT NOT NULL CHECK(length(content_hash)=64),
+  status TEXT NOT NULL CHECK(status IN ('active','revoked')),
+  byte_size INTEGER NOT NULL CHECK(byte_size>=0),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(project_id,relative_path)
+);
+CREATE TABLE knowledge_chunks(
+  source_id TEXT NOT NULL REFERENCES knowledge_sources(source_id),
+  version INTEGER NOT NULL CHECK(version>=1),
+  ordinal INTEGER NOT NULL CHECK(ordinal>=0),
+  start_line INTEGER NOT NULL CHECK(start_line>=1),
+  end_line INTEGER NOT NULL CHECK(end_line>=start_line),
+  heading TEXT,
+  text TEXT NOT NULL,
+  content_hash TEXT NOT NULL CHECK(length(content_hash)=64),
+  PRIMARY KEY(source_id,version,ordinal)
+);
+CREATE INDEX knowledge_sources_project_status ON knowledge_sources(project_id,status);
+CREATE INDEX knowledge_chunks_source_version ON knowledge_chunks(source_id,version);"""
+_KNOWLEDGE_SEARCH_MIGRATION_SQL = """ALTER TABLE knowledge_sources ADD COLUMN environment_id TEXT;
+UPDATE knowledge_sources SET environment_id=(
+  SELECT environment_id FROM projects WHERE projects.project_id=knowledge_sources.project_id
+);
+CREATE INDEX knowledge_sources_scope ON knowledge_sources(project_id,environment_id,status);
+CREATE VIRTUAL TABLE knowledge_fts USING fts5(text, tokenize='trigram');
+CREATE TABLE knowledge_short_terms(
+  chunk_rowid INTEGER NOT NULL,
+  term TEXT NOT NULL,
+  PRIMARY KEY(chunk_rowid,term)
+);
+CREATE INDEX knowledge_short_terms_term ON knowledge_short_terms(term);
+INSERT INTO knowledge_fts(rowid,text)
+  SELECT c.rowid,c.text FROM knowledge_chunks c JOIN knowledge_sources s
+  ON s.source_id=c.source_id WHERE s.status='active'
+  AND c.version=s.current_version AND length(c.text)>0;"""
+_PROJECT_MEMORY_MIGRATION_SQL = """CREATE TABLE project_memory(
+  memory_id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(project_id),
+  environment_id TEXT,
+  scope TEXT NOT NULL CHECK(scope IN ('project','environment')),
+  kind TEXT NOT NULL CHECK(kind IN ('environment_fact','project_convention',
+    'confirmed_decision','workflow_hint')),
+  subject_key TEXT NOT NULL,
+  text TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('candidate','validated','stale','revoked')),
+  revision INTEGER NOT NULL CHECK(revision>=1),
+  source_json TEXT NOT NULL CHECK(json_valid(source_json)),
+  content_hash TEXT NOT NULL CHECK(length(content_hash)=64),
+  expires_at TEXT,
+  last_verified_at TEXT,
+  idempotency_key TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  CHECK((scope='project' AND environment_id IS NULL) OR
+        (scope='environment' AND environment_id IS NOT NULL))
+);
+CREATE INDEX project_memory_scope ON project_memory(project_id,environment_id,status,subject_key);
+CREATE TABLE memory_events(
+  event_id TEXT PRIMARY KEY,
+  memory_id TEXT NOT NULL REFERENCES project_memory(memory_id),
+  action TEXT NOT NULL CHECK(action IN ('proposed','validated','stale','revoked')),
+  reason TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX memory_events_memory ON memory_events(memory_id,created_at);
+CREATE TRIGGER memory_events_no_update BEFORE UPDATE ON memory_events
+  BEGIN SELECT RAISE(ABORT,'memory event is immutable'); END;
+CREATE TRIGGER memory_events_no_delete BEFORE DELETE ON memory_events
+  BEGIN SELECT RAISE(ABORT,'memory event is immutable'); END;
+CREATE VIRTUAL TABLE memory_fts USING fts5(text,tokenize='trigram');"""
+_PAIRING_MIGRATION_SQL = """CREATE TABLE pairing_requests(
+  pairing_id TEXT PRIMARY KEY,
+  nonce_hash TEXT NOT NULL UNIQUE CHECK(length(nonce_hash)=64),
+  claim_secret_hash TEXT UNIQUE CHECK(claim_secret_hash IS NULL OR length(claim_secret_hash)=64),
+  status TEXT NOT NULL CHECK(status IN ('pending','claimed','approved','rejected','expired')),
+  attempt_count INTEGER NOT NULL DEFAULT 0 CHECK(attempt_count BETWEEN 0 AND 5),
+  device_name TEXT,
+  address_summary TEXT,
+  fingerprint_summary TEXT,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  claimed_at TEXT,
+  decided_at TEXT,
+  consumed_at TEXT,
+  granted_project_ids_json TEXT CHECK(granted_project_ids_json IS NULL OR
+    json_valid(granted_project_ids_json))
+);
+CREATE INDEX pairing_requests_status_expiry ON pairing_requests(status,expires_at);
+CREATE TABLE paired_devices(
+  device_id TEXT PRIMARY KEY,
+  pairing_id TEXT NOT NULL UNIQUE REFERENCES pairing_requests(pairing_id),
+  name TEXT NOT NULL,
+  address_summary TEXT NOT NULL,
+  fingerprint_summary TEXT NOT NULL,
+  project_ids_json TEXT NOT NULL CHECK(json_valid(project_ids_json)),
+  status TEXT NOT NULL CHECK(status IN ('approved','revoked')),
+  approved_at TEXT NOT NULL,
+  revoked_at TEXT
+);"""
+_REMOTE_SESSION_MIGRATION_SQL = """ALTER TABLE pairing_requests
+  ADD COLUMN session_delivered_at TEXT;
+CREATE TABLE device_sessions(
+  session_id TEXT PRIMARY KEY,
+  device_id TEXT NOT NULL REFERENCES paired_devices(device_id),
+  token_hash TEXT NOT NULL UNIQUE CHECK(length(token_hash)=64),
+  csrf_hash TEXT NOT NULL CHECK(length(csrf_hash)=64),
+  issued_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  refresh_expires_at TEXT NOT NULL,
+  rotated_from TEXT REFERENCES device_sessions(session_id),
+  revoked_at TEXT
+);
+CREATE INDEX device_sessions_device ON device_sessions(device_id,revoked_at,expires_at);"""
 MIGRATIONS = (
     *_legacy_migrations(),
     Migration(
@@ -375,6 +563,22 @@ MIGRATIONS = (
               hashlib.sha256(_TASK_CHANGE_MIGRATION_SQL.encode()).hexdigest()),
     Migration(24, _STORAGE_BOUNDARY_MIGRATION_SQL,
               hashlib.sha256(_STORAGE_BOUNDARY_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(25, _AGENT_PROFILE_MIGRATION_SQL,
+              hashlib.sha256(_AGENT_PROFILE_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(26, _WORKFLOW_DRAFT_MIGRATION_SQL,
+              hashlib.sha256(_WORKFLOW_DRAFT_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(27, _KNOWLEDGE_INGESTION_MIGRATION_SQL,
+              hashlib.sha256(_KNOWLEDGE_INGESTION_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(28, _KNOWLEDGE_SEARCH_MIGRATION_SQL,
+              hashlib.sha256(_KNOWLEDGE_SEARCH_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(29, _PROJECT_MEMORY_MIGRATION_SQL,
+              hashlib.sha256(_PROJECT_MEMORY_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(30, _ARTIFACT_RETENTION_MIGRATION_SQL,
+              hashlib.sha256(_ARTIFACT_RETENTION_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(31, _PAIRING_MIGRATION_SQL,
+              hashlib.sha256(_PAIRING_MIGRATION_SQL.encode()).hexdigest()),
+    Migration(32, _REMOTE_SESSION_MIGRATION_SQL,
+              hashlib.sha256(_REMOTE_SESSION_MIGRATION_SQL.encode()).hexdigest()),
 )
 CURRENT_COMPATIBLE_SCHEMA = 15
 LATEST_SCHEMA = MIGRATIONS[-1].version
@@ -593,6 +797,17 @@ class ForgePersistence:
                 db.execute("BEGIN IMMEDIATE")
                 for statement in _statements(migration.sql):
                     db.execute(statement)
+                if migration.version == 28:
+                    rows = db.execute(
+                        "SELECT c.rowid,c.text FROM knowledge_chunks c JOIN knowledge_sources s "
+                        "ON s.source_id=c.source_id WHERE s.status='active' "
+                        "AND c.version=s.current_version AND length(c.text)>0"
+                    )
+                    for row in rows:
+                        db.executemany(
+                            "INSERT INTO knowledge_short_terms(chunk_rowid,term) VALUES(?,?)",
+                            ((row["rowid"], term) for term in cjk_short_terms(row["text"])),
+                        )
                 db.execute(
                     "INSERT INTO schema_migrations(version,applied_at,checksum) "
                     "VALUES (?,strftime('%Y-%m-%dT%H:%M:%fZ','now'),?)",
