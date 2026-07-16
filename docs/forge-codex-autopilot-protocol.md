@@ -14,7 +14,7 @@
 
 任务 ID、名称、依赖与 Phase Gate 固定来自 `forge_spec_v1.0/planning/tasks.json` 和 `planning/phases.json`；Playbook 只承载这些权威 Task 的实施说明。
 
-> **2026-09-26 Desktop-first 排期覆盖**：用户已暂停 P7/P8 手机、Companion、设备配对、远程 HTTPS/命令与跨设备协作的新增工作，转为 Desktop 完整可用。此覆盖仅改变选下一项的顺序：先按既有 PDF 功能对应表逐一核验并修复桌面缺口，即使相关权威 Task 历史状态为 DONE。每项须有实现、正常桌面入口、Python Host 真实运行及当前版本验收；已有 Demo 不能代替整桌面验收。远程历史代码/测试/记录保留，未完成写继续拒绝，网络默认关闭。Desktop 里程碑完成后停止并报告，不自动恢复 P7/P8。Claude、Windows/Intel、签名/公证、真机等原验收与发布门禁不因排期而通过；既有开发依赖例外仅作历史授权，当前不据此选远程工作。
+> **2026-09-27 Desktop 界面重做排期覆盖**：用户要求以 Aperant 公开 2.x 桌面版为逐屏对照，替换 Forge 当前不可用的主界面（ADR 0085）。先完成原位项目选择、真实回复/模型显示、新建任务、看板和任务详情，再逐页改造 Profile/Workflow/插件/知识及设置；每页须保留真实 Python Host 行为和安全门禁。旧 glass 布局及旧安装包不算新界面验收。P7/P8 手机、Companion、配对、远程 HTTPS/命令与跨设备协作的新增工作仍暂停；远程历史代码/测试/记录保留，未完成写继续拒绝，网络默认关闭。Desktop 里程碑完成后停止并报告，不自动恢复 P7/P8。Claude、Windows/Intel、签名/公证、真机等原验收与发布门禁不因排期而通过。
 
 > **2026-09-24 单执行器开发依赖放行**：用户仅授权 `P4-05 → P4-06` 和将来满足前提的 `P4-10 → P5-01` 两条开发排期例外，详见 [ADR 0052](decisions/0052-claude-sdk-api-key-gate.md) 与 `docs/development-dependency-exceptions.json`。P4-05 保持 BLOCKED，P4-10 的第二真实执行器验收不得伪造或标 PASSED，P4 完整 Phase Gate 和多执行器发布不得宣称通过。只允许 Codex 和执行器无关的 P4-06～09 / 后续 P5 工作；不借用订阅登录、不请求新凭据、不自动批准工具。此例外不改变权威 Depends on，也不允许一般性跳过 BLOCKED。
 

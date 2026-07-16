@@ -4,14 +4,14 @@
 > **当前基线**：MIG-PY-01～09 在当前 macOS arm64 开发环境完成；Desktop 的唯一业务 Host 已切到 Python。P2-10 的 Python Host 纵向真实 Demo 与 P2 Phase Gate 已在 macOS arm64 开发路径通过；历史 Node 结果只作对照，跨平台与安装包仍未验证。<br>
 > **执行模型**：一次只实施一个权威 Task；Autopilot 启用时完成后由 `docs/forge-codex-autopilot-protocol.md` 决定自动继续。<br>
 > **当前完整交付目标（用户 2026-09-25 授权）**：权威任务图与已批准 ADR 中的全部必做产品范围均须落地并真实验收。内部 Demo、本机闭环和阶段报告是过程证据，不是停止条件；缺少签名、Claude 凭据或目标平台时只保留精确未验项，继续不依赖它们的工作。P9 等权威可选远期增强仍按原标记，不因本目标自动实施。用户入口、真实 Python Host 运行和验收证据须同时成立。<br>
-> **最新排期覆盖（2026-09-26）**：当前里程碑改为 Desktop 全部已确认功能实际可用。优先复核并补齐项目/环境、自然语言/任务、Run/看板、Review/Verify、Profile/Workflow、插件/工具、知识/记忆、安装体验；每项均需实现、桌面入口、Python Host 真实链路和对应版本证据。P7/P8 手机与远程新增开发从安全点后置，保留代码/历史状态/权威 ID 和安全门禁，未完成远程写继续拒绝。桌面里程碑报告后停止，不自动恢复 P7/P8。本优先级覆盖下文按 Phase 寻找下一 TODO 的排期规则，不改变权威任务图或正式发行验收。<br>
+> **最新桌面方向（2026-09-27）**：用户批准以原先提供的磨砂玻璃视频及 `forge_glass_v1.1/design/` 实现视觉材质和动效；Aperant 公开 2.x 仍对照已改进的桌面信息架构、交互密度与操作路径。见 ADR 0085/0086。新安装默认亮色，保留真实暗色与跟随系统选项及既有用户偏好。优先修正项目原位切换、新建任务与模型回复、五列看板、任务详情、Profile/Workflow/插件/知识的实际操作层级，不覆盖 Forge 的 Python Host、数据、审批与安全语义。Desktop 完整可用仍是当前里程碑；P7/P8 手机与远程新增开发后置，历史代码/权威 ID 和正式发布门禁不变。新界面每项均需真实运行、用户入口、当前版本截图与验收，旧安装包不得冒称新界面。<br>
 > **项目边界**：ProofRun 与 Forge 当前完全独立，ProofRun 不进入 Forge 仓库、数据库、工作流或默认插件。未来如需接入，只能通过稳定的公开插件接口。<br>
 > **工程规格优先级**：
 >
 > 1. 产品语义、架构、安全、契约：`forge_spec_v1.0/`
 >    用户批准的 Python Core 架构覆盖其中的 Node/TypeScript Host 技术选择，不改变权威 Task/Test ID 和产品语义；见 ADR 0029。
 > 2. 正式生产代码与已落地 ADR
-> 3. UI 视觉：`@forge/ui` 与 glass v1.1 设计系统
+> 3. UI：信息架构与交互路径参考 ADR 0085 的 Aperant 2.x 对照；视觉材质与动效参考用户原视频及 `forge_glass_v1.1/design/`，按 ADR 0086 独立实现。正式 token 与组件位于 `@forge/ui`，参考资料不成为运行时代码
 > 4. 本文档仅对权威 Task 提供详细实施说明，不重定义任务 ID、依赖或 Phase Gate
 >
 > **重要**：本文件不是概念 Roadmap，而是 Codex 的执行手册。每一个任务都应当可以直接照着做。
@@ -110,12 +110,12 @@ pnpm probe:codex
 ## A5. UI Rules
 
 - 生产 UI 使用 `@forge/ui`。
-- glass v1.1：银白 / 浅蓝灰 / 雾面玻璃 / 深色胶囊主按钮。
-- 不恢复旧深色侧栏 + 铜橙方案。
+- 当前 Desktop 的项目原位选择、单一新建任务入口、五列看板和清晰的角色/模型信息遵循 ADR 0085；视觉按 ADR 0086 采用用户视频的银白/浅蓝灰雾面、圆润层次与克制动效。亮色新安装默认，暗色是同源蓝灰变体；既有主题偏好保持有效。
+- 不恢复旧规格中的铜橙方案。
 - 不直接运行参考 prototype HTML 作为产品。
 - 所有运行状态必须来自真实 Host 数据。
 - 不显示虚假的在线 Agent、费用、成功率、测试结果。
-- Reduced Motion / Reduced Transparency 必须保留。
+- 页面、卡片、Dialog、Drawer 的转场先对照 `forge_glass_v1.1/design/motion.json`；不连续动画化 blur、整窗透明度或背景，也不以动效预告尚无 Host 回执的成功。Reduced Motion / Reduced Transparency、可读焦点与键盘操作必须保留并验收。
 
 ## A6. After
 

@@ -6,7 +6,7 @@
 - 公共字段和数据格式：`forge_spec_v1.0/contracts/` 的 Schema 与公开契约。正文与 Schema 有实质冲突时，记录问题与建议；不要静默修改基线。
 - 任务顺序与验收：`forge_spec_v1.0/planning/tasks.json`、`forge_spec_v1.0/tests/acceptance-cases.json`。
 - 用户已批准 Python Core 架构更正：仅覆盖旧蓝图中 Node/TypeScript 业务 Host 的技术选择；权威产品语义、Task/Test ID、验收与安全边界仍有效。决策见 `docs/decisions/0029-python-core-runtime-architecture.md`，实施顺序见 `docs/forge-python-core-migration-plan.md`。
-- 页面组织、视觉、材质和动效：`forge_glass_v1.1/README.md`、`forge_glass_v1.1/design/`。旧规格包中的铜橙主题、深色侧栏、旧设计 tokens 与旧原型不是界面实现基准。
+- 2026-09-27 用户批准桌面重设计：以 Aperant 公开 2.x 桌面版对照信息架构与交互密度（`docs/decisions/0085-aperant-reference-desktop-redesign.md`），以用户先前提供的磨砂玻璃视频及 `forge_glass_v1.1/design/` 对照视觉材质与动效（`docs/decisions/0086-video-glass-visual-with-current-desktop-ia.md`）。ADR 0086 覆盖 ADR 0085 的视觉优先级，不撤销已改善的交互结构。Aperant 3.0 尚无公开可核对版本；不得把旧截图称为 3.0。独立编写 Forge 实现，不直接复制第三方源码、素材或视频帧。
 - 两个资料目录是只读基线。不要移动、删除或把原型 HTML 当生产入口；参考包既有测试结果不是产品测试结果。
 
 ## 开发边界
@@ -18,7 +18,7 @@
 - Desktop 本地通信采用有版本的 JSON-RPC over stdio，并实施方法白名单、请求/响应校验、大小与超时边界。不要为本地通信引入 FastAPI/TCP；远程 HTTP/SSE/WebSocket 留给未来独立 Adapter。
 - TypeScript strict，包通过 `exports` 暴露公共入口，内部包依赖必须用 `workspace:` 协议。不要把演示任务、日志或在线设备当成真实产品状态。
 - 自然语言先生成可编辑 Task Contract；人工批准只进入 TODO，默认不自动开工。Done 不代表合并或部署。
-- 视觉后续采用银白/浅蓝灰雾面、浅色窄侧栏、圆润面板、深色胶囊按钮和清晰阅读表面；动效克制，并提供减少透明度与减少动效回退。
+- 当前桌面采用视频中的银白/浅蓝灰雾面、柔和层级和克制动效；亮色与暗色共用紧凑侧栏和页面布局，新安装默认亮色，已保存的主题选择不得覆盖。项目原位选择、单一新建任务入口、五列看板、分区任务详情继续保留；保持 Forge 真正的 Python Host 状态和人工审批。主题切换、减少透明度、系统与用户的减少动效、键盘操作均须真实有效；动效不能冒充任务或 Run 已成功。
 
 ## 验证与记录
 
