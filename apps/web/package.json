@@ -14,7 +14,9 @@
     "@forge/contracts": "workspace:*",
     "@forge/core": "workspace:*",
     "@forge/ui": "workspace:*",
-    "vue": "3.5.43"
+    "@vue-flow/core": "1.48.2",
+    "vue": "3.5.43",
+    "zod": "4.6.4"
   },
   "devDependencies": {
     "@types/node": "22.20.4",

@@ -23,6 +23,26 @@ afterEach(() => {
 });
 
 describe('shared Forge shell', () => {
+  it('opens keyboard navigation with Ctrl/Cmd+K, traps focus, and restores the trigger', async () => {
+    const root = mountApp();
+    const trigger = root.querySelector<HTMLButtonElement>('button[aria-label="快速导航"]')!;
+    trigger.focus();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).not.toBeNull());
+    const search = document.querySelector<HTMLInputElement>('[role="dialog"] input.forge-text-input');
+    expect(document.activeElement).toBe(search);
+    const last = [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] nav button')].at(-1)!;
+    last.focus();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('关闭对话框');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
+    await nextTick();
+    expect(document.activeElement).toBe(trigger);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'K', ctrlKey: true, bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).not.toBeNull());
+  });
+
   it('mounts in an ordinary Web environment without Electron APIs', async () => {
     delete window.forge;
     const root = mountApp();
@@ -30,14 +50,14 @@ describe('shared Forge shell', () => {
     expect(root.textContent).toContain('Web');
     expect(root.textContent).toContain('Local Host unavailable');
     expect(root.textContent).toContain('先选择项目');
-    expect(root.querySelector<HTMLButtonElement>('button[disabled]')?.textContent).toContain('Agent runtime 尚未启用');
+    expect(root.textContent).toContain('普通 Web 尚未连接远程 Host');
     const input = root.querySelector<HTMLTextAreaElement>('textarea');
     expect(input).not.toBeNull();
     input!.value = '给订单列表添加日期筛选';
     input!.dispatchEvent(new Event('input', { bubbles: true }));
     await nextTick();
     expect(input!.value).toBe('给订单列表添加日期筛选');
-    expect(root.textContent).toContain('不会创建任务');
+    expect(root.textContent).toContain('本地项目选择只在 Forge Desktop 中提供');
     root.querySelector<HTMLButtonElement>('button[aria-label="项目"]')?.click();
     await nextTick();
     expect(root.textContent).toContain('本地项目需要 Forge Desktop');
@@ -59,7 +79,13 @@ describe('shared Forge shell', () => {
       hostStatus: async () => status,
       hostHealth: async () => ({ commandId: 'health-1', ok: true as const, data: health, durationMs: 1, hostTimestamp: health.timestamp }),
       invokeSystem: async (command) => ({ commandId: command.commandId, ok: true as const, data: health, durationMs: 1, hostTimestamp: health.timestamp }),
-      inspectBundledPlugin: async () => ({ pluginId: 'forge.executor.codex', version: '0.0.1', forgeApiRange: '^1.0.0', compatible: true, active: true, issues: [], configSchema: { type: 'object', additionalProperties: false, properties: {}, required: [] } }),
+      inspectBundledPlugin: async () => ({ pluginId: 'forge.executor.codex', version: '0.0.2', forgeApiRange: '^1.0.0', compatible: true, active: true, enabled: true, restartRequired: false, issues: [], faults: [], configSchema: { type: 'object', additionalProperties: false, properties: {}, required: [] } }),
+      setBundledPluginEnabled: async () => { throw new Error('FIXTURE_READ_ONLY'); },
+      agentProfileCatalog: async () => ({ profiles: [], availability: [], executors: [], modelProviders: [] }),
+      saveAgentProfile: async (value) => value.profile,
+      invokeWorkflow: async () => [],
+      invokeKnowledge: async () => [],
+      invokeMemory: async () => [],
       chooseProjectFolder: async () => null,
       invokeProject: async (command) => ({ commandId: command.commandId, ok: true as const, data: null, durationMs: 1, hostTimestamp: health.timestamp }),
       invokeConversation: async (command) => ({ commandId: command.commandId, ok: true as const, data: null, durationMs: 1, hostTimestamp: health.timestamp }),
@@ -84,6 +110,12 @@ describe('shared Forge shell', () => {
     root.querySelector<HTMLButtonElement>('button[role="switch"]')?.click();
     await nextTick();
     expect(root.querySelector('.app-shell')?.getAttribute('data-reduce-transparency')).toBe('true');
+    const theme = root.querySelector<HTMLSelectElement>('.settings-card .forge-select');
+    expect(theme).not.toBeNull();
+    theme!.value = 'dark';
+    theme!.dispatchEvent(new Event('change', { bubbles: true }));
+    await nextTick();
+    expect(root.querySelector('.app-shell')?.getAttribute('data-theme')).toBe('dark');
   });
 
   it('shows the real board entry without inventing tasks when no project is selected', async () => {
@@ -103,6 +135,12 @@ describe('shared Forge shell', () => {
       hostHealth: async () => ({ commandId: 'health-mismatch', ok: false as const, error, durationMs: 0, hostTimestamp: new Date().toISOString() }),
       invokeSystem: async (command) => ({ commandId: command.commandId, ok: false as const, error, durationMs: 0, hostTimestamp: new Date().toISOString() }),
       inspectBundledPlugin: async () => { throw new Error('HOST_UNAVAILABLE'); },
+      setBundledPluginEnabled: async () => { throw new Error('HOST_UNAVAILABLE'); },
+      agentProfileCatalog: async () => { throw new Error('HOST_UNAVAILABLE'); },
+      saveAgentProfile: async (value) => value.profile,
+      invokeWorkflow: async () => [],
+      invokeKnowledge: async () => [],
+      invokeMemory: async () => [],
       chooseProjectFolder: async () => null,
       invokeProject: async (command) => ({ commandId: command.commandId, ok: false as const, error, durationMs: 0, hostTimestamp: new Date().toISOString() }),
       invokeConversation: async (command) => ({ commandId: command.commandId, ok: false as const, error, durationMs: 0, hostTimestamp: new Date().toISOString() }),
@@ -147,7 +185,13 @@ describe('shared Forge shell', () => {
       hostStatus: async () => ({ revision: 1, state: 'connected' as const, info, health, lastHealthCheck: now, error: null }),
       hostHealth: async () => ({ commandId: 'health', ok: true as const, data: health, durationMs: 1, hostTimestamp: now }),
       invokeSystem: async (command) => ({ commandId: command.commandId, ok: true as const, data: health, durationMs: 1, hostTimestamp: now }),
-      inspectBundledPlugin: async () => ({ pluginId: 'forge.executor.codex', version: '0.0.1', forgeApiRange: '^1.0.0', compatible: true, active: true, issues: [], configSchema: { type: 'object', additionalProperties: false, properties: {}, required: [] } }),
+      inspectBundledPlugin: async () => ({ pluginId: 'forge.executor.codex', version: '0.0.2', forgeApiRange: '^1.0.0', compatible: true, active: true, enabled: true, restartRequired: false, issues: [], faults: [], configSchema: { type: 'object', additionalProperties: false, properties: {}, required: [] } }),
+      setBundledPluginEnabled: async () => { throw new Error('FIXTURE_READ_ONLY'); },
+      agentProfileCatalog: async () => ({ profiles: [], availability: [], executors: [], modelProviders: [] }),
+      saveAgentProfile: async (value) => value.profile,
+      invokeWorkflow: async () => [],
+      invokeKnowledge: async () => [],
+      invokeMemory: async () => [],
       chooseProjectFolder: async () => probe.rootPath,
       invokeProject: async (command) => {
         if (command.type === 'project.create') createCalls += 1;

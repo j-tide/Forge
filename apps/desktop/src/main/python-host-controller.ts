@@ -2,6 +2,19 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { forgeError, forgeErrorCodeSchema, hostConnectionSnapshotSchema, hostProtocolVersion,
   bundledPluginInspectionSchema, type BundledPluginInspection,
+  agentProfileCatalogSchema, agentProfileSchema, agentProfileSaveSchema,
+  type AgentProfileCatalog, type AgentProfile, type AgentProfileSave,
+  workflowCommandSchema, workflowCompileSchema, workflowImpactSchema, workflowRecordSchema,
+  publishedWorkflowSchema,
+  workflowTemplateSchema, workflowWriteResultSchema, type WorkflowCommand,
+  knowledgeCommandSchema, knowledgeSourceSchema, knowledgeChunkSchema, knowledgeSearchResultSchema,
+  type KnowledgeCommand,
+  memoryCommandSchema, projectMemorySchema, memorySearchResultSchema,
+  devicePairingCommandSchema, pairingIssuedSchema, pairingInspectionSchema,
+  pairingDecisionResultSchema, type DevicePairingCommand,
+  diagnosticsPreviewSchema, diagnosticsCleanupResultSchema,
+  hostActivitySchema, type HostActivity,
+  type MemoryCommand,
   pythonHostHealthSchema, pythonHostInfoSchema, pythonHostSnapshotSchema, pythonTransportVersion,
   systemCommandEnvelopeSchema, systemCommandResultSchema,
   projectCommandEnvelopeSchema, projectCommandResultSchema,
@@ -41,7 +54,8 @@ export class PythonHostController {
 
   constructor(private readonly interpreter: string, private readonly productVersion: string,
     private readonly dataDir: string,
-    private readonly onStatus: (snapshot: PythonHostSnapshot) => void) {}
+    private readonly onStatus: (snapshot: PythonHostSnapshot) => void,
+    private readonly packagedPython?: { pythonHome: string; pythonPath: string }) {}
 
   get status(): HostConnectionSnapshot { return hostConnectionSnapshotSchema.parse(this.snapshot); }
   get pythonStatus(): PythonHostSnapshot { return this.snapshot; }
@@ -54,8 +68,10 @@ export class PythonHostController {
     try {
       child = spawn(this.interpreter, ['-m', 'forge.host'], {
         shell: false, stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...hostEnvironment(process.env), FORGE_HOST_OWNERSHIP_TOKEN: this.token,
-          FORGE_HOST_DATA_DIR: this.dataDir },
+        env: { ...hostEnvironment(process.env),
+          ...(this.packagedPython ? { PYTHONHOME: this.packagedPython.pythonHome,
+            PYTHONPATH: this.packagedPython.pythonPath, PYTHONDONTWRITEBYTECODE: '1' } : {}),
+          FORGE_HOST_OWNERSHIP_TOKEN: this.token, FORGE_HOST_DATA_DIR: this.dataDir },
       });
     } catch { this.fail('HOST_STARTUP_FAILED'); return; }
     this.child = child;
@@ -138,6 +154,12 @@ export class PythonHostController {
         durationMs: performance.now() - started, hostTimestamp: new Date().toISOString() });
     } catch (error) {
       const code = error instanceof Error ? error.message : 'INVALID_RESPONSE';
+      if (process.env.FORGE_BRIDGE_DIAGNOSTIC === '1') {
+        process.stderr.write(`${JSON.stringify({ component: 'forge-python-bridge',
+          event: 'domain_request_failed', method: command.type,
+          errorKind: error instanceof Error ? error.constructor.name : 'unknown',
+          errorCode: /^[A-Z_]{1,64}$/.test(code) ? code : 'UNSTRUCTURED' })}\n`);
+      }
       return parse(this.failure(command.commandId, code));
     } finally {
       if (timeout > limits.requestMs) {
@@ -182,6 +204,98 @@ export class PythonHostController {
     const raw = await this.call('plugin.inspectBundled', {});
     if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
     return bundledPluginInspectionSchema.parse(raw.data);
+  }
+  async setBundledPluginEnabled(enabled: boolean): Promise<BundledPluginInspection> {
+    if (!['connected', 'degraded'].includes(this.snapshot.state)) throw new Error('HOST_UNAVAILABLE');
+    const raw = await this.call('plugin.setBundledEnabled', { enabled });
+    if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
+    return bundledPluginInspectionSchema.parse(raw.data);
+  }
+  async agentProfileCatalog(): Promise<AgentProfileCatalog> {
+    if (!['connected', 'degraded'].includes(this.snapshot.state)) throw new Error('HOST_UNAVAILABLE');
+    const raw = await this.call('agent.profileCatalog', {}, 25_000);
+    if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
+    return agentProfileCatalogSchema.parse(raw.data);
+  }
+  async saveAgentProfile(value: AgentProfileSave): Promise<AgentProfile> {
+    if (!['connected', 'degraded'].includes(this.snapshot.state)) throw new Error('HOST_UNAVAILABLE');
+    const checked = agentProfileSaveSchema.parse(value);
+    const raw = await this.call('agent.profileSave', checked);
+    if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
+    return agentProfileSchema.parse(raw.data);
+  }
+  async invokeWorkflow(command: WorkflowCommand): Promise<unknown> {
+    if (!['connected', 'degraded'].includes(this.snapshot.state)) throw new Error('HOST_UNAVAILABLE');
+    const checked = workflowCommandSchema.parse(command);
+    const raw = await this.call(`workflow.${checked.type}`, checked.payload, 25_000);
+    if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
+    const data: unknown = raw.data;
+    switch (checked.type) {
+      case 'presets': return workflowTemplateSchema.array().parse(data);
+      case 'list': return workflowRecordSchema.array().parse(data);
+      case 'get': return workflowRecordSchema.parse(data);
+      case 'getPublished': return publishedWorkflowSchema.parse(data);
+      case 'impact': return workflowImpactSchema.parse(data);
+      case 'saveDraft':
+      case 'publish': return workflowWriteResultSchema.parse(data);
+      case 'compileDraft': return workflowCompileSchema.parse(data);
+    }
+  }
+  async invokeKnowledge(command: KnowledgeCommand): Promise<unknown> {
+    if (!['connected', 'degraded'].includes(this.snapshot.state)) throw new Error('HOST_UNAVAILABLE');
+    const checked = knowledgeCommandSchema.parse(command);
+    const raw = await this.call(`knowledge.${checked.type}`, checked.payload, 25_000);
+    if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
+    const data: unknown = raw.data;
+    switch (checked.type) {
+      case 'list': return knowledgeSourceSchema.array().parse(data);
+      case 'import':
+      case 'revoke': return knowledgeSourceSchema.parse(data);
+      case 'chunk': return knowledgeChunkSchema.parse(data);
+      case 'search': return knowledgeSearchResultSchema.parse(data);
+    }
+  }
+  async invokeMemory(command: MemoryCommand): Promise<unknown> {
+    if (!['connected', 'degraded'].includes(this.snapshot.state)) throw new Error('HOST_UNAVAILABLE');
+    const checked = memoryCommandSchema.parse(command);
+    const raw = await this.call(`memory.${checked.type}`, checked.payload, 25_000);
+    if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
+    const data: unknown = raw.data;
+    switch (checked.type) {
+      case 'list': return projectMemorySchema.array().parse(data);
+      case 'retrieve': return memorySearchResultSchema.parse(data);
+      case 'get':
+      case 'propose':
+      case 'edit':
+      case 'decide': return projectMemorySchema.parse(data);
+    }
+  }
+  async invokeDevicePairing(command: DevicePairingCommand): Promise<unknown> {
+    if (this.snapshot.state !== 'connected') throw new Error('HOST_UNAVAILABLE');
+    const checked = devicePairingCommandSchema.parse(command);
+    const raw = await this.call(`devices.pair.${checked.type}`, checked.payload);
+    if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
+    switch (checked.type) {
+      case 'issue': return pairingIssuedSchema.parse(raw.data);
+      case 'inspect': return pairingInspectionSchema.parse(raw.data);
+      case 'decide': return pairingDecisionResultSchema.parse(raw.data);
+    }
+  }
+  async prepareDiagnostics(): Promise<import('@forge/contracts').DiagnosticsPreview> {
+    if (this.snapshot.state !== 'connected') throw new Error('HOST_UNAVAILABLE');
+    const raw = await this.call('diagnostics.prepare', {}, 10_000);
+    if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
+    return diagnosticsPreviewSchema.parse(raw.data);
+  }
+  async activity(): Promise<HostActivity> {
+    if (!['connected', 'degraded'].includes(this.snapshot.state)) throw new Error('HOST_UNAVAILABLE');
+    return hostActivitySchema.parse(await this.call('system.activity', {}, 8_000));
+  }
+  async cleanupExpiredArtifacts(previewId: string): Promise<{ purgedImportedArtifacts: number }> {
+    if (this.snapshot.state !== 'connected') throw new Error('HOST_UNAVAILABLE');
+    const raw = await this.call('diagnostics.cleanup', { previewId, confirmed: true }, 15_000);
+    if (!raw || typeof raw !== 'object' || !('data' in raw)) throw new Error('INVALID_RESPONSE');
+    return diagnosticsCleanupResultSchema.omit({ cancelled: true }).parse(raw.data);
   }
   async invokeConversation(raw: unknown): Promise<ConversationCommandResult> {
     const parsed = conversationCommandEnvelopeSchema.safeParse(raw);

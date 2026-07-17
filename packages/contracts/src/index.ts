@@ -36,7 +36,18 @@ export interface ForgeDesktopBridge {
   onPythonHostStatus?(listener: (snapshot: PythonHostSnapshot) => void): () => void;
   invokeSystem(command: SystemCommandEnvelope): Promise<SystemCommandResult>;
   inspectBundledPlugin(): Promise<import('./plugin-config.js').BundledPluginInspection>;
+  setBundledPluginEnabled(enabled: boolean): Promise<import('./plugin-config.js').BundledPluginInspection>;
+  agentProfileCatalog(): Promise<import('./agent-profile.js').AgentProfileCatalog>;
+  saveAgentProfile(value: import('./agent-profile.js').AgentProfileSave): Promise<import('./agent-profile.js').AgentProfile>;
+  invokeWorkflow(command: import('./workflow.js').WorkflowCommand): Promise<unknown>;
+  invokeKnowledge(command: import('./knowledge.js').KnowledgeCommand): Promise<unknown>;
+  invokeMemory(command: import('./project-memory.js').MemoryCommand): Promise<unknown>;
+  invokeDevicePairing?(command: import('./device-pairing.js').DevicePairingCommand): Promise<unknown>;
   chooseProjectFolder(): Promise<string | null>;
+  openAppPreview?(request: import('./app-preview.js').AppPreviewRequest): Promise<import('./app-preview.js').AppPreviewResult>;
+  prepareDiagnostics?(): Promise<import('./diagnostics.js').DiagnosticsPreview>;
+  exportDiagnostics?(previewId: string): Promise<import('./diagnostics.js').DiagnosticsExportResult>;
+  cleanupExpiredArtifacts?(previewId: string): Promise<import('./diagnostics.js').DiagnosticsCleanupResult>;
   invokeProject(command: ProjectCommandEnvelope): Promise<ProjectCommandResult>;
   invokeConversation(command: ConversationCommandEnvelope): Promise<ConversationCommandResult>;
   invokeDraft(command: DraftCommandEnvelope): Promise<DraftCommandResult>;
@@ -46,6 +57,10 @@ export interface ForgeDesktopBridge {
   onConversationEvent(listener: (event: ConversationStreamEvent) => void): () => void;
   onHostStatus(listener: (snapshot: HostConnectionSnapshot) => void): () => void;
 }
+
+export * from './app-preview.js';
+export * from './diagnostics.js';
+export * from './host-activity.js';
 
 export * from './host-protocol.js';
 export * from './python-host-protocol.js';
@@ -66,4 +81,10 @@ export * from './final-acceptance.js';
 export * from './delivery.js';
 export * from './task-change.js';
 export * from './plugin-config.js';
+export * from './agent-profile.js';
+export * from './workflow.js';
+export * from './knowledge.js';
+export * from './project-memory.js';
+export * from './device-pairing.js';
+export * from './context-builder.js';
 export * from './rework.js';
