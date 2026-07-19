@@ -1,5 +1,13 @@
 # Forge 实施状态
 
+## Desktop 基座路线更新 · Aperant 衍生仓库（2026-09-27，内部预览已构建）
+
+用户已明确批准 [ADR 0087](decisions/0087-aperant-derived-desktop-base.md)：未来桌面改以 Aperant `v2.8.0-beta.6` 的 AGPL-3.0 衍生代码为基座，继续实现 Forge 视频方向的玻璃视觉。独立兄弟仓库 `/Users/iamzjt/Desktop/my/myapp/Forge-Aperant` 已检出上游提交 `cba7a0270ec794a14ac71615bc6c48085807ede6`；应用/项目/配置数据隔离、自动发布与更新停用、亮暗玻璃预览和来源声明已提交到本地代码。GitHub 使用独立私有仓库而非平台 fork 关系，移除平台 fork 标识不意味着掩盖源码来源。它是 Aperant 衍生版，不是 Aperant 3.0 或原 Forge Vue 客户端的独立重写；其上游来源、署名、许可证、修改标记和相应源码义务必须持续保留。
+
+此衍生版在 macOS arm64 上完成 `npm run lint`、Desktop typecheck、219 文件 / 4632 项测试、`npm run build`、真实 Electron 空项目亮暗主题截图及最终打包 `.app` 启动。本机内部预览包：`/Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/dist/Forge Glass Preview-0.1.0-preview.1-darwin-arm64-INTERNAL.dmg`，SHA-256 `c72b6ad3d2c2b45ab7cebd9916a675abac03330c756b1b15c4a6973f15047f14`，ad-hoc 签名、未公证；[亮色](https://github.com/j-tide/Forge-Aperant/blob/main/docs/screenshots/forge-glass-preview-light.png)与[暗色](https://github.com/j-tide/Forge-Aperant/blob/main/docs/screenshots/forge-glass-preview-dark.png)是该新仓库真实 Electron 界面截图。`npm run package:mac` 在下载 DMG helper 时中断，最终包经 `electron-builder --mac dir` 与 macOS 原生 `hdiutil` 生成并校验。在线 npm audit 仍有 33 项生产依赖风险，发布前须修复。
+
+**当前尚无 Forge 与衍生版的合并 Runtime 或产品验收。**原 Forge 客户端代码、Python Host、现有 SQLite 用户数据及下方内部包和测试证据保持原状；下方“当前包”仅指各记录生成时的原 Forge 构建，不能转记为衍生版结果。后续需逐项完成有版本 Host 接口、Forge 状态与审批映射、数据保护和当前衍生安装版验收。P7/P8 后置、远程默认关闭和正式发布门禁继续有效；本次只记录技术路线，没有在原 Forge 中替换客户端、迁移数据或发布新包。
+
 ## Desktop 视觉收敛与当前内部包 · 2026-09-27（macOS arm64）
 
 用户再次反馈界面仍不够好看。本轮沿用 [ADR 0086](decisions/0086-video-glass-visual-with-current-desktop-ia.md) 已批准的视频银蓝雾面方向，实际调整 `@forge/ui` 亮暗 token、环境光、Shell/Panel 层级和侧栏 Forge 标记；压缩无任务看板引导面板的占屏面积。新建任务抽屉把真实消息放在输入区之前，保持阅读顺序；工作流零配置页消除重复模板入口，角色和插件页收紧宽度、减少重复标题，明确区分已安装、Host 可用与缺凭据。减少透明度与减少动效沿用现有回退。没有添加业务能力、伪造任务或模型结果，也没有新增依赖、SQLite migration、Host 协议和权限。

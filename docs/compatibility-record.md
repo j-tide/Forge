@@ -1,5 +1,11 @@
 # Forge 版本与兼容性记录
 
+## 2026-09-27 · 独立 Aperant 衍生桌面预览（与原 Forge 构建分开）
+
+经 [ADR 0087](decisions/0087-aperant-derived-desktop-base.md) 批准，独立私有仓库 `j-tide/Forge-Aperant` 基于 Aperant `v2.8.0-beta.6` / `cba7a0270ec794a14ac71615bc6c48085807ede6`。该预览使用上游 Electron 40.0.0、React 19.2.4 与 npm workspace；构建在本机 Node 24.19.0 上完成，不能把原 Forge 的 Vue/pnpm/Python Host 检查结果算到此版本。应用 ID `dev.iamzjt.forgeglasspreview`，项目目录 `.forge-glass-preview/`，与原 Aperant 和 Forge 数据隔离；当前尚未接入 Forge Python Host、SQLite 项目/任务/审批/Run，亦未做在线 Agent 业务验收。
+
+本机 macOS arm64 上，`npm ci --ignore-scripts --offline`、`npm run lint`（exit 0，有 827 条继承的 warning）、Desktop typecheck、`npm run test`（219 文件 / 4632 测试）、`npm run build`、真实 Electron 亮暗主题空项目启动及最新打包 `.app` 启动均通过。`electron-builder --mac dir --publish never --config.mac.identity=-` 在关闭证书自动发现后生成 ad-hoc `.app`；原生 `ditto` ZIP 校验、`hdiutil` DMG 校验及 `codesign --verify --deep --strict` 通过。常规 `npm run package:mac` 在本机下载 DMG helper 时中断，不记为通过。内部 DMG SHA-256 为 `c72b6ad3d2c2b45ab7cebd9916a675abac03330c756b1b15c4a6973f15047f14`，**INTERNAL / ADHOC / UNNOTARIZED**。在线 `npm audit --omit=dev` 仍报告 33 项生产依赖风险（10 high、9 moderate、14 low），公开发布前须处置。Windows x64、macOS Intel、开发者签名、公证、完整任务链、与 Python Host 集成及原 Forge 数据迁移均 **UNVERIFIED**。
+
 ## 2026-09-27 · Current video-glass polish / internal macOS arm64 build
 
 The approved [ADR 0086](decisions/0086-video-glass-visual-with-current-desktop-ia.md) sets the current silver and pale-blue frosted visual and restrained motion direction; [ADR 0085](decisions/0085-aperant-reference-desktop-redesign.md) remains the interaction and information architecture reference. This source revision changes `@forge/ui` light/dark shell and panel tokens, ambient gradients and the independently authored Forge rail mark; it narrows the true empty-board hero, orders the real conversation before the New Task composer, and reduces duplicated Workflow/Role/Plugin UI. Existing light/dark, reduced transparency/motion, and compact Desktop structure remain. There is no new dependency, native module, SQLite schema, local protocol, network listener, credential path, model invocation, or Renderer permission.

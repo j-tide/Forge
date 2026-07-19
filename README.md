@@ -4,11 +4,13 @@
 
 Forge 是自然语言驱动的多 Agent 研发工作台。需求先成为可编辑的 Task Contract，经人工批准进入 TODO；开发、Review、验证与人工验收依靠真实状态和证据。Done 不代表合并或部署。Forge 与 ProofRun 完全独立。
 
+> **桌面基座变更（2026-09-27）**：用户已批准 [ADR 0087](docs/decisions/0087-aperant-derived-desktop-base.md)，未来 Desktop 在独立私有仓库 [Forge-Aperant](https://github.com/j-tide/Forge-Aperant) 的 Aperant `v2.8.0-beta.6` AGPL-3.0 衍生版上继续开发。下文的 Vue/Python Desktop 和安装包记录是本仓库既有版本的历史实现与验收；衍生版尚未连接本仓库的 Python Host 或迁移现有数据，不能把两者的验收互相替代。衍生版保留上游来源与许可声明。
+
 ## 当前状态
 
-### 视频磨砂视觉与现行桌面交互结构（实施中）
+### 原 Forge Desktop 路线：视频磨砂视觉与现行桌面交互结构（历史实现）
 
-经批准的 [ADR 0085](docs/decisions/0085-aperant-reference-desktop-redesign.md) 以公开 Aperant **2.x** 桌面版对照信息架构与交互密度；新的 [ADR 0086](docs/decisions/0086-video-glass-visual-with-current-desktop-ia.md) 将用户先前提供的视频及 `forge_glass_v1.1/design/` 恢复为视觉材质和动效方向。Forge 界面独立用 Vue 实现，继续读取真实 Python Host 状态，不复制第三方源码、素材或视频帧。亮色与暗色共用布局，新安装默认亮色，已保存的主题偏好保持；此设计迁移仍在实施与验收中。
+经批准的 [ADR 0085](docs/decisions/0085-aperant-reference-desktop-redesign.md) 以公开 Aperant **2.x** 桌面版对照信息架构与交互密度；[ADR 0086](docs/decisions/0086-video-glass-visual-with-current-desktop-ia.md) 将用户先前提供的视频及 `forge_glass_v1.1/design/` 恢复为视觉材质和动效方向。这个仓库中的旧 Forge 界面独立用 Vue 实现，继续读取真实 Python Host 状态；亮色与暗色共用布局。该实现保留作历史证据，未来桌面基座已由 ADR 0087 改为独立衍生仓库。
 
 当前源码的正常入口：
 
