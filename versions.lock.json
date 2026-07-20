@@ -1,7 +1,7 @@
 {
-  "taskId": "P0-08",
+  "taskId": "P6-08",
   "releaseVersion": "0.0.1",
-  "verifiedOn": "2026-09-23",
+  "verifiedOn": "2026-09-25",
   "localEnvironment": {
     "platform": "macOS arm64",
     "macOSVersion": "27.0",
@@ -14,6 +14,12 @@
     "electronChromium": "152.0.7977.130"
   },
   "lockedToolVersions": {
+    "@electron/asar": {
+      "version": "4.3.0",
+      "license": "MIT",
+      "registryUnpackedBytes": 125022,
+      "role": "internal macOS and Windows Electron app.asar packaging"
+    },
     "@eslint/js": {
       "version": "10.0.1",
       "license": "MIT",
@@ -66,12 +72,13 @@
   "deferredCompatibility": {
     "sqliteNodeAndElectron": "better-sqlite3 13.0.3 N-API prebuild loaded in Node 22.22.0 ABI 127 and Electron utilityProcess Node 24.21.0 ABI 149 on macOS arm64; packaged app and Windows/macOS Intel unverified",
     "hostProcessAndProtocol": "Electron utilityProcess and standalone Node Host handshake, health, crash detection, and owned shutdown passed on macOS arm64; Windows x64 and macOS Intel unverified",
-    "electronAndBundledNode": "Electron 44.4.3 Desktop startup and renderer smoke passed on macOS arm64; Windows and macOS Intel unverified",
+    "electronAndBundledNode": "Electron 44.4.3 Desktop startup and renderer smoke passed on macOS arm64 in development and an ad-hoc internal app.asar bundle; Developer ID/notarization, Windows and macOS Intel unverified",
+    "pythonPackagedHost": "uv-managed CPython 3.12.13 and Python SQLite 3.50.4/schema30 loaded from a moved, ad-hoc internal macOS arm64 app on an isolated user data root; public signing/notarization, Gatekeeper, x64 and credential upgrade unverified",
     "vueAndVite": "Vue 3.5.43 and Vite 8.3.0 Web build, browser startup, and Desktop renderer passed on macOS arm64",
     "sqliteAndDrizzle": "P0-04: better-sqlite3 13.0.3 and Drizzle 0.45.3 installed; Node and Electron utilityProcess SQLite runtime tested on macOS arm64; packaged app and Windows/macOS Intel unverified",
     "codexSdk": "Codex SDK 0.155.1 and app-server CLI 0.155.1: real read-only, coding, streaming, interrupt, resume, approval approve/reject on macOS arm64; Windows/Intel and packaged app unverified",
     "claudeAgentSdk": "claude-agent-sdk 0.2.159 pinned; bundled Claude Code CLI 2.1.281 --version loaded in an owned process on macOS arm64. No Anthropic API key: agent run, auth, approvals, resume, model compatibility, cancellation and Windows/Intel are UNVERIFIED; not activated as a Forge Executor.",
-    "codexPlatformBinary": "@openai/codex@0.155.1-darwin-arm64 optional binary in lockfile, real app-server and SDK runs on macOS arm64; Windows/Intel and packaged paths unverified",
+    "codexPlatformBinary": "@openai/codex@0.155.1-darwin-arm64 optional binary in lockfile; real app-server run from installed internal macOS arm64 app with an external CLI on current user PATH/login passed. Finder clean-PATH and Windows/Intel remain unverified",
     "workspaceAndProcess": "P0-06: Node POSIX detached process groups and Git worktree verified on macOS arm64; Windows process-tree backend unavailable/unverified, macOS Intel unverified",
     "designSystem": "P0-07: @forge/ui reuses exact Vue 3.5.43, TypeScript 5.9.3 and vue-tsc 3.3.11; Web and Electron renderer verified on macOS arm64. Windows and system DPI unverified.",
     "contractValidator": "P0-08: Ajv 8.20.0, ajv-formats 3.0.1, yaml 2.9.1, and existing better-sqlite3 13.0.3 validated on macOS arm64 Node 22.22.0; Linux CI and Windows/macOS Intel not yet executed."
@@ -119,6 +126,18 @@
         "license": "MIT",
         "registryUnpackedBytes": 7120,
         "role": "strict Vue type checking"
+      },
+      "@vue-flow/core": {
+        "version": "1.48.2",
+        "license": "MIT",
+        "registryUnpackedBytes": 1285046,
+        "role": "advanced Workflow canvas layout and connectors; never execution engine"
+      },
+      "zod": {
+        "version": "4.6.4",
+        "license": "MIT",
+        "registryUnpackedBytes": 6138878,
+        "role": "strict canvas JSON import and layout validation; already locked elsewhere in workspace"
       }
     },
     "packages/ui": {
@@ -327,13 +346,16 @@
     "lockfile": "python/uv.lock",
     "licenses": "docs/python-dependency-licenses.json",
     "direct": {
+      "cryptography": "50.0.1",
       "pydantic": "2.13.5",
       "pytest": "9.1.1",
       "pytest-asyncio": "1.4.0",
       "ruff": "0.16.8",
       "mypy": "2.3.1",
       "hatchling": "1.32.4",
-      "claude-agent-sdk": "0.2.159"
+      "claude-agent-sdk": "0.2.159",
+      "jsonschema": "4.26.0",
+      "types-jsonschema": "4.26.0.20260518"
     }
   }
 }

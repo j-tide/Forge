@@ -9,6 +9,8 @@ const phases = JSON.parse(readFileSync(`${root}forge_spec_v1.0/planning/phases.j
 const cases = JSON.parse(readFileSync(`${root}forge_spec_v1.0/tests/acceptance-cases.json`, 'utf8'));
 const deferredFile = process.argv[3] ?? `${root}docs/deferred-verification.json`;
 const deferred = JSON.parse(readFileSync(deferredFile, 'utf8'));
+const exceptionFile = process.argv[4] ?? `${root}docs/development-dependency-exceptions.json`;
+const exceptions = JSON.parse(readFileSync(exceptionFile, 'utf8'));
 const issues = [];
 const taskById = new Map(tasks.map((task) => [task.id, task]));
 const caseIds = new Set(cases.map((entry) => entry.id));
@@ -54,6 +56,7 @@ for (let index = 0; index < phaseHeaders.length; index += 1) {
 }
 
 const referencedDetails = new Map();
+const statusById = new Map();
 for (let index = 0; index < taskHeaders.length; index += 1) {
   const header = taskHeaders[index];
   const task = taskById.get(header[1]);
@@ -70,6 +73,7 @@ for (let index = 0; index < taskHeaders.length; index += 1) {
   check(body.match(/^### Authoritative acceptance\n\n([^\n]*)$/m)?.[1] ?? null,
     task.acceptance, `${task.id} acceptance`);
   const status = field(body, 'Status');
+  statusById.set(task.id, status);
   if (!['TODO', 'IN_PROGRESS', 'DONE', 'BLOCKED', 'DEFERRED'].includes(status) &&
     !(task.id === 'P2-10' && status === 'PAUSED_FOR_PYTHON_CORE_MIGRATION')) {
     issues.push(`${task.id} invalid status ${status}`);
@@ -94,6 +98,38 @@ for (let index = 0; index < details.length; index += 1) {
   for (const id of owners) if (!taskById.has(id)) issues.push(`${detail[1]} references unknown task ${id}`);
 }
 for (const id of referencedDetails.keys()) if (!details.some((entry) => entry[1] === id)) issues.push(`Missing detail ${id}`);
+
+// Explicit development-only exceptions to the exact user-authorized canonical edges.
+// Never infer that arbitrary BLOCKED tasks satisfy their downstream dependencies.
+const authorizedEdges = new Set(['P4-05:P4-06', 'P4-10:P5-01', 'P6-06:P6-07',
+  'P6-07:P6-08', 'P6-08:P6-09', 'P6-09:P6-10', 'P6-10:P7-01']);
+if (exceptions.schemaVersion !== '1.0' || !Array.isArray(exceptions.exceptions)) {
+  issues.push('Development dependency exceptions require schemaVersion 1.0 and exceptions array');
+} else {
+  const seen = new Set();
+  for (const exception of exceptions.exceptions) {
+    const edge = `${exception.blockedTaskId}:${exception.allowedTaskId}`;
+    if (!authorizedEdges.has(edge) || seen.has(edge)) issues.push(`Unauthorized development dependency exception ${edge}`);
+    seen.add(edge);
+    if (!taskById.get(exception.allowedTaskId)?.dependsOn.includes(exception.blockedTaskId)) {
+      issues.push(`Development exception ${edge} is not a canonical dependency edge`);
+    }
+    if (exception.scope !== 'development-only' || !exception.authorization?.trim() ||
+        !exception.releaseGate?.trim() || !Array.isArray(exception.preconditions) ||
+        exception.preconditions.length === 0) {
+      issues.push(`Development exception ${edge} lacks bounded authorization, preconditions or release gate`);
+    }
+    if (statusById.get(exception.blockedTaskId) === 'DONE') {
+      issues.push(`Development exception ${edge} must be removed after the blocked task passes`);
+    }
+  }
+  for (const edge of authorizedEdges) {
+    const [blockedTaskId] = edge.split(':');
+    if (statusById.get(blockedTaskId) !== 'DONE' && !seen.has(edge)) {
+      issues.push(`Missing authorized development exception ${edge}`);
+    }
+  }
+}
 
 if (deferred.schemaVersion !== '1.0' || !Array.isArray(deferred.entries)) {
   issues.push('Deferred verification manifest requires schemaVersion 1.0 and entries array');

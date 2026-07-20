@@ -10,12 +10,58 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const original = readFileSync(join(root, 'docs/forge-codex-execution-playbook.md'), 'utf8');
 const validator = join(root, 'scripts/validate-playbook-task-map.mjs');
 const originalDeferred = JSON.parse(readFileSync(join(root, 'docs/deferred-verification.json'), 'utf8'));
+const originalExceptions = JSON.parse(readFileSync(join(root, 'docs/development-dependency-exceptions.json'), 'utf8'));
 
 test('canonical Playbook task map validates', () => {
   const result = spawnSync(process.execPath, [validator], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /92 tasks/);
   assert.match(result.stdout, new RegExp(`${originalDeferred.entries.length} deferred verifications`));
+});
+
+for (const [name, mutate, expected] of [
+  ['unrelated blocked task', (value) => ({ ...value, blockedTaskId: 'P4-04', allowedTaskId: 'P4-05' }), 'Unauthorized development dependency exception'],
+  ['release scope', (value) => ({ ...value, scope: 'release' }), 'lacks bounded authorization'],
+  ['missing authorization', (value) => ({ ...value, authorization: '' }), 'lacks bounded authorization'],
+]) {
+  test(`development exception rejects ${name}`, () => {
+    const dir = mkdtempSync(join(tmpdir(), 'forge-dependency-exception-'));
+    try {
+      const changed = { ...originalExceptions, exceptions: [mutate(originalExceptions.exceptions[0]), originalExceptions.exceptions[1]] };
+      const file = join(dir, 'exceptions.json');
+      writeFileSync(file, JSON.stringify(changed));
+      const result = spawnSync(process.execPath, [validator, join(root, 'docs/forge-codex-execution-playbook.md'), join(root, 'docs/deferred-verification.json'), file], { encoding: 'utf8' });
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, new RegExp(expected));
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+}
+
+for (const [blocked, allowed] of [
+  ['P6-06', 'P6-07'], ['P6-07', 'P6-08'], ['P6-08', 'P6-09'], ['P6-09', 'P6-10'],
+  ['P6-10', 'P7-01'],
+]) test(`${blocked} to ${allowed} scheduling exception is exact and cannot release`, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'forge-development-dependency-exception-'));
+  try {
+    const file = join(dir, 'exceptions.json');
+    const withoutP6 = { ...originalExceptions,
+      exceptions: originalExceptions.exceptions.filter((item) => item.blockedTaskId !== blocked) };
+    writeFileSync(file, JSON.stringify(withoutP6));
+    let result = spawnSync(process.execPath, [validator, join(root,
+      'docs/forge-codex-execution-playbook.md'), join(root,
+      'docs/deferred-verification.json'), file], { encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, new RegExp(`Missing authorized development exception ${blocked}:${allowed}`));
+
+    const releaseScope = { ...originalExceptions, exceptions: originalExceptions.exceptions.map(
+      (item) => item.blockedTaskId === blocked ? { ...item, scope: 'release' } : item) };
+    writeFileSync(file, JSON.stringify(releaseScope));
+    result = spawnSync(process.execPath, [validator, join(root,
+      'docs/forge-codex-execution-playbook.md'), join(root,
+      'docs/deferred-verification.json'), file], { encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, new RegExp(`${blocked}:${allowed} lacks bounded authorization`));
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
 for (const [name, change, expected] of [

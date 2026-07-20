@@ -1,28 +1,56 @@
 /** MIG-PY-09: real Electron Renderer -> Main -> Python Host -> Codex, isolated fixture. */
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { _electron as electron } from 'playwright-core';
 
 const requireDesktop = createRequire(new URL('../apps/desktop/package.json', import.meta.url));
 const desktopDirectory = fileURLToPath(new URL('../apps/desktop/', import.meta.url));
+const repositoryRoot = fileURLToPath(new URL('../', import.meta.url));
+const packagedAcceptance = process.env.FORGE_VERTICAL_PACKAGED === '1';
 const p3Acceptance = process.env.FORGE_P3_ACCEPTANCE === '1';
+const contextOnly = process.env.FORGE_VERTICAL_CONTEXT_ONLY === '1';
+const customWorkflow = process.env.FORGE_VERTICAL_CUSTOM_WORKFLOW === '1';
 const mergeOnly = process.env.FORGE_VERTICAL_MERGE_ONLY === '1';
 const finalOnly = process.env.FORGE_VERTICAL_FINAL_ONLY === '1' || mergeOnly;
-const root = await mkdtemp(join(tmpdir(), 'forge-python-desktop-live-'));
+const requestedRoot = process.env.FORGE_VERTICAL_ROOT;
+if (requestedRoot && (!isAbsolute(requestedRoot) || existsSync(requestedRoot))) {
+  throw new Error('FORGE_VERTICAL_ROOT must be an absolute path that does not exist');
+}
+const root = requestedRoot ?? await mkdtemp(join(tmpdir(), 'forge-python-desktop-live-'));
+if (requestedRoot) await mkdir(root, { recursive: true });
+const artifactTag = process.env.FORGE_VERTICAL_ARTIFACT_TAG;
+if (artifactTag && !/^[a-z0-9][a-z0-9-]{0,39}$/.test(artifactTag)) {
+  throw new Error('FORGE_VERTICAL_ARTIFACT_TAG must be a short lowercase slug');
+}
+const packagedScreenshot = (part) => artifactTag ?
+  join(repositoryRoot, 'output', 'playwright', `${artifactTag}-${part}-1440x900.png`) :
+  fileURLToPath(new URL(`../output/playwright/p6-06-packaged-${part}-1440x900.png`, import.meta.url));
 const source = join(root, 'Forge fixture 空格');
-const dataDir = join(root, 'data');
-const screenshot = fileURLToPath(new URL(p3Acceptance ?
+const packagedAppData = join(root, 'isolated-app-data');
+const dataDir = packagedAcceptance ? join(packagedAppData, 'Forge', 'production') : join(root, 'data');
+const screenshot = packagedAcceptance && artifactTag ? packagedScreenshot('delivery') :
+  fileURLToPath(new URL(packagedAcceptance ?
+  '../output/playwright/p6-06-packaged-delivery-1440x900.png' : p3Acceptance ?
   '../output/playwright/p3-12-python-desktop-handoff-1440x900.png' : mergeOnly ?
   '../output/playwright/p3-08-python-desktop-delivery-1440x900.png' : finalOnly ?
-  '../output/playwright/p3-07-python-desktop-delivery-1440x900.png' :
+  '../output/playwright/p3-07-python-desktop-delivery-1440x900.png' : customWorkflow ?
+  '../output/playwright/p5-11-workflow-run-desktop.png' : contextOnly ?
+  '../output/playwright/p5-11-context-source-desktop.png' :
   '../output/playwright/mig-py-09-python-desktop-run-1440x900.png', import.meta.url));
 let desktop;
+let installRoot;
+let mounted = false;
+const mount = join(root, 'mounted-dmg');
+let installedApp;
+const lifecycleOnly = process.env.FORGE_P6_LIFECYCLE === '1';
 const git = (...args) => execFileSync('git', ['-C', source, ...args], { encoding: 'utf8' }).trim();
 
 async function invoke(page, group, type, payload) {
@@ -54,6 +82,24 @@ async function boardSnapshot(page, projectId) {
 }
 
 try {
+  if (packagedAcceptance) {
+    assert.equal(process.platform, 'darwin');
+    assert.equal(process.arch, 'arm64');
+    const version = JSON.parse(await readFile(join(desktopDirectory, 'package.json'), 'utf8')).version;
+    const dmg = process.env.FORGE_VERTICAL_DMG || join(repositoryRoot, 'build', 'macos',
+      `Forge-${version}-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64.dmg`);
+    installRoot = await mkdtemp(join(repositoryRoot, 'build', 'macos', 'qa-install-'));
+    installedApp = join(installRoot, 'Forge INTERNAL.app');
+    await mkdir(mount);
+    const attach = spawnSync('hdiutil', ['attach', '-readonly', '-nobrowse',
+      '-mountpoint', mount, dmg], { encoding: 'utf8' });
+    assert.equal(attach.status, 0, attach.stderr);
+    mounted = true;
+    execFileSync('ditto', [join(mount, 'Forge INTERNAL.app'), installedApp]);
+    execFileSync('hdiutil', ['detach', mount]);
+    mounted = false;
+    execFileSync('codesign', ['--verify', '--deep', '--strict', installedApp]);
+  }
   await mkdir(source);
   git('init', '-b', 'main');
   git('config', 'user.name', 'Forge fixture');
@@ -62,21 +108,54 @@ try {
   await writeFile(join(source, 'test.js'), "import { add } from './math.js';\nimport assert from 'node:assert/strict';\nassert.equal(add(1, 2), 3);\nconsole.log('Forge fixture test completed');\n");
   await writeFile(join(source, 'hold.js'), 'setTimeout(() => {}, 120_000);\n');
   await writeFile(join(source, 'package.json'), '{"type":"module","scripts":{"test":"node test.js"}}\n');
+  if (contextOnly) {
+    await mkdir(join(source, 'docs'));
+    await writeFile(join(source, 'docs', 'context.md'),
+      '# Date API\nUse start_date for date filtering in this fixture.\n');
+    await writeFile(join(source, 'docs', 'conflict.md'),
+      '# Date API\nDo not use start_date for date filtering in this fixture.\n');
+  }
   git('add', '.'); git('commit', '-m', 'fixture');
   const sourceHead = git('rev-parse', 'HEAD');
-  desktop = await electron.launch({ executablePath: requireDesktop('electron'),
-    args: [desktopDirectory], env: { ...process.env, FORGE_DEV_SERVER_URL: '', FORGE_HOST_DATA_DIR: dataDir } });
+  const desktopExecutable = packagedAcceptance ? join(installedApp, 'Contents', 'MacOS', 'Forge') :
+    requireDesktop('electron');
+  const desktopArgs = packagedAcceptance ? [] : [desktopDirectory];
+  const desktopEnv = { ...process.env, FORGE_DEV_SERVER_URL: '',
+    ...(packagedAcceptance ? { FORGE_INTERNAL_TEST_HOME: packagedAppData } :
+      { FORGE_HOST_DATA_DIR: dataDir }) };
+  desktop = await electron.launch({ executablePath: desktopExecutable,
+    args: desktopArgs, env: desktopEnv });
+  if (process.env.FORGE_BRIDGE_DIAGNOSTIC === '1') {
+    desktop.process().stderr?.on('data', (chunk) => {
+      for (const line of chunk.toString().split('\n')) {
+        if (line.includes('forge-python-bridge')) process.stderr.write(`${line}\n`);
+      }
+    });
+  }
   if (mergeOnly) await desktop.evaluate(({dialog}) => {
     let confirmations = 0;
     dialog.showMessageBox = async () => ({response:++confirmations === 1 ? 0 : 1,
       checkboxChecked:false});
   });
-  const page = await desktop.firstWindow();
+  let page = await desktop.firstWindow();
   await page.getByRole('button', { name: 'Host connected' }).waitFor({ timeout: 15000 });
   const hostHealth = await page.evaluate(() => globalThis.forge.hostHealth());
   assert.equal(hostHealth.ok, true);
   assert.equal(hostHealth.data.runtime.implementation, 'CPython');
-  assert.equal(hostHealth.data.storage.schemaVersion, 24);
+  assert.equal(hostHealth.data.storage.schemaVersion, 32);
+  if (packagedAcceptance) {
+    const packagePaths = await desktop.evaluate(({ app }) => ({
+      packaged: app.isPackaged, appData: app.getPath('appData'), resources: process.resourcesPath,
+    }));
+    assert.equal(packagePaths.packaged, true);
+    assert.equal(packagePaths.appData, packagedAppData);
+    assert.ok(packagePaths.resources.startsWith(installedApp));
+    const hostCommand = execFileSync('ps', ['-p', String(hostHealth.data.pid), '-o', 'command='],
+      { encoding: 'utf8' });
+    assert.ok(hostCommand.includes(join(installedApp, 'Contents', 'Resources',
+      'forge-python', 'runtime', 'bin', 'python3.12')));
+    assert.ok(!hostCommand.includes(join(repositoryRoot, 'python', '.venv')));
+  }
 
   await desktop.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () =>
     ({ canceled: false, filePaths: [path] }); }, source);
@@ -87,6 +166,14 @@ try {
     rootPath: source, fingerprint: probe.fingerprint, trustVersion: 'project-trust/v1',
     approved: true, expectedRevision: 0,
   });
+  let contextSourceId;
+  if (contextOnly) {
+    const imported = await page.evaluate((projectId) => globalThis.forge.invokeKnowledge({
+      type: 'import', payload: { projectId, relativePath: 'docs/context.md' },
+    }), project.projectId);
+    assert.equal(imported.status, 'active');
+    contextSourceId = imported.sourceId;
+  }
   let verifierPreset;
   if (process.env.FORGE_VERTICAL_VERIFY_ONLY === '1' || finalOnly) {
     const environment = await invoke(page, 'project', 'environment.get', {
@@ -120,6 +207,41 @@ try {
     projectId: project.projectId, conversationId: conversation.conversationId,
     sourceMessageId: sent.message.messageId, idempotencyKey: 'python-desktop-live-draft-01',
   });
+  const modelId = process.env.FORGE_VERTICAL_MODEL ?? 'gpt-6-luna';
+  let workflowRef = 'standard@1';
+  if (customWorkflow) {
+    const developer = await page.evaluate((modelId) => globalThis.forge.saveAgentProfile({
+      profile: { schemaVersion:'1.0', id:'profile.fixture.workflow.developer', revision:1,
+        name:'Fixture Workflow Developer', role:'developer', executorId:'executor.codex',
+        modelId, promptTemplate:'Develop only in the isolated fixture workspace.',
+        contextProviders:['task-contract','project-context'], policyProfile:'workspace-write',
+        limits:{maxTurns:10,maxSeconds:180,maxOutputTokens:50000} }, expectedRevision:0,
+    }), modelId);
+    const reviewer = await page.evaluate((modelId) => globalThis.forge.saveAgentProfile({
+      profile: { schemaVersion:'1.0', id:'profile.fixture.workflow.reviewer', revision:1,
+        name:'Fixture Workflow Reviewer', role:'reviewer', executorId:'executor.codex',
+        modelId, promptTemplate:'Review the fixed snapshot read-only.',
+        contextProviders:['task-contract','snapshot-diff'], policyProfile:'read-only',
+        limits:{maxTurns:10,maxSeconds:180,maxOutputTokens:50000} }, expectedRevision:0,
+    }), modelId);
+    const presets = await page.evaluate(() => globalThis.forge.invokeWorkflow({
+      type:'presets',payload:{},
+    }));
+    const quick = presets.find((item) => item.id === 'quick');
+    assert.ok(quick);
+    const template = { ...quick, id:'workflow.fixture.quick',
+      nodes:quick.nodes.map((node) => ({...node,binding:node.id === 'develop' ? developer.id :
+        node.id === 'review' ? reviewer.id : node.binding})) };
+    const saved = await page.evaluate((template) => globalThis.forge.invokeWorkflow({
+      type:'saveDraft',payload:{template,expectedRevision:0},
+    }), template);
+    assert.equal(saved.compiled.launchable, true);
+    const published = await page.evaluate((workflowId) => globalThis.forge.invokeWorkflow({
+      type:'publish',payload:{workflowId,expectedDraftRevision:1},
+    }), template.id);
+    assert.equal(published.record.publishedRevision, 1);
+    workflowRef = template.id;
+  }
   const decisionId = crypto.randomUUID();
   const decisionRef = `decision:${decisionId}`;
   const contract = { schemaVersion: '1.0', taskId: draft.draftId, projectId: project.projectId,
@@ -130,7 +252,7 @@ try {
     constraints: [], scope: ['math.js', 'test.js'], outOfScope: [], dependencies: [],
     openQuestions: [], assumptions: [],
     sourceRefs: [`message:${sent.message.messageId}`, decisionRef],
-    workflowRef: 'standard@1', priority: 'normal' };
+    workflowRef, priority: 'normal' };
   const revised = await invoke(page, 'draft', 'draft.revise', {
     projectId: project.projectId, draftId: draft.draftId, expectedRevision: 1,
     contract, decisionId, decisionSummary: 'Fixture scope approved',
@@ -147,20 +269,103 @@ try {
     },
   });
   assert.equal(approved.taskState, 'todo');
+  if (packagedAcceptance) {
+    const beforeStart = await boardSnapshot(page, project.projectId);
+    assert.equal(beforeStart.tasks.find((item) => item.id === draft.draftId)?.state, 'todo');
+    assert.equal(beforeStart.tasks.find((item) => item.id === draft.draftId)?.latestRunId ?? null, null);
+  }
   const capabilities = await invoke(page, 'run', 'run.capabilities', {
     projectId: project.projectId, taskId: draft.draftId,
   });
-  const modelId = process.env.FORGE_VERTICAL_MODEL ?? 'gpt-6-luna';
   assert.equal(capabilities.available, true);
   assert.ok(capabilities.modelIds.includes(modelId));
+  if (contextOnly) {
+    const rejected = await page.evaluate(({projectId,taskId,modelId}) =>
+      globalThis.forge.invokeRun({schemaVersion:'1.0',commandId:crypto.randomUUID(),
+        type:'run.start',createdAt:new Date().toISOString(),
+        protocolVersion:'forge-host-protocol/v5',payload:{projectId,taskId,
+          expectedTaskRevision:2,modelId,idempotencyKey:crypto.randomUUID(),
+          contextQuery:'no_matching_context_fixture_987654321'}}),
+      {projectId:project.projectId,taskId:draft.draftId,modelId});
+    assert.equal(rejected.ok, false);
+    assert.equal(rejected.error.code, 'CONTEXT_NO_SOURCE');
+    const conflicting = await page.evaluate((projectId) => globalThis.forge.invokeKnowledge({
+      type:'import',payload:{projectId,relativePath:'docs/conflict.md'},
+    }), project.projectId);
+    assert.equal(conflicting.status, 'active');
+    const conflict = await page.evaluate(({projectId,taskId,modelId}) =>
+      globalThis.forge.invokeRun({schemaVersion:'1.0',commandId:crypto.randomUUID(),
+        type:'run.start',createdAt:new Date().toISOString(),
+        protocolVersion:'forge-host-protocol/v5',payload:{projectId,taskId,
+          expectedTaskRevision:2,modelId,idempotencyKey:crypto.randomUUID(),
+          contextQuery:'start_date'}}),
+      {projectId:project.projectId,taskId:draft.draftId,modelId});
+    assert.equal(conflict.ok, false);
+    assert.equal(conflict.error.code, 'CONTEXT_REQUIRES_HUMAN');
+    await page.evaluate(({projectId,sourceId}) => globalThis.forge.invokeKnowledge({
+      type:'revoke',payload:{projectId,sourceId},
+    }), {projectId:project.projectId,sourceId:conflicting.sourceId});
+    console.log(JSON.stringify({stage:'p5-context-gates',noAnswer:rejected.error.code,
+      conflict:conflict.error.code,sourceClean:git('status','--porcelain') === ''}));
+  }
+  let savedProfile = null;
+  let savedReviewerProfile = null;
+  if (process.env.FORGE_VERTICAL_PROFILE === '1') {
+    const catalog = await page.evaluate(() => globalThis.forge.agentProfileCatalog());
+    assert.equal(catalog.executors.find((item) => item.executorId === 'executor.claude').available, false);
+    const base = {
+      schemaVersion: '1.0', revision: 1, name: 'Fixture Developer', role: 'developer',
+      executorId: 'executor.codex', promptTemplate: 'Develop only in the isolated workspace.',
+      contextProviders: ['task-contract', 'project-context'], policyProfile: 'workspace-write',
+      limits: { maxTurns: 10, maxSeconds: 180, maxOutputTokens: 50000 },
+    };
+    const bad = await page.evaluate((value) => globalThis.forge.saveAgentProfile(value), {
+      profile: { ...base, id: 'profile.fixture.unsupported', modelId: 'unsupported-model' },
+      expectedRevision: 0,
+    });
+    assert.equal(bad.modelId, 'unsupported-model');
+    const refused = await page.evaluate(async (payload) => globalThis.forge.invokeRun({
+      schemaVersion: '1.0', commandId: crypto.randomUUID(), type: 'run.start',
+      createdAt: new Date().toISOString(), protocolVersion: 'forge-host-protocol/v5', payload,
+    }), { projectId: project.projectId, taskId: draft.draftId,
+      expectedTaskRevision: 2, modelId: 'unsupported-model',
+      idempotencyKey: crypto.randomUUID(), profileId: bad.id, profileRevision: 1 });
+    assert.equal(refused.ok, false);
+    assert.equal(refused.error.code, 'MODEL_UNAVAILABLE');
+    savedProfile = await page.evaluate((value) => globalThis.forge.saveAgentProfile(value), {
+      profile: { ...base, id: 'profile.fixture.developer', modelId }, expectedRevision: 0,
+    });
+    if (process.env.FORGE_VERTICAL_REVIEW_ONLY === '1') {
+      savedReviewerProfile = await page.evaluate((value) =>
+        globalThis.forge.saveAgentProfile(value), {
+        profile: { ...base, id: 'profile.fixture.reviewer', name: 'Fixture Reviewer',
+          role: 'reviewer', modelId, promptTemplate:
+            'Review the fixed snapshot for correctness. Return the requested structured result.',
+          contextProviders: ['task-contract', 'snapshot-diff'], policyProfile: 'read-only' },
+        expectedRevision: 0,
+      });
+    }
+  }
   let successResult;
   if (process.env.FORGE_VERTICAL_SKIP_SUCCESS !== '1') {
   const runId = crypto.randomUUID();
   const run = await invoke(page, 'run', 'run.start', {
     projectId: project.projectId, taskId: draft.draftId,
     expectedTaskRevision: 2, modelId, idempotencyKey: runId,
+    ...(savedProfile ? { profileId: savedProfile.id, profileRevision: savedProfile.revision } : {}),
+    ...(contextOnly ? { contextQuery: 'start_date' } : {}),
   });
   assert.equal(run.runId, runId);
+  if (contextOnly) {
+    const python = fileURLToPath(new URL('../python/.venv/bin/python', import.meta.url));
+    const sourceEvidence = JSON.parse(execFileSync(python, ['-c',
+      'import json,sqlite3,sys; c=sqlite3.connect(sys.argv[1]); r=c.execute("SELECT bundle_json FROM context_bundles WHERE run_id=?",(sys.argv[2],)).fetchone(); print(json.dumps([{"kind":i["kind"],"authority":i["authority"],"sourceRef":i["sourceRef"]} for i in json.loads(r[0])["items"]]))',
+      join(dataDir, 'forge.sqlite'), runId], { encoding: 'utf8' }));
+    assert.ok(sourceEvidence.some((item) => item.kind === 'retrieved_knowledge' &&
+      item.authority === 'untrusted_project' && item.sourceRef.startsWith('knowledge:')));
+    console.log(JSON.stringify({ stage: 'p5-context-run', runId,
+      sources: sourceEvidence.filter((item) => item.kind === 'retrieved_knowledge') }));
+  }
   let inspection;
   for (let attempt = 0; attempt < 240; attempt += 1) {
     await delay(1000);
@@ -170,15 +375,34 @@ try {
     if (['succeeded', 'failed', 'cancelled', 'interrupted'].includes(inspection.run.state)) break;
   }
   assert.equal(inspection?.run.state, 'succeeded', JSON.stringify(inspection));
-  const pluginLock = JSON.parse(await readFile(fileURLToPath(new URL(
-    '../python/src/forge/builtin_plugins/plugins.lock.json', import.meta.url)), 'utf8')).plugins[0];
-  const snapshotText = execFileSync('uv', [
-    '--directory', fileURLToPath(new URL('../python/', import.meta.url)),
-    'run', '--frozen', 'python', '-c',
+  const pluginLockFile = packagedAcceptance ? join(installedApp, 'Contents', 'Resources',
+    'forge-python', 'packages', 'forge', 'builtin_plugins', 'plugins.lock.json') :
+    fileURLToPath(new URL('../python/src/forge/builtin_plugins/plugins.lock.json', import.meta.url));
+  const pluginLock = JSON.parse(await readFile(pluginLockFile, 'utf8')).plugins[0];
+  const snapshotText = execFileSync(packagedAcceptance ? 'python3' : 'uv', [
+    ...(packagedAcceptance ? [] : ['--directory', fileURLToPath(new URL('../python/', import.meta.url)),
+      'run', '--frozen', 'python']), '-c',
     "import sqlite3,sys,pathlib; p=pathlib.Path(sys.argv[1]); db=sqlite3.connect(p.as_uri()+'?mode=ro',uri=True); row=db.execute('SELECT snapshot_json FROM run_config_snapshots WHERE run_id=?',(sys.argv[2],)).fetchone(); print(row[0] if row else '')",
     join(dataDir, 'forge.sqlite'), runId,
   ], { encoding: 'utf8', timeout: 15_000 });
   const frozenPlugin = JSON.parse(snapshotText).plugins.find((entry) => entry.id === pluginLock.id);
+  if (customWorkflow) {
+    const frozen = JSON.parse(snapshotText);
+    assert.equal(frozen.workflow.id, workflowRef);
+    assert.equal(frozen.workflow.version, '1');
+    assert.equal(frozen.profile.id, 'profile.fixture.workflow.developer');
+    assert.equal(frozen.stageProfiles[0].id, 'profile.fixture.workflow.reviewer');
+    const configSource = await invoke(page, 'run', 'run.config', {
+      projectId:project.projectId,runId,
+    });
+    assert.equal(configSource.workflow.contentHash, frozen.workflow.contentHash);
+    assert.equal(configSource.developerProfile.id, frozen.profile.id);
+    assert.equal(configSource.actualNodeId, 'develop');
+  }
+  if (savedProfile) {
+    assert.equal(JSON.parse(snapshotText).profile.id, savedProfile.id);
+    assert.equal(JSON.parse(snapshotText).profile.version, String(savedProfile.revision));
+  }
   assert.deepEqual(frozenPlugin, { id: pluginLock.id, version: pluginLock.version,
     contentHash: pluginLock.contentHash });
   let handoff = null;
@@ -215,6 +439,29 @@ try {
     runState: inspection.run.state, changed, sourceClean: true,
     formalAcceptance: handoff.stepResult.acceptanceResults[0].status, screenshot,
     diffArtifact };
+  if (contextOnly) {
+    const initialSources = await invoke(page, 'run', 'context.sources', {
+      projectId: project.projectId, runId,
+    });
+    assert.equal(initialSources.length, 1);
+    assert.equal(initialSources[0].status, 'current');
+    const revoked = await page.evaluate(({projectId,sourceId}) => globalThis.forge.invokeKnowledge({
+      type: 'revoke', payload: { projectId, sourceId },
+    }), {projectId:project.projectId,sourceId:contextSourceId});
+    assert.equal(revoked.status, 'revoked');
+    const after = await invoke(page, 'run', 'context.sources', {
+      projectId: project.projectId, runId,
+    });
+    assert.equal(after[0].status, 'revoked');
+    await page.getByRole('tab', { name: 'context' }).click();
+    await page.getByText('历史 Run 输入已冻结', { exact: false }).waitFor();
+    await page.getByText('retrieved_knowledge', { exact: false }).first().waitFor();
+    await page.screenshot({ path: fileURLToPath(new URL(
+      '../output/playwright/p5-11-context-source-desktop.png', import.meta.url)) });
+    assert.equal(git('status', '--porcelain'), '');
+    console.log(JSON.stringify({stage:'p5-context-run-completed',runId,
+      runState:inspection.run.state,sourceStatus:after[0].status,sourceClean:true}));
+  }
   if (process.env.FORGE_VERTICAL_VERIFY_ONLY === '1' || finalOnly) {
     assert.ok(verifierPreset?.approvalHash);
     const verifyInput = {
@@ -279,7 +526,9 @@ try {
     assert.equal(afterMatrix.requiredCovered, true);
     assert.equal(afterMatrix.evaluation, 'covered');
     assert.equal(afterMatrix.finalAcceptanceRequired, true);
-    const matrixScreenshot = fileURLToPath(new URL(p3Acceptance ?
+    const matrixScreenshot = packagedAcceptance && artifactTag ? packagedScreenshot('matrix') :
+      fileURLToPath(new URL(packagedAcceptance ?
+      '../output/playwright/p6-06-packaged-matrix-1440x900.png' : p3Acceptance ?
       '../output/playwright/p3-12-python-desktop-matrix-1440x900.png' : mergeOnly ?
       '../output/playwright/p3-08-python-desktop-matrix-1440x900.png' : finalOnly ?
       '../output/playwright/p3-07-python-desktop-matrix-1440x900.png' :
@@ -299,6 +548,8 @@ try {
       projectId: project.projectId, taskId: draft.draftId,
       developmentRunId: runId, expectedSnapshotId: handoff.snapshot.snapshotId,
       modelId, idempotencyKey: reviewKey,
+      ...(savedReviewerProfile ? { profileId: savedReviewerProfile.id,
+        profileRevision: savedReviewerProfile.revision } : {}),
     };
     const startedReview = await invoke(page, 'run', 'run.reviewStart', reviewInput);
     const retriedReview = await invoke(page, 'run', 'run.reviewStart', reviewInput);
@@ -316,14 +567,25 @@ try {
     });
     assert.equal(reports.length, 1);
     assert.equal(reports[0].snapshotId, handoff.snapshot.snapshotId);
-    assert.ok(reports[0].result);
+    if (savedReviewerProfile) {
+      const storedProfile = execFileSync('uv', [
+        '--directory', fileURLToPath(new URL('../python/', import.meta.url)),
+        'run', '--frozen', 'python', '-c',
+        "import sqlite3,sys,pathlib; p=pathlib.Path(sys.argv[1]); db=sqlite3.connect(p.as_uri()+'?mode=ro',uri=True); row=db.execute('SELECT profile_id,profile_revision FROM review_jobs WHERE review_run_id=?',(sys.argv[2],)).fetchone(); print((row[0] or '')+':'+str(row[1] or ''))",
+        join(dataDir, 'forge.sqlite'), reviewJob.reviewRunId,
+      ], { encoding: 'utf8', timeout: 15_000 }).trim();
+      assert.equal(storedProfile, `${savedReviewerProfile.id}:${savedReviewerProfile.revision}`);
+    }
+    assert.ok(reports[0].result, `Review has no structured result: status=${reports[0].status}, jobError=${reviewJob.errorCode ?? 'none'}`);
     assert.notEqual(reports[0].status, 'stale');
     await page.reload();
     await page.getByText('Review 与问题历史').waitFor({ timeout: 15_000 });
     await page.getByText(`最近报告：${reports[0].status}`, { exact: false })
       .waitFor({ timeout: 15_000 });
     await page.getByText('Review 与问题历史').scrollIntoViewIfNeeded();
-    const reviewScreenshot = fileURLToPath(new URL(p3Acceptance ?
+    const reviewScreenshot = packagedAcceptance && artifactTag ? packagedScreenshot('review') :
+      fileURLToPath(new URL(packagedAcceptance ?
+      '../output/playwright/p6-06-packaged-review-1440x900.png' : p3Acceptance ?
       '../output/playwright/p3-12-python-desktop-review-1440x900.png' : mergeOnly ?
       '../output/playwright/p3-08-python-desktop-review-1440x900.png' : finalOnly ?
       '../output/playwright/p3-07-python-desktop-review-1440x900.png' :
@@ -369,7 +631,9 @@ try {
     assert.equal(task.state, 'done');
     assert.equal(task.boardColumn, 'done');
     await finalPanel.scrollIntoViewIfNeeded();
-    const finalScreenshot = fileURLToPath(new URL(p3Acceptance ?
+    const finalScreenshot = packagedAcceptance && artifactTag ? packagedScreenshot('accepted') :
+      fileURLToPath(new URL(packagedAcceptance ?
+      '../output/playwright/p6-06-packaged-accepted-1440x900.png' : p3Acceptance ?
       '../output/playwright/p3-12-python-desktop-accepted-1440x900.png' : mergeOnly ?
       '../output/playwright/p3-08-python-desktop-accepted-1440x900.png' :
       '../output/playwright/p3-07-python-desktop-accepted-1440x900.png', import.meta.url));
@@ -534,9 +798,10 @@ try {
   }
   }
 
-  if (process.env.FORGE_VERTICAL_REVIEW_ONLY !== '1' &&
+  if ((packagedAcceptance || process.env.FORGE_VERTICAL_REVIEW_ONLY !== '1') &&
       process.env.FORGE_VERTICAL_VERIFY_ONLY !== '1' &&
-      !finalOnly) {
+      (packagedAcceptance || !finalOnly)) {
+  if (!contextOnly) {
   // An owned, real Codex app-server is deliberately terminated mid-command.
   // This is a provider-failure path, not a simulated successful Agent result.
   const failureMessage = await invoke(page, 'conversation', 'conversation.send', {
@@ -595,6 +860,76 @@ try {
     .map(async (name) => JSON.parse(await readFile(join(recordsDir, name), 'utf8'))));
   const owned = records.find((item) => item.runId === failureRunId && item.status === 'running');
   assert.ok(owned && Number.isInteger(owned.pid) && owned.pid > 0);
+  if (lifecycleOnly) {
+    const hostPid = hostHealth.data.pid;
+    await desktop.evaluate(({ dialog }) => {
+      globalThis.__forgeLifecycleDialogs = [];
+      dialog.showMessageBox = async (...args) => {
+        globalThis.__forgeLifecycleDialogs.push(args.at(-1));
+        return { response: 0, checkboxChecked: false };
+      };
+    });
+    await desktop.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
+    assert.equal(await desktop.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length), 1);
+    const firstDialog = await desktop.evaluate(() => globalThis.__forgeLifecycleDialogs.at(-1));
+    assert.equal(firstDialog.title, 'Forge has active work');
+    assert.deepEqual(firstDialog.buttons, ['Cancel', 'Keep running in tray', 'Stop safely and quit']);
+    assert.match(firstDialog.detail, /computer and user session to remain awake/);
+    assert.equal((await invoke(page, 'run', 'run.inspect', {
+      projectId: project.projectId, runId: failureRunId, afterCursor: 0, limit: 100,
+    })).run.state, 'running');
+    await desktop.evaluate(({ dialog }) => { dialog.showMessageBox = async (...args) => {
+      globalThis.__forgeLifecycleDialogs.push(args.at(-1));
+      return { response: 1, checkboxChecked: false };
+    }; });
+    const closed = page.waitForEvent('close');
+    await desktop.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
+    await closed;
+    assert.equal(await desktop.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length), 0);
+    assert.equal((await desktop.evaluate(() => globalThis.__forgeLifecycleDialogs.at(-1))).title,
+      'Forge has active work');
+    process.kill(hostPid, 0);
+    process.kill(owned.pid, 0);
+    const nextWindow = desktop.waitForEvent('window');
+    const second = spawn(requireDesktop('electron'), [desktopDirectory], {
+      env: { ...process.env, FORGE_DEV_SERVER_URL: '', FORGE_HOST_DATA_DIR: dataDir },
+      stdio: 'ignore',
+    });
+    const secondExit = once(second, 'exit');
+    page = await nextWindow;
+    const [secondCode] = await secondExit;
+    assert.equal(secondCode, 0);
+    await page.getByRole('button', { name: 'Host connected' }).waitFor({ timeout: 15_000 });
+    const reopened = await page.evaluate(() => globalThis.forge.hostHealth());
+    assert.equal(reopened.data.pid, hostPid);
+    assert.equal((await invoke(page, 'run', 'run.inspect', {
+      projectId: project.projectId, runId: failureRunId, afterCursor: 0, limit: 100,
+    })).run.state, 'running');
+    await desktop.evaluate(({ dialog }) => { dialog.showMessageBox = async (...args) => {
+      globalThis.__forgeLifecycleDialogs.push(args.at(-1));
+      return { response: 2, checkboxChecked: false };
+    }; });
+    const exit = desktop.waitForEvent('close');
+    void desktop.evaluate(({ app }) => app.quit()).catch(() => {});
+    await exit;
+    desktop = null;
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      try { process.kill(hostPid, 0); await delay(100); }
+      catch (error) { if (error.code === 'ESRCH') break; throw error; }
+    }
+    assert.throws(() => process.kill(hostPid, 0), { code: 'ESRCH' });
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      try { process.kill(owned.pid, 0); await delay(100); }
+      catch (error) { if (error.code === 'ESRCH') break; throw error; }
+    }
+    assert.throws(() => process.kill(owned.pid, 0), { code: 'ESRCH' });
+    const stopped = JSON.parse(await readFile(join(recordsDir, `${owned.processId}.json`), 'utf8'));
+    assert.notEqual(stopped.status, 'running');
+    assert.equal(git('status', '--porcelain'), '');
+    console.log(JSON.stringify({ stage: 'p6-lifecycle', hostPid, runId: failureRunId,
+      cancelledCloseKeptWindow: true, trayKeptHost: true, secondInstanceReusedHost: true,
+      safeQuitStoppedOwnedProcess: true, sourceClean: true }));
+  } else {
   const cancelScenario = process.env.FORGE_VERTICAL_TERMINATION === 'cancel';
   if (cancelScenario) {
     const cancellation = await invoke(page, 'run', 'run.cancel', {
@@ -632,6 +967,13 @@ try {
     const stopped = JSON.parse(await readFile(join(recordsDir,
       `${owned.processId}.json`), 'utf8'));
     assert.notEqual(stopped.status, 'running', 'Owned app-server remained active');
+    if (packagedAcceptance) {
+      const childExited = await new Promise((resolve) => {
+        try { process.kill(owned.pid, 0); resolve(false); }
+        catch (error) { resolve(error.code === 'ESRCH'); }
+      });
+      assert.equal(childExited, true, 'Cancelled packaged app-server process still exists');
+    }
   }
   assert.equal(await invoke(page, 'run', 'run.handoff', {
     projectId: project.projectId, runId: failureRunId }), null);
@@ -642,8 +984,48 @@ try {
     termination: cancelScenario ? 'user-cancel' : 'provider-kill',
     providerFailure: failureInspection.run.state, failureObservationTypes:
       failureInspection.observations.map((item) => item.type), screenshot }));
+  if (packagedAcceptance) {
+    await desktop.close();
+    desktop = null;
+    const reopened = await electron.launch({ executablePath: desktopExecutable,
+      args: desktopArgs, env: desktopEnv });
+    desktop = reopened;
+    const reopenedPage = await reopened.firstWindow();
+    await reopenedPage.getByRole('button', { name: 'Host connected' }).waitFor({ timeout: 20_000 });
+    const restored = await boardSnapshot(reopenedPage, project.projectId);
+    assert.equal(restored.tasks.find((item) => item.id === draft.draftId)?.state,
+      finalOnly ? 'done' : 'active');
+    assert.equal(restored.tasks.find((item) => item.id === failureDraft.draftId)?.state,
+      'todo');
+    const delivery = finalOnly ? await invoke(reopenedPage, 'run', 'deliveries.get', {
+      projectId: project.projectId, taskId: draft.draftId,
+    }) : null;
+    if (delivery) assert.equal(delivery.snapshotId, successResult.successSnapshotId);
+    if (customWorkflow) {
+      const frozen = await invoke(reopenedPage, 'run', 'run.config', {
+        projectId: project.projectId, runId: successResult.successRunId,
+      });
+      assert.equal(frozen.workflow.id, workflowRef);
+      assert.equal(frozen.workflow.version, '1');
+    }
+    assert.equal(git('rev-parse', 'HEAD'), sourceHead);
+    assert.equal(git('status', '--porcelain'), '');
+    console.log(JSON.stringify({ stage: 'packaged-business-restart',
+      packagePath: installedApp, projectId: project.projectId,
+      taskId: draft.draftId, deliveryId: delivery?.deliveryId ?? null,
+      restoredState: finalOnly ? 'done' : 'active', cancelledRunNotDone: true,
+      sourceClean: true }));
+  }
+  }
+  }
   }
 } finally {
   await desktop?.close();
-  await rm(root, { recursive: true, force: true });
+  if (mounted) execFileSync('hdiutil', ['detach', mount]);
+  if (installRoot) await rm(installRoot, { recursive: true, force: true });
+  if (process.env.FORGE_VERTICAL_KEEP_FIXTURE === '1') {
+    console.error(`Forge fixture retained for diagnosis: ${root}`);
+  } else {
+    await rm(root, { recursive: true, force: true });
+  }
 }
