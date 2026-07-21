@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "1.0",
+  "exceptions": [
+    {
+      "blockedTaskId": "P4-05",
+      "allowedTaskId": "P4-06",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-24: Claude online acceptance deferred; continue Codex-only work without changing P4-05 status or canonical dependencies.",
+      "preconditions": ["provider-neutral Executor API available", "Codex path verified", "no approval or permission relaxation"],
+      "releaseGate": "P4-05 and the second real Executor acceptance remain required before full P4 or multi-Executor release."
+    },
+    {
+      "blockedTaskId": "P4-10",
+      "allowedTaskId": "P5-01",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-24: permit only P5 work independent of a second real Executor after applicable P4 tests pass.",
+      "preconditions": ["P4-06 through P4-09 verified within Codex-only scope", "P4-10 applicable checks executed", "second-Executor case remains deferred"],
+      "releaseGate": "P4 Phase Gate and full multi-Executor release cannot pass until two different real Executors complete the same approved TODO."
+    },
+    {
+      "blockedTaskId": "P6-06",
+      "allowedTaskId": "P6-07",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-25: permit P6-07 platform preparation after the exact internal macOS arm64 package has real install evidence; do not mark P6-06 or signing/notarization accepted.",
+      "preconditions": [
+        "internal ad-hoc macOS arm64 DMG mounted, installed and launched with bundled Python Host and isolated data",
+        "P6-07 work does not rely on Developer ID signing, notarization or an unverified Windows runtime",
+        "T111-T113 and public release remain deferred; no permission or integrity gate is relaxed"
+      ],
+      "releaseGate": "P6-06 remains BLOCKED until Developer ID signing, notarization, fresh-user install and upgrade evidence. P6-07 Windows support remains unverified until a real Windows x64 installed-app task and required signing/UAC evidence. No public release or full P6 Phase Gate."
+    },
+    {
+      "blockedTaskId": "P6-07",
+      "allowedTaskId": "P6-08",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-25: continue independently executable update and migration work while Windows x64/signing environment is unavailable; do not treat the internal unsigned ZIP as an installer.",
+      "preconditions": [
+        "P6-07 native Windows x64 staging, bundled Python path and real Windows smoke entry prepared without unsupported macOS cross-build claims",
+        "P6-08 work is restricted to offline signed-manifest verification and isolated non-cutover SQLite migration rehearsal",
+        "P6-07 installer, Authenticode, UAC, Windows full-task and T111-T113 remain unverified"
+      ],
+      "releaseGate": "Windows x64 installed signed task, uninstall/upgrade/data policy, UAC/Chinese path/DPI and P6-07 acceptance remain required. P6-08 cannot claim signed installed-app update or full release."
+    },
+    {
+      "blockedTaskId": "P6-08",
+      "allowedTaskId": "P6-09",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-25: run currently applicable real P6 acceptance even though signed installed-app update, target platforms and credential continuity remain unavailable; do not lower assertions or treat fixtures as a public release.",
+      "preconditions": [
+        "P6-08 Ed25519 manifest and artifact integrity fail-closed in local tests",
+        "active operations block migration; SQLite WAL backup and staged migration preserve the original on success and failure",
+        "P6-09 scope excludes unsupported installed-updater, Windows/macOS Intel, signing and deferred Claude claims while retaining exact T IDs"
+      ],
+      "releaseGate": "T112/T113 installed signed upgrade and credential continuity, actual update cutover/rollback, Windows installed task, Claude and all applicable P6-09 cases still gate full P6 acceptance and public release."
+    },
+    {
+      "blockedTaskId": "P6-09",
+      "allowedTaskId": "P6-10",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-25: document the currently working internal install, first task, recovery and limits without claiming full P6 acceptance or a public v1 release.",
+      "preconditions": [
+        "same internal macOS arm64 DMG completed a real Codex business loop, separate cancellation and restart readback",
+        "current macOS arm64 quality and applicable P3 scenarios passed; exact outstanding security, platform, Claude and T116-T120 cases remain tracked",
+        "P6-10 output is marked internal-only and does not instruct users to bypass system protections"
+      ],
+      "releaseGate": "P6-09 full case-by-case acceptance, T111-T113 signed distribution/update, Windows/macOS Intel and Claude/multi-Executor evidence still gate a public v1.0 guide, support claim or release."
+    },
+    {
+      "blockedTaskId": "P6-10",
+      "allowedTaskId": "P7-01",
+      "scope": "development-only",
+      "authorization": "User decision 2026-09-25: after delivering the proven internal Mac Demo and auditing local features, continue P7/P8 work independent of P6 external distribution, target-platform and deferred Claude conditions; no P6 release or Phase Gate claim.",
+      "preconditions": [
+        "same installed internal macOS arm64 DMG has a real single-Codex project-to-Done and cancellation/restart record",
+        "persistent isolated human Demo app/project/data and operation guide delivered without overwriting daily Forge data",
+        "P7 security gates for authentication, device/project scope, approval freshness, CSRF and revocation must be implemented and tested before enabling remote control"
+      ],
+      "releaseGate": "P6-10 remains BLOCKED for full public guide and another-computer release verification; P7/P8 development does not authorize public network exposure, P6/P7/P8 release, or skipping remote security acceptance."
+    }
+  ]
+}

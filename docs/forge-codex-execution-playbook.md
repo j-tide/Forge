@@ -1092,7 +1092,7 @@ None; follow the authoritative task and referenced contracts.
 
 D-025.
 
-2026-09-24：已固定官方 Python SDK 0.2.159，并在 macOS arm64 用受控子进程读取随包 CLI 2.1.281 版本；这只是离线供应链探测。用户暂无 Anthropic API Key，且明确要求暂不做此部分真实验收。依据 [ADR 0052](decisions/0052-claude-sdk-api-key-gate.md)，未激活 Claude Adapter，未将 T041～T045 或真实交付标为通过。恢复条件为用户在仓库外配置授权 API Key，并批准有成本上限的独立 fixture；不得借用订阅登录。P4-06 依赖本项，暂不可执行。
+2026-09-24：已固定官方 Python SDK 0.2.159，并在 macOS arm64 用受控子进程读取随包 CLI 2.1.281 版本；这只是离线供应链探测。用户暂无 Anthropic API Key，且明确要求暂不做此部分真实验收。依据 [ADR 0052](decisions/0052-claude-sdk-api-key-gate.md)，未激活 Claude Adapter，未将 T041～T045 或真实交付标为通过。恢复条件为用户在仓库外配置授权 API Key，并批准有成本上限的独立 fixture；不得借用订阅登录。权威 P4-06 依赖仍为 P4-05，但本次用户批准仅限开发的精确依赖例外；不等于 P4-05 DONE 或 P4 Phase Gate 通过。
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
@@ -1100,7 +1100,7 @@ D-025.
 
 ## P4-06 Agent Profile与能力选择
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P4-05
 **Module:** M09
 **Acceptance cases:** T041, T042, T043, T044, T045
@@ -1118,13 +1118,17 @@ D-025.
 
 D-026.
 
+本轮依据 [ADR 0052](decisions/0052-claude-sdk-api-key-gate.md) 的精确开发放行使用已验证 Codex 能力；Claude 必须显示未配置/未验收且不能启动。只读、审批或网络限制得不到真实执行器保障时阻止启动。T041 的双真实执行器部分继续待验，不计入通过。
+
+2026-09-24：Codex Developer/Reviewer Profile 的版本冻结、真实能力门禁和 Desktop 纵向验收通过，故此 Task 的单执行器开发范围记为 DONE；Claude 专属 T041～T045 与完整多执行器发布验收继续 DEFERRED_VERIFICATION。见 ADR 0053。
+
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
 ---
 
 ## P4-07 ModelProvider与整理器替换
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P4-06
 **Module:** M03
 **Acceptance cases:** T011, T012, T013, T014, T015
@@ -1142,13 +1146,15 @@ D-026.
 
 D-002.
 
+2026-09-24：Python Host 的独立 ModelProvider/ModelSession 与插件注册已经落地；内置 Codex 0.0.2 实测结构化输出、10 条文本增量、原生 usage。关闭 Provider 后真实 Desktop 手工草稿→人审 TODO→重启仍可用；普通 Executor 不被关闭。Codex 没有文档化的可执行 turn token 上限，因此非空 token 限额请求被拒绝，另有真实字节/时间边界。Claude 不构成第二个已验收 Provider。见 ADR 0054。
+
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
 ---
 
 ## P4-08 工具/MCP入口契约
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P4-07
 **Module:** M16
 **Acceptance cases:** T076, T077, T078, T079, T080
@@ -1172,7 +1178,7 @@ D-031.
 
 ## P4-09 插件故障隔离与诊断
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P4-08
 **Module:** M08
 **Acceptance cases:** T036, T037, T038, T039, T040
@@ -1196,7 +1202,7 @@ None; follow the authoritative task and referenced contracts.
 
 ## P4-10 P4替换性验收
 
-**Status:** TODO
+**Status:** BLOCKED
 **Depends on:** P4-09
 **Module:** M24
 **Acceptance cases:** T116, T117, T118, T119, T120
@@ -1224,7 +1230,7 @@ D-032.
 
 ## P5-01 标准/快速/严格模板
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P4-10
 **Module:** M06
 **Acceptance cases:** T026, T027, T028, T029, T030
@@ -1248,7 +1254,7 @@ D-009, D-010, D-027.
 
 ## P5-02 Workflow编译器
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P5-01
 **Module:** M06
 **Acceptance cases:** T026, T027, T028, T029, T030
@@ -1272,7 +1278,7 @@ D-008, D-009.
 
 ## P5-03 线性配置编辑体验
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P5-02
 **Module:** M06
 **Acceptance cases:** T026, T027, T028, T029, T030
@@ -1296,7 +1302,7 @@ D-028.
 
 ## P5-04 高级画布编辑
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P5-03
 **Module:** M06
 **Acceptance cases:** T026, T027, T028, T029, T030
@@ -1320,7 +1326,7 @@ D-029.
 
 ## P5-05 工作流版本冻结
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P5-04
 **Module:** M07
 **Acceptance cases:** T031, T032, T033, T034, T035
@@ -1344,7 +1350,7 @@ None; follow the authoritative task and referenced contracts.
 
 ## P5-06 知识导入与原文定位
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P5-05
 **Module:** M14
 **Acceptance cases:** T066, T067, T068, T069, T070
@@ -1368,7 +1374,7 @@ D-033.
 
 ## P5-07 FTS与中文检索
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P5-06
 **Module:** M14
 **Acceptance cases:** T066, T067, T068, T069, T070
@@ -1392,7 +1398,7 @@ D-034.
 
 ## P5-08 Context Builder预算与冲突
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P5-07
 **Module:** M14
 **Acceptance cases:** T066, T067, T068, T069, T070
@@ -1416,7 +1422,7 @@ D-031, D-036.
 
 ## P5-09 项目记忆生命周期
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P5-08
 **Module:** M15
 **Acceptance cases:** T071, T072, T073, T074, T075
@@ -1440,7 +1446,7 @@ D-037, D-038.
 
 ## P5-10 知识/记忆管理页面
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P5-09
 **Module:** M15
 **Acceptance cases:** T071, T072, T073, T074, T075
@@ -1464,7 +1470,7 @@ D-039.
 
 ## P5-11 流程与检索集成测试
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P5-10
 **Module:** M24
 **Acceptance cases:** T116, T117, T118, T119, T120
@@ -1488,7 +1494,7 @@ D-040.
 
 ## P5-12 P5文档与迁移
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P5-11
 **Module:** M18
 **Acceptance cases:** T086, T087, T088, T089, T090
@@ -1516,7 +1522,7 @@ None; follow the authoritative task and referenced contracts.
 
 ## P6-01 全页面视觉一致性
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P5-12
 **Module:** M22
 **Acceptance cases:** T106, T107, T108, T109, T110
@@ -1540,7 +1546,7 @@ D-041.
 
 ## P6-02 键盘、可访问性与DPI
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P6-01
 **Module:** M22
 **Acceptance cases:** T106, T107, T108, T109, T110
@@ -1564,7 +1570,7 @@ D-046.
 
 ## P6-03 应用预览与代码浏览
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P6-02
 **Module:** M17
 **Acceptance cases:** T081, T082, T083, T084, T085
@@ -1588,7 +1594,7 @@ None; follow the authoritative task and referenced contracts.
 
 ## P6-04 诊断、隐私与清理
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P6-03
 **Module:** M23
 **Acceptance cases:** T111, T112, T113, T114, T115
@@ -1612,7 +1618,7 @@ D-002, D-042, D-047, D-063.
 
 ## P6-05 应用退出与托盘生命周期
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P6-04
 **Module:** M01
 **Acceptance cases:** T001, T002, T003, T004, T005
@@ -1636,7 +1642,7 @@ None; follow the authoritative task and referenced contracts.
 
 ## P6-06 Mac签名/公证包
 
-**Status:** TODO
+**Status:** BLOCKED
 **Depends on:** P6-05
 **Module:** M23
 **Acceptance cases:** T111, T112, T113, T114, T115
@@ -1654,13 +1660,15 @@ arm64/x64平台测试、代码签名、公证；无凭据只产标注内部包�
 
 D-043.
 
+2026-09-25：从冻结 pnpm/uv 锁生成 `INTERNAL-ADHOC-UNNOTARIZED` macOS arm64 app/DMG，真实挂载/复制/隔离用户数据启动，Vue/包内 Python Host/SQLite schema30/security 和移除 app 后保留数据通过。同一 DMG 的复制安装版又完成真实 Codex 开发、Verify、Review、人审 Done、单独取消与重启恢复；详见 `docs/demo/p6-internal-macos-package.md`。正式 Developer ID 签名、公证、Gatekeeper 新用户安装、x64、签名升级/回滚与合法凭据连续性没有验证，T111–T113 均不标 PASSED。当前 Keychain 只有 Apple Development 身份；P6-06 保持 BLOCKED。用户仅批准精确 P6-06→P6-07 的开发调度例外，不是发布验收。见 ADR 0073。
+
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
 ---
 
 ## P6-07 Windows安装与签名
 
-**Status:** TODO
+**Status:** BLOCKED
 **Depends on:** P6-06
 **Module:** M23
 **Acceptance cases:** T111, T112, T113, T114, T115
@@ -1678,13 +1686,15 @@ Windows实机完整跑一任务，不能只测网页。
 
 D-044, D-045.
 
+2026-09-25：Windows x64 原生内部 ZIP 构建脚本、包内 CPython 路径、真实 Windows package smoke 和手工 CI 入口已准备；本机仅 macOS arm64，Windows 构建/安装/签名/UAC/中文路径/完整任务均未执行，内部 ZIP 不是安装器。P6-07 正式验收保持 BLOCKED。用户仅批准精确 P6-07→P6-08 离线更新/迁移开发例外，不改变权威 Depends on 或发布门禁。见 ADR 0074。
+
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
 ---
 
 ## P6-08 安全更新与数据迁移
 
-**Status:** TODO
+**Status:** BLOCKED
 **Depends on:** P6-07
 **Module:** M18
 **Acceptance cases:** T086, T087, T088, T089, T090
@@ -1702,13 +1712,15 @@ D-044, D-045.
 
 D-047.
 
+2026-09-25：Python 离线 `forge-release/v1` Ed25519 精确签名+SHA-256/版本/平台预检、active-operation 拒绝、SQLite online backup 与独立 staging schema29→30 迁移/失败不碰原库已实现并在临时数据实测。无生产信任公钥、正式签名包、Host 停机独占 cutover/回滚或凭据跨升级；P6-08 正式验收仍 BLOCKED。用户仅批准精确 P6-08→P6-09 的当前适用用例验收开发排期，不宣称完整更新可用。见 ADR 0075。
+
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
 ---
 
 ## P6-09 完整功能/Agent对照验收
 
-**Status:** TODO
+**Status:** BLOCKED
 **Depends on:** P6-08
 **Module:** M24
 **Acceptance cases:** T116, T117, T118, T119, T120
@@ -1726,13 +1738,15 @@ D-047.
 
 D-048.
 
+2026-09-25：同一内部 Mac DMG 的完整单 Codex 产品闭环与取消/重启、179 Python 测试、TS/契约/任务图/Desktop/Package smoke 和六个本地 P3 场景有真实证据；`docs/p6-current-scope-acceptance.md` 保留确切未验 Test ID。Windows、签名升级、Claude、T081/T083～T085 安全全项及 T116～T120 对照评测未完成，P6-09 正式验收保持 BLOCKED。用户仅准许精确 P6-09→P6-10 编写内部指南/说明；不产生公开 v1 发布声明。
+
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
 ---
 
 ## P6-10 v1.0用户指南与发布说明
 
-**Status:** TODO
+**Status:** BLOCKED
 **Depends on:** P6-09
 **Module:** M23
 **Acceptance cases:** T111, T112, T113, T114, T115
@@ -1750,6 +1764,8 @@ D-048.
 
 D-048.
 
+2026-09-25：仅内部 `0.0.1-INTERNAL-ADHOC-UNNOTARIZED` Mac arm64 用户指南与 QA 说明已完成，准确记录安装前提、首次 Task、恢复、权限与未验证矩阵；既有 DMG 不含此后新增的 Windows staging/更新预检源码。另一台电脑真实按指南完成任务、公开签名/公证/Windows/升级/凭据验收均未通过，P6-10 正式验收保持 BLOCKED，P6 Phase Gate 不通过。用户本次放行止于 P6-10，不自动进入 P7/P8。
+
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
 ---
@@ -1760,7 +1776,7 @@ D-048.
 
 ## P7-01 Host常驻模式
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P6-10
 **Module:** M20
 **Acceptance cases:** T096, T097, T098, T099, T100
@@ -1780,11 +1796,13 @@ None; follow the authoritative task and referenced contracts.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25：复用 P6-05 已真实通过的 macOS arm64 活跃 Codex Run→关窗留托盘→无窗口时 Host/归属子进程仍运行→第二实例恢复同一 Host/Run→显式安全退出清理 PID 的证据；Settings 已说明用户会话/睡眠限制，Main 的托盘/窗口逻辑不把关窗当作 Host 退出。已安装内部 Demo 的应用与包内 Python Host 当前也长期常驻而非 smoke 自动退出。未新增远程监听或修改安全边界。P7-01 的当前 Host 常驻实现和本地验收 DONE；共享引用 T096～T100 中涉及尚未出现的设备 nonce、SSE、Origin/CSRF、scope 与远端断线 UI 的完整用例精确映射到 P7-03/04/06/07/09，均为 `DEFERRED_VERIFICATION`，不标 PASSED。P6-10 和 P6 Gate 继续 BLOCKED；仅精确开发例外允许 P7-01，正式远程开启仍受后续安全门禁约束。
+
 ---
 
 ## P7-02 HTTPS入口和网关配置
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P7-01
 **Module:** M20
 **Acceptance cases:** T096, T097, T098, T099, T100
@@ -1804,11 +1822,13 @@ D-050.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25：独立 Python `forge.remote_gateway` 需显式 `--enable-loopback` 才启动，真实绑定 `127.0.0.1` 随机端口、同 origin 服务生产 Vue 静态资源；`/v1/*` 读 401/写 403，未连接 Host/SQLite，也未加入 Desktop 正常启动。当前安装版 Demo/Main/Host 无 TCP 监听。私网 HTTPS 部署前提与不得公开端口详见 `docs/remote/loopback-staging.md`；没有创建证书、代理或公网隧道。当前安全静态入口/默认关闭验收 DONE；尚无实际私网 TLS/手机，权威 T096～T100 的配对/会话/撤销/权限/离线全项仍各自递延 P7-03/04/06/07/09，不标 PASSED。见 ADR 0076。
+
 ---
 
 ## P7-03 设备配对生命周期
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P7-02
 **Module:** M20
 **Acceptance cases:** T096, T097, T098, T099, T100
@@ -1828,11 +1848,13 @@ D-051.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25：Python Host/SQLite schema31 已实现一次性 256-bit nonce、10 分钟有效、仅 hash 持久化、单次 claim 后独立 claimSecret hash、每配对 5 次失败上限、原子人工决定与已保存 Project ID scope 校验。Settings 的本机配对入口和原生 Main 批准对话框经固定 Preload/IPC 白名单进入 Host，Renderer 无 claim/Node/任意 channel。真实 SQLite/restart/Host stdio/开发版 Electron smoke 通过；新增 migration 的临时 schema30→31 在线备份、保值及重复执行通过。网络 claim、会话、私网 HTTPS、真机未开启/未实测。T096 的完整第二设备 HTTP 重放转 P7-04；T097～T100 的撤销/SSE、CSRF、scope 缩小、真实断线分别保留到 P7-06/04/07/09，不标 PASSED。ADR 0077。P7-04 下一项；P6/P4 正式阻塞不变。
+
 ---
 
 ## P7-04 会话与CSRF
 
-**Status:** TODO
+**Status:** DONE
 **Depends on:** P7-03
 **Module:** M17
 **Acceptance cases:** T081, T082, T083, T084, T085
@@ -1852,11 +1874,13 @@ None; follow the authoritative task and referenced contracts.
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
+2026-09-25：Python Host 持有 schema32 的 hash-only 设备会话与一次性交付标记；批准前无 cookie，批准后 claimSecret 只交付一次，15 分钟 session 在 24 小时上限内旋转并同事务废止旧 token，revoke 持久化。可选 loopback HTTP 适配器严格校验 Origin、Fetch Metadata、JSON/Host、Secure HttpOnly SameSite=Strict cookie、session-bound CSRF 和 429 限速；HTTP worker 回调串行回到 Host SQLite owner。真实 HTTP→Host service→SQLite 双路径与重启测试通过，正常 Desktop/static CLI 仍不开认证 API，所有业务命令继续 403。当前 macOS arm64 开发范围 DONE；真实私网 HTTPS/另一设备 Cookie/手机仍未实测，完整 T096/T098 留 P7-10。原 T081～T085 不改 ID，远端凭据/跨界面/预览/Artifact/权限全项分别递延 P7-05/07/10，不标 PASSED。ADR 0078；P7-05 下一项，P6/P4 正式阻塞不变。
+
 ---
 
 ## P7-05 Command HTTP适配
 
-**Status:** TODO
+**Status:** IN_PROGRESS
 **Depends on:** P7-04
 **Module:** M19
 **Acceptance cases:** T091, T092, T093, T094, T095
@@ -1873,6 +1897,8 @@ None; follow the authoritative task and referenced contracts.
 ### Existing detailed guidance
 
 D-049.
+
+2026-09-25：可选回环网关的 Project 列表、Board 和 Task 详情三个只读 GET 经真实 session、Project 白名单映射现有 Python Host CommandBus；Task URL 不含 Project 时只在获授权项目中查找。`POST /v1/commands` 按权威闭合 envelope/CSRF/actor 防伪校验，但因 P7-07 尚无设备操作 grant，所有计划写命令明确 403。未知/本机专属命令不得到达 Host。权威写命令名与当前 Host 本地方法和 payload 存在差异，不能直接重命名；T091–T093 成功写路径和 T094 SSE 游标未通过，P7-05 继续 IN_PROGRESS。详见 ADR 0079。P7-06 不因此视为依赖已满足。
 
 读取本任务引用的契约与验收用例；只实施本编号的权威范围。映射说明中超出本任务的部分在其对应编号实施。
 
