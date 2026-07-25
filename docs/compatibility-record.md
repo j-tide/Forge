@@ -1,5 +1,13 @@
 # Forge 版本与兼容性记录
 
+## 2026-09-28 · 衍生预览 0.1.0-preview.2 汉化与语言持久化
+
+独立Forge-Aperant的私有prerelease已上传DMG、ZIP、源码和校验表，4资产远端digest/大小与本地一致，main/tag=`1798ba81d9957cdd714c3d3d850bb072da7d3e81`。Node工具24.19.0、npm10.8.2、Electron40.0.0、React19.2.4、i18next25.8.18；没有新增依赖或改变原Forge版本锁。新profile默认zh-CN；旧en/fr偏好保留；设置立即保存仅language字段；原生菜单／通知按保存设置切换，中文不启用英文词典。没有改模型、认证、权限、SQLite或Task语义。
+
+macOS arm64：36 namespaces/5167文本、4032静态引用校验0错误0警告，251动态key另由组件／运行检查覆盖，不宣称静态通过；typecheck、lint（825warning/5info）、4735 Vitest+6 mutation、build及双主题真实切换／重启均通过。最终包isPackaged=true/version正确、6主要编译文件与ASAR一致、启动后codesign deep/strict、hdiutil verify、ZIP校验通过。包内许可证／UPSTREAM与源文件一致。已有安装profile的en未被自动改为中文；该安装启动与独立QA中文截图的证据分开记录。
+
+本版为ADHOC/UNNOTARIZED内部预览。未验证Windows/Intel、正式签名、公证、更新、Python Host连接与完整Agent运行；不能沿用原Forge验收。在线production npm audit仍33项（10 high/9 moderate/14 low）。离线npm ci的0 vulnerabilities输出不视作安全审计结果。完整证据见衍生仓库docs/releases/0.1.0-preview.2.md；P0～P6外部未验项与Claude阻塞保留，手机／远程不恢复。
+
 ## 2026-09-27 · 独立 Aperant 衍生桌面预览（与原 Forge 构建分开）
 
 经 [ADR 0087](decisions/0087-aperant-derived-desktop-base.md) 批准，独立私有仓库 `j-tide/Forge-Aperant` 基于 Aperant `v2.8.0-beta.6` / `cba7a0270ec794a14ac71615bc6c48085807ede6`。该预览使用上游 Electron 40.0.0、React 19.2.4 与 npm workspace；构建在本机 Node 24.19.0 上完成，不能把原 Forge 的 Vue/pnpm/Python Host 检查结果算到此版本。应用 ID `dev.iamzjt.forgeglasspreview`，项目目录 `.forge-glass-preview/`，与原 Aperant 和 Forge 数据隔离；当前尚未接入 Forge Python Host、SQLite 项目/任务/审批/Run，亦未做在线 Agent 业务验收。

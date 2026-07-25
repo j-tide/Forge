@@ -1,5 +1,17 @@
 # Forge 实施状态
 
+## Desktop 衍生预览汉化与发布 · 0.1.0-preview.2（2026-09-28）
+
+用户要求“全部汉化、设置中英文切换、发布版本”，已在独立 `../Forge-Aperant` 完成，并发布 [GitHub 私有 prerelease v0.1.0-preview.2](https://github.com/j-tide/Forge-Aperant/releases/tag/v0.1.0-preview.2)。代码按功能拆为 5 个提交，远端 main 与 tag 均指向 `1798ba81d9957cdd714c3d3d850bb072da7d3e81`，ahead/behind 为 0/0。提交日期沿用用户此前批准的合成排期（2026-10-24～11-01，间隔1～2天）；实际开发／验收日期为2026-09-28。
+
+中文资源覆盖36个namespace／5167条文本，以及任务、设置、智能体、知识、集成、终端、工作树、向导、原生菜单／通知／应用错误反馈；4032个静态翻译引用无缺失，251个动态引用明确不冒充静态验证。设置→语言的中文／English按钮即时保存、重启保留；不覆盖已有显式语言、主题或未保存的其他表单，保存失败有真实反馈。用户内容、代码、路径、模型ID、品牌及provider原始输出保持原文，不重写项目／任务数据。
+
+`npm ci --ignore-scripts --offline`、局部postinstall、`check:i18n`、lint（exit0，825既有warning/5info）、typecheck、4735个Vitest测试＋6个解析器mutation测试、build、`git diff --check`通过。真实Electron亮暗两主题均完成中文→英文→重启→中文→重启；最终`.app`真实启动及6个主要ASAR构建文件逐字节一致检查通过。安装版保留原有en设置，未强行修改用户偏好。启动后codesign deep/strict、DMG及ZIP完整性通过。未调用付费模型。
+
+应用：`/Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/dist/0.1.0-preview.2/mac-arm64/Forge Glass Preview.app`；衍生仓库根`npm run preview:open`常驻打开。DMG/ZIP/对应源码/SHA256SUMS共4个发布资产的远端SHA256已与本地一致：DMG `7144c68ea97d64d089c0719f5dd1818c0e57b2154df0b943542447aa12f7be10`，ZIP `c49cc0b64028140b53773926e255d9d378f49403726742a84df82f16fb6526e5`，源码 `81e82ce589b3b5b7e475ceeae6fdf1a9a474b36c846ef1f5381a6a1864681ace`。GitHub将文件名空格变为点，已按实际下载名修正远端SHA256SUMS。源码／真实截图与完整记录在衍生仓库`docs/releases/0.1.0-preview.2.md`及`docs/screenshots/0.1.0-preview.2/`。
+
+**仅为INTERNAL / ADHOC / UNNOTARIZED衍生UI预览。**保留AGPL与上游署名；仓库仍私有。未接入Forge Python Host，不改变原Forge权威Task状态、Claude／P6发布门禁，未把此UI检查算作完整业务闭环。Windows、Intel、签名／公证、原Forge数据迁移等未验；手机与远程继续后置。production npm audit仍有33项风险（10 high/9 moderate/14 low）。
+
 ## Desktop 基座路线更新 · Aperant 衍生仓库（2026-09-27，内部预览已构建）
 
 用户已明确批准 [ADR 0087](decisions/0087-aperant-derived-desktop-base.md)：未来桌面改以 Aperant `v2.8.0-beta.6` 的 AGPL-3.0 衍生代码为基座，继续实现 Forge 视频方向的玻璃视觉。独立兄弟仓库 `/Users/iamzjt/Desktop/my/myapp/Forge-Aperant` 已检出上游提交 `cba7a0270ec794a14ac71615bc6c48085807ede6`；应用/项目/配置数据隔离、自动发布与更新停用、亮暗玻璃预览和来源声明已提交到本地代码。GitHub 使用独立私有仓库而非平台 fork 关系，移除平台 fork 标识不意味着掩盖源码来源。它是 Aperant 衍生版，不是 Aperant 3.0 或原 Forge Vue 客户端的独立重写；其上游来源、署名、许可证、修改标记和相应源码义务必须持续保留。

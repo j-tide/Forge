@@ -6,6 +6,8 @@ Forge 是自然语言驱动的多 Agent 研发工作台。需求先成为可编�
 
 > **桌面基座变更（2026-09-27）**：用户已批准 [ADR 0087](docs/decisions/0087-aperant-derived-desktop-base.md)，未来 Desktop 在独立私有仓库 [Forge-Aperant](https://github.com/j-tide/Forge-Aperant) 的 Aperant `v2.8.0-beta.6` AGPL-3.0 衍生版上继续开发。下文的 Vue/Python Desktop 和安装包记录是本仓库既有版本的历史实现与验收；衍生版尚未连接本仓库的 Python Host 或迁移现有数据，不能把两者的验收互相替代。衍生版保留上游来源与许可声明。
 
+> **最新衍生预览（2026-09-28）**：[v0.1.0-preview.2下载](https://github.com/j-tide/Forge-Aperant/releases/tag/v0.1.0-preview.2)，中文界面，设置→语言提供中文／English即时切换并保存。仅macOS arm64 INTERNAL / ADHOC / UNNOTARIZED；完整证据见[实施状态](docs/implementation-status.md)。正常启动请用衍生仓库的`npm run preview:open`；本仓库下方命令仍对应历史Vue/Python实现，不混用。
+
 ## 当前状态
 
 ### 原 Forge Desktop 路线：视频磨砂视觉与现行桌面交互结构（历史实现）
