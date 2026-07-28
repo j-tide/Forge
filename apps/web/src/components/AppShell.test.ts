@@ -48,5 +48,8 @@ it('identifies the installed historical Host as read-only in the shell and diagn
   expect(newTask).not.toHaveBeenCalled();
   root.querySelector<HTMLButtonElement>('.forge-brand-mark')?.click();
   expect(navigate).toHaveBeenCalledWith('board');
+  expect(root.querySelector('.forge-brand-mark')?.getAttribute('aria-label')).toBe('Forge 看板');
+  expect(root.querySelector('.forge-brand-glyph')?.getAttribute('aria-hidden')).toBe('true');
+  expect(root.querySelector('.forge-brand-mark svg')).toBeNull();
   expect(root.querySelector('.forge-rail-link[aria-label="工作台"]')).toBeNull();
 });

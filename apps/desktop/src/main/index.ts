@@ -542,7 +542,11 @@ async function decideQuit(): Promise<void> {
 }
 
 function createWindow(): void {
-  const window = new BrowserWindow(createWindowOptions(preloadPath));
+  const iconName = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
+  const window = new BrowserWindow({
+    ...createWindowOptions(preloadPath),
+    icon: fileURLToPath(new URL(`../../assets/${iconName}`, import.meta.url)),
+  });
   mainWindow = window;
 
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));

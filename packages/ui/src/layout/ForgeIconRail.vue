@@ -5,13 +5,7 @@ const emit = defineEmits<{ select: [id: string] }>();
 <template>
   <nav class="forge-icon-rail" aria-label="主导航">
     <button class="forge-brand-mark" type="button" aria-label="Forge 看板" title="Forge 看板" @click="emit('select', 'board')">
-      <svg class="forge-brand-glyph" viewBox="0 0 96 96" aria-hidden="true" focusable="false">
-        <g transform="translate(24 20) skewX(-18)">
-          <rect x="8" y="0" width="43" height="12" rx="2" />
-          <rect x="4" y="20" width="35" height="12" rx="2" />
-          <rect x="0" y="40" width="14" height="12" rx="2" />
-        </g>
-      </svg><span class="forge-brand-name">Forge</span>
+      <span class="forge-brand-glyph" aria-hidden="true" /><span class="forge-brand-name">Forge</span>
     </button>
     <div class="forge-rail-project"><slot name="project" /></div>
     <p class="forge-rail-section-label">工作区</p>

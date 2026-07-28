@@ -52,6 +52,7 @@ await rm(stage, { recursive: true, force: true });
 await mkdir(stage, { recursive: true });
 run('ditto', [electronPackage, join(stage, appName)]);
 await mkdir(resources, { recursive: true });
+await cp(join(root, 'apps', 'desktop', 'assets', 'icon.icns'), join(resources, 'Forge.icns'));
 run('pnpm', ['--filter', '@forge/desktop', 'deploy', '--prod', '--offline',
   '--frozen-lockfile', '--node-linker=hoisted', deployedApp]);
 run(join(root, 'node_modules', '.bin', 'asar'), ['pack', deployedApp,
@@ -86,6 +87,7 @@ for (const [key, value] of [
   ['CFBundleIdentifier', `dev.forge.desktop.internal.${qaId}`],
   ['CFBundleName', 'Forge'],
   ['CFBundleDisplayName', 'Forge INTERNAL'],
+  ['CFBundleIconFile', 'Forge.icns'],
   ['CFBundleShortVersionString', appVersion],
   ['CFBundleVersion', appVersion],
 ]) {

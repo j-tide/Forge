@@ -75,7 +75,6 @@ button:focus-visible, textarea:focus-visible {
   letter-spacing: -.035em;
 }
 .app-shell .forge-brand-mark:hover { background: var(--shell-hover); box-shadow: var(--forge-shadow-elevated), var(--forge-glass-inner-highlight); }
-.forge-brand-glyph { width: 31px; height: 31px; fill: var(--forge-color-accent-text); }
 .forge-brand-name, .forge-rail-project, .forge-rail-section-label, .forge-rail-label { display: none; }
 .app-shell .forge-rail-links { align-items: center; flex: 1; gap: 8px; width: 100%; min-height: 0; overflow-y: auto; }
 .app-shell .forge-rail-link {
