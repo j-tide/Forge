@@ -1,5 +1,7 @@
 # Forge Codex Execution Playbook
 
+> **当前桌面源码交付位置（2026-09-28）**：用户批准将 ADR 0087 的衍生基座完整归拢到 `desktop/`，使用独立 npm workspace/锁文件和专用 CI；原 Python Host 与下文权威 Task/Test 和安全边界保留。`0.1.0-preview.3` 是尚未接入 Python Host 的 macOS arm64 预览，不是完整产品验收。
+
 > **用途**：Forge 后续开发的单一可执行实施文档。<br>
 > **当前基线**：MIG-PY-01～09 在当前 macOS arm64 开发环境完成；Desktop 的唯一业务 Host 已切到 Python。P2-10 的 Python Host 纵向真实 Demo 与 P2 Phase Gate 已在 macOS arm64 开发路径通过；历史 Node 结果只作对照，跨平台与安装包仍未验证。<br>
 > **执行模型**：一次只实施一个权威 Task；Autopilot 启用时完成后由 `docs/forge-codex-autopilot-protocol.md` 决定自动继续。<br>

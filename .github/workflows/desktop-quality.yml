@@ -1,0 +1,43 @@
+name: desktop-quality
+
+on:
+  push:
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/desktop-quality.yml'
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/desktop-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Desktop static and unit checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install frozen Desktop dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Validate localization references
+        run: npm run check:i18n
+      - name: Lint Desktop sources
+        run: npm run lint
+      - name: Typecheck Desktop sources
+        run: npm run typecheck
+      - name: Test Desktop contracts and components
+        run: npm test
+      - name: Build Desktop main, preload and renderer
+        run: npm run build

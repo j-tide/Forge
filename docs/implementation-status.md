@@ -1,5 +1,37 @@
 # Forge 实施状态
 
+## 2026-09-28 · Forge 仓库源码归拢 / 0.1.0-preview.3
+
+用户明确授权按功能提交、推送到 `j-tide/Forge` 并发布预览。衍生 Desktop 完整源码与历史归入 `desktop/`，原 Python Host、规格、Vue 历史实现及 SQLite 用户数据原位保留；许可/来源和独立 npm 边界见 ADR 0087。当前预览仍未连接 Forge Python Host，不是完整产品验收。普通打开使用根 `pnpm desktop:open`，开发入口位于 `desktop/`；详细变更、当前截图、检查结果及未验项见 [0.1.0-preview.3](../desktop/docs/releases/0.1.0-preview.3.md)。
+
+本轮安装依赖不变。衍生 npm i18n/lint/typecheck/test/build、亮暗 Logo 和语言重启 QA、真实 .app smoke、ad-hoc 签名通过；原 pnpm frozen install/contracts/lint/typecheck/test（含 build）与真实 Python Host Desktop smoke 通过。现有用户数据哈希保持不变，没有模型调用。app.asar SHA-256 `74d49170981acedc7d118caf653e6fe7e28ecf8b9b2475aaec07478867f94257`。生产依赖 audit 仍 33 项（10 high/9 moderate/14 low），未消除。Windows/Intel、Claude、签名/公证、正式更新与衍生 Python 集成保持未验。手机远程后置。提交时间沿用用户指定随机 1～3 天排期；实际开发与验证为 2026-09-28，二者明确区分。
+
+
+## Forge 原创 Logo 与全局资源替换（2026-09-28）
+
+用户要求创建 Forge 标识并全局替换。使用内置 imagegen 生成原创双斜切 F 透明标识及同视觉银白／浅蓝灰应用图标；源图、SHA、完整提示词保存在 `../Forge-Aperant/apps/desktop/resources/branding/`。该目录是品牌资产源；既有 Pillow12.1.1 与 macOS iconutil 只转换尺寸和 PNG/ICO/ICNS 格式，不绘制另一套 F、不新增依赖。保留第三方 Provider/功能图标、AGPL及来源署名、两个只读资料包和历史发布截图。
+
+衍生桌面：共享 `ForgeMark/ForgeBrand` 接入侧栏展开/收起、欢迎、onboarding、About、设置版本区、favicon；UI使用同一alpha轮廓及light/dark主题色。Dock/Finder与Windows/Linux包图标统一转换，打包显式复制PNG/ICO，Bundle使用ICNS。原Forge同步 `@forge/ui` Rail、favicon、既有192/512 web图标、tray模板和窗口图标；mac内部包装设置CFBundleIconFile。没有重打或覆盖旧原Forge/Python安装包，它们保留历史旧图标。没有修改Host、Run、Task或用户数据。
+
+检查：衍生 `generate-preview-icon.py --check`（14PNG、ICO尺寸/内容、ICNS内容与源一致）、4品牌+6解析器Node测试、248文件/4763 Vitest、i18n、lint（exit0；825既有warning/5info）、typecheck、build通过。`npm run test:logo:desktop` 以独立profile在macOS arm64真实验证两主题1440×900首页、侧栏收起/展开、About、设置中重开向导和favicon/alpha真实解码；前景对比11.86/14.13，无模型调用。未把“通过设置打开向导”写成“首启自动显示”。原Forge针对性回归为UI7、Web224/36文件、Desktop17（含原PythonHost），UI/Desktop类型检查、目标ESLint、Web/Desktop构建及diffcheck通过。
+
+新衍生应用：`/Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/dist/logo-unreleased/mac-arm64/Forge.app`；构建标识`forge-logo-20260928-f3383f498f87`，ASAR SHA-256`f3383f498f87f4c96ae7f3a0376b45496bdd4a6d6e4b19d1695918a21c13bba5`。真实打包启动检查8个JS/CSS/PNG构建文件及4原生图标逐字节一致、nativeImage256px非空，appName=Forge/isPackaged=true；启动后codesign deep/strict通过。既有settings/projects/旧新profiles四项哈希/不存在状态保持不变。根`npm run preview:open`优先常驻打开新包，截图和build-info在衍生`docs/screenshots/logo-unreleased/`，提示词和格式转换说明在品牌目录。
+
+状态：INTERNAL/ADHOC/UNNOTARIZED/UNRELEASED。未commit/push/release，版本仍基于0.1.0-preview.2；尚未连接Forge PythonHost，不将Logo检查计为完整业务验收。Windows/Intel、原Forge下一次重包、原Windows自制ZIP的PE图标、签名公证及正式发布仍未验。Claude与P6门禁、production audit33项风险、手机/远程暂停保持原状态。
+
+## Desktop 品牌统一 · Forge 未发布工作区构建（2026-09-28）
+
+已在独立兄弟仓库 `../Forge-Aperant` 遍历1496个当前文本文件，将普通界面、中／英／法资源、欢迎／引导、原生窗口、OAuth成功页、诊断报头、GitHub/GitLab审查正文、内置MCP工具名称及现行开发指引统一为Forge。移除侧栏赞助、上游社群推广与失效Python CLI说明；产品名为Forge，npm workspace／desktop包名为`forge-desktop-workspace`／`forge-desktop`。GitHub实查仍为`isFork:false`、`parent:null`的独立私有仓库，无平台Fork标识。
+
+保留AGPL、copyright、UPSTREAM和应用法律来源入口，以及历史发布证据。历史`.auto-claude`扫描／清理排除、OAuth认证参数、已存Memory数据库namespace和旧设置ID仅用于安全／兼容，不能机械删除。appId及`Forge Glass Preview`数据目录保持稳定；API profiles新写同一隔离目录内`forge/profiles.json`，仅新文件不存在时兼容读旧文件，旧文件不删，真实FS测试确认首次写保留内容及0600权限。没有改写原Forge SQLite／冻结Run／用户任务。
+
+实际检查：`npm install --package-lock-only --ignore-scripts --offline --no-audit --no-fund`、`npm run check:i18n`（36ns／5167文本／4030静态引用／0error）、`npm run lint`（exit0；825已有warnings／5infos）、`npm run typecheck`、`npm run test`（247files／4755 Vitest用例及3品牌+6解析器Node用例）、`npm run build`、`npm run test:i18n:desktop`（两主题中文→英文→重启→中文→重启）、`node --test scripts/update-readme.test.mjs apps/desktop/scripts/postinstall-preview.test.mjs`（13通过）、bash／Node脚本语法与`git diff --check`通过。未调用模型或引入依赖。
+
+未发布应用：`/Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/dist/branding-unreleased/mac-arm64/Forge.app`；构建标识`forge-branding-20260928-c067d26d1f35`，ASAR SHA-256 `c067d26d1f35551948fb09b5d0cf412547c55c10fa234f20e1796cf5fc8509a4`。`FORGE_PACKAGED_APP=… node scripts/smoke-packaged-localization.mjs`实际启动PASS，appName=Forge，isPackaged=true，6个主要编译文件与当前out逐字节一致，LICENSE／UPSTREAM也一致；启动后`codesign --verify --deep --strict`通过。现有settings/projects/API profile四项哈希／不存在状态保持不变。根`npm run preview:open`常驻打开当前新包，不使用Smoke入口。真实截图在衍生仓库`docs/screenshots/branding-unreleased/`。
+
+此次未commit／push／release，已发布0.1.0-preview.2及原Forge安装包不覆盖。本构建仍是INTERNAL／ADHOC／UNNOTARIZED的衍生桌面，尚未连接Forge Python Host；原ForgeTask状态、Claude验收／P6发布门禁、Windows／Intel／签名公证／审计风险及手机远程暂停保持不变。
+
+
 ## Desktop 衍生预览汉化与发布 · 0.1.0-preview.2（2026-09-28）
 
 用户要求“全部汉化、设置中英文切换、发布版本”，已在独立 `../Forge-Aperant` 完成，并发布 [GitHub 私有 prerelease v0.1.0-preview.2](https://github.com/j-tide/Forge-Aperant/releases/tag/v0.1.0-preview.2)。代码按功能拆为 5 个提交，远端 main 与 tag 均指向 `1798ba81d9957cdd714c3d3d850bb072da7d3e81`，ahead/behind 为 0/0。提交日期沿用用户此前批准的合成排期（2026-10-24～11-01，间隔1～2天）；实际开发／验收日期为2026-09-28。

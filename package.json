@@ -25,6 +25,7 @@
     "test:python-codex-live": "pnpm py:sync && uv --directory python run --frozen python spikes/codex_live.py missing-auth && uv --directory python run --frozen python spikes/codex_live.py invalid-model && uv --directory python run --frozen python spikes/codex_live.py structured && uv --directory python run --frozen python spikes/codex_live.py coding && uv --directory python run --frozen python spikes/codex_live.py cancel && uv --directory python run --frozen python spikes/codex_live.py approve && uv --directory python run --frozen python spikes/codex_live.py reject && uv --directory python run --frozen python spikes/codex_live.py continuation && uv --directory python run --frozen python spikes/codex_live.py restart-continuation && uv --directory python run --frozen python spikes/host_codex_live.py",
     "test:review-copy-live": "pnpm py:sync && uv --directory python run --frozen python spikes/review_copy_live.py",
     "dev:desktop": "node scripts/dev-desktop.mjs",
+    "desktop:open": "node desktop/scripts/open-forge.mjs",
     "start:desktop": "pnpm build && pnpm --filter @forge/desktop start",
     "smoke:desktop": "pnpm build && node scripts/smoke-desktop.mjs",
     "smoke:preview": "pnpm build && node scripts/smoke-app-preview.mjs",

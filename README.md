@@ -1,12 +1,14 @@
 # Forge
 
+<img src="apps/desktop/assets/icon.png" alt="Forge" width="80" />
+
 > **Python Core**：Desktop 的唯一业务 Runtime 是独立 Python Host。Electron Main 负责窗口、目录选择和 Host 生命周期；Vue/TypeScript 通过固定 Preload API 与 Main 通信，Main 以有版本的 JSON-RPC stdio 连接 Python。历史 Node Host 仅保留为迁移对照，不是生产 fallback。MIG-PY-09 和 P2 Phase Gate 已在 macOS arm64 开发环境通过；见 [迁移计划](docs/forge-python-core-migration-plan.md) 与 [P2 阶段报告](docs/p2-completion-report.md)。SQLite 数据不重置。
 
 Forge 是自然语言驱动的多 Agent 研发工作台。需求先成为可编辑的 Task Contract，经人工批准进入 TODO；开发、Review、验证与人工验收依靠真实状态和证据。Done 不代表合并或部署。Forge 与 ProofRun 完全独立。
 
-> **桌面基座变更（2026-09-27）**：用户已批准 [ADR 0087](docs/decisions/0087-aperant-derived-desktop-base.md)，未来 Desktop 在独立私有仓库 [Forge-Aperant](https://github.com/j-tide/Forge-Aperant) 的 Aperant `v2.8.0-beta.6` AGPL-3.0 衍生版上继续开发。下文的 Vue/Python Desktop 和安装包记录是本仓库既有版本的历史实现与验收；衍生版尚未连接本仓库的 Python Host 或迁移现有数据，不能把两者的验收互相替代。衍生版保留上游来源与许可声明。
+> **当前桌面预览（2026-09-28）**：源码已归拢到本仓库 [desktop/](desktop/)，基于用户批准的 [ADR 0087](docs/decisions/0087-aperant-derived-desktop-base.md)。[v0.1.0-preview.3 下载](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.3)包含 macOS arm64 INTERNAL / ADHOC / UNNOTARIZED 安装包、对应源码和校验摘要。新 Forge 标识、玻璃亮暗主题、中文／English 切换已通过真实 Electron 与包启动检查；见[本版说明](desktop/docs/releases/0.1.0-preview.3.md)。衍生桌面尚未连接本仓库 Python Host，不能把下面历史产品验收当成本版验收。保留 AGPL-3.0 来源与法律说明。
 
-> **最新衍生预览（2026-09-28）**：[v0.1.0-preview.2下载](https://github.com/j-tide/Forge-Aperant/releases/tag/v0.1.0-preview.2)，中文界面，设置→语言提供中文／English即时切换并保存。仅macOS arm64 INTERNAL / ADHOC / UNNOTARIZED；完整证据见[实施状态](docs/implementation-status.md)。正常启动请用衍生仓库的`npm run preview:open`；本仓库下方命令仍对应历史Vue/Python实现，不混用。
+正常打开当前衍生包：`pnpm desktop:open`；开发请在 `desktop/` 中运行 `npm run dev`，详见 [desktop README](desktop/README.md)。原根目录 `pnpm dev:desktop` 仍对应下方历史 Vue/Python 路线。已发布 .2 和未发布 logo 构建记录保留在实施状态中，新包未覆盖原安装或用户数据库。
 
 ## 当前状态
 

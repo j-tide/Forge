@@ -19,3 +19,9 @@ ADR 0085/0086 选择在原 Forge 仓库独立编写 Vue 桌面，并以 Aperant 
 原 Forge 仓库中的 Python Host 仍是已批准的最终业务 Runtime，原有 SQLite 项目、任务、Run 和审批记录原位保留；本 ADR 不执行数据迁移、重置、代码替换或安装覆盖。当前 Aperant 衍生版及其原有任务/执行链**尚未与 Forge Python Host 组成一个 Runtime**，不能把 Aperant 的现成功能或衍生版视觉预览记为 Forge Task/Run/Agent 产品验收。
 
 后续迁移须有明确的接口与数据方案：将衍生 Desktop 的正常用户入口连接至 Forge 有版本的本地 Host 协议，逐项映射 Task Contract、人工审批、Run/Attempt、证据、插件、身份和权限；保持 Main/Preload/Renderer 边界与默认关闭的远程入口。先在隔离数据上验证，再以非破坏方式验证既有 SQLite 数据和安装共存。每项必须以当前衍生版的真实入口、Python Host 运行链路、安装态测试和权威验收用例证明；完整 Desktop 里程碑及发布门禁未因本 ADR 自动通过。涉及产品语义、安全或许可边界的实际冲突，先记录并作单独决策。
+
+## 2026-09-28 · 用户批准归拢与发布
+
+用户要求全部源码提交、推送到 `j-tide/Forge` 并发布新版本。将已批准的衍生项目完整导入本仓库 `desktop/`，保留导入前的 Git 历史、AGPL-3.0 许可、来源、独立 npm workspace/锁文件及数据身份。兄弟仓库仅作本次导入准备来源；不强推覆盖原 Forge 历史，不移动/删除原 Python Host、apps、规格或用户数据。
+
+`desktop/` 的专用质量 CI 与原 pnpm gate 分别执行；根 `pnpm desktop:open` 打开已生成的衍生预览包。当前版本 `0.1.0-preview.3` 仅发布 macOS arm64 INTERNAL / ADHOC / UNNOTARIZED 预览及相应源码。此次归拢不把衍生 Main 业务链升级为已验收的 Python Host 集成，不解除 Windows/Intel、Claude、签名、公证和正式更新门禁。用户本轮明确授权 commit/push/prerelease；默认不自动发布规则对后续其他任务仍生效。

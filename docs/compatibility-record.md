@@ -1,5 +1,29 @@
 # Forge 版本与兼容性记录
 
+## 2026-09-28 · Forge 仓库源码归拢 / 0.1.0-preview.3
+
+用户明确授权按功能提交、推送到 `j-tide/Forge` 并发布预览。衍生 Desktop 完整源码与历史归入 `desktop/`，原 Python Host、规格、Vue 历史实现及 SQLite 用户数据原位保留；许可/来源和独立 npm 边界见 ADR 0087。当前预览仍未连接 Forge Python Host，不是完整产品验收。普通打开使用根 `pnpm desktop:open`，开发入口位于 `desktop/`；详细变更、当前截图、检查结果及未验项见 [0.1.0-preview.3](../desktop/docs/releases/0.1.0-preview.3.md)。
+
+本轮安装依赖不变。衍生 npm i18n/lint/typecheck/test/build、亮暗 Logo 和语言重启 QA、真实 .app smoke、ad-hoc 签名通过；原 pnpm frozen install/contracts/lint/typecheck/test（含 build）与真实 Python Host Desktop smoke 通过。现有用户数据哈希保持不变，没有模型调用。app.asar SHA-256 `74d49170981acedc7d118caf653e6fe7e28ecf8b9b2475aaec07478867f94257`。生产依赖 audit 仍 33 项（10 high/9 moderate/14 low），未消除。Windows/Intel、Claude、签名/公证、正式更新与衍生 Python 集成保持未验。手机远程后置。提交时间沿用用户指定随机 1～3 天排期；实际开发与验证为 2026-09-28，二者明确区分。
+
+
+## 2026-09-28 · Forge original logo and native icon resources
+
+Original Forge mark/app-tile generated with built-in imagegen. Canonical PNGs, exact prompts and source hashes reside in the sibling desktop `resources/branding/`; existing Pillow12.1.1/macOS iconutil convert platform formats only. No added dependency, model execution or credential change. The mark uses one alpha silhouette in both themes; native assets cover macOS ICNS, Windows ICO, Linux PNG sizes, existing web app icons and original Forge template trays.
+
+macOS arm64: converter verifies14PNG outputs plus ICO sizes/content and ICNS content; 248 files/4763 Vitest +10 Node tests, i18n, lint (825 pre-existing warnings/5infos), typecheck/build pass. Real Electron validates two themes, expanded/collapsed navigation, welcome, About, settings-rerun onboarding and favicon loading. The new unpublished bundle `dist/logo-unreleased/mac-arm64/Forge.app` (`forge-logo-20260928-f3383f498f87`, ASAR `f3383f498f87f4c96ae7f3a0376b45496bdd4a6d6e4b19d1695918a21c13bba5`) launches, matches8 compiled JS/CSS/PNG files and4 native resources, decodes its256px native icon, and passes ad-hoc signature verification after exit. Existing settings/projects/profile file hashes/existence unchanged. This verifies assets/startup, not notification delivery or full business runtime.
+
+Original Vue/Desktop code receives the same asset bytes; targeted UI7/Web224/Desktop17 tests, typechecks, relevant ESLint and builds pass. Its old installed Python packages are preserved, not rebuilt; packaging configuration now embeds Forge.icns for the next build. The original Windows hand-built ZIP's PE executable icon and all Windows/Intel runtime display remain UNVERIFIED. No claims of signed/notarized release, second-executor acceptance or completed derivative Python Host integration. Historical artifacts, AGPL notices, dependency audit findings, formal gates and paused mobile/remote state remain intact.
+
+## 2026-09-28 · Unreleased Forge display-name and namespace change
+
+The independent sibling Desktop now displays **Forge** while retaining `dev.iamzjt.forgeglasspreview` and the stable, separate `Forge Glass Preview` user-data directory. The npm package/workspace names and built-in MCP namespace changed consistently, with explicit aliases for saved configuration IDs. API profiles use `userData/forge/profiles.json`; only a missing new file allows reading the legacy path within this same isolated userData. Real filesystem tests verify profile preservation, no old-file deletion, and private 0600 permissions. Existing Graphiti database namespaces, OAuth parameters, legacy project-data exclusions and historical process-name protections remain compatibility/safety details, not promotional branding.
+
+Build `forge-branding-20260928-c067d26d1f35` (`app.asar` SHA-256 `c067d26d1f35551948fb09b5d0cf412547c55c10fa234f20e1796cf5fc8509a4`) is **UNRELEASED / INTERNAL / ADHOC / UNNOTARIZED**, based on 0.1.0-preview.2. Real macOS arm64 Electron language/theme/restart QA and packaged startup passed; all six major compiled files match source build outputs byte-for-byte. Packaged LICENSE/UPSTREAM match sources and the ad-hoc bundle signature remains valid after startup. Existing settings, projects and both possible API-profile file states/hashes were unchanged. No provider calls, new dependencies, global environment changes, commit, push, or release were performed.
+
+This is branding/localization/data-compatibility verification, not a new Forge Python Host integration or business workflow acceptance. The previously published assets remain unchanged. Existing Windows/Intel, Developer ID/notarization, Claude, formal updates, inherited dependency audit findings and original Forge release gates retain their previous UNVERIFIED/BLOCKED status. Mobile and remote additions remain paused.
+
+
 ## 2026-09-28 · 衍生预览 0.1.0-preview.2 汉化与语言持久化
 
 独立Forge-Aperant的私有prerelease已上传DMG、ZIP、源码和校验表，4资产远端digest/大小与本地一致，main/tag=`1798ba81d9957cdd714c3d3d850bb072da7d3e81`。Node工具24.19.0、npm10.8.2、Electron40.0.0、React19.2.4、i18next25.8.18；没有新增依赖或改变原Forge版本锁。新profile默认zh-CN；旧en/fr偏好保留；设置立即保存仅language字段；原生菜单／通知按保存设置切换，中文不启用英文词典。没有改模型、认证、权限、SQLite或Task语义。
