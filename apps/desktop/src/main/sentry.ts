@@ -33,22 +33,21 @@ declare const __SENTRY_TRACES_SAMPLE_RATE__: string;
 declare const __SENTRY_PROFILES_SAMPLE_RATE__: string;
 
 // In-memory state for current setting (updated via IPC when user toggles)
-let sentryEnabledState = true;
+let sentryEnabledState = false;
 
 /**
  * Get Sentry DSN from build-time constant
  *
  * The DSN is embedded at build time via Vite's `define` option.
- * - In local development: comes from .env file (loaded by dotenv)
- * - In CI builds: comes from GitHub secrets
- * - For forks: without SENTRY_DSN, Sentry is disabled (safe for forks)
+ * Only the derivative-specific DSN may enable reporting. Generic SENTRY_DSN
+ * values inherited from an upstream build or shell are ignored.
  */
 function getSentryDsn(): string {
   // __SENTRY_DSN__ is replaced at build time with the actual value
   // Falls back to runtime env var for development flexibility
   // typeof guard needed for test environments where Vite's define doesn't apply
   const buildTimeValue = typeof __SENTRY_DSN__ !== 'undefined' ? __SENTRY_DSN__ : '';
-  return buildTimeValue || process.env.SENTRY_DSN || '';
+  return buildTimeValue || process.env.FORGE_GLASS_PREVIEW_SENTRY_DSN || '';
 }
 
 /**
@@ -60,7 +59,7 @@ function getTracesSampleRate(): number {
   // Try build-time constant first, then runtime env var
   // typeof guard needed for test environments where Vite's define doesn't apply
   const buildTimeValue = typeof __SENTRY_TRACES_SAMPLE_RATE__ !== 'undefined' ? __SENTRY_TRACES_SAMPLE_RATE__ : '';
-  const envValue = buildTimeValue || process.env.SENTRY_TRACES_SAMPLE_RATE;
+  const envValue = buildTimeValue || process.env.FORGE_GLASS_PREVIEW_SENTRY_TRACES_SAMPLE_RATE;
   if (envValue) {
     const parsed = parseFloat(envValue);
     if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 1) {
@@ -80,7 +79,7 @@ function getProfilesSampleRate(): number {
   // Try build-time constant first, then runtime env var
   // typeof guard needed for test environments where Vite's define doesn't apply
   const buildTimeValue = typeof __SENTRY_PROFILES_SAMPLE_RATE__ !== 'undefined' ? __SENTRY_PROFILES_SAMPLE_RATE__ : '';
-  const envValue = buildTimeValue || process.env.SENTRY_PROFILES_SAMPLE_RATE;
+  const envValue = buildTimeValue || process.env.FORGE_GLASS_PREVIEW_SENTRY_PROFILES_SAMPLE_RATE;
   if (envValue) {
     const parsed = parseFloat(envValue);
     if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 1) {
@@ -95,6 +94,49 @@ function getProfilesSampleRate(): number {
 let cachedDsn: string = '';
 let cachedTracesSampleRate: number = 0;
 let cachedProfilesSampleRate: number = 0;
+let sentryClientInitialized = false;
+
+function startSentryMain(): void {
+  if (sentryClientInitialized || !sentryEnabledState || !cachedDsn ||
+      (!app.isPackaged && process.env.SENTRY_DEV !== 'true')) {
+    return;
+  }
+
+  Sentry.init({
+    dsn: cachedDsn,
+    environment: app.isPackaged ? 'production' : 'development',
+    release: `forge-glass-preview@${app.getVersion()}`,
+
+    beforeSend(event: Sentry.ErrorEvent) {
+      if (!sentryEnabledState) {
+        return null;
+      }
+      return processEvent(event as SentryErrorEvent) as Sentry.ErrorEvent;
+    },
+
+    beforeSendTransaction(event: Sentry.ErrorEvent) {
+      if (!sentryEnabledState) {
+        return null;
+      }
+      return processEvent(event as SentryErrorEvent) as Sentry.ErrorEvent;
+    },
+
+    tracesSampleRate: cachedTracesSampleRate,
+    profilesSampleRate: cachedProfilesSampleRate,
+    sendClientReports: false,
+  });
+  sentryClientInitialized = true;
+}
+
+function stopSentryMain(): void {
+  if (!sentryClientInitialized) {
+    return;
+  }
+  sentryClientInitialized = false;
+  void Sentry.close(0).catch((error) => {
+    console.warn('[Sentry] Failed to close error reporting client:', error);
+  });
+}
 
 /**
  * Initialize Sentry for the main process
@@ -109,42 +151,20 @@ export function initSentryMain(): void {
   // Read initial setting from disk synchronously
   const savedSettings = readSettingsFile();
   const settings = { ...DEFAULT_APP_SETTINGS, ...savedSettings };
-  sentryEnabledState = settings.sentryEnabled ?? true;
+  sentryEnabledState = settings.sentryEnabled ?? false;
 
-  // Check if we have a DSN - if not, Sentry is effectively disabled
+  // No SDK client is initialized until both the preview DSN and user opt-in exist.
   const hasDsn = cachedDsn.length > 0;
-  const shouldEnable = hasDsn && (app.isPackaged || process.env.SENTRY_DEV === 'true');
 
   if (!hasDsn) {
-    console.log('[Sentry] No SENTRY_DSN configured - error reporting disabled');
-    console.log('[Sentry] To enable: set SENTRY_DSN environment variable');
+    console.log('[Sentry] No Forge Glass Preview DSN configured - error reporting disabled');
   }
 
-  Sentry.init({
-    dsn: cachedDsn,
-    environment: app.isPackaged ? 'production' : 'development',
-    release: `auto-claude@${app.getVersion()}`,
-
-    beforeSend(event: Sentry.ErrorEvent) {
-      if (!sentryEnabledState) {
-        return null;
-      }
-      // Process event with shared privacy utility
-      return processEvent(event as SentryErrorEvent) as Sentry.ErrorEvent;
-    },
-
-    // Sample rates from environment variables (default: 10% in production, 0 in dev)
-    tracesSampleRate: cachedTracesSampleRate,
-    profilesSampleRate: cachedProfilesSampleRate,
-
-    // Only enable if we have a DSN and are in production (or SENTRY_DEV is set)
-    enabled: shouldEnable,
-  });
+  startSentryMain();
 
   // Listen for settings changes from renderer process
   ipcMain.on(IPC_CHANNELS.SENTRY_STATE_CHANGED, (_event, enabled: boolean) => {
-    sentryEnabledState = enabled;
-    console.log(`[Sentry] Error reporting ${enabled ? 'enabled' : 'disabled'} (via IPC)`);
+    setSentryEnabled(enabled);
   });
 
   // IPC handler for renderer to get Sentry config
@@ -160,8 +180,8 @@ export function initSentryMain(): void {
     };
   });
 
-  if (hasDsn) {
-    console.log(`[Sentry] Main process initialized (enabled: ${sentryEnabledState}, traces: ${cachedTracesSampleRate}, profiles: ${cachedProfilesSampleRate})`);
+  if (hasDsn && sentryClientInitialized) {
+    console.log(`[Sentry] Main process initialized (traces: ${cachedTracesSampleRate}, profiles: ${cachedProfilesSampleRate})`);
   }
 }
 
@@ -176,8 +196,13 @@ export function isSentryEnabled(): boolean {
  * Set Sentry enabled state programmatically
  */
 export function setSentryEnabled(enabled: boolean): void {
-  sentryEnabledState = enabled;
-  console.log(`[Sentry] Error reporting ${enabled ? 'enabled' : 'disabled'} (programmatic)`);
+  sentryEnabledState = enabled === true;
+  if (sentryEnabledState) {
+    startSentryMain();
+  } else {
+    stopSentryMain();
+  }
+  console.log(`[Sentry] Error reporting ${sentryEnabledState ? 'enabled' : 'disabled'}`);
 }
 
 /**
@@ -214,7 +239,7 @@ export function safeCaptureException(error: Error, context?: SentryCaptureContex
  */
 export function getSentryEnvForSubprocess(): Record<string, string> {
   const dsn = getSentryDsn();
-  if (!dsn) {
+  if (!dsn || !sentryEnabledState) {
     return {};
   }
 

@@ -15,7 +15,9 @@ on:
         type: boolean
 
 jobs:
+  # Disabled in Forge Glass Preview. Re-enable only with a derivative release plan.
   validate-version:
+    if: ${{ false }}
     name: Validate beta version format
     runs-on: ubuntu-latest
     steps:
@@ -33,6 +35,7 @@ jobs:
           echo "Valid beta version: $VERSION"
 
   create-tag:
+    if: ${{ false }}
     name: Create beta tag
     needs: validate-version
     runs-on: ubuntu-latest
@@ -63,6 +66,7 @@ jobs:
 
   # Intel build on Intel runner for native compilation
   build-macos-intel:
+    if: ${{ false }}
     needs: create-tag
     runs-on: macos-15-intel
     outputs:
@@ -115,6 +119,7 @@ jobs:
 
   # Apple Silicon build on ARM64 runner for native compilation
   build-macos-arm64:
+    if: ${{ false }}
     needs: create-tag
     runs-on: macos-15
     outputs:
@@ -166,6 +171,7 @@ jobs:
             apps/desktop/dist/*.yml
 
   build-windows:
+    if: ${{ false }}
     needs: create-tag
     runs-on: windows-latest
     permissions:
@@ -323,6 +329,7 @@ jobs:
             apps/desktop/dist/*.yml
 
   build-linux:
+    if: ${{ false }}
     needs: create-tag
     runs-on: ubuntu-latest
     steps:
@@ -375,6 +382,7 @@ jobs:
 
   # Finalize macOS notarization (runs in parallel with Windows/Linux builds)
   finalize-notarization:
+    if: ${{ false }}
     needs: [build-macos-intel, build-macos-arm64]
     runs-on: macos-latest
     steps:
@@ -416,9 +424,10 @@ jobs:
           path: arm64/*.dmg
 
   create-release:
+    if: ${{ false }}
     needs: [create-tag, finalize-notarization, build-windows, build-linux]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.dry_run != 'true' }}
+    # Upstream condition retained for reference: if: ${{ github.event.inputs.dry_run != 'true' }}
     permissions:
       contents: write
     steps:
@@ -570,9 +579,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   dry-run-summary:
+    if: ${{ false }}
     needs: [create-tag, finalize-notarization, build-windows, build-linux]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.dry_run == 'true' }}
+    # Upstream condition retained for reference: if: ${{ github.event.inputs.dry_run == 'true' }}
     steps:
       - uses: actions/checkout@v4
 

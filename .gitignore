@@ -57,11 +57,14 @@ lerna-debug.log*
 # Auto Claude Generated
 # ===========================
 .auto-claude/
+.forge-glass-preview/
 .aperant/
 .planning/
 .planning-archive/
 .auto-build-security.json
 .auto-claude-security.json
+.forge-glass-preview-security.json
+.forge-glass-preview-allowlist
 .auto-claude-status
 .claude_settings.json
 .update-metadata.json
@@ -110,6 +113,8 @@ coverage/
 test-results/
 playwright-report/
 playwright/.cache/
+.playwright-cli/
+output/
 
 # ===========================
 # Python

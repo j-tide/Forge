@@ -1,14 +1,9 @@
 #!/usr/bin/env node
 /**
- * Post-install script for Auto Claude UI
+ * Post-install script for Forge Glass Preview
  *
- * On Windows:
- *   1. Try to download prebuilt node-pty binaries from GitHub releases
- *   2. Fall back to electron-rebuild if prebuilds aren't available
- *   3. Show helpful error message if compilation fails
- *
- * On macOS/Linux:
- *   1. Run electron-rebuild (compilers are typically available)
+ * Build native modules locally when platform packages are not already present.
+ * The derivative never downloads binaries from upstream app releases.
  */
 
 const { spawn } = require('child_process');
@@ -23,8 +18,7 @@ const WINDOWS_BUILD_TOOLS_HELP = `
   VISUAL STUDIO BUILD TOOLS REQUIRED
 ================================================================================
 
-Prebuilt binaries weren't available for your Electron version, and compilation
-requires Visual Studio Build Tools.
+This preview builds native modules locally and requires Visual Studio Build Tools.
 
 To install:
 
@@ -139,29 +133,6 @@ async function main() {
   if (isNodePtyBuilt()) {
     console.log('[postinstall] Native modules already built, skipping rebuild.');
     return;
-  }
-
-  if (isWindows) {
-    // On Windows, try prebuilds first
-    console.log('[postinstall] Windows detected - checking for prebuilt binaries...\n');
-
-    try {
-      // Dynamic import to handle case where the script doesn't exist yet
-      const { downloadPrebuilds } = require('./download-prebuilds.cjs');
-      const result = await downloadPrebuilds();
-
-      if (result.success) {
-        console.log('\n[postinstall] Successfully installed prebuilt binaries!');
-        console.log('[postinstall] No Visual Studio Build Tools required.\n');
-        return;
-      }
-
-      console.log(`\n[postinstall] Prebuilds not available (${result.reason})`);
-      console.log('[postinstall] Falling back to electron-rebuild...\n');
-    } catch (err) {
-      console.log('[postinstall] Could not check for prebuilds:', err.message);
-      console.log('[postinstall] Falling back to electron-rebuild...\n');
-    }
   }
 
   // Run electron-rebuild

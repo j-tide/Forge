@@ -234,6 +234,10 @@ function buildPathsToAdd(
  */
 export function getAugmentedEnv(additionalPaths?: string[]): Record<string, string> {
   const env = { ...process.env } as Record<string, string>;
+  // Child processes must not inherit a generic upstream reporting DSN.
+  delete env.SENTRY_DSN;
+  delete env.SENTRY_TRACES_SAMPLE_RATE;
+  delete env.SENTRY_PROFILES_SAMPLE_RATE;
   const pathSeparator = getPathDelimiter();
 
   // Get all candidate paths (platform + additional)
@@ -409,6 +413,10 @@ async function getNpmGlobalPrefixAsync(): Promise<string | null> {
  */
 export async function getAugmentedEnvAsync(additionalPaths?: string[]): Promise<Record<string, string>> {
   const env = { ...process.env } as Record<string, string>;
+  // Child processes must not inherit a generic upstream reporting DSN.
+  delete env.SENTRY_DSN;
+  delete env.SENTRY_TRACES_SAMPLE_RATE;
+  delete env.SENTRY_PROFILES_SAMPLE_RATE;
   const pathSeparator = getPathDelimiter();
 
   // Get all candidate paths (platform + additional)

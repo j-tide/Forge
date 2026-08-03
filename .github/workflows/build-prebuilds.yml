@@ -17,7 +17,9 @@ env:
   ELECTRON_VERSION: ${{ github.event.inputs.electron_version || '40.0.0' }}
 
 jobs:
+  # Disabled in Forge Glass Preview until it has its own release plan.
   build-windows:
+    if: ${{ false }}
     runs-on: windows-latest
     strategy:
       matrix:
@@ -106,6 +108,7 @@ jobs:
 
   # Create a combined prebuilds package
   package-prebuilds:
+    if: ${{ false }}
     needs: build-windows
     runs-on: ubuntu-latest
     steps:

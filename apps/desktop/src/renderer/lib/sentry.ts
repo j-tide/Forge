@@ -12,8 +12,8 @@
  * - Tags, contexts, extra data, and user info are all sanitized
  *
  * DSN Configuration:
- * - DSN is loaded from environment variable via main process IPC
- * - If no DSN is configured, Sentry is disabled (safe for forks)
+ * - Only a derivative-specific DSN is supplied by the main process
+ * - The SDK is not initialized until settings load and the user opts in
  *
  * Race Condition Prevention:
  * - We track whether settings have been loaded from disk
@@ -34,6 +34,50 @@ let settingsLoaded = false;
 
 // Track whether Sentry has been initialized
 let sentryInitialized = false;
+let cachedConfig: { dsn: string; tracesSampleRate: number; profilesSampleRate: number } | null = null;
+
+function isReportingEnabled(): boolean {
+  if (!settingsLoaded) {
+    return false;
+  }
+  try {
+    return useSettingsStore.getState().settings.sentryEnabled === true;
+  } catch {
+    return false;
+  }
+}
+
+function startSentryRenderer(): void {
+  if (sentryInitialized || !cachedConfig?.dsn || !isReportingEnabled()) {
+    return;
+  }
+
+  const config = cachedConfig;
+  Sentry.init({
+    dsn: config.dsn,
+
+    beforeSend(event: Sentry.ErrorEvent) {
+      if (!isReportingEnabled()) {
+        return null;
+      }
+      return processEvent(event as SentryErrorEvent) as Sentry.ErrorEvent;
+    },
+
+    beforeSendTransaction(event: Sentry.ErrorEvent) {
+      if (!isReportingEnabled()) {
+        return null;
+      }
+      return processEvent(event as SentryErrorEvent) as Sentry.ErrorEvent;
+    },
+
+    tracesSampleRate: config.tracesSampleRate,
+    profilesSampleRate: config.profilesSampleRate,
+    sendClientReports: false,
+  });
+
+  sentryInitialized = true;
+  console.log(`[Sentry] Renderer initialized (traces: ${config.tracesSampleRate}, profiles: ${config.profilesSampleRate})`);
+}
 
 /**
  * Mark settings as loaded
@@ -41,7 +85,7 @@ let sentryInitialized = false;
  */
 export function markSettingsLoaded(): void {
   settingsLoaded = true;
-  console.log('[Sentry] Settings loaded, error reporting ready');
+  startSentryRenderer();
 }
 
 /**
@@ -74,51 +118,12 @@ export async function initSentryRenderer(): Promise<void> {
     console.warn('[Sentry] Failed to get config from main process:', error);
   }
 
-  const hasDsn = config.dsn.length > 0;
-  if (!hasDsn) {
+  cachedConfig = config;
+  if (!config.dsn) {
     console.log('[Sentry] No DSN configured - error reporting disabled in renderer');
     return;
   }
-
-  Sentry.init({
-    dsn: config.dsn,
-
-    beforeSend(event: Sentry.ErrorEvent) {
-      // Don't send events until settings are loaded
-      // This prevents sending events if user had disabled Sentry
-      if (!settingsLoaded) {
-        console.log('[Sentry] Settings not loaded yet, dropping event');
-        return null;
-      }
-
-      // Check current setting at send time (allows mid-session toggle)
-      try {
-        const currentSettings = useSettingsStore.getState().settings;
-        const isEnabled = currentSettings.sentryEnabled ?? true;
-
-        if (!isEnabled) {
-          return null;
-        }
-      } catch (error) {
-        // If settings store fails, don't send event (be conservative)
-        console.error('[Sentry] Failed to read settings, dropping event:', error);
-        return null;
-      }
-
-      // Process event with shared privacy utility
-      return processEvent(event as SentryErrorEvent) as Sentry.ErrorEvent;
-    },
-
-    // Sample rates from main process (configured via environment variables)
-    tracesSampleRate: config.tracesSampleRate,
-    profilesSampleRate: config.profilesSampleRate,
-
-    // Enable in Electron environment when we have a DSN
-    enabled: true,
-  });
-
-  sentryInitialized = true;
-  console.log(`[Sentry] Renderer initialized (traces: ${config.tracesSampleRate}, profiles: ${config.profilesSampleRate})`);
+  startSentryRenderer();
 }
 
 /**
@@ -133,6 +138,9 @@ export function isSentryInitialized(): boolean {
  * Call this whenever the user toggles the setting in the UI
  */
 export function notifySentryStateChanged(enabled: boolean): void {
+  if (enabled) {
+    startSentryRenderer();
+  }
   console.log(`[Sentry] Notifying main process: ${enabled ? 'enabled' : 'disabled'}`);
   try {
     window.electronAPI?.notifySentryStateChanged?.(enabled);
@@ -146,7 +154,7 @@ export function notifySentryStateChanged(enabled: boolean): void {
  * Useful for error boundaries or try/catch blocks
  */
 export function captureException(error: Error, context?: Record<string, unknown>): void {
-  if (!sentryInitialized) {
+  if (!sentryInitialized || !isReportingEnabled()) {
     // Sentry not initialized (no DSN configured), just log
     console.error('[Sentry] Not initialized, error not captured:', error);
     return;

@@ -1,9 +1,10 @@
 {
-  "name": "auto-claude",
-  "version": "2.8.0-beta.6",
-  "description": "Autonomous multi-agent coding framework powered by Claude AI",
+  "name": "forge-aperant-base",
+  "private": true,
+  "version": "0.1.0-preview.1",
+  "description": "Forge Glass Preview derivative of Aperant; see UPSTREAM.md",
   "license": "AGPL-3.0",
-  "author": "Auto Claude Team",
+  "author": "Forge Glass Preview contributors",
   "workspaces": [
     "apps/*",
     "libs/*"
@@ -28,7 +29,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/AndyMik90/Auto-Claude.git"
+    "url": "https://github.com/j-tide/Forge-Aperant.git"
   },
   "keywords": [
     "ai",

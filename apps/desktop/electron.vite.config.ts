@@ -3,22 +3,22 @@ import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 import { config as dotenvConfig } from 'dotenv';
 
-// Load .env file for build-time constants (Sentry DSN, etc.)
+// Load .env file for build-time constants (preview Sentry DSN, etc.)
 dotenvConfig({ path: resolve(__dirname, '.env') });
 
 /**
  * Build-time constants embedded via Vite `define`.
  *
- * In CI builds, these come from GitHub secrets.
- * In local development, these come from apps/desktop/.env (loaded by dotenv).
+ * Only derivative-specific variables may configure error reporting. An inherited
+ * upstream SENTRY_DSN must never be embedded into this preview build.
  *
  * The `define` option replaces these values at build time, so they're
  * embedded in the bundle and available at runtime in packaged apps.
  */
 const sentryDefines = {
-  '__SENTRY_DSN__': JSON.stringify(process.env.SENTRY_DSN || ''),
-  '__SENTRY_TRACES_SAMPLE_RATE__': JSON.stringify(process.env.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
-  '__SENTRY_PROFILES_SAMPLE_RATE__': JSON.stringify(process.env.SENTRY_PROFILES_SAMPLE_RATE || '0.1'),
+  '__SENTRY_DSN__': JSON.stringify(process.env.FORGE_GLASS_PREVIEW_SENTRY_DSN || ''),
+  '__SENTRY_TRACES_SAMPLE_RATE__': JSON.stringify(process.env.FORGE_GLASS_PREVIEW_SENTRY_TRACES_SAMPLE_RATE || '0.1'),
+  '__SENTRY_PROFILES_SAMPLE_RATE__': JSON.stringify(process.env.FORGE_GLASS_PREVIEW_SENTRY_PROFILES_SAMPLE_RATE || '0.1'),
 };
 
 /** Embedded API keys — search works out of the box, no user config needed. */
@@ -131,10 +131,12 @@ export default defineConfig({
           '**/.git/**',
           '**/.worktrees/**',
           '**/.auto-claude/**',
+          '**/.forge-glass-preview/**',
           '**/out/**',
           // Ignore the parent autonomous-coding directory's worktrees
           resolve(__dirname, '../.worktrees/**'),
           resolve(__dirname, '../.auto-claude/**'),
+          resolve(__dirname, '../.forge-glass-preview/**'),
         ]
       }
     }

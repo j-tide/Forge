@@ -50,15 +50,16 @@ for (const envPath of possibleEnvPaths) {
 
 import { app, BrowserWindow, shell, nativeImage, session, screen, Menu, MenuItem } from 'electron';
 import { join } from 'path';
-import { accessSync, readFileSync, writeFileSync, rmSync, cpSync } from 'fs';
+import { accessSync, readFileSync, writeFileSync } from 'fs';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
+import { PREVIEW_APP_ID, PREVIEW_APP_NAME } from './preview-identity';
 import { setupIpcHandlers } from './ipc-setup';
 import { AgentManager } from './agent';
 import { TerminalManager } from './terminal-manager';
 import { getUsageMonitor } from './claude-profile/usage-monitor';
 import { initializeUsageMonitorForwarding } from './ipc-handlers/terminal-handlers';
-import { initializeAppUpdater, stopPeriodicUpdates } from './app-updater';
-import { DEFAULT_APP_SETTINGS, IPC_CHANNELS, SPELL_CHECK_LANGUAGE_MAP, DEFAULT_SPELL_CHECK_LANGUAGE, ADD_TO_DICTIONARY_LABELS } from '../shared/constants';
+import { stopPeriodicUpdates } from './app-updater';
+import { IPC_CHANNELS, SPELL_CHECK_LANGUAGE_MAP, DEFAULT_SPELL_CHECK_LANGUAGE, ADD_TO_DICTIONARY_LABELS } from '../shared/constants';
 import { getAppLanguage, initAppLanguage } from './app-language';
 import { readSettingsFile } from './settings-utils';
 import { registerSettingsAccessor } from './ai/auth/resolver';
@@ -69,27 +70,7 @@ import { initializeClaudeProfileManager, getClaudeProfileManager } from './claud
 import { isProfileAuthenticated } from './claude-profile/profile-utils';
 import { isMacOS, isWindows } from './platform';
 import { ptyDaemonClient } from './terminal/pty-daemon-client';
-import type { AppSettings, AuthFailureInfo } from '../shared/types';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Migrate userData from old app name (auto-claude-ui → aperant)
-// Must run before any code accesses app.getPath('userData')
-// ─────────────────────────────────────────────────────────────────────────────
-{
-  const newUserData = app.getPath('userData');
-  const oldUserData = join(dirname(newUserData), 'auto-claude-ui');
-  if (existsSync(oldUserData) && !existsSync(join(newUserData, '.migrated'))) {
-    try {
-      // Copy all files from old location to new (don't move — keeps old as backup)
-      cpSync(oldUserData, newUserData, { recursive: true, force: false, errorOnExist: false });
-      // Mark as migrated so we don't repeat
-      writeFileSync(join(newUserData, '.migrated'), new Date().toISOString());
-      console.warn('[main] Migrated userData from auto-claude-ui to aperant');
-    } catch (err) {
-      console.warn('[main] userData migration failed (non-fatal):', err);
-    }
-  }
-}
+import type { AuthFailureInfo } from '../shared/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Window sizing constants
@@ -121,41 +102,6 @@ registerSettingsAccessor((key: string) => {
   const settings = readSettingsFile();
   return settings?.[key] as string | undefined;
 });
-
-/**
- * Load app settings synchronously (for use during startup).
- * This is a simple merge with defaults - no migrations or auto-detection.
- */
-function loadSettingsSync(): AppSettings {
-  const savedSettings = readSettingsFile();
-  return { ...DEFAULT_APP_SETTINGS, ...savedSettings } as AppSettings;
-}
-
-/**
- * Clean up stale update metadata files from the redundant source updater system.
- *
- * The old "source updater" wrote .update-metadata.json files that could persist
- * across app updates and cause version display desync. This cleanup ensures
- * we use the actual bundled version from app.getVersion().
- */
-function cleanupStaleUpdateMetadata(): void {
-  const userData = app.getPath('userData');
-  const stalePaths = [
-    join(userData, 'auto-claude-source'),
-    join(userData, 'backend-source'),
-  ];
-
-  for (const stalePath of stalePaths) {
-    if (existsSync(stalePath)) {
-      try {
-        rmSync(stalePath, { recursive: true, force: true });
-        console.warn(`[main] Cleaned up stale update metadata: ${stalePath}`);
-      } catch (e) {
-        console.warn(`[main] Failed to clean up stale metadata at ${stalePath}:`, e);
-      }
-    }
-  }
-}
 
 // Get icon path based on platform
 function getIconPath(): string {
@@ -240,6 +186,7 @@ function createWindow(): void {
     height,
     minWidth,
     minHeight,
+    title: PREVIEW_APP_NAME,
     show: false,
     autoHideMenuBar: true,
     titleBarStyle: 'hiddenInset',
@@ -389,13 +336,6 @@ function createWindow(): void {
   });
 }
 
-// Set app name before ready (for dock tooltip on macOS in dev mode)
-app.setName('Aperant');
-if (isMacOS()) {
-  // Force the name to appear in dock on macOS
-  app.name = 'Aperant';
-}
-
 // Fix Windows GPU cache permission errors (0x5 Access Denied)
 if (isWindows()) {
   app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
@@ -406,7 +346,7 @@ if (isWindows()) {
 // Initialize the application
 app.whenReady().then(() => {
   // Set app user model id for Windows
-  electronApp.setAppUserModelId('com.aperant.app');
+  electronApp.setAppUserModelId(PREVIEW_APP_ID);
 
   // Clear cache on Windows to prevent permission errors from stale cache
   if (isWindows()) {
@@ -417,10 +357,6 @@ app.whenReady().then(() => {
 
   // Initialize app language from OS locale for main process i18n (context menus)
   initAppLanguage();
-
-  // Clean up stale update metadata from the old source updater system
-  // This prevents version display desync after electron-updater installs a new version
-  cleanupStaleUpdateMetadata();
 
   // Set dock icon on macOS
   if (isMacOS()) {
@@ -628,27 +564,7 @@ app.whenReady().then(() => {
       console.warn('[main] ========================================');
     }
 
-    // Initialize app auto-updater (only in production, or when DEBUG_UPDATER is set)
-    const forceUpdater = process.env.DEBUG_UPDATER === 'true';
-    if (app.isPackaged || forceUpdater) {
-      // Load settings to get beta updates preference
-      const settings = loadSettingsSync();
-      const betaUpdates = settings.betaUpdates ?? false;
-
-      initializeAppUpdater(mainWindow, betaUpdates);
-      console.warn('[main] App auto-updater initialized');
-      console.warn(`[main] Beta updates: ${betaUpdates ? 'enabled' : 'disabled'}`);
-      if (forceUpdater && !app.isPackaged) {
-        console.warn('[main] Updater forced in dev mode via DEBUG_UPDATER=true');
-        console.warn('[main] Note: Updates won\'t actually work in dev mode');
-      }
-    } else {
-      console.warn('[main] ========================================');
-      console.warn('[main] App auto-updater DISABLED (development mode)');
-      console.warn('[main] To test updater logging, set DEBUG_UPDATER=true');
-      console.warn('[main] Note: Actual updates only work in packaged builds');
-      console.warn('[main] ========================================');
-    }
+    console.warn('[main] App auto-updater disabled for Forge Glass Preview');
   }
 
   // macOS: re-create window when dock icon is clicked

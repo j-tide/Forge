@@ -8,8 +8,10 @@ interface SentryScope {
 
 interface SentryInitOptions {
   beforeSend?: (event: SentryErrorEvent) => SentryErrorEvent | null;
+  beforeSendTransaction?: (event: SentryErrorEvent) => SentryErrorEvent | null;
   tracesSampleRate?: number;
   profilesSampleRate?: number;
+  sendClientReports?: boolean;
   dsn?: string;
   environment?: string;
   release?: string;
@@ -33,6 +35,7 @@ interface SentryCaptureContext {
 declare module '@sentry/electron/main' {
   export type ErrorEvent = SentryErrorEvent;
   export function init(options: SentryInitOptions): void;
+  export function close(timeout?: number): Promise<boolean>;
   export function captureException(error: Error, context?: SentryCaptureContext): void;
   export function withScope(callback: (scope: SentryScope) => void): void;
   export function addBreadcrumb(breadcrumb: SentryBreadcrumb): void;

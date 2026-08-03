@@ -19,9 +19,11 @@ on:
         type: boolean
 
 jobs:
+  # Disabled in Forge Glass Preview. Re-enable only with a derivative release plan.
   # Intel build on Intel runner for native compilation
   # Note: macos-15-intel is the last Intel runner, supported until Fall 2027
   build-macos-intel:
+    if: ${{ false }}
     runs-on: macos-15-intel
     outputs:
       notarization_id: ${{ steps.notarize.outputs.notarization-id }}
@@ -69,6 +71,7 @@ jobs:
 
   # Apple Silicon build on ARM64 runner for native compilation
   build-macos-arm64:
+    if: ${{ false }}
     runs-on: macos-15
     outputs:
       notarization_id: ${{ steps.notarize.outputs.notarization-id }}
@@ -115,6 +118,7 @@ jobs:
             apps/desktop/dist/*.blockmap
 
   build-windows:
+    if: ${{ false }}
     runs-on: windows-latest
     permissions:
       id-token: write  # Required for OIDC authentication with Azure
@@ -266,6 +270,7 @@ jobs:
             apps/desktop/dist/*.blockmap
 
   build-linux:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -312,6 +317,7 @@ jobs:
 
   # Finalize macOS notarization (runs in parallel with Windows/Linux builds)
   finalize-notarization:
+    if: ${{ false }}
     needs: [build-macos-intel, build-macos-arm64]
     runs-on: macos-latest
     steps:
@@ -353,6 +359,7 @@ jobs:
           path: arm64/*.dmg
 
   create-release:
+    if: ${{ false }}
     needs: [build-macos-intel, build-macos-arm64, finalize-notarization, build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
@@ -537,10 +544,11 @@ jobs:
 
   # Update README with new version after successful release
   update-readme:
+    if: ${{ false }}
     needs: [create-release]
     runs-on: ubuntu-latest
     # Only update README on actual releases (tag push), not dry runs
-    if: ${{ github.event_name == 'push' }}
+    # Upstream condition retained for reference: if: ${{ github.event_name == 'push' }}
     permissions:
       contents: write
     steps:

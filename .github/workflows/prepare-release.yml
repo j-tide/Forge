@@ -21,7 +21,9 @@ on:
         type: boolean
 
 jobs:
+  # Disabled in Forge Glass Preview. Re-enable only with a derivative release plan.
   check-and-tag:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

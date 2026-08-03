@@ -1,18 +1,11 @@
 {
-  "name": "aperant",
-  "version": "2.8.0-beta.6",
+  "name": "forge-glass-preview",
+  "private": true,
+  "version": "0.1.0-preview.1",
   "type": "module",
-  "description": "Autonomous multi-agent coding framework",
-  "homepage": "https://github.com/AndyMik90/Aperant",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/AndyMik90/Aperant.git"
-  },
+  "description": "Independent Forge Glass Preview desktop app derived from Aperant",
   "main": "./out/main/index.js",
-  "author": {
-    "name": "Aperant Team",
-    "email": "119136210+AndyMik90@users.noreply.github.com"
-  },
+  "author": "Forge Glass Preview contributors",
   "license": "AGPL-3.0",
   "engines": {
     "node": ">=24.0.0",
@@ -28,16 +21,16 @@
     "start:mcp": "electron . --remote-debugging-port=9222",
     "preview": "electron-vite preview",
     "rebuild": "electron-rebuild",
-    "package": "electron-builder",
-    "package:mac": "electron-builder --mac",
-    "package:win": "electron-builder --win",
-    "package:linux": "electron-builder --linux",
-    "package:flatpak": "electron-builder --linux flatpak",
+    "package": "electron-builder --publish never",
+    "package:mac": "electron-builder --mac --publish never",
+    "package:win": "electron-builder --win --publish never",
+    "package:linux": "electron-builder --linux --publish never",
+    "package:flatpak": "electron-builder --linux flatpak --publish never",
     "verify:linux": "node scripts/verify-linux-packages.cjs dist",
     "test:verify-linux": "node --test scripts/verify-linux-packages.test.mjs",
-    "start:packaged:mac": "open dist/mac-arm64/Aperant.app || open dist/mac/Aperant.app",
-    "start:packaged:win": "start \"\" \"dist\\win-unpacked\\Aperant.exe\"",
-    "start:packaged:linux": "./dist/linux-unpacked/aperant",
+    "start:packaged:mac": "open 'dist/mac-arm64/Forge Glass Preview.app' || open 'dist/mac/Forge Glass Preview.app'",
+    "start:packaged:win": "start \"\" \"dist\\win-unpacked\\Forge Glass Preview.exe\"",
+    "start:packaged:linux": "./dist/linux-unpacked/forge-glass-preview",
     "test": "vitest run",
     "test:unit": "vitest run --exclude src/__tests__/integration/ --exclude src/__tests__/e2e/",
     "test:integration": "vitest run src/__tests__/integration/",
@@ -99,7 +92,6 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.3.1",
     "electron-log": "^5.4.3",
-    "electron-updater": "^6.8.3",
     "i18next": "^25.8.18",
     "lucide-react": "^0.577.0",
     "minimatch": "^10.2.4",
@@ -158,17 +150,11 @@
     "@electron/rebuild": "4.0.3"
   },
   "build": {
-    "appId": "com.aperant.app",
-    "productName": "Aperant",
+    "appId": "dev.iamzjt.forgeglasspreview",
+    "productName": "Forge Glass Preview",
     "npmRebuild": false,
     "artifactName": "${productName}-${version}-${platform}-${arch}.${ext}",
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "AndyMik90",
-        "repo": "Aperant"
-      }
-    ],
+    "publish": null,
     "directories": {
       "output": "dist",
       "buildResources": "resources"
@@ -181,6 +167,14 @@
       "out/main/node_modules/@lydell/node-pty-*/**"
     ],
     "extraResources": [
+      {
+        "from": "../../LICENSE",
+        "to": "LICENSE"
+      },
+      {
+        "from": "../../UPSTREAM.md",
+        "to": "UPSTREAM.md"
+      },
       {
         "from": "resources/icon.ico",
         "to": "icon.ico"

@@ -6,7 +6,9 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Disabled in Forge Glass Preview until it has its own release plan.
   discord-notification:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

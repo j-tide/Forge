@@ -20,7 +20,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Disabled in Forge Glass Preview until it has its own release plan.
   scan:
+    if: ${{ false }}
     name: Scan release assets
     runs-on: ubuntu-latest
     permissions:
