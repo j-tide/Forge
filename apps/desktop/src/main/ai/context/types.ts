@@ -55,7 +55,7 @@ export interface ServiceInfo {
   key_directories?: Record<string, string>;
 }
 
-/** Shape of .auto-claude/project_index.json */
+/** Shape of .forge-glass-preview/project_index.json */
 export interface ProjectIndex {
   services?: Record<string, ServiceInfo>;
   [key: string]: unknown;

@@ -46,6 +46,7 @@ export class IncrementalIndexer {
       ignored: [
         '**/node_modules/**',
         '**/.git/**',
+        '**/.forge-glass-preview/**',
         '**/.auto-claude/**',
         '**/dist/**',
         '**/build/**',
@@ -313,7 +314,7 @@ export class IncrementalIndexer {
   private collectSupportedFiles(dir: string, extensions: string[]): string[] {
     const files: string[] = [];
     const IGNORED_DIRS = new Set([
-      'node_modules', '.git', '.auto-claude', 'dist', 'build',
+      'node_modules', '.git', '.forge-glass-preview', '.auto-claude', 'dist', 'build',
       '.next', '__pycache__', 'target', '.venv',
     ]);
 

@@ -9,14 +9,11 @@ import path from 'path';
 import { existsSync } from 'fs';
 
 // Path constants for worktree directories
-export const TASK_WORKTREE_DIR = '.auto-claude/worktrees/tasks';
-export const TERMINAL_WORKTREE_DIR = '.auto-claude/worktrees/terminal';
+export const TASK_WORKTREE_DIR = '.forge-glass-preview/worktrees/tasks';
+export const TERMINAL_WORKTREE_DIR = '.forge-glass-preview/worktrees/terminal';
 
 // Metadata directories (separate from git worktrees to avoid uncommitted files)
-export const TERMINAL_WORKTREE_METADATA_DIR = '.auto-claude/terminal/metadata';
-
-// Legacy path for backwards compatibility
-export const LEGACY_WORKTREE_DIR = '.worktrees';
+export const TERMINAL_WORKTREE_METADATA_DIR = '.forge-glass-preview/terminal/metadata';
 
 /**
  * Get the task worktrees directory path
@@ -55,7 +52,7 @@ export function isPathWithinBase(resolvedPath: string, basePath: string): boolea
 }
 
 /**
- * Find a task worktree path, checking new location first then legacy
+ * Find a task worktree only in the preview namespace.
  * Returns the path if found, null otherwise
  * Includes path traversal protection to ensure paths stay within project
  */
@@ -83,18 +80,6 @@ export function findTaskWorktree(projectPath: string, specId: string): string | 
   }
 
   if (existsSync(resolvedNewPath)) return resolvedNewPath;
-
-  // Legacy fallback
-  const legacyPath = path.join(projectPath, LEGACY_WORKTREE_DIR, specId);
-  const resolvedLegacyPath = path.resolve(legacyPath);
-
-  // Validate legacy path as well
-  if (!isPathWithinBase(resolvedLegacyPath, normalizedProject)) {
-    console.error(`[worktree-paths] Path traversal detected: specId "${specId}" resolves outside project (legacy)`);
-    return null;
-  }
-
-  if (existsSync(resolvedLegacyPath)) return resolvedLegacyPath;
 
   return null;
 }
@@ -126,7 +111,7 @@ export function getTerminalWorktreePath(projectPath: string, name: string): stri
 }
 
 /**
- * Find a terminal worktree path, checking new location first then legacy
+ * Find a terminal worktree only in the preview namespace.
  * Returns the path if found, null otherwise
  * Includes path traversal protection to ensure paths stay within project
  */
@@ -153,18 +138,6 @@ export function findTerminalWorktree(projectPath: string, name: string): string 
   }
 
   if (existsSync(resolvedNewPath)) return resolvedNewPath;
-
-  // Legacy fallback (terminal worktrees used terminal-{name} prefix)
-  const legacyPath = path.join(projectPath, LEGACY_WORKTREE_DIR, `terminal-${name}`);
-  const resolvedLegacyPath = path.resolve(legacyPath);
-
-  // Validate legacy path as well
-  if (!isPathWithinBase(resolvedLegacyPath, normalizedProject)) {
-    console.error(`[worktree-paths] Path traversal detected: name "${name}" resolves outside project (legacy)`);
-    return null;
-  }
-
-  if (existsSync(resolvedLegacyPath)) return resolvedLegacyPath;
 
   return null;
 }

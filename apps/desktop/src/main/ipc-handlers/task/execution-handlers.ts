@@ -446,7 +446,7 @@ export function registerTaskExecutionHandlers(
         // The worktree still has all changes, so nothing is lost
         if (hasWorktree) {
           // Step 1: Unstage all changes
-          const resetResult = spawnSync(getToolPath('git'), ['reset', 'HEAD'], {
+          const resetResult = spawnSync(getToolPath('git'), ['reset', 'HEAD', '--', '.', ':(exclude).auto-claude', ':(exclude).forge-glass-preview'], {
             cwd: project.path,
             encoding: 'utf-8',
             stdio: 'pipe',
@@ -457,7 +457,7 @@ export function registerTaskExecutionHandlers(
           }
 
           // Step 2: Discard all working tree changes (restore to pre-merge state)
-          const checkoutResult = spawnSync(getToolPath('git'), ['checkout', '--', '.'], {
+          const checkoutResult = spawnSync(getToolPath('git'), ['checkout', '--', '.', ':(exclude).auto-claude', ':(exclude).forge-glass-preview'], {
             cwd: project.path,
             encoding: 'utf-8',
             stdio: 'pipe',
@@ -468,15 +468,15 @@ export function registerTaskExecutionHandlers(
           }
 
           // Step 3: Clean untracked files that came from the merge
-          // IMPORTANT: Exclude .auto-claude directory to preserve specs and worktree data
-          const cleanResult = spawnSync(getToolPath('git'), ['clean', '-fd', '-e', '.auto-claude'], {
+          // IMPORTANT: Exclude .forge-glass-preview directory to preserve specs and worktree data
+          const cleanResult = spawnSync(getToolPath('git'), ['clean', '-fd', '-e', '.auto-claude', '-e', '.forge-glass-preview'], {
             cwd: project.path,
             encoding: 'utf-8',
             stdio: 'pipe',
             env: getIsolatedGitEnv()
           });
           if (cleanResult.status === 0) {
-            console.log('[TASK_REVIEW] Cleaned untracked files in main (excluding .auto-claude)');
+            console.log('[TASK_REVIEW] Cleaned untracked files in main (excluding .forge-glass-preview)');
           }
 
           console.log('[TASK_REVIEW] Main branch restored to pre-merge state');

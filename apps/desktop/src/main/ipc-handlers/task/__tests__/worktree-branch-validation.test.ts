@@ -13,9 +13,9 @@ import { GIT_BRANCH_REGEX, validateWorktreeBranch } from '../worktree-handlers';
 
 describe('GIT_BRANCH_REGEX', () => {
   it('should accept valid auto-claude branch names', () => {
-    expect(GIT_BRANCH_REGEX.test('auto-claude/my-feature')).toBe(true);
-    expect(GIT_BRANCH_REGEX.test('auto-claude/123-fix-bug')).toBe(true);
-    expect(GIT_BRANCH_REGEX.test('auto-claude/feature_with_underscore')).toBe(true);
+    expect(GIT_BRANCH_REGEX.test('forge-glass-preview/my-feature')).toBe(true);
+    expect(GIT_BRANCH_REGEX.test('forge-glass-preview/123-fix-bug')).toBe(true);
+    expect(GIT_BRANCH_REGEX.test('forge-glass-preview/feature_with_underscore')).toBe(true);
   });
 
   it('should accept valid feature branch names', () => {
@@ -46,12 +46,12 @@ describe('GIT_BRANCH_REGEX', () => {
 });
 
 describe('validateWorktreeBranch', () => {
-  const expectedBranch = 'auto-claude/my-feature-123';
+  const expectedBranch = 'forge-glass-preview/my-feature-123';
 
   describe('exact match scenarios', () => {
     it('should use detected branch when it matches expected exactly', () => {
-      const result = validateWorktreeBranch('auto-claude/my-feature-123', expectedBranch);
-      expect(result.branchToDelete).toBe('auto-claude/my-feature-123');
+      const result = validateWorktreeBranch('forge-glass-preview/my-feature-123', expectedBranch);
+      expect(result.branchToDelete).toBe('forge-glass-preview/my-feature-123');
       expect(result.usedFallback).toBe(false);
       expect(result.reason).toBe('exact_match');
     });
@@ -59,21 +59,27 @@ describe('validateWorktreeBranch', () => {
 
   describe('pattern match scenarios', () => {
     it('should allow other auto-claude branches (specId renamed)', () => {
-      const result = validateWorktreeBranch('auto-claude/renamed-feature', expectedBranch);
-      expect(result.branchToDelete).toBe('auto-claude/renamed-feature');
+      const result = validateWorktreeBranch('forge-glass-preview/renamed-feature', expectedBranch);
+      expect(result.branchToDelete).toBe('forge-glass-preview/renamed-feature');
       expect(result.usedFallback).toBe(false);
       expect(result.reason).toBe('pattern_match');
     });
 
     it('should allow auto-claude branches with different formats', () => {
-      const result = validateWorktreeBranch('auto-claude/001-task', expectedBranch);
-      expect(result.branchToDelete).toBe('auto-claude/001-task');
+      const result = validateWorktreeBranch('forge-glass-preview/001-task', expectedBranch);
+      expect(result.branchToDelete).toBe('forge-glass-preview/001-task');
       expect(result.usedFallback).toBe(false);
       expect(result.reason).toBe('pattern_match');
     });
   });
 
   describe('security: corrupted worktree scenarios (issue #1479)', () => {
+    it('does not accept an upstream Aperant task branch', () => {
+      const result = validateWorktreeBranch('auto-claude/001-upstream-task', expectedBranch);
+      expect(result.branchToDelete).toBe(expectedBranch);
+      expect(result.usedFallback).toBe(true);
+      expect(result.reason).toBe('invalid_pattern');
+    });
     it('should reject main project branch and use expected pattern', () => {
       // This is the critical case: corrupted worktree returns main project's branch
       const result = validateWorktreeBranch('feature/xstate-task-machine', expectedBranch);
@@ -150,9 +156,9 @@ describe('validateWorktreeBranch', () => {
       expect(result.reason).toBe('invalid_pattern');
     });
 
-    it('should reject auto-claude/ with no suffix (invalid branch name)', () => {
-      // "auto-claude/" alone is not a valid branch name - needs actual specId
-      const result = validateWorktreeBranch('auto-claude/', expectedBranch);
+    it('should reject forge-glass-preview/ with no suffix (invalid branch name)', () => {
+      // "forge-glass-preview/" alone is not a valid branch name - needs actual specId
+      const result = validateWorktreeBranch('forge-glass-preview/', expectedBranch);
       expect(result.branchToDelete).toBe(expectedBranch);
       expect(result.usedFallback).toBe(true);
       expect(result.reason).toBe('invalid_pattern');

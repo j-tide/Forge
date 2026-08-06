@@ -11,11 +11,8 @@
 import * as net from 'net';
 import * as fs from 'fs';
 import * as pty from '@lydell/node-pty';
-import { isWindows, isUnix } from '../platform';
-
-const SOCKET_PATH = isWindows()
-  ? `\\\\.\\pipe\\auto-claude-pty-${process.getuid?.() || 'default'}`
-  : `/tmp/auto-claude-pty-${process.getuid?.() || 'default'}.sock`;
+import { isUnix } from '../platform';
+import { getPtyDaemonSocketPath, PTY_DAEMON_PROFILE_ENV } from './pty-daemon-socket';
 
 // Maximum buffer size per PTY (100KB)
 const MAX_BUFFER_SIZE = 100_000;
@@ -84,8 +81,15 @@ class PtyDaemon {
   private ptys = new Map<string, ManagedPty>();
   private server: net.Server | null = null;
   private isShuttingDown = false;
+  private readonly socketPath: string;
 
   constructor() {
+    const profileUserDataPath = process.env[PTY_DAEMON_PROFILE_ENV];
+    if (!profileUserDataPath) {
+      throw new Error('PTY daemon profile path is missing');
+    }
+    this.socketPath = getPtyDaemonSocketPath(profileUserDataPath);
+
     console.error('[PTY Daemon] Starting...');
     this.cleanup();
     this.startServer();
@@ -96,9 +100,9 @@ class PtyDaemon {
    * Remove stale socket/pipe
    */
   private cleanup(): void {
-    if (isUnix() && fs.existsSync(SOCKET_PATH)) {
+    if (isUnix() && fs.existsSync(this.socketPath)) {
       try {
-        fs.unlinkSync(SOCKET_PATH);
+        fs.unlinkSync(this.socketPath);
         console.error('[PTY Daemon] Cleaned up stale socket');
       } catch (error) {
         console.error('[PTY Daemon] Failed to clean up socket:', error);
@@ -123,12 +127,12 @@ class PtyDaemon {
       }
     });
 
-    this.server.listen(SOCKET_PATH, () => {
-      console.error(`[PTY Daemon] Listening on ${SOCKET_PATH}`);
+    this.server.listen(this.socketPath, () => {
+      console.error(`[PTY Daemon] Listening on ${this.socketPath}`);
       // Set permissions on Unix
       if (isUnix()) {
         try {
-          fs.chmodSync(SOCKET_PATH, 0o600);
+          fs.chmodSync(this.socketPath, 0o600);
         } catch (error) {
           console.error('[PTY Daemon] Failed to set socket permissions:', error);
         }

@@ -39,7 +39,7 @@ const MAX_STEPS_PER_PHASE = 30;
 export interface RoadmapConfig {
   /** Project directory path */
   projectDir: string;
-  /** Output directory for roadmap files (defaults to .auto-claude/roadmap/) */
+  /** Output directory for roadmap files (defaults to .forge-glass-preview/roadmap/) */
   outputDir?: string;
   /** Model shorthand (defaults to 'sonnet') */
   modelShorthand?: ModelShorthand;
@@ -443,7 +443,7 @@ export async function runRoadmapGeneration(
     abortSignal,
   } = config;
 
-  const outputDir = config.outputDir ?? join(projectDir, '.auto-claude', 'roadmap');
+  const outputDir = config.outputDir ?? join(projectDir, '.forge-glass-preview', 'roadmap');
 
   // Ensure output directory exists
   if (!existsSync(outputDir)) {
@@ -454,7 +454,7 @@ export async function runRoadmapGeneration(
   const toolContext: ToolContext = {
     cwd: projectDir,
     projectDir,
-    specDir: join(projectDir, '.auto-claude', 'specs'),
+    specDir: join(projectDir, '.forge-glass-preview', 'specs'),
     securityProfile: null as unknown as SecurityProfile,
     abortSignal,
   };

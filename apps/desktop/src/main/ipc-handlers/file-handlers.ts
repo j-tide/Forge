@@ -35,7 +35,7 @@ function validatePath(filePath: string): { valid: true; path: string } | { valid
 const IGNORED_DIRS = new Set([
   'node_modules', '.git', '__pycache__', 'dist', 'build',
   '.next', '.nuxt', 'coverage', '.cache', '.venv', 'venv',
-  'out', '.turbo', '.worktrees',
+  'out', '.turbo', '.worktrees', '.auto-claude', '.forge-glass-preview',
   'vendor', 'target', '.gradle', '.maven'
 ]);
 

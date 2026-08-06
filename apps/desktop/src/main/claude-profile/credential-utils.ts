@@ -163,8 +163,8 @@ export function calculateConfigDirHash(configDir: string): string {
  * Normalize Windows path separators for hash consistency with Claude CLI.
  *
  * Claude CLI on Windows uses backslashes, so we must too for hash consistency.
- * Mixed slashes (C:\Users\bill/.claude-profiles) produce different hashes than
- * consistent slashes (C:\Users\bill\.claude-profiles).
+ * Mixed slashes (C:\Users\bill/.forge-glass-preview) produce different hashes than
+ * consistent slashes (C:\Users\bill\.forge-glass-preview).
  *
  * Supports:
  * - Drive letter paths: C:\Users\...

@@ -1,5 +1,5 @@
 import { ipcMain, nativeImage } from 'electron';
-import { IPC_CHANNELS, AUTO_BUILD_PATHS, getSpecsDir, VALID_THINKING_LEVELS, sanitizeThinkingLevel } from '../../../shared/constants';
+import { IPC_CHANNELS, AUTO_BUILD_PATHS, PROJECT_DATA_DIR, getSpecsDir, VALID_THINKING_LEVELS, sanitizeThinkingLevel } from '../../../shared/constants';
 import type { IPCResult, Task, TaskMetadata, TaskOutcome } from '../../../shared/types';
 import path from 'path';
 import { execFileSync } from 'child_process';
@@ -16,6 +16,7 @@ import { getToolPath } from '../../cli-tool-manager';
 import { getIsolatedGitEnv } from '../../utils/git-isolation';
 import { taskStateManager } from '../../task-state-manager';
 import { safeBreadcrumb } from '../../sentry';
+import { isInitialized } from '../../project-initializer';
 
 /**
  * Sanitize thinking levels in task metadata in-place.
@@ -162,6 +163,9 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
       const project = projectStore.getProject(projectId);
       if (!project) {
         return { success: false, error: 'Project not found' };
+      }
+      if (project.autoBuildPath !== PROJECT_DATA_DIR || !isInitialized(project.path)) {
+        return { success: false, error: `Initialize ${PROJECT_DATA_DIR} before creating preview tasks. Aperant data is untouched.` };
       }
 
       // Auto-generate title if empty using Claude AI
@@ -462,7 +466,7 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
           return { success: false, error: 'Task not found' };
         }
 
-        const autoBuildDir = project.autoBuildPath || '.auto-claude';
+        const autoBuildDir = project.autoBuildPath || '.forge-glass-preview';
         const specDir = path.join(project.path, autoBuildDir, 'specs', task.specId);
 
         if (!existsSync(specDir)) {
@@ -674,7 +678,7 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
           console.error(`[IPC] TASK_LOAD_IMAGE_THUMBNAIL: Unknown project: "${projectPath}"`);
           return { success: false, error: 'Unknown project' };
         }
-        const autoBuildPath = project.autoBuildPath || '.auto-claude';
+        const autoBuildPath = project.autoBuildPath || '.forge-glass-preview';
 
         // Build full path to the image
         const specsDir = getSpecsDir(autoBuildPath);

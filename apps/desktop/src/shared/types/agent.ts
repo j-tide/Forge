@@ -163,7 +163,7 @@ export interface ClaudeProfile {
   /** When the OAuth token was created (for expiry tracking - 1 year validity) */
   tokenCreatedAt?: Date;
   /**
-   * Path to the Claude config directory (e.g., ~/.claude or ~/.claude-profiles/work)
+   * Path to the Claude config directory (e.g., ~/.forge-glass-preview/claude-profiles/work)
    * @deprecated Use oauthToken instead for reliable multi-profile switching
    */
   configDir?: string;

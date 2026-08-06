@@ -14,8 +14,13 @@ import type {
   TerminalRecoveryInfo,
 } from '../../shared/types/terminal-session';
 
-const SESSIONS_FILE = path.join(app.getPath('userData'), 'terminal-sessions.json');
-const BUFFERS_DIR = path.join(app.getPath('userData'), 'terminal-buffers');
+function getSessionsFilePath(): string {
+  return path.join(app.getPath('userData'), 'terminal-sessions.json');
+}
+
+function getBuffersDir(): string {
+  return path.join(app.getPath('userData'), 'terminal-buffers');
+}
 
 // Session age limit: 7 days
 const MAX_SESSION_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -25,16 +30,13 @@ class SessionPersistence {
   private saveTimeout: NodeJS.Timeout | null = null;
   private isInitialized = false;
 
-  constructor() {
-    this.ensureDirectories();
-  }
-
   /**
    * Ensure required directories exist
    */
   private ensureDirectories(): void {
-    if (!fs.existsSync(BUFFERS_DIR)) {
-      fs.mkdirSync(BUFFERS_DIR, { recursive: true });
+    const buffersDir = getBuffersDir();
+    if (!fs.existsSync(buffersDir)) {
+      fs.mkdirSync(buffersDir, { recursive: true });
     }
   }
 
@@ -46,6 +48,7 @@ class SessionPersistence {
       return this.getRecoveryInfo();
     }
 
+    this.ensureDirectories();
     const sessions = this.loadSessions();
     this.isInitialized = true;
 
@@ -57,13 +60,14 @@ class SessionPersistence {
    * Load sessions from disk
    */
   loadSessions(): TerminalSessionState[] {
-    if (!fs.existsSync(SESSIONS_FILE)) {
+    const sessionsFile = getSessionsFilePath();
+    if (!fs.existsSync(sessionsFile)) {
       return [];
     }
 
     try {
       const data: TerminalSessionsFile = JSON.parse(
-        fs.readFileSync(SESSIONS_FILE, 'utf8')
+        fs.readFileSync(sessionsFile, 'utf8')
       );
 
       // Validate version
@@ -182,9 +186,10 @@ class SessionPersistence {
     }
 
     const bufferFile = `buffer-${sessionId}.txt`;
-    const bufferPath = path.join(BUFFERS_DIR, bufferFile);
 
     try {
+      this.ensureDirectories();
+      const bufferPath = path.join(getBuffersDir(), bufferFile);
       fs.writeFileSync(bufferPath, serializedBuffer, 'utf8');
       session.bufferFile = bufferFile;
       this.saveSession(session);
@@ -201,7 +206,7 @@ class SessionPersistence {
     const session = this.sessions.get(sessionId);
     if (!session?.bufferFile) return null;
 
-    const bufferPath = path.join(BUFFERS_DIR, session.bufferFile);
+    const bufferPath = path.join(getBuffersDir(), session.bufferFile);
     if (!fs.existsSync(bufferPath)) {
       console.warn(`[SessionPersistence] Buffer file missing: ${session.bufferFile}`);
       return null;
@@ -219,7 +224,7 @@ class SessionPersistence {
    * Delete a buffer file
    */
   private deleteBufferFile(bufferFile: string): void {
-    const bufferPath = path.join(BUFFERS_DIR, bufferFile);
+    const bufferPath = path.join(getBuffersDir(), bufferFile);
     if (fs.existsSync(bufferPath)) {
       try {
         fs.unlinkSync(bufferPath);
@@ -265,7 +270,8 @@ class SessionPersistence {
     };
 
     try {
-      fs.writeFileSync(SESSIONS_FILE, JSON.stringify(data, null, 2), 'utf8');
+      this.ensureDirectories();
+      fs.writeFileSync(getSessionsFilePath(), JSON.stringify(data, null, 2), 'utf8');
       console.warn(`[SessionPersistence] Saved ${data.sessions.length} sessions to disk`);
     } catch (error) {
       console.error('[SessionPersistence] Failed to save sessions:', error);
@@ -276,10 +282,11 @@ class SessionPersistence {
    * Clean up old buffer files not referenced by any session
    */
   cleanupOrphanedBuffers(): void {
-    if (!fs.existsSync(BUFFERS_DIR)) return;
+    const buffersDir = getBuffersDir();
+    if (!fs.existsSync(buffersDir)) return;
 
     try {
-      const bufferFiles = fs.readdirSync(BUFFERS_DIR);
+      const bufferFiles = fs.readdirSync(buffersDir);
       const referencedBuffers = new Set(
         Array.from(this.sessions.values())
           .map((s) => s.bufferFile)
@@ -289,7 +296,7 @@ class SessionPersistence {
       let cleanedCount = 0;
       for (const file of bufferFiles) {
         if (!referencedBuffers.has(file)) {
-          const filePath = path.join(BUFFERS_DIR, file);
+          const filePath = path.join(buffersDir, file);
           fs.unlinkSync(filePath);
           cleanedCount++;
         }

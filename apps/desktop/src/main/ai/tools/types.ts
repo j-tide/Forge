@@ -23,7 +23,7 @@ export interface ToolContext {
   cwd: string;
   /** Root directory of the project being worked on */
   projectDir: string;
-  /** Spec directory for the current task (e.g., .auto-claude/specs/001-feature/) */
+  /** Spec directory for the current task (e.g., .forge-glass-preview/specs/001-feature/) */
   specDir: string;
   /** Security profile governing command allowlists */
   securityProfile: SecurityProfile;

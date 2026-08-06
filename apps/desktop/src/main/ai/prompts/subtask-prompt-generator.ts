@@ -28,9 +28,8 @@ import type {
 
 /** Patterns to detect worktree isolation */
 const WORKTREE_PATH_PATTERNS = [
-  /[/\\]\.auto-claude[/\\]worktrees[/\\]tasks[/\\]/,
-  /[/\\]\.auto-claude[/\\]github[/\\]pr[/\\]worktrees[/\\]/,
-  /[/\\]\.worktrees[/\\]/,
+  /[/\\]\.forge-glass-preview[/\\]worktrees[/\\]tasks[/\\]/,
+  /[/\\]\.forge-glass-preview[/\\]github[/\\]pr[/\\]worktrees[/\\]/,
 ];
 
 /**
@@ -106,7 +105,7 @@ function getRelativeSpecPath(specDir: string, projectDir: string): string {
 
   // Fallback: just use the spec dir name
   const parts = resolvedSpec.split(/[/\\]/);
-  return `./auto-claude/specs/${parts[parts.length - 1]}`;
+  return `./.forge-glass-preview/specs/${parts[parts.length - 1]}`;
 }
 
 /**
@@ -330,7 +329,7 @@ export async function generateSubtaskPrompt(config: SubtaskPromptConfig): Promis
     `4. **Run verification** and fix any issues\n` +
     `5. **Commit your changes:**\n` +
     `   \`\`\`bash\n` +
-    `   git add .\n` +
+    `   git add . ':!.auto-claude' ':!.forge-glass-preview'\n` +
     `   git commit -m "auto-claude: ${subtask.id} - ${subtask.description.slice(0, 50)}"\n` +
     `   \`\`\`\n` +
     `6. **Update the plan** - set this subtask's status to "completed" in implementation_plan.json\n\n` +

@@ -1,6 +1,6 @@
 import path from 'path';
 
-const INSIGHTS_DIR = '.auto-claude/insights';
+const INSIGHTS_DIR = '.forge-glass-preview/insights';
 const SESSIONS_DIR = 'sessions';
 const CURRENT_SESSION_FILE = 'current_session.json';
 

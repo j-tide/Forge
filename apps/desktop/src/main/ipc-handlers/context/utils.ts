@@ -11,12 +11,15 @@ export interface GlobalSettings {
   globalOpenAIApiKey?: string;
 }
 
-const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+function getSettingsPath(): string {
+  return path.join(app.getPath('userData'), 'settings.json');
+}
 
 /**
  * Get the auto-build source path from settings
  */
 export function getAutoBuildSourcePath(): string | null {
+  const settingsPath = getSettingsPath();
   if (existsSync(settingsPath)) {
     try {
       const content = readFileSync(settingsPath, 'utf-8');
@@ -85,6 +88,7 @@ export function loadProjectEnvVars(projectPath: string, autoBuildPath?: string):
  * Load global settings from user data directory
  */
 export function loadGlobalSettings(): GlobalSettings {
+  const settingsPath = getSettingsPath();
   if (!existsSync(settingsPath)) {
     return {};
   }
@@ -218,7 +222,7 @@ export interface MemoryDatabaseDetails {
 export function getMemoryDatabaseDetails(projectEnvVars: EnvironmentVars): MemoryDatabaseDetails {
   const dbPath = projectEnvVars['GRAPHITI_DB_PATH'] ||
                  process.env.GRAPHITI_DB_PATH ||
-                 require('path').join(require('os').homedir(), '.auto-claude', 'memories');
+                 require('path').join(require('os').homedir(), '.forge-glass-preview', 'memories');
 
   const database = projectEnvVars['GRAPHITI_DATABASE'] ||
                    process.env.GRAPHITI_DATABASE ||

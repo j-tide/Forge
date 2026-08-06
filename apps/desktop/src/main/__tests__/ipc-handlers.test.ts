@@ -419,15 +419,15 @@ describe("IPC Handlers", { timeout: 30000 }, () => {
         () => mockMainWindow as never
       );
 
-      // Create .auto-claude directory first (before adding project so it gets detected)
-      mkdirSync(path.join(TEST_PROJECT_PATH, ".auto-claude", "specs"), { recursive: true });
+      // Create .forge-glass-preview directory first (before adding project so it gets detected)
+      mkdirSync(path.join(TEST_PROJECT_PATH, ".forge-glass-preview", "specs"), { recursive: true });
 
-      // Add a project - it will detect .auto-claude
+      // Add a project - it will detect .forge-glass-preview
       const addResult = await ipcMain.invokeHandler("project:add", {}, TEST_PROJECT_PATH);
       const projectId = (addResult as { data: { id: string } }).data.id;
 
-      // Create a spec directory with implementation plan in .auto-claude/specs
-      const specDir = path.join(TEST_PROJECT_PATH, ".auto-claude", "specs", "001-test-feature");
+      // Create a spec directory with implementation plan in .forge-glass-preview/specs
+      const specDir = path.join(TEST_PROJECT_PATH, ".forge-glass-preview", "specs", "001-test-feature");
       mkdirSync(specDir, { recursive: true });
       writeFileSync(
         path.join(specDir, "implementation_plan.json"),
@@ -489,8 +489,8 @@ describe("IPC Handlers", { timeout: 30000 }, () => {
         () => mockMainWindow as never
       );
 
-      // Create .auto-claude directory first (before adding project so it gets detected)
-      mkdirSync(path.join(TEST_PROJECT_PATH, ".auto-claude", "specs"), { recursive: true });
+      // Create .forge-glass-preview directory first (before adding project so it gets detected)
+      mkdirSync(path.join(TEST_PROJECT_PATH, ".forge-glass-preview", "specs"), { recursive: true });
 
       // Add a project first
       const addResult = await ipcMain.invokeHandler("project:add", {}, TEST_PROJECT_PATH);
@@ -523,8 +523,9 @@ describe("IPC Handlers", { timeout: 30000 }, () => {
       const result = await ipcMain.invokeHandler("settings:get", {});
 
       expect(result).toHaveProperty("success", true);
-      const data = (result as { data: { theme: string } }).data;
-      expect(data).toHaveProperty("theme", "dark");
+      const data = (result as { data: { theme: string; colorTheme: string } }).data;
+      expect(data).toHaveProperty("theme", "light");
+      expect(data).toHaveProperty("colorTheme", "forge-glass");
     });
   });
 
@@ -626,11 +627,12 @@ describe("IPC Handlers", { timeout: 30000 }, () => {
         () => mockMainWindow as never
       );
 
-      // Add project first
+      // The preview data directory must exist before this project is active.
+      mkdirSync(path.join(TEST_PROJECT_PATH, '.forge-glass-preview', 'specs'), { recursive: true });
       await ipcMain.invokeHandler("project:add", {}, TEST_PROJECT_PATH);
 
       // Create a spec/task directory with implementation_plan.json
-      const specDir = path.join(TEST_PROJECT_PATH, ".auto-claude", "specs", "task-1");
+      const specDir = path.join(TEST_PROJECT_PATH, ".forge-glass-preview", "specs", "task-1");
       mkdirSync(specDir, { recursive: true });
       writeFileSync(
         path.join(specDir, "implementation_plan.json"),

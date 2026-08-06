@@ -48,7 +48,7 @@ import {
 import { getCredentialsFromKeychain, normalizeWindowsPath, updateProfileSubscriptionMetadata } from './claude-profile/credential-utils';
 import { loadProfilesFile } from './services/profile/profile-manager';
 import {
-  CLAUDE_PROFILES_DIR,
+  getPreviewProfileDirectory,
   generateProfileId as generateProfileIdImpl,
   createProfileDirectory as createProfileDirectoryImpl,
   isProfileAuthenticated as isProfileAuthenticatedImpl,
@@ -57,6 +57,7 @@ import {
   getEmailFromConfigDir
 } from './claude-profile/profile-utils';
 import { debugLog } from '../shared/utils/debug-logger';
+import { isManagedPreviewConfigDir } from './utils/config-path-validator';
 
 /**
  * Manages Claude Code profiles for multi-account support.
@@ -94,20 +95,31 @@ export class ClaudeProfileManager {
 
     // Load existing data asynchronously
     const loadedData = await loadProfileStoreAsync(this.storePath);
+    let ignoredExternalStore = false;
     if (loadedData) {
-      this.data = loadedData;
-      debugLog('[ClaudeProfileManager] Loaded profile store with', this.data.profiles.length, 'profiles');
+      // Keep the saved file intact, but do not activate profiles pointing at Aperant,
+      // the provider's default directory, or any other external location.
+      const hasExternalProfile = loadedData.profiles.some(
+        profile => profile.configDir && !isManagedPreviewConfigDir(profile.configDir)
+      );
+      if (hasExternalProfile) {
+        ignoredExternalStore = true;
+        console.warn('[ClaudeProfileManager] Saved store contains an external profile directory; leaving it untouched and starting with preview defaults');
+      } else {
+        this.data = loadedData;
+        debugLog('[ClaudeProfileManager] Loaded profile store with', this.data.profiles.length, 'profiles');
+      }
     } else {
       debugLog('[ClaudeProfileManager] No existing profile store found, using defaults');
     }
 
     // Run one-time migration to fix corrupted emails
     // This repairs emails that were truncated due to ANSI escape codes in terminal output
-    this.migrateCorruptedEmails();
+    if (!ignoredExternalStore) this.migrateCorruptedEmails();
 
     // Populate missing subscription metadata for existing profiles
     // This reads subscriptionType and rateLimitTier from Keychain credentials
-    this.populateSubscriptionMetadata();
+    if (!ignoredExternalStore) this.populateSubscriptionMetadata();
 
     this.initialized = true;
     console.log('[ClaudeProfileManager] Initialization complete');
@@ -124,7 +136,7 @@ export class ClaudeProfileManager {
     let needsSave = false;
 
     for (const profile of this.data.profiles) {
-      if (!profile.configDir) {
+      if (!profile.configDir || !isManagedPreviewConfigDir(profile.configDir)) {
         continue;
       }
 
@@ -159,8 +171,8 @@ export class ClaudeProfileManager {
     debugLog('[ClaudeProfileManager] populateSubscriptionMetadata: checking', this.data.profiles.length, 'profiles');
 
     for (const profile of this.data.profiles) {
-      if (!profile.configDir) {
-        debugLog('[ClaudeProfileManager] populateSubscriptionMetadata: skipping profile', profile.id, '(no configDir)');
+      if (!profile.configDir || !isManagedPreviewConfigDir(profile.configDir)) {
+        debugLog('[ClaudeProfileManager] populateSubscriptionMetadata: skipping profile', profile.id, '(no preview configDir)');
         continue;
       }
 
@@ -216,8 +228,8 @@ export class ClaudeProfileManager {
   /**
    * Create default profile data
    *
-   * IMPORTANT: New profiles use isolated directories (~/.claude-profiles/{name})
-   * to prevent interference with external Claude Code CLI usage.
+   * New profiles use directories owned by Forge Glass Preview to prevent
+   * interference with external Claude Code CLI usage.
    * The profile name is used as the directory name (sanitized to lowercase).
    */
   private createDefaultData(): ProfileStoreData {
@@ -225,7 +237,7 @@ export class ClaudeProfileManager {
     // This prevents interference with external Claude Code CLI which uses ~/.claude
     const initialProfileName = 'Primary';
     const sanitizedName = initialProfileName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const isolatedConfigDir = join(CLAUDE_PROFILES_DIR, sanitizedName);
+    const isolatedConfigDir = getPreviewProfileDirectory(initialProfileName);
 
     const defaultProfile: ClaudeProfile = {
       id: sanitizedName,  // Use sanitized name as ID (e.g., 'primary')
@@ -544,7 +556,7 @@ export class ClaudeProfileManager {
 
     // All profiles now use explicit CLAUDE_CONFIG_DIR for isolation
     // This prevents interference with external Claude Code CLI usage
-    if (profile?.configDir) {
+    if (profile?.configDir && isManagedPreviewConfigDir(profile.configDir)) {
       // Expand ~ to home directory for the environment variable
       const expandedConfigDir = normalizeWindowsPath(
         profile.configDir.startsWith('~')
@@ -557,26 +569,13 @@ export class ClaudeProfileManager {
         console.warn('[ClaudeProfileManager] Using CLAUDE_CONFIG_DIR for profile:', profile.name, expandedConfigDir);
       }
     } else if (profile) {
-      // Fallback: retrieve OAuth token directly from Keychain when configDir is missing.
-      // Without configDir, Claude CLI cannot resolve credentials automatically,
-      // so we inject CLAUDE_CODE_OAUTH_TOKEN as a direct override.
-      debugLog(
-        '[ClaudeProfileManager] Profile has no configDir configured:',
-        profile.name,
-        '- falling back to Keychain token lookup. Subscription display may be degraded.'
-      );
-
-      const credentials = getCredentialsFromKeychain(undefined, true);
-      if (credentials.token) {
-        env.CLAUDE_CODE_OAUTH_TOKEN = credentials.token;
-        debugLog('[ClaudeProfileManager] Injected CLAUDE_CODE_OAUTH_TOKEN from Keychain for profile:', profile.name);
-      } else {
-        debugLog(
-          '[ClaudeProfileManager] No token found in Keychain for profile without configDir:',
-          profile.name,
-          credentials.error ? `(error: ${credentials.error})` : ''
-        );
+      // Never fall through to the provider's default ~/.claude or Keychain account.
+      const fallbackDir = getPreviewProfileDirectory(profile.name);
+      if (!isManagedPreviewConfigDir(fallbackDir)) {
+        throw new Error(`Invalid preview profile directory: ${fallbackDir}`);
       }
+      env.CLAUDE_CONFIG_DIR = normalizeWindowsPath(fallbackDir);
+      console.warn('[ClaudeProfileManager] Profile has no managed preview configDir; authentication is required:', profile.id);
     }
 
     return env;
@@ -787,7 +786,7 @@ export class ClaudeProfileManager {
    * (checks if the config directory has credential files)
    */
   isProfileAuthenticated(profile: ClaudeProfile): boolean {
-    return isProfileAuthenticatedImpl(profile);
+    return !!profile.configDir && isManagedPreviewConfigDir(profile.configDir) && isProfileAuthenticatedImpl(profile);
   }
 
   /**
@@ -834,27 +833,13 @@ export class ClaudeProfileManager {
       return {};
     }
 
-    if (!profile.configDir) {
-      // Fallback: retrieve OAuth token directly from Keychain when configDir is missing.
-      // Without configDir, Claude CLI cannot resolve credentials automatically,
-      // so we inject CLAUDE_CODE_OAUTH_TOKEN as a direct override.
-      // This mirrors the fallback in getActiveProfileEnv().
-      debugLog(
-        '[ClaudeProfileManager] getProfileEnv: profile has no configDir:',
-        profile.name,
-        '- falling back to Keychain token lookup.'
-      );
-
-      const credentials = getCredentialsFromKeychain(undefined, true);
-      if (credentials.token) {
-        debugLog('[ClaudeProfileManager] getProfileEnv: injected CLAUDE_CODE_OAUTH_TOKEN from Keychain for profile:', profile.name);
-        return { CLAUDE_CODE_OAUTH_TOKEN: credentials.token };
+    if (!profile.configDir || !isManagedPreviewConfigDir(profile.configDir)) {
+      console.warn('[ClaudeProfileManager] Profile has no managed preview configDir; authentication is required:', profile.id);
+      const fallbackDir = getPreviewProfileDirectory(profile.name);
+      if (!isManagedPreviewConfigDir(fallbackDir)) {
+        throw new Error(`Invalid preview profile directory: ${fallbackDir}`);
       }
-      debugLog(
-        '[ClaudeProfileManager] getProfileEnv: no token found in Keychain for profile without configDir:',
-        profile.name
-      );
-      return {};
+      return { CLAUDE_CONFIG_DIR: normalizeWindowsPath(fallbackDir) };
     }
 
     // Expand ~ to home directory for the environment variable

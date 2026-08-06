@@ -9,17 +9,15 @@ import * as net from 'net';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { spawn, ChildProcess } from 'child_process';
+import { app } from 'electron';
 import { isWindows, GRACEFUL_KILL_TIMEOUT_MS } from '../platform';
 import { getTaskkillExePath } from '../utils/windows-paths';
 import { getIsShuttingDown } from './pty-manager';
+import { getPtyDaemonSocketPath, PTY_DAEMON_PROFILE_ENV } from './pty-daemon-socket';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const SOCKET_PATH = isWindows()
-  ? `\\\\.\\pipe\\auto-claude-pty-${process.getuid?.() || 'default'}`
-  : `/tmp/auto-claude-pty-${process.getuid?.() || 'default'}.sock`;
 
 interface DaemonResponseData {
   exitCode?: number;
@@ -65,6 +63,14 @@ class PtyDaemonClient {
   private isConnecting = false;
   private buffer = '';
   private isShuttingDown = false;
+  private profileUserDataPath: string | null = null;
+
+  private getProfileUserDataPath(): string {
+    // The singleton is imported before index.ts sets the isolated preview path.
+    // Bind it on first use so reconnects target the same profile.
+    this.profileUserDataPath ??= app.getPath('userData');
+    return this.profileUserDataPath;
+  }
 
   /**
    * Connect to daemon, spawning if necessary
@@ -99,7 +105,7 @@ class PtyDaemonClient {
    */
   private tryConnect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const socket = net.connect(SOCKET_PATH);
+      const socket = net.connect(getPtyDaemonSocketPath(this.getProfileUserDataPath()));
 
       const timeout = setTimeout(() => {
         socket.destroy();
@@ -132,7 +138,10 @@ class PtyDaemonClient {
       this.daemonProcess = spawn(process.execPath, [daemonPath], {
         detached: true,
         stdio: 'ignore', // Don't pipe stdout/stderr
-        env: { ...process.env },
+        env: {
+          ...process.env,
+          [PTY_DAEMON_PROFILE_ENV]: this.getProfileUserDataPath(),
+        },
       });
 
       // Unref so parent can exit independently

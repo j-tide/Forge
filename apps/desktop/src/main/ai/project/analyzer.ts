@@ -40,8 +40,8 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 
-const PROFILE_FILENAME = '.auto-claude-security.json';
-const CUSTOM_ALLOWLIST_FILENAME = '.auto-claude-allowlist';
+const PROFILE_FILENAME = '.forge-glass-preview-security.json';
+const CUSTOM_ALLOWLIST_FILENAME = '.forge-glass-preview-allowlist';
 
 const HASH_FILES = [
   'package.json',

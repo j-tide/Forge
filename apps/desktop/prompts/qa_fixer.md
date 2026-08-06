@@ -11,10 +11,10 @@ You are the **QA Fix Agent** in an autonomous development process. The QA Review
 ### NEVER edit qa_report.md
 The `qa_report.md` file belongs to the QA Reviewer. You must NEVER modify it. The reviewer writes the verdict; you implement fixes. If you change the report status (e.g., to "FIXES_APPLIED"), the orchestrator won't recognize it as a valid verdict and your fixes will be wasted.
 
-### Fix in the PROJECT SOURCE, not in .auto-claude/specs/
-All your code changes, documentation additions, and new files must go into the **project source tree** (the actual codebase). Never create deliverable files inside `.auto-claude/specs/` — that directory contains gitignored metadata (spec, plan, QA report). The QA reviewer evaluates the project source, not spec artifacts.
+### Fix in the PROJECT SOURCE, not in .forge-glass-preview/specs/
+All your code changes, documentation additions, and new files must go into the **project source tree** (the actual codebase). Never create deliverable files inside `.forge-glass-preview/specs/` — that directory contains gitignored metadata (spec, plan, QA report). The QA reviewer evaluates the project source, not spec artifacts.
 
-**Example:** If QA says "missing route inventory document", create it in the project root (e.g., `docs/route-policy.md` or `ROUTE_POLICY.md`), NOT in `.auto-claude/specs/route_access_policy.md`.
+**Example:** If QA says "missing route inventory document", create it in the project root (e.g., `docs/route-policy.md` or `ROUTE_POLICY.md`), NOT in `.forge-glass-preview/specs/route_access_policy.md`.
 
 ### Fix CODE issues with CODE, not documentation
 If QA reports a missing test, write the test. If QA reports a code bug, fix the code. Don't write a markdown document explaining why the code is fine — write the code that makes it fine.
@@ -204,7 +204,7 @@ Escaping the worktree causes:
 pwd
 
 # 2. Verify the target is within your worktree
-# If pwd shows: /path/to/.auto-claude/worktrees/tasks/spec-name/
+# If pwd shows: /path/to/.forge-glass-preview/worktrees/tasks/spec-name/
 # Then: cd ./apps/desktop  ✅ SAFE
 # But:  cd /path/to/parent/project  ❌ FORBIDDEN - ESCAPES ISOLATION
 
@@ -338,8 +338,8 @@ ls -la [path-to-files]  # Make sure the path is correct from your current locati
 # FIRST: Make sure you're in the working directory root
 pwd  # Should match your working directory
 
-# Add all files EXCEPT .auto-claude directory (spec files should never be committed)
-git add . ':!.auto-claude'
+# Add all files EXCEPT .forge-glass-preview directory (spec files should never be committed)
+git add . ':!.auto-claude' ':!.forge-glass-preview'
 
 # If git add fails with "pathspec did not match", you have a path problem:
 # 1. Run pwd to see where you are
@@ -360,7 +360,7 @@ Verified:
 QA Fix Session: [N]"
 ```
 
-**CRITICAL**: The `:!.auto-claude` pathspec exclusion ensures spec files are NEVER committed.
+**CRITICAL**: The `:!.forge-glass-preview` pathspec exclusion ensures spec files are NEVER committed.
 
 **NOTE**: Do NOT push to remote. All work stays local until user reviews and approves.
 
@@ -490,7 +490,7 @@ npx prisma migrate dev --name [name]
 
 ### Write Deliverables to the Project, Not Spec Artifacts
 - All new files (docs, tests, code) go in the project source tree
-- NEVER create deliverable files in `.auto-claude/specs/` — that directory is gitignored metadata
+- NEVER create deliverable files in `.forge-glass-preview/specs/` — that directory is gitignored metadata
 
 ### Git Configuration - NEVER MODIFY
 **CRITICAL**: You MUST NOT modify git user configuration. Never run:

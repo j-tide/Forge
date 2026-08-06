@@ -195,7 +195,7 @@ function getDefaultBranch(projectPath: string): string {
     return project.settings.mainBranch;
   }
 
-  const envPath = path.join(projectPath, '.auto-claude', '.env');
+  const envPath = path.join(projectPath, '.forge-glass-preview', '.env');
   if (existsSync(envPath)) {
     try {
       const content = readFileSync(envPath, 'utf-8');
@@ -291,7 +291,7 @@ const DEFAULT_STRATEGY_MAP: Record<string, 'symlink' | 'recreate' | 'copy' | 'sk
  * node_modules-only behavior for backward compatibility.
  */
 function loadDependencyConfigs(projectPath: string): DependencyConfig[] {
-  const indexPath = path.join(projectPath, '.auto-claude', 'project_index.json');
+  const indexPath = path.join(projectPath, '.forge-glass-preview', 'project_index.json');
 
   if (existsSync(indexPath)) {
     try {
@@ -779,7 +779,7 @@ async function createTerminalWorktree(
   }
 
   const worktreePath = getTerminalWorktreePath(projectPath, name);
-  const branchName = `terminal/${name}`;
+  const branchName = `forge-glass-preview/terminal/${name}`;
   let directoryCreated = false;
 
   try {
@@ -1045,9 +1045,9 @@ async function listTerminalWorktrees(projectPath: string): Promise<TerminalWorkt
  * List "other" worktrees - worktrees not managed by Auto Claude
  * These are discovered via `git worktree list` excluding:
  * - Main worktree (project root)
- * - .auto-claude/worktrees/terminal/*
- * - .auto-claude/worktrees/tasks/*
- * - .auto-claude/worktrees/pr/*
+ * - .forge-glass-preview/worktrees/terminal/*
+ * - .forge-glass-preview/worktrees/tasks/*
+ * - .forge-glass-preview/worktrees/pr/*
  */
 async function listOtherWorktrees(projectPath: string): Promise<OtherWorktreeInfo[]> {
   // Validate projectPath against registered projects
@@ -1061,9 +1061,9 @@ async function listOtherWorktrees(projectPath: string): Promise<OtherWorktreeInf
   // Paths to exclude (normalize for comparison)
   const normalizedProjectPath = path.resolve(projectPath);
   const excludePrefixes = [
-    path.join(normalizedProjectPath, '.auto-claude', 'worktrees', 'terminal'),
-    path.join(normalizedProjectPath, '.auto-claude', 'worktrees', 'tasks'),
-    path.join(normalizedProjectPath, '.auto-claude', 'worktrees', 'pr'),
+    path.join(normalizedProjectPath, '.forge-glass-preview', 'worktrees', 'terminal'),
+    path.join(normalizedProjectPath, '.forge-glass-preview', 'worktrees', 'tasks'),
+    path.join(normalizedProjectPath, '.forge-glass-preview', 'worktrees', 'pr'),
   ];
 
   try {

@@ -28,7 +28,7 @@ import type { ModelShorthand, ThinkingLevel } from '../../ai/config/types';
 const { debug: debugLog } = createContextLogger('GitHub AutoFix');
 
 /**
- * Auto-fix configuration stored in .auto-claude/github/config.json
+ * Auto-fix configuration stored in .forge-glass-preview/github/config.json
  */
 export interface AutoFixConfig {
   enabled: boolean;
@@ -99,7 +99,7 @@ export interface BatchProgress {
  * Get the GitHub directory for a project
  */
 function getGitHubDir(project: Project): string {
-  return path.join(project.path, '.auto-claude', 'github');
+  return path.join(project.path, '.forge-glass-preview', 'github');
 }
 
 /**

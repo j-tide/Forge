@@ -141,7 +141,7 @@ function gatherPRContext(
  * Extract a brief summary from the spec file for fallback PR body.
  */
 function extractSpecSummary(projectDir: string, specId: string): string {
-  const specFile = join(projectDir, '.auto-claude', 'specs', specId, 'spec.md');
+  const specFile = join(projectDir, '.forge-glass-preview', 'specs', specId, 'spec.md');
   if (!existsSync(specFile)) {
     return `Implements ${specId}`;
   }

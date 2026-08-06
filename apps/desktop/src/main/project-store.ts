@@ -3,7 +3,7 @@ import { readFileSync, existsSync, mkdirSync, readdirSync, Dirent } from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import type { Project, ProjectSettings, Task, TaskStatus, TaskMetadata, ImplementationPlan, ReviewReason, PlanSubtask, KanbanPreferences, ExecutionPhase } from '../shared/types';
-import { DEFAULT_PROJECT_SETTINGS, AUTO_BUILD_PATHS, getSpecsDir, JSON_ERROR_PREFIX, JSON_ERROR_TITLE_SUFFIX, TASK_STATUS_PRIORITY } from '../shared/constants';
+import { DEFAULT_PROJECT_SETTINGS, AUTO_BUILD_PATHS, PROJECT_DATA_DIR, getSpecsDir, JSON_ERROR_PREFIX, JSON_ERROR_TITLE_SUFFIX, TASK_STATUS_PRIORITY } from '../shared/constants';
 import { getAutoBuildPath, isInitialized } from './project-initializer';
 import { getTaskWorktreeDir } from './worktree-paths';
 import { findAllSpecPaths } from './utils/spec-path-helpers';
@@ -30,6 +30,19 @@ interface StoreData {
 interface TasksCacheEntry {
   tasks: Task[];
   timestamp: number;
+}
+
+function getDataDirectoryWarning(projectPath: string, storedDataPath?: string): string | undefined {
+  if (existsSync(path.join(projectPath, PROJECT_DATA_DIR)) && !isInitialized(projectPath)) {
+    return `${PROJECT_DATA_DIR} exists but is unsafe (for example, a symbolic link). Preview project data was not opened.`;
+  }
+  if (storedDataPath && storedDataPath !== PROJECT_DATA_DIR) {
+    return `This project was previously linked to ${storedDataPath}. Forge Glass Preview does not import that data. Initialize ${PROJECT_DATA_DIR} to use this project.`;
+  }
+  if (existsSync(path.join(projectPath, '.auto-claude'))) {
+    return `Aperant data exists in .auto-claude. Forge Glass Preview does not read or change it; initialize ${PROJECT_DATA_DIR} separately.`;
+  }
+  return undefined;
 }
 
 /**
@@ -64,13 +77,19 @@ export class ProjectStore {
         const content = readFileSync(this.storePath, 'utf-8');
         const data = JSON.parse(content);
         // Convert date strings back to Date objects and normalize paths to absolute
-        data.projects = data.projects.map((p: Project) => ({
-          ...p,
-          // Ensure project.path is always absolute (critical for dev mode path resolution)
-          path: ensureAbsolutePath(p.path),
-          createdAt: new Date(p.createdAt),
-          updatedAt: new Date(p.updatedAt)
-        }));
+        data.projects = data.projects.map((p: Project) => {
+          const projectPath = ensureAbsolutePath(p.path);
+          return {
+            ...p,
+            // A saved preview record may still name Aperant's directory. Resolve
+            // only the preview namespace; never import or migrate the old data.
+            path: projectPath,
+            autoBuildPath: getAutoBuildPath(projectPath) || '',
+            dataDirectoryWarning: getDataDirectoryWarning(projectPath, p.autoBuildPath),
+            createdAt: new Date(p.createdAt),
+            updatedAt: new Date(p.updatedAt)
+          };
+        });
         return data;
       } catch {
         return { projects: [], settings: {} };
@@ -97,21 +116,21 @@ export class ProjectStore {
     // Check if project already exists (using absolute path for comparison)
     const existing = this.data.projects.find((p) => p.path === absolutePath);
     if (existing) {
-      // Validate that .auto-claude folder still exists for existing project
-      // If manually deleted, reset autoBuildPath so UI prompts for reinitialization
-      if (existing.autoBuildPath && !isInitialized(existing.path)) {
-        console.warn(`[ProjectStore] .auto-claude folder was deleted for project "${existing.name}" - resetting autoBuildPath`);
-        existing.autoBuildPath = '';
+      const dataPath = getAutoBuildPath(existing.path) || '';
+      if (existing.autoBuildPath !== dataPath) {
+        existing.autoBuildPath = dataPath;
         existing.updatedAt = new Date();
+        this.invalidateTasksCache(existing.id);
         this.save();
       }
+      existing.dataDirectoryWarning = getDataDirectoryWarning(existing.path);
       return existing;
     }
 
     // Derive name from path if not provided
     const projectName = name || path.basename(absolutePath);
 
-    // Determine auto-claude path (supports both 'auto-claude' and '.auto-claude')
+    // Only the preview namespace is a valid project data path.
     const autoBuildPath = getAutoBuildPath(absolutePath) || '';
 
     const project: Project = {
@@ -119,6 +138,7 @@ export class ProjectStore {
       name: projectName,
       path: absolutePath, // Store absolute path
       autoBuildPath,
+      dataDirectoryWarning: getDataDirectoryWarning(absolutePath),
       settings: { ...DEFAULT_PROJECT_SETTINGS },
       createdAt: new Date(),
       updatedAt: new Date()
@@ -134,10 +154,18 @@ export class ProjectStore {
    * Update project's autoBuildPath after initialization
    */
   updateAutoBuildPath(projectId: string, autoBuildPath: string): Project | undefined {
+    if (autoBuildPath !== PROJECT_DATA_DIR) {
+      throw new Error(`Unsupported project data directory: ${autoBuildPath}`);
+    }
     const project = this.data.projects.find((p) => p.id === projectId);
     if (project) {
+      if (!isInitialized(project.path)) {
+        throw new Error(`${PROJECT_DATA_DIR} is missing or unsafe`);
+      }
       project.autoBuildPath = autoBuildPath;
+      project.dataDirectoryWarning = getDataDirectoryWarning(project.path);
       project.updatedAt = new Date();
+      this.invalidateTasksCache(projectId);
       this.save();
     }
     return project;
@@ -213,11 +241,11 @@ export class ProjectStore {
   }
 
   /**
-   * Validate all projects to ensure their .auto-claude folders still exist.
+   * Validate all projects to ensure their .forge-glass-preview folders still exist.
    * If a project has autoBuildPath set but the folder was deleted,
    * reset autoBuildPath to empty string so the UI prompts for reinitialization.
    *
-   * @returns Array of project IDs that were reset due to missing .auto-claude folder
+   * @returns Array of project IDs that were reset due to missing .forge-glass-preview folder
    */
   validateProjects(): string[] {
     const resetProjectIds: string[] = [];
@@ -235,11 +263,13 @@ export class ProjectStore {
         continue; // Don't reset - let user handle this case
       }
 
-      // Check if .auto-claude folder still exists
+      // Check if .forge-glass-preview folder still exists
       if (!isInitialized(project.path)) {
-        console.warn(`[ProjectStore] .auto-claude folder missing for project "${project.name}" at ${project.path}`);
+        console.warn(`[ProjectStore] .forge-glass-preview folder missing for project "${project.name}" at ${project.path}`);
         project.autoBuildPath = '';
+        project.dataDirectoryWarning = getDataDirectoryWarning(project.path);
         project.updatedAt = new Date();
+        this.invalidateTasksCache(project.id);
         resetProjectIds.push(project.id);
         hasChanges = true;
       }
@@ -247,7 +277,7 @@ export class ProjectStore {
 
     if (hasChanges) {
       this.save();
-      console.warn(`[ProjectStore] Reset ${resetProjectIds.length} project(s) due to missing .auto-claude folder`);
+      console.warn(`[ProjectStore] Reset ${resetProjectIds.length} project(s) due to missing .forge-glass-preview folder`);
     }
 
     return resetProjectIds;
@@ -281,17 +311,18 @@ export class ProjectStore {
    * Implements caching with 3-second TTL to prevent excessive worktree scanning
    */
   getTasks(projectId: string): Task[] {
+    const project = this.getProject(projectId);
+    if (!project || project.autoBuildPath !== PROJECT_DATA_DIR || !isInitialized(project.path)) {
+      this.tasksCache.delete(projectId);
+      return [];
+    }
+
     // Check cache first
     const cached = this.tasksCache.get(projectId);
     const now = Date.now();
 
     if (cached && (now - cached.timestamp) < this.CACHE_TTL_MS) {
       return cached.tasks;
-    }
-
-    const project = this.getProject(projectId);
-    if (!project) {
-      return [];
     }
 
     const allTasks: Task[] = [];
@@ -907,5 +938,24 @@ export class ProjectStore {
   }
 }
 
-// Singleton instance
-export const projectStore = new ProjectStore();
+// Create the singleton on first use, after main sets the preview userData path.
+// Eager module evaluation can happen before the entrypoint's startup code.
+let projectStoreInstance: ProjectStore | null = null;
+
+function getProjectStoreInstance(): ProjectStore {
+  if (!projectStoreInstance) {
+    projectStoreInstance = new ProjectStore();
+  }
+  return projectStoreInstance;
+}
+
+export const projectStore: ProjectStore = new Proxy({} as ProjectStore, {
+  get(_target, property) {
+    const instance = getProjectStoreInstance();
+    const value = Reflect.get(instance, property, instance);
+    return typeof value === 'function' ? value.bind(instance) : value;
+  },
+  set(_target, property, value) {
+    return Reflect.set(getProjectStoreInstance(), property, value);
+  },
+});

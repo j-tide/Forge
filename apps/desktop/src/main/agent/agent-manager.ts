@@ -375,7 +375,7 @@ export class AgentManager extends EventEmitter {
     const resolved = await this.resolveAuthFromProviderQueue(specModelId, preferredProvider);
 
     // Build the serializable session config for the worker
-    const resolvedSpecDir = specDir ?? path.join(projectPath, '.auto-claude', 'specs', taskId);
+    const resolvedSpecDir = specDir ?? path.join(projectPath, '.forge-glass-preview', 'specs', taskId);
     const sessionConfig: SerializableSessionConfig = {
       agentType: 'spec_orchestrator' as const,
       systemPrompt,

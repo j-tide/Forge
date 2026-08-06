@@ -7,7 +7,7 @@
  *
  * Manages:
  * - Baseline capture when worktrees are created
- * - File content snapshots in .auto-claude/baselines/
+ * - File content snapshots in .forge-glass-preview/baselines/
  * - Task modification tracking with semantic analysis
  * - Persistence of evolution data
  */
@@ -198,7 +198,7 @@ export class FileEvolutionTracker {
     storageDir?: string,
     semanticAnalyzer?: SemanticAnalyzer,
   ) {
-    const resolvedStorageDir = storageDir ?? path.join(projectDir, '.auto-claude');
+    const resolvedStorageDir = storageDir ?? path.join(projectDir, '.forge-glass-preview');
     this.storage = new EvolutionStorage(projectDir, resolvedStorageDir);
     this.analyzer = semanticAnalyzer ?? new SemanticAnalyzer();
     this.evolutions = this.storage.loadEvolutions();

@@ -7,9 +7,9 @@
  *
  * Creates and manages git worktrees for autonomous task execution.
  * Each task runs in an isolated worktree at:
- *   {projectPath}/.auto-claude/worktrees/tasks/{specId}/
+ *   {projectPath}/.forge-glass-preview/worktrees/tasks/{specId}/
  * on branch:
- *   auto-claude/{specId}
+ *   forge-glass-preview/{specId}
  *
  * The function is idempotent — calling it repeatedly with the same specId
  * returns the existing worktree without error.
@@ -78,7 +78,7 @@ export interface WorktreeResult {
  *                       the remote ref (preserves gitignored files)
  * @param pushNewBranches If true, push the branch to origin and set upstream
  *                        tracking after worktree creation. Defaults to true.
- * @param autoBuildPath  Optional custom data directory (e.g. ".auto-claude").
+ * @param autoBuildPath  Optional custom data directory (e.g. ".forge-glass-preview").
  *                       Passed to getSpecsDir() for spec-copy logic.
  */
 export async function createOrGetWorktree(
@@ -89,8 +89,8 @@ export async function createOrGetWorktree(
   pushNewBranches = true,
   autoBuildPath?: string,
 ): Promise<WorktreeResult> {
-  const worktreePath = join(projectPath, '.auto-claude/worktrees/tasks', specId);
-  const branchName = `auto-claude/${specId}`;
+  const worktreePath = join(projectPath, '.forge-glass-preview/worktrees/tasks', specId);
+  const branchName = `forge-glass-preview/${specId}`;
 
   // ------------------------------------------------------------------
   // Step 1: Prune stale worktree references from git's internal records
@@ -239,11 +239,11 @@ export async function createOrGetWorktree(
   // ------------------------------------------------------------------
   // Step 7: Copy spec directory into the worktree
   //
-  // .auto-claude/specs/ is gitignored, so it is NOT present in the
+  // .forge-glass-preview/specs/ is gitignored, so it is NOT present in the
   // newly-created worktree checkout. Copy it from the main project so
   // that agents can read spec.md, implementation_plan.json, etc.
   // ------------------------------------------------------------------
-  const specsRelDir = getSpecsDir(autoBuildPath); // e.g. ".auto-claude/specs"
+  const specsRelDir = getSpecsDir(autoBuildPath); // e.g. ".forge-glass-preview/specs"
   const sourceSpecDir = join(projectPath, specsRelDir, specId);
   const destSpecDir = join(worktreePath, specsRelDir, specId);
 

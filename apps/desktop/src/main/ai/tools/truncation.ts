@@ -44,7 +44,7 @@ export interface TruncationResult {
  *
  * @param output - The raw tool output string
  * @param toolName - Name of the tool (for spillover filename)
- * @param projectDir - Project directory (spillover written to .auto-claude/tool-output/)
+ * @param projectDir - Project directory (spillover written to .forge-glass-preview/tool-output/)
  * @param maxBytes - Override max bytes limit (default: MAX_BYTES)
  * @returns TruncationResult with potentially truncated content
  */
@@ -67,7 +67,7 @@ export function truncateToolOutput(
   }
 
   // Exceeds limits — spill to disk
-  const spilloverDir = path.join(projectDir, '.auto-claude', 'tool-output');
+  const spilloverDir = path.join(projectDir, '.forge-glass-preview', 'tool-output');
   try {
     fs.mkdirSync(spilloverDir, { recursive: true });
   } catch {

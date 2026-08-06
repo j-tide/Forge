@@ -81,7 +81,7 @@ Helper utilities for profile operations.
 
 **Constants:**
 - `DEFAULT_CLAUDE_CONFIG_DIR` - Default Claude config location (~/.claude)
-- `CLAUDE_PROFILES_DIR` - Additional profiles directory (~/.claude-profiles)
+- `CLAUDE_PROFILES_DIR` - Preview profiles directory (~/.forge-glass-preview/claude-profiles)
 
 ### 7. **types.ts**
 Re-exports shared types for convenience and future extensibility.

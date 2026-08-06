@@ -151,7 +151,7 @@ export function detectWorktreeBranch(
   options: { timeout?: number; logPrefix?: string } = {}
 ): WorktreeBranchDetectionResult {
   const { timeout = 30000, logPrefix = '[WORKTREE_BRANCH_DETECTION]' } = options;
-  const expectedBranch = `auto-claude/${specId}`;
+  const expectedBranch = `forge-glass-preview/${specId}`;
   let branch = expectedBranch;
   let usingFallback = false;
 

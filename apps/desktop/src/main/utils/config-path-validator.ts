@@ -8,6 +8,35 @@
 
 import path from 'path';
 import os from 'os';
+import { lstatSync } from 'fs';
+import { PREVIEW_HOME_DIRECTORY_NAME } from '../../shared/constants/preview-paths';
+
+/** Only direct children of the preview's profile root may be created by the app. */
+export function isManagedPreviewConfigDir(configDir: string): boolean {
+  if (!configDir || configDir.includes('\0')) return false;
+
+  const expandedPath = configDir.startsWith('~')
+    ? path.join(os.homedir(), configDir.slice(1))
+    : configDir;
+  const profileDir = path.resolve(expandedPath);
+  const previewRoot = path.join(os.homedir(), PREVIEW_HOME_DIRECTORY_NAME);
+  const profilesRoot = path.join(previewRoot, 'claude-profiles');
+
+  if (path.dirname(profileDir) !== profilesRoot || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path.basename(profileDir))) {
+    return false;
+  }
+
+  // An existing symlink or junction could redirect a new profile into Aperant data.
+  for (const candidate of [previewRoot, profilesRoot, profileDir]) {
+    try {
+      if (lstatSync(candidate).isSymbolicLink()) return false;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return false;
+    }
+  }
+
+  return true;
+}
 
 /**
  * Validate that a config directory path is safe and within expected boundaries.
@@ -27,16 +56,9 @@ export function isValidConfigDir(configDir: string): boolean {
   const normalizedPath = path.resolve(expandedPath);
   const homeDir = os.homedir();
 
-  // Allow paths within:
-  // 1. User's home directory (~/)
-  // 2. ~/.claude (default config directory)
-  // 3. ~/.claude-profiles/* (profile config directories)
-  // 4. User's app data directory (for custom profiles)
-  const allowedPrefixes = [
-    homeDir,
-    path.join(homeDir, '.claude'),
-    path.join(homeDir, '.claude-profiles'),
-  ];
+  // Broad validation is retained for read-only provider checks. App-created
+  // profile directories use isManagedPreviewConfigDir() instead.
+  const allowedPrefixes = [homeDir];
 
   // Check if normalized path starts with any allowed prefix
   // IMPORTANT: Use path separator boundary to prevent attacks like

@@ -77,7 +77,7 @@ const PHASE_CONFIG_MAP: Record<BuildPhase, Phase> = {
 
 /** Configuration for the build orchestrator */
 export interface BuildOrchestratorConfig {
-  /** Spec directory path (e.g., .auto-claude/specs/001-feature/) */
+  /** Spec directory path (e.g., .forge-glass-preview/specs/001-feature/) */
   specDir: string;
   /** Project root directory */
   projectDir: string;

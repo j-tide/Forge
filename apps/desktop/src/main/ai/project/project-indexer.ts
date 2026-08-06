@@ -35,6 +35,7 @@ const SKIP_DIRS = new Set([
   '.nuxt',
   'target',
   'vendor',
+  '.forge-glass-preview',
   '.auto-claude',
   'coverage',
   '.nyc_output',

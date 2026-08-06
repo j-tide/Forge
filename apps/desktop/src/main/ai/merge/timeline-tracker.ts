@@ -313,7 +313,7 @@ function getCommitInfo(commitHash: string, cwd: string): Record<string, string> 
 
 function getWorktreeFileContent(taskId: string, filePath: string, projectDir: string): string {
   // Try common worktree locations
-  const worktreePath = path.join(projectDir, '.auto-claude', 'worktrees', taskId, filePath);
+  const worktreePath = path.join(projectDir, '.forge-glass-preview', 'worktrees', taskId, filePath);
   if (fs.existsSync(worktreePath)) {
     try {
       return fs.readFileSync(worktreePath, 'utf8');
@@ -369,7 +369,7 @@ export class FileTimelineTracker {
 
   constructor(projectPath: string, storagePath?: string) {
     this.projectPath = path.resolve(projectPath);
-    const resolvedStoragePath = storagePath ?? path.join(this.projectPath, '.auto-claude');
+    const resolvedStoragePath = storagePath ?? path.join(this.projectPath, '.forge-glass-preview');
     this.persistence = new TimelinePersistence(resolvedStoragePath);
     this.timelines = this.persistence.loadAllTimelines();
   }

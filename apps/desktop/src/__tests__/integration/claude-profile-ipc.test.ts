@@ -38,6 +38,7 @@ vi.mock('electron', () => ({
 // Mock config path validator to allow test temp directories
 vi.mock('../../main/utils/config-path-validator', () => ({
   isValidConfigDir: vi.fn().mockReturnValue(true),
+  isManagedPreviewConfigDir: vi.fn().mockReturnValue(true),
 }));
 
 // Mock ClaudeProfileManager
@@ -213,7 +214,7 @@ describe('Claude Profile IPC Integration', () => {
       expect(existsSync(profile.configDir!)).toBe(true);
     });
 
-    it('should not create config directory for default profile', async () => {
+    it('should create a config directory for a default preview profile', async () => {
       const handleProfileSave = handlers.get('claude:profileSave');
       expect(handleProfileSave).toBeDefined();
 
@@ -225,7 +226,7 @@ describe('Claude Profile IPC Integration', () => {
       await handleProfileSave?.(null, profile);
 
       // biome-ignore lint/style/noNonNullAssertion: Test file - configDir is set in createTestProfile
-      expect(existsSync(profile.configDir!)).toBe(false);
+      expect(existsSync(profile.configDir!)).toBe(true);
     });
 
     it('should handle save errors gracefully', async () => {

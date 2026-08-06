@@ -1,7 +1,8 @@
-import { existsSync, mkdirSync, writeFileSync, readFileSync, appendFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, appendFileSync, lstatSync, readdirSync } from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
 import { getToolPath } from './cli-tool-manager';
+import { PROJECT_DATA_DIR } from '../shared/constants';
 
 /**
  * Debug logging - only logs when DEBUG=true or in development mode
@@ -126,7 +127,8 @@ export function initializeGit(projectPath: string): InitializationResult {
       debug('Adding files and creating initial commit');
 
       // Add all files
-      execFileSync(git, ['add', '-A'], {
+      // Never stage either application's private task records in a new repository.
+      execFileSync(git, ['add', '-A', '--', '.', ':(exclude).auto-claude', `:(exclude)${PROJECT_DATA_DIR}`], {
         cwd: projectPath,
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe']
@@ -155,7 +157,7 @@ export function initializeGit(projectPath: string): InitializationResult {
 /**
  * Entries to add to .gitignore when initializing a project
  */
-const GITIGNORE_ENTRIES = ['.auto-claude/'];
+const GITIGNORE_ENTRIES = [`${PROJECT_DATA_DIR}/`];
 
 /**
  * Ensure entries exist in the project's .gitignore file.
@@ -205,21 +207,21 @@ function ensureGitignoreEntries(projectPath: string, entries: string[]): void {
       appendContent += '\n';
     }
 
-    appendContent += '\n# Aperant data directory\n';
+    appendContent += '\n# Forge Glass Preview data directory\n';
     for (const entry of entriesToAdd) {
       appendContent += entry + '\n';
     }
 
     appendFileSync(gitignorePath, appendContent);
   } else {
-    writeFileSync(gitignorePath, '# Aperant data directory\n' + entriesToAdd.join('\n') + '\n', 'utf-8');
+    writeFileSync(gitignorePath, '# Forge Glass Preview data directory\n' + entriesToAdd.join('\n') + '\n', 'utf-8');
   }
 
   debug('Added entries to .gitignore', { entries: entriesToAdd });
 }
 
 /**
- * Data directories created in .auto-claude for each project
+ * Data directories created in .forge-glass-preview for each project
  */
 const DATA_DIRECTORIES = [
   'specs',
@@ -259,17 +261,25 @@ export function getLocalSourcePath(projectPath: string): string | null {
 }
 
 /**
- * Check if project is initialized (has .auto-claude directory)
+ * Check if project is initialized (has .forge-glass-preview directory)
  */
 export function isInitialized(projectPath: string): boolean {
-  const dotAutoBuildPath = path.join(projectPath, '.auto-claude');
-  return existsSync(dotAutoBuildPath);
+  const dataPath = path.join(projectPath, PROJECT_DATA_DIR);
+  try {
+    const stats = lstatSync(dataPath);
+    // A link at the data root (or one of its top-level children) could point to
+    // an existing Aperant data directory. Treat it as uninitialized instead.
+    return stats.isDirectory() && !stats.isSymbolicLink() &&
+      !readdirSync(dataPath, { withFileTypes: true }).some(entry => entry.isSymbolicLink());
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Initialize auto-claude data directory in a project.
  *
- * Creates .auto-claude/ with data directories (specs, ideation, insights, roadmap).
+ * Creates .forge-glass-preview/ with data directories (specs, ideation, insights, roadmap).
  * The framework code runs from the source repo - only data is stored here.
  *
  * Requires:
@@ -299,20 +309,20 @@ export function initializeProject(projectPath: string): InitializationResult {
   }
 
   // Check if already initialized
-  const dotAutoBuildPath = path.join(projectPath, '.auto-claude');
+  const dotAutoBuildPath = path.join(projectPath, PROJECT_DATA_DIR);
 
   if (existsSync(dotAutoBuildPath)) {
-    debug('Already initialized - .auto-claude exists');
+    debug('Already initialized - .forge-glass-preview exists');
     return {
       success: false,
-      error: 'Project already has auto-claude initialized (.auto-claude exists)'
+      error: `Project data directory already exists (${PROJECT_DATA_DIR}). No existing data was changed.`
     };
   }
 
   try {
-    debug('Creating .auto-claude data directory', { dotAutoBuildPath });
+    debug('Creating .forge-glass-preview data directory', { dotAutoBuildPath });
 
-    // Create the .auto-claude directory
+    // Create the .forge-glass-preview directory
     mkdirSync(dotAutoBuildPath, { recursive: true });
 
     // Create data directories
@@ -323,7 +333,7 @@ export function initializeProject(projectPath: string): InitializationResult {
       writeFileSync(path.join(dirPath, '.gitkeep'), '', 'utf-8');
     }
 
-    // Update .gitignore to exclude .auto-claude/
+    // Update .gitignore to exclude .forge-glass-preview/
     ensureGitignoreEntries(projectPath, GITIGNORE_ENTRIES);
 
     debug('Initialization complete');
@@ -339,16 +349,16 @@ export function initializeProject(projectPath: string): InitializationResult {
 }
 
 /**
- * Ensure all data directories exist in .auto-claude.
+ * Ensure all data directories exist in .forge-glass-preview.
  * Useful if new directories are added in future versions.
  */
 export function ensureDataDirectories(projectPath: string): InitializationResult {
-  const dotAutoBuildPath = path.join(projectPath, '.auto-claude');
+  const dotAutoBuildPath = path.join(projectPath, PROJECT_DATA_DIR);
 
-  if (!existsSync(dotAutoBuildPath)) {
+  if (!isInitialized(projectPath)) {
     return {
       success: false,
-      error: 'Project not initialized. Run initialize first.'
+      error: 'Preview project data is missing or unsafe. No data was changed.'
     };
   }
 
@@ -373,20 +383,20 @@ export function ensureDataDirectories(projectPath: string): InitializationResult
 /**
  * Get the auto-claude folder path for a project.
  *
- * IMPORTANT: Only .auto-claude/ is considered a valid "installed" auto-claude.
+ * IMPORTANT: Only .forge-glass-preview/ is considered a valid "installed" auto-claude.
  * The auto-claude/ folder (if it exists) is the SOURCE CODE being developed,
  * not an installation. This allows Aperant to be used to develop itself.
  */
 export function getAutoBuildPath(projectPath: string): string | null {
-  const dotAutoBuildPath = path.join(projectPath, '.auto-claude');
+  const dotAutoBuildPath = path.join(projectPath, PROJECT_DATA_DIR);
 
   debug('getAutoBuildPath called', { projectPath, dotAutoBuildPath });
 
-  if (existsSync(dotAutoBuildPath)) {
-    debug('Returning .auto-claude (installed version)');
-    return '.auto-claude';
+  if (isInitialized(projectPath)) {
+    debug('Returning .forge-glass-preview (installed version)');
+    return PROJECT_DATA_DIR;
   }
 
-  debug('No .auto-claude folder found - project not initialized');
+  debug('No .forge-glass-preview folder found - project not initialized');
   return null;
 }

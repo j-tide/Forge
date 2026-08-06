@@ -22,7 +22,8 @@ import { readSettingsFile, writeSettingsFile } from '../settings-utils';
 import { isSecurePath, getWhereExePath, getTaskkillExePath } from '../utils/windows-paths';
 import { isWindows, isMacOS, isLinux } from '../platform';
 import { getClaudeProfileManager } from '../claude-profile-manager';
-import { isValidConfigDir } from '../utils/config-path-validator';
+import { isManagedPreviewConfigDir, isValidConfigDir } from '../utils/config-path-validator';
+import { getPreviewProfileDirectory } from '../claude-profile/profile-utils';
 import { clearKeychainCache, getCredentialsFromKeychain, updateProfileSubscriptionMetadata } from '../claude-profile/credential-utils';
 import { getUsageMonitor } from '../claude-profile/usage-monitor';
 import semver from 'semver';
@@ -1235,14 +1236,13 @@ export function registerClaudeCodeHandlers(): void {
           };
         }
 
-        // For default profile, use the default Claude config dir
-        const configDir = profile.configDir || '~/.claude';
+        const configDir = profile.configDir || getPreviewProfileDirectory(profile.name);
 
         // Validate path to prevent operations on arbitrary directories
-        if (!isValidConfigDir(configDir)) {
+        if (!isManagedPreviewConfigDir(configDir)) {
           return {
             success: false,
-            error: `Invalid config directory path: ${configDir}. Config directories must be within the user's home directory.`
+            error: `Invalid preview profile directory: ${configDir}`
           };
         }
 
@@ -1337,7 +1337,10 @@ export function registerClaudeCodeHandlers(): void {
           };
         }
 
-        const configDir = profile.configDir || '~/.claude';
+        const configDir = profile.configDir || getPreviewProfileDirectory(profile.name);
+        if (!isManagedPreviewConfigDir(configDir)) {
+          return { success: false, error: `Invalid preview profile directory: ${configDir}` };
+        }
         const result = checkProfileAuthentication(configDir);
 
         console.warn('[Claude Code] Auth verification result:', result);
@@ -1379,6 +1382,7 @@ export function registerClaudeCodeHandlers(): void {
         // See: docs/LONG_LIVED_AUTH_PLAN.md for full context.
         if (result.authenticated) {
           profile.isAuthenticated = true;
+          profile.configDir = expandedConfigDir;
 
           if (result.email) {
             profile.email = result.email;
@@ -1450,9 +1454,9 @@ export function registerClaudeCodeHandlers(): void {
         }
 
         // Resolve configDir (same logic as CLAUDE_PROFILE_AUTHENTICATE)
-        const configDir = profile.configDir || '~/.claude';
-        if (!isValidConfigDir(configDir)) {
-          return { success: false, error: `Invalid config directory path: ${configDir}` };
+        const configDir = profile.configDir || getPreviewProfileDirectory(profile.name);
+        if (!isManagedPreviewConfigDir(configDir)) {
+          return { success: false, error: `Invalid preview profile directory: ${configDir}` };
         }
 
         const expandedConfigDir = configDir.startsWith('~')
@@ -1557,6 +1561,7 @@ export function registerClaudeCodeHandlers(): void {
               if (result.authenticated) {
                 // Update profile metadata (same logic as VERIFY_AUTH handler)
                 profile.isAuthenticated = true;
+                profile.configDir = expandedConfigDir;
                 if (result.email) {
                   profile.email = result.email;
                 }

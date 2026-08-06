@@ -29,8 +29,8 @@ export const UI_SCALE_STEP = 5;
 // ============================================
 
 export const DEFAULT_APP_SETTINGS = {
-  theme: 'dark' as const,
-  colorTheme: 'default' as const,
+  theme: 'light' as const,
+  colorTheme: 'forge-glass' as const,
   defaultModel: 'opus',
   agentFramework: 'auto-claude',
   pythonPath: undefined as string | undefined,
@@ -63,8 +63,8 @@ export const DEFAULT_APP_SETTINGS = {
   betaUpdates: false,
   // Language preference (default to English)
   language: 'en' as const,
-  // Anonymous error reporting (Sentry) - enabled by default to help improve the app
-  sentryEnabled: true,
+  // A derivative install does not opt users into upstream error reporting.
+  sentryEnabled: false,
   // Auto-name Claude terminals based on initial message (enabled by default)
   autoNameClaudeTerminals: true,
   // GPU acceleration for terminal rendering
@@ -95,12 +95,14 @@ export const DEFAULT_PROJECT_SETTINGS = {
 // Auto Build File Paths
 // ============================================
 
+// Project data is deliberately separate from upstream Aperant's .auto-claude/.
+export const PROJECT_DATA_DIR = '.forge-glass-preview';
+
 // File paths relative to project
-// IMPORTANT: All paths use .auto-claude/ (the installed instance), NOT auto-claude/ (source code)
 export const AUTO_BUILD_PATHS = {
-  SPECS_DIR: '.auto-claude/specs',
-  ROADMAP_DIR: '.auto-claude/roadmap',
-  IDEATION_DIR: '.auto-claude/ideation',
+  SPECS_DIR: `${PROJECT_DATA_DIR}/specs`,
+  ROADMAP_DIR: `${PROJECT_DATA_DIR}/roadmap`,
+  IDEATION_DIR: `${PROJECT_DATA_DIR}/ideation`,
   IMPLEMENTATION_PLAN: 'implementation_plan.json',
   SPEC_FILE: 'spec.md',
   QA_REPORT: 'qa_report.md',
@@ -114,15 +116,17 @@ export const AUTO_BUILD_PATHS = {
   MANUAL_COMPETITORS: 'manual_competitors.json',
   IDEATION_FILE: 'ideation.json',
   IDEATION_CONTEXT: 'ideation_context.json',
-  PROJECT_INDEX: '.auto-claude/project_index.json',
+  PROJECT_INDEX: `${PROJECT_DATA_DIR}/project_index.json`,
   MEMORY_STATE: '.memory_state.json'
 } as const;
 
 /**
  * Get the specs directory path.
- * All specs go to .auto-claude/specs/ (the project's data directory).
+ * All specs go to .forge-glass-preview/specs/ (the project's data directory).
  */
 export function getSpecsDir(autoBuildPath: string | undefined): string {
-  const basePath = autoBuildPath || '.auto-claude';
-  return `${basePath}/specs`;
+  if (autoBuildPath && autoBuildPath !== PROJECT_DATA_DIR) {
+    throw new Error(`Unsupported project data directory: ${autoBuildPath}`);
+  }
+  return AUTO_BUILD_PATHS.SPECS_DIR;
 }

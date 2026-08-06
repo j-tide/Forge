@@ -8,16 +8,22 @@ import { join } from 'path';
 import { existsSync, readFileSync, readdirSync, mkdirSync } from 'fs';
 import type { ClaudeProfile, APIProfile } from '../../shared/types';
 import { getCredentialsFromKeychain } from './credential-utils';
+import { PREVIEW_CLAUDE_PROFILES_RELATIVE_DIR, getPreviewClaudeProfileSlug } from '../../shared/constants/preview-paths';
+import { isManagedPreviewConfigDir } from '../utils/config-path-validator';
 
 /**
- * Default Claude config directory
+ * Claude CLI's official default directory. The preview does not create profiles here.
  */
 export const DEFAULT_CLAUDE_CONFIG_DIR = join(homedir(), '.claude');
 
 /**
- * Default profiles directory for additional accounts
+ * Forge Glass Preview's own Claude profiles directory.
  */
-export const CLAUDE_PROFILES_DIR = join(homedir(), '.claude-profiles');
+export const CLAUDE_PROFILES_DIR = join(homedir(), PREVIEW_CLAUDE_PROFILES_RELATIVE_DIR);
+
+export function getPreviewProfileDirectory(profileName: string): string {
+  return join(CLAUDE_PROFILES_DIR, getPreviewClaudeProfileSlug(profileName));
+}
 
 /**
  * Generate a unique ID for a new profile
@@ -39,16 +45,11 @@ export function generateProfileId(name: string, existingProfiles: ClaudeProfile[
  * Create a new profile directory and initialize it
  */
 export async function createProfileDirectory(profileName: string): Promise<string> {
-  // Create profiles directory - mkdirSync with recursive:true is idempotent
-  // and won't throw if the directory already exists, so no existsSync check needed
-  mkdirSync(CLAUDE_PROFILES_DIR, { recursive: true });
+  const profileDir = getPreviewProfileDirectory(profileName);
+  if (!isManagedPreviewConfigDir(profileDir)) {
+    throw new Error(`Invalid preview profile directory: ${profileDir}`);
+  }
 
-  // Create directory for this profile
-  const sanitizedName = profileName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const profileDir = join(CLAUDE_PROFILES_DIR, sanitizedName);
-
-  // mkdirSync with recursive:true is idempotent and won't throw if directory exists
-  // No existsSync check needed - avoids TOCTOU race condition
   mkdirSync(profileDir, { recursive: true });
 
   return profileDir;
@@ -241,7 +242,7 @@ export function expandHomePath(path: string): string {
  * source for the user's email. This is more reliable than parsing terminal output
  * which may contain ANSI escape codes that corrupt the email.
  *
- * @param configDir - The profile's config directory (e.g., ~/.claude or ~/.claude-profiles/work)
+ * @param configDir - The profile's Claude config directory
  * @returns The email address if found, null otherwise
  */
 export function getEmailFromConfigDir(configDir?: string): string | null {

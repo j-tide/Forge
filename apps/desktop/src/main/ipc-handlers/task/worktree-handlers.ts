@@ -33,8 +33,8 @@ export const GIT_BRANCH_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9._/-]*[a-zA-Z0-9]$|^[a-zA
 /**
  * Validates a detected branch name and returns the safe branch to delete.
  *
- * Why `auto-claude/` prefix is considered safe:
- * - All task worktrees use branches named `auto-claude/{specId}`
+ * Why `forge-glass-preview/` prefix is considered safe:
+ * - All task worktrees use branches named `forge-glass-preview/{specId}`
  * - This pattern is controlled by Auto-Claude, not user input
  * - If detected branch matches this pattern, it's a valid task branch
  * - If it doesn't match (e.g., `main`, `develop`, `feature/xxx`), it's likely
@@ -68,7 +68,7 @@ export function validateWorktreeBranch(
 
   // Matches auto-claude pattern with valid specId (not just "auto-claude/")
   // The specId must be non-empty for this to be a valid task branch
-  if (detectedBranch.startsWith('auto-claude/') && detectedBranch.length > 'auto-claude/'.length) {
+  if (detectedBranch.startsWith('forge-glass-preview/') && detectedBranch.length > 'forge-glass-preview/'.length) {
     return {
       branchToDelete: detectedBranch,
       usedFallback: false,
@@ -1480,7 +1480,7 @@ function getEffectiveBaseBranch(projectPath: string, specId: string, projectMain
   }
 
   // 1. Try task metadata baseBranch
-  const specDir = path.join(projectPath, '.auto-claude', 'specs', specId);
+  const specDir = path.join(projectPath, '.forge-glass-preview', 'specs', specId);
   const taskBaseBranch = getTaskBaseBranch(specDir);
   if (taskBaseBranch) {
     return taskBaseBranch;
@@ -1755,7 +1755,7 @@ export function registerWorktreeHandlers(
 ): void {
   /**
    * Get the worktree status for a task
-   * Per-spec architecture: Each spec has its own worktree at .auto-claude/worktrees/tasks/{spec-name}/
+   * Per-spec architecture: Each spec has its own worktree at .forge-glass-preview/worktrees/tasks/{spec-name}/
    */
   ipcMain.handle(
     IPC_CHANNELS.TASK_WORKTREE_STATUS,
@@ -1766,7 +1766,7 @@ export function registerWorktreeHandlers(
           return { success: false, error: 'Task not found' };
         }
 
-        // Find worktree at .auto-claude/worktrees/tasks/{spec-name}/
+        // Find worktree at .forge-glass-preview/worktrees/tasks/{spec-name}/
         const worktreePath = findTaskWorktree(project.path, task.specId);
 
         if (!worktreePath) {
@@ -1871,7 +1871,7 @@ export function registerWorktreeHandlers(
 
   /**
    * Get the diff for a task's worktree
-   * Per-spec architecture: Each spec has its own worktree at .auto-claude/worktrees/tasks/{spec-name}/
+   * Per-spec architecture: Each spec has its own worktree at .forge-glass-preview/worktrees/tasks/{spec-name}/
    */
   ipcMain.handle(
     IPC_CHANNELS.TASK_WORKTREE_DIFF,
@@ -1882,7 +1882,7 @@ export function registerWorktreeHandlers(
           return { success: false, error: 'Task not found' };
         }
 
-        // Find worktree at .auto-claude/worktrees/tasks/{spec-name}/
+        // Find worktree at .forge-glass-preview/worktrees/tasks/{spec-name}/
         const worktreePath = findTaskWorktree(project.path, task.specId);
 
         if (!worktreePath) {
@@ -1987,7 +1987,7 @@ export function registerWorktreeHandlers(
 
         debug('Found task:', task.specId, 'project:', project.path);
 
-        const specDir = path.join(project.path, project.autoBuildPath || '.auto-claude', 'specs', task.specId);
+        const specDir = path.join(project.path, project.autoBuildPath || '.forge-glass-preview', 'specs', task.specId);
         const worktreePath = findTaskWorktree(project.path, task.specId);
 
         // Auto-fix any misconfigured bare repo before merge operation
@@ -2031,7 +2031,7 @@ export function registerWorktreeHandlers(
         const aiResolverFn = createMergeResolverFn(modelShorthand, 'low');
 
         // Create the merge orchestrator
-        const storageDir = path.join(project.path, project.autoBuildPath || '.auto-claude');
+        const storageDir = path.join(project.path, project.autoBuildPath || '.forge-glass-preview');
         const orchestrator = new MergeOrchestrator({
           projectDir: project.path,
           storageDir,
@@ -2069,7 +2069,7 @@ export function registerWorktreeHandlers(
             if (applied) {
               // Stage all changed files
               try {
-                execFileSync(getToolPath('git'), ['add', '-A'], {
+                execFileSync(getToolPath('git'), ['add', '-A', '--', '.', ':(exclude).auto-claude', ':(exclude).forge-glass-preview'], {
                   cwd: project.path,
                   encoding: 'utf-8',
                   env: getIsolatedGitEnv()
@@ -2126,7 +2126,7 @@ export function registerWorktreeHandlers(
 
                     if (!hasActualStagedChanges) {
                       // Check if worktree branch was already merged (merge commit exists)
-                      const specBranch = `auto-claude/${task.specId}`;
+                      const specBranch = `forge-glass-preview/${task.specId}`;
                       try {
                         // Check if current branch contains all commits from spec branch
                         // git merge-base --is-ancestor returns exit code 0 if true, 1 if false
@@ -2269,7 +2269,7 @@ export function registerWorktreeHandlers(
               ];
               // Add worktree plan path if worktree exists
               if (worktreePath) {
-                const worktreeSpecDir = path.join(worktreePath, project.autoBuildPath || '.auto-claude', 'specs', task.specId);
+                const worktreeSpecDir = path.join(worktreePath, project.autoBuildPath || '.forge-glass-preview', 'specs', task.specId);
                 planPaths.push({ path: path.join(worktreeSpecDir, AUTO_BUILD_PATHS.IMPLEMENTATION_PLAN), isMain: false });
               }
 
@@ -2433,7 +2433,7 @@ export function registerWorktreeHandlers(
         // 1. Task metadata baseBranch (explicit task-level override)
         // 2. Project settings mainBranch (project-level default)
         // 3. Default to 'main'
-        const specDir = path.join(project.path, project.autoBuildPath || '.auto-claude', 'specs', task.specId);
+        const specDir = path.join(project.path, project.autoBuildPath || '.forge-glass-preview', 'specs', task.specId);
         const taskBaseBranch = getTaskBaseBranch(specDir);
         const projectMainBranch = project.settings?.mainBranch;
         const effectiveBaseBranch = taskBaseBranch || projectMainBranch || 'main';
@@ -2442,7 +2442,7 @@ export function registerWorktreeHandlers(
 
         // Run preview using the TypeScript MergeOrchestrator in dry-run mode
         // (no AI resolver needed for preview — only conflict detection and analysis)
-        const storageDir = path.join(project.path, project.autoBuildPath || '.auto-claude');
+        const storageDir = path.join(project.path, project.autoBuildPath || '.forge-glass-preview');
         const orchestrator = new MergeOrchestrator({
           projectDir: project.path,
           storageDir,
@@ -2515,7 +2515,7 @@ export function registerWorktreeHandlers(
 
   /**
    * Discard the worktree changes
-   * Per-spec architecture: Each spec has its own worktree at .auto-claude/worktrees/tasks/{spec-name}/
+   * Per-spec architecture: Each spec has its own worktree at .forge-glass-preview/worktrees/tasks/{spec-name}/
    *
    * Note: Uses the shared cleanupWorktree utility which handles Windows-specific issues
    * where `git worktree remove --force` fails when the directory contains untracked files.
@@ -2530,7 +2530,7 @@ export function registerWorktreeHandlers(
           return { success: false, error: 'Task not found' };
         }
 
-        // Find worktree at .auto-claude/worktrees/tasks/{spec-name}/
+        // Find worktree at .forge-glass-preview/worktrees/tasks/{spec-name}/
         const worktreePath = findTaskWorktree(project.path, task.specId);
 
         if (!worktreePath) {
@@ -2622,7 +2622,7 @@ export function registerWorktreeHandlers(
           return { success: false, error: 'Project path is invalid' };
         }
 
-        // Find worktree at .auto-claude/worktrees/tasks/{spec-name}/
+        // Find worktree at .forge-glass-preview/worktrees/tasks/{spec-name}/
         const worktreePath = findTaskWorktree(project.path, specName);
 
         if (!worktreePath) {
@@ -2670,7 +2670,7 @@ export function registerWorktreeHandlers(
 
   /**
    * List all spec worktrees for a project
-   * Per-spec architecture: Each spec has its own worktree at .auto-claude/worktrees/tasks/{spec-name}/
+   * Per-spec architecture: Each spec has its own worktree at .forge-glass-preview/worktrees/tasks/{spec-name}/
    */
   ipcMain.handle(
     IPC_CHANNELS.TASK_LIST_WORKTREES,
@@ -2699,7 +2699,7 @@ export function registerWorktreeHandlers(
         // Used for orphan detection - worktrees without a matching task are orphaned
         const tasks = projectStore.getTasks(projectId);
         // Track if task lookup was successful (empty array with existing specs dir = lookup failed)
-        const mainSpecsDir = path.join(project.path, '.auto-claude', 'specs');
+        const mainSpecsDir = path.join(project.path, '.forge-glass-preview', 'specs');
         const taskLookupSuccessful = tasks.length > 0 || !existsSync(mainSpecsDir);
 
         // Helper to process a single worktree entry (async)
@@ -2997,7 +2997,7 @@ export function registerWorktreeHandlers(
 
         debug('Found task:', task.specId, 'project:', project.path);
 
-        const specDir = path.join(project.path, project.autoBuildPath || '.auto-claude', 'specs', task.specId);
+        const specDir = path.join(project.path, project.autoBuildPath || '.forge-glass-preview', 'specs', task.specId);
 
         // Use EAFP pattern - try to read specDir and catch ENOENT
         try {
@@ -3034,7 +3034,7 @@ export function registerWorktreeHandlers(
         // Determine base branch and branch name
         const taskBaseBranch = getTaskBaseBranch(specDir);
         const baseBranch = options?.targetBranch || taskBaseBranch || 'main';
-        const branchName = `auto-claude/${task.specId}`;
+        const branchName = `forge-glass-preview/${task.specId}`;
         const prTitle = options?.title || `auto-claude: ${task.specId}`;
 
         if (taskBaseBranch) {
