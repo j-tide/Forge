@@ -5,7 +5,7 @@ import {
   Settings,
   LayoutGrid,
   Terminal,
-  Map,
+  Map as MapIcon,
   BookOpen,
   Lightbulb,
   AlertCircle,
@@ -81,7 +81,7 @@ const baseNavItems: NavItem[] = [
   { id: 'kanban', labelKey: 'navigation:items.kanban', icon: LayoutGrid, shortcut: 'K' },
   { id: 'terminals', labelKey: 'navigation:items.terminals', icon: Terminal, shortcut: 'A' },
   { id: 'insights', labelKey: 'navigation:items.insights', icon: Sparkles, shortcut: 'N' },
-  { id: 'roadmap', labelKey: 'navigation:items.roadmap', icon: Map, shortcut: 'D' },
+  { id: 'roadmap', labelKey: 'navigation:items.roadmap', icon: MapIcon, shortcut: 'D' },
   { id: 'ideation', labelKey: 'navigation:items.ideation', icon: Lightbulb, shortcut: 'I' },
   { id: 'changelog', labelKey: 'navigation:items.changelog', icon: FileText, shortcut: 'L' },
   { id: 'context', labelKey: 'navigation:items.context', icon: BookOpen, shortcut: 'C' },
@@ -107,12 +107,13 @@ export function Sidebar({
   activeView = 'kanban',
   onViewChange
 }: SidebarProps) {
-  const { t } = useTranslation(['navigation', 'dialogs', 'common']);
+  const { t } = useTranslation(['navigation', 'dialogs', 'common', 'welcome']);
   const projects = useProjectStore((state) => state.projects);
   const selectedProjectId = useProjectStore((state) => state.selectedProjectId);
   const settings = useSettingsStore((state) => state.settings);
 
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
+  const [showHelpDialog, setShowHelpDialog] = useState(false);
   const [showInitDialog, setShowInitDialog] = useState(false);
   const [showGitSetupModal, setShowGitSetupModal] = useState(false);
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
@@ -296,12 +297,15 @@ export function Sidebar({
 
     const button = (
       <button
+        type="button"
         key={item.id}
         onClick={() => handleNavClick(item.id)}
         disabled={!selectedProjectId}
         aria-keyshortcuts={item.shortcut}
+        aria-current={isActive ? 'page' : undefined}
+        data-active={isActive}
         className={cn(
-          'flex w-full items-center rounded-lg text-sm transition-all duration-200',
+          'forge-glass-sidebar-nav-item flex w-full items-center rounded-lg text-sm transition-all duration-200',
           'hover:bg-accent hover:text-accent-foreground',
           'disabled:pointer-events-none disabled:opacity-50',
           isActive && 'bg-accent text-accent-foreground',
@@ -345,16 +349,16 @@ export function Sidebar({
   return (
     <TooltipProvider>
       <div className={cn(
-        "flex h-full flex-col bg-sidebar border-r border-border transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
-      )}>
+        "forge-glass-sidebar flex h-full flex-col border-r border-border bg-sidebar text-sidebar-foreground transition-all duration-300",
+        isCollapsed ? "w-16" : "w-60"
+      )} data-collapsed={isCollapsed}>
         {/* Header with drag area - extra top padding for macOS traffic lights */}
         <div className={cn(
-          "electron-drag flex h-14 items-center pt-6 transition-all duration-300",
+          "forge-glass-sidebar-header electron-drag flex h-14 items-center pt-6 transition-all duration-300",
           isCollapsed ? "justify-center px-2" : "px-4"
         )}>
           {!isCollapsed && (
-            <span className="electron-no-drag text-lg font-bold text-primary">Aperant</span>
+            <span className="forge-glass-sidebar-brand electron-no-drag text-lg font-bold text-primary">Forge</span>
           )}
         </div>
 
@@ -399,7 +403,7 @@ export function Sidebar({
                   {t('sections.project')}
                 </h3>
               )}
-              <nav className="space-y-1">
+              <nav className="forge-glass-sidebar-nav space-y-1">
                 {visibleNavItems.map(renderNavItem)}
               </nav>
             </div>
@@ -415,7 +419,7 @@ export function Sidebar({
         <UpdateBanner />
 
         {/* Bottom section with Settings, Help, and New Task */}
-        <div className={cn("space-y-3 transition-all duration-300", isCollapsed ? "p-2" : "p-4")}>
+        <div className={cn("forge-glass-sidebar-actions space-y-3 transition-all duration-300", isCollapsed ? "p-2" : "p-4")}>
           {/* Settings and Help row */}
           <div className={cn(
             "flex items-center",
@@ -440,7 +444,7 @@ export function Sidebar({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => window.open('https://github.com/AndyMik90/Auto-Claude/issues', '_blank')}
+                  onClick={() => setShowHelpDialog(true)}
                   aria-label={t('tooltips.help')}
                 >
                   <HelpCircle className="h-4 w-4" />
@@ -454,10 +458,11 @@ export function Sidebar({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                type="button"
                 onClick={() => window.open('https://github.com/sponsors/AndyMik90', '_blank')}
                 className={cn(
                   'flex w-full items-center text-xs transition-colors',
-                  'text-amber-500/70 hover:text-amber-400',
+                  'text-muted-foreground hover:text-foreground',
                   isCollapsed ? 'justify-center' : 'gap-1.5 px-3'
                 )}
               >
@@ -474,7 +479,7 @@ export function Sidebar({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                className="w-full"
+                className="forge-glass-new-task-button w-full"
                 size={isCollapsed ? "icon" : "default"}
                 onClick={onNewTaskClick}
                 disabled={!selectedProjectId || !selectedProject?.autoBuildPath}
@@ -494,6 +499,24 @@ export function Sidebar({
           )}
         </div>
       </div>
+
+      {/* Local information for this independently modified preview. */}
+      <Dialog open={showHelpDialog} onOpenChange={setShowHelpDialog}>
+        <DialogContent className="forge-glass-about-dialog">
+          <DialogHeader>
+            <DialogTitle>Forge Glass Preview</DialogTitle>
+            <DialogDescription>{t('welcome:hero.subtitle')}</DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Forge Glass Preview is independently modified from Aperant v2.8.0-beta.6, licensed under AGPL-3.0.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowHelpDialog(false)}>
+              {t('common:buttons.close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Initialize Auto Claude Dialog */}
       <Dialog open={showInitDialog} onOpenChange={(open) => {

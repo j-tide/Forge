@@ -20,15 +20,15 @@
   },
   "actions": {
     "settings": "Settings",
-    "help": "Help & Feedback",
+    "help": "About Forge",
     "newTask": "New Task",
     "collapseSidebar": "Collapse Sidebar",
     "expandSidebar": "Expand Sidebar",
-    "sponsor": "Sponsor Us"
+    "sponsor": "Support Aperant upstream"
   },
   "tooltips": {
     "settings": "Application Settings",
-    "help": "Help & Feedback"
+    "help": "About Forge"
   },
   "messages": {
     "initializeToCreateTasks": "Initialize Aperant to create tasks"

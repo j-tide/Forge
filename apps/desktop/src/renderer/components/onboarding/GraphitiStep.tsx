@@ -907,7 +907,7 @@ export function GraphitiStep({ onNext, onBack, onSkip }: GraphitiStepProps) {
                         disabled={isSaving || isValidating}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Stored in ~/.auto-claude/graphs/
+                        Stored in ~/.forge-glass-preview/graphs/
                       </p>
                     </div>
 

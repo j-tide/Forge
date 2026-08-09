@@ -55,5 +55,16 @@ export const COLOR_THEMES: ColorThemeDefinition[] = [
     name: 'Forest',
     description: 'Natural, earthy green tones',
     previewColors: { bg: '#DCFCE7', accent: '#16A34A', darkBg: '#052E16' }
+  },
+  {
+    id: 'forge-glass',
+    name: 'Forge Glass',
+    description: 'Silver and pale blue frosted workspace',
+    previewColors: {
+      bg: '#E7EDF7',
+      accent: '#426FD0',
+      darkBg: '#172337',
+      darkAccent: '#9AB9F2'
+    }
   }
 ];

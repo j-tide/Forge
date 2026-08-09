@@ -96,13 +96,13 @@ export function DebugSettings() {
                   {t('debug.errorReporting.label', 'Anonymous Error Reporting')}
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {t('debug.errorReporting.description', 'Send crash reports to help improve Aperant. No personal data or code is collected.')}
+                  {t('debug.errorReporting.previewDescription', 'Optional crash reporting for Forge Glass Preview, when this build has a configured reporting endpoint.')}
                 </p>
               </div>
             </div>
             <Switch
               id="sentry-toggle"
-              checked={settings.sentryEnabled ?? true}
+              checked={settings.sentryEnabled ?? false}
               onCheckedChange={handleSentryToggle}
             />
           </div>

@@ -90,11 +90,11 @@ export function ProjectTabBar({
 
   return (
     <div className={cn(
-      'flex items-center border-b border-border bg-background',
+      'forge-glass-project-tabs flex items-center border-b border-border bg-background',
       'overflow-x-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent',
       className
     )}>
-      <div className="flex items-center flex-1 min-w-0">
+      <div className="forge-glass-project-tab-list flex items-center flex-1 min-w-0">
         {projects.map((project, index) => {
           const isActiveTab = activeProjectId === project.id;
           return (
@@ -116,7 +116,7 @@ export function ProjectTabBar({
         })}
       </div>
 
-      <div className="flex items-center gap-2 px-2 py-1">
+      <div className="forge-glass-project-tab-status flex items-center gap-2 px-2 py-1">
         <AuthStatusIndicator />
         <UsageIndicator />
         <Button

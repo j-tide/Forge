@@ -20,15 +20,15 @@
   },
   "actions": {
     "settings": "Paramètres",
-    "help": "Aide & Feedback",
+    "help": "À propos de Forge",
     "newTask": "Nouvelle tâche",
     "collapseSidebar": "Réduire la barre latérale",
     "expandSidebar": "Développer la barre latérale",
-    "sponsor": "Nous sponsoriser"
+    "sponsor": "Soutenir Aperant d’origine"
   },
   "tooltips": {
     "settings": "Paramètres de l'application",
-    "help": "Aide & Feedback"
+    "help": "À propos de Forge"
   },
   "messages": {
     "initializeToCreateTasks": "Initialisez Aperant pour créer des tâches"

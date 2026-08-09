@@ -127,7 +127,7 @@ export function MemoryBackendSection({
           <div className="space-y-2">
             <Label className="text-sm font-medium text-foreground">Database Name</Label>
             <p className="text-xs text-muted-foreground">
-              Name for the memory database (stored in ~/.auto-claude/memories/)
+              Name for the memory database (stored in ~/.forge-glass-preview/memories/)
             </p>
             <Input
               placeholder="auto_claude_memory"
@@ -139,10 +139,10 @@ export function MemoryBackendSection({
           <div className="space-y-2">
             <Label className="text-sm font-medium text-foreground">Database Path (Optional)</Label>
             <p className="text-xs text-muted-foreground">
-              Custom storage location. Default: ~/.auto-claude/memories/
+              Custom storage location. Default: ~/.forge-glass-preview/memories/
             </p>
             <Input
-              placeholder="~/.auto-claude/memories"
+              placeholder="~/.forge-glass-preview/memories"
               value={envConfig.memoryDbPath || ''}
               onChange={(e) => onUpdateConfig({ memoryDbPath: e.target.value || undefined })}
             />

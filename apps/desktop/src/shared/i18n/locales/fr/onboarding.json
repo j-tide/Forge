@@ -1,12 +1,12 @@
 {
   "wizard": {
     "title": "Assistant de configuration",
-    "description": "Configurez votre environnement Aperant en quelques étapes simples",
+    "description": "Configurez Forge Glass Preview en quelques étapes simples",
     "helpText": "Cet assistant vous aidera à configurer votre environnement en quelques étapes. Vous pouvez configurer votre token OAuth Claude, activer les fonctionnalités de mémoire et créer votre première tâche."
   },
   "welcome": {
-    "title": "Bienvenue sur Aperant",
-    "subtitle": "Construisez des logiciels de manière autonome avec des agents IA",
+    "title": "Bienvenue dans Forge Glass Preview",
+    "subtitle": "Explorez le parcours des tâches dans cette préversion",
     "getStarted": "Commencer",
     "skip": "Passer la configuration",
     "features": {
@@ -16,7 +16,7 @@
       },
       "specDriven": {
         "title": "Workflow basé sur les specs",
-        "description": "Définissez des tâches avec des spécifications claires et laissez Aperant gérer l'implémentation"
+        "description": "Définissez des tâches avec des spécifications claires et examinez l'implémentation obtenue"
       },
       "memory": {
         "title": "Mémoire & Contexte",
@@ -84,7 +84,7 @@
   "memory": {
     "title": "Mémoire",
     "description": "Configurer la mémoire persistante entre sessions pour les agents",
-    "contextDescription": "La mémoire Aperant aide à retenir le contexte entre vos sessions de code",
+    "contextDescription": "La mémoire aide à conserver le contexte entre vos sessions de code",
     "enableMemory": "Activer la mémoire",
     "enableMemoryDescription": "Mémoire persistante entre sessions utilisant une base de données intégrée",
     "memoryDisabledInfo": "La mémoire est désactivée. Les informations de session seront stockées uniquement dans des fichiers locaux. Activez la mémoire pour un contexte persistant entre sessions avec recherche sémantique.",
@@ -128,13 +128,13 @@
   },
   "completion": {
     "title": "Vous êtes prêt !",
-    "subtitle": "Aperant est prêt à vous aider à construire des logiciels incroyables",
+    "subtitle": "La configuration de la préversion est prête à être explorée",
     "setupComplete": "Configuration terminée",
     "setupCompleteDescription": "Votre environnement est configuré et prêt. Vous pouvez commencer à créer des tâches immédiatement ou explorer l'application à votre rythme.",
     "whatsNext": "Et maintenant ?",
     "createTask": {
       "title": "Créer une tâche",
-      "description": "Commencez par créer votre première tâche pour voir Aperant en action.",
+      "description": "Commencez par créer votre première tâche dans Forge Glass Preview.",
       "action": "Ouvrir le créateur de tâches"
     },
     "customizeSettings": {
@@ -158,7 +158,8 @@
     "done": "Terminé"
   },
   "privacy": {
-    "title": "Aidez à améliorer Aperant",
+    "title": "Rapports d'erreurs facultatifs",
+    "previewTitle": "Rapports d'erreurs facultatifs",
     "subtitle": "Les rapports d'erreurs anonymes nous aident à corriger les bugs plus rapidement",
     "whatWeCollect": {
       "title": "Ce que nous collectons",
@@ -184,7 +185,7 @@
     "detecting": "Vérification de l'installation de Claude Code...",
     "info": {
       "title": "Qu'est-ce que Claude Code ?",
-      "description": "Claude Code est le CLI officiel d'Anthropic qui alimente les fonctionnalités IA d'Aperant. Il fournit une authentification sécurisée et un accès direct aux modèles Claude."
+      "description": "Claude Code est le CLI officiel d'Anthropic utilisé par les fonctionnalités IA de cette préversion. Il fournit une authentification sécurisée et un accès direct aux modèles Claude."
     },
     "status": {
       "installed": "Installé",
@@ -206,19 +207,19 @@
   },
   "devtools": {
     "title": "Outils de développement",
-    "description": "Choisissez votre IDE, terminal et CLI préférés pour travailler avec les worktrees Aperant",
+    "description": "Choisissez votre IDE, terminal et CLI préférés pour travailler avec les worktrees de Forge Glass Preview",
     "detecting": "Détection des outils installés...",
     "detectAgain": "Détecter à nouveau",
     "whyConfigure": "Pourquoi configurer ceci ?",
-    "whyConfigureDescription": "Quand Aperant construit des fonctionnalités dans des worktrees isolés, vous pouvez les ouvrir directement dans votre IDE ou terminal préféré pour tester et réviser les changements.",
+    "whyConfigureDescription": "Vous pouvez ouvrir les worktrees des tâches directement dans votre IDE ou terminal préféré pour tester et réviser les changements.",
     "ide": {
       "label": "IDE préféré",
-      "description": "Aperant ouvrira les worktrees dans cet éditeur",
+      "description": "Forge Glass Preview ouvrira les worktrees dans cet éditeur",
       "customPath": "Chemin IDE personnalisé"
     },
     "terminal": {
       "label": "Terminal préféré",
-      "description": "Aperant ouvrira les sessions terminal ici",
+      "description": "Forge Glass Preview ouvrira les sessions terminal ici",
       "customPath": "Chemin terminal personnalisé"
     },
     "cli": {

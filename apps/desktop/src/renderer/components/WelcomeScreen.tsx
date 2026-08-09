@@ -19,7 +19,7 @@ export function WelcomeScreen({
   onOpenProject,
   onSelectProject
 }: WelcomeScreenProps) {
-  const { t } = useTranslation(['welcome', 'common']);
+  const { t } = useTranslation(['welcome', 'common', 'dialogs']);
 
   // Sort projects by updatedAt (most recent first)
   const recentProjects = [...projects]
@@ -40,11 +40,24 @@ export function WelcomeScreen({
     return new Date(date).toLocaleDateString();
   };
 
+  const projectActions = (
+    <div className="forge-glass-welcome-actions flex flex-wrap justify-center gap-3">
+      <Button size="lg" onClick={onNewProject} className="gap-2 px-6">
+        <FolderPlus className="h-5 w-5" />
+        {t('welcome:actions.newProject')}
+      </Button>
+      <Button size="lg" variant="secondary" onClick={onOpenProject} className="gap-2 px-6">
+        <FolderOpen className="h-5 w-5" />
+        {t('welcome:actions.openProject')}
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="flex h-full items-center justify-center p-8">
-      <div className="w-full max-w-2xl">
+    <div className="forge-glass-welcome flex h-full items-center justify-center overflow-y-auto p-5 sm:p-8" data-empty={projects.length === 0}>
+      <div className="w-full max-w-3xl">
         {/* Hero Section */}
-        <div className="text-center mb-10">
+        <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-foreground tracking-tight">
             {t('welcome:hero.title')}
           </h1>
@@ -53,87 +66,72 @@ export function WelcomeScreen({
           </p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-4 justify-center mb-10">
-          <Button
-            size="lg"
-            onClick={onNewProject}
-            className="gap-2 px-6"
-          >
-            <FolderPlus className="h-5 w-5" />
-            {t('welcome:actions.newProject')}
-          </Button>
-          <Button
-            size="lg"
-            variant="secondary"
-            onClick={onOpenProject}
-            className="gap-2 px-6"
-          >
-            <FolderOpen className="h-5 w-5" />
-            {t('welcome:actions.openProject')}
-          </Button>
-        </div>
-
         {/* Recent Projects Section */}
         {recentProjects.length > 0 && (
-          <Card className="border border-border bg-card/50 backdrop-blur-sm">
-            <div className="p-4 pb-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                {t('welcome:recentProjects.title')}
+          <>
+            <div className="mb-8">{projectActions}</div>
+            <Card className="forge-glass-welcome-projects border border-border bg-card/50 backdrop-blur-sm">
+              <div className="p-4 pb-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  {t('welcome:recentProjects.title')}
+                </div>
               </div>
-            </div>
-            <Separator />
-            <ScrollArea className="max-h-[320px]">
-              <div className="p-2">
-                {recentProjects.map((project, _index) => (
-                  <button
-                    key={project.id}
-                    onClick={() => onSelectProject(project.id)}
-                    className="w-full flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-accent/50 group"
-                    aria-label={t('welcome:recentProjects.openProjectAriaLabel', { name: project.name })}
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/20 text-accent-foreground shrink-0">
-                      <Folder className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground truncate">
-                          {project.name}
-                        </span>
-                        {project.autoBuildPath && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/20 text-success shrink-0">
-                            Initialized
-                          </span>
-                        )}
+              <Separator />
+              <ScrollArea className="max-h-[320px]">
+                <div className="p-2">
+                  {recentProjects.map((project) => (
+                    <button
+                      type="button"
+                      key={project.id}
+                      onClick={() => onSelectProject(project.id)}
+                      className="forge-glass-welcome-project group flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label={t('welcome:recentProjects.openProjectAriaLabel', { name: project.name })}
+                      data-initialized={Boolean(project.autoBuildPath)}
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/20 text-accent-foreground shrink-0">
+                        <Folder className="h-5 w-5" />
                       </div>
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {project.path}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-muted-foreground">
-                        {formatRelativeTime(project.updatedAt)}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-          </Card>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-foreground truncate">
+                            {project.name}
+                          </span>
+                          {project.autoBuildPath && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/20 text-success shrink-0">
+                              {t('dialogs:initialize.projectInitialized')}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {project.path}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs text-muted-foreground">
+                          {formatRelativeTime(project.updatedAt)}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </Card>
+          </>
         )}
 
         {/* Empty State for No Projects */}
         {projects.length === 0 && (
-          <Card className="border border-dashed border-border bg-card/30 p-8 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/20 mx-auto mb-4">
+          <Card className="forge-glass-welcome-projects border border-border bg-card/50 p-8 text-center backdrop-blur-sm sm:p-10">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/20">
               <Folder className="h-6 w-6 text-accent-foreground" />
             </div>
-            <h3 className="font-medium text-foreground mb-1">{t('welcome:recentProjects.empty')}</h3>
-            <p className="text-sm text-muted-foreground mb-4">
+            <h2 className="mb-1 text-lg font-semibold text-foreground">{t('welcome:recentProjects.empty')}</h2>
+            <p className="text-sm text-muted-foreground">
               {t('welcome:recentProjects.emptyDescription')}
             </p>
+            <div className="mt-6">{projectActions}</div>
           </Card>
         )}
       </div>

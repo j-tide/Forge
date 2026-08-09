@@ -7,7 +7,7 @@
   "sections": {
     "appearance": {
       "title": "Apparence",
-      "description": "Personnalisez l'apparence de Aperant"
+      "description": "Personnalisez l'interface de Forge Glass Preview"
     },
     "display": {
       "title": "Affichage",
@@ -34,8 +34,8 @@
       "description": "Comptes Claude & endpoints API"
     },
     "updates": {
-      "title": "Mises à jour",
-      "description": "Mises à jour Aperant"
+      "title": "À propos",
+      "description": "Identité et version de la préversion"
     },
     "notifications": {
       "title": "Notifications",
@@ -252,7 +252,7 @@
   },
   "theme": {
     "title": "Apparence",
-    "description": "Personnalisez l'apparence de Aperant",
+    "description": "Personnalisez l'interface de Forge Glass Preview",
     "mode": "Mode",
     "modeDescription": "Choisir entre les thèmes clair et sombre",
     "light": "Clair",
@@ -270,14 +270,14 @@
     "tabTerminalFonts": "Polices de terminal",
     "ide": {
       "label": "IDE préféré",
-      "description": "Aperant ouvrira les worktrees dans cet éditeur",
+      "description": "Ouvrir les worktrees des tâches dans cet éditeur",
       "placeholder": "Sélectionner un IDE...",
       "customPath": "Chemin IDE personnalisé",
       "customPathPlaceholder": "/chemin/vers/votre/ide"
     },
     "terminal": {
       "label": "Terminal préféré",
-      "description": "Aperant ouvrira les sessions terminal ici",
+      "description": "Ouvrir les sessions terminal ici",
       "placeholder": "Sélectionner un terminal...",
       "customPath": "Chemin terminal personnalisé",
       "customPathPlaceholder": "/chemin/vers/votre/terminal"
@@ -304,8 +304,11 @@
     }
   },
   "updates": {
-    "title": "Mises à jour",
-    "description": "Gérer les mises à jour de Aperant",
+    "title": "À propos de Forge Glass Preview",
+    "description": "Identité et version de la préversion",
+    "previewDescription": "Version de la préversion installée",
+    "previewUnavailable": "Les mises à jour automatiques ne sont pas disponibles dans Forge Glass Preview. Installez les prochaines versions manuellement.",
+    "previewOrigin": "Version dérivée indépendante d'Aperant v2.8.0-beta.6, sous licence AGPL-3.0.",
     "appUpdateReady": "Mise à jour de l'app prête",
     "newVersion": "Nouvelle version",
     "released": "Publiée le",
@@ -855,7 +858,8 @@
     "description": "Accédez aux logs et informations de débogage pour le dépannage",
     "errorReporting": {
       "label": "Rapports d'erreurs anonymes",
-      "description": "Envoyer des rapports de crash pour améliorer Aperant. Aucune donnée personnelle ni code n'est collecté."
+      "description": "Rapports de crash facultatifs pour Forge Glass Preview, si cette version dispose d'un service de collecte configuré.",
+      "previewDescription": "Rapports de crash facultatifs pour Forge Glass Preview, si cette version dispose d'un service de collecte configuré."
     },
     "openLogsFolder": "Ouvrir le dossier des logs",
     "copyDebugInfo": "Copier les infos de débogage",

@@ -121,7 +121,7 @@ describe('OAuthStep Profile Management Logic', () => {
       const newProfile = {
         id: 'profile-new',
         name: 'New Profile',
-        configDir: '~/.claude-profiles/new-profile',
+        configDir: '~/.forge-glass-preview/claude-profiles/new-profile',
         isDefault: false,
         createdAt: new Date()
       };
@@ -140,7 +140,7 @@ describe('OAuthStep Profile Management Logic', () => {
       const newProfile = {
         id: 'profile-new',
         name: 'New Profile',
-        configDir: '~/.claude-profiles/new-profile',
+        configDir: '~/.forge-glass-preview/claude-profiles/new-profile',
         isDefault: false,
         createdAt: new Date()
       };

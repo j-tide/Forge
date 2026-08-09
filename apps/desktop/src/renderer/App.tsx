@@ -372,7 +372,7 @@ export function App() {
     setInitError(null);
   }, []);
 
-  // Check if selected project needs initialization (e.g., .auto-claude folder was deleted)
+  // Check if selected project needs initialization (e.g., .forge-glass-preview folder was deleted)
   useEffect(() => {
     // Don't show dialog while initialization is in progress
     if (isInitializing) return;
@@ -1034,6 +1034,11 @@ export function App() {
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
+              {pendingProject?.dataDirectoryWarning && (
+                <div className="mb-4 rounded-lg border border-warning/50 bg-warning/10 p-4 text-sm" role="alert">
+                  {pendingProject.dataDirectoryWarning}
+                </div>
+              )}
               <div className="rounded-lg bg-muted p-4 text-sm">
                 <p className="font-medium mb-2">{t('initialize.willDo')}</p>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground">

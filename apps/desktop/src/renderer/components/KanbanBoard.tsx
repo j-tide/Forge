@@ -333,15 +333,18 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
       <div
         ref={setNodeRef}
         className={cn(
-          'flex flex-col rounded-xl border border-white/5 bg-linear-to-b from-secondary/30 to-transparent backdrop-blur-sm transition-all duration-200',
+          'forge-glass-board-column flex flex-col rounded-xl border border-border/70 bg-linear-to-b from-secondary/30 to-transparent backdrop-blur-sm transition-all duration-200',
           getColumnBorderColor(),
           'border-t-2',
           isOver && 'drop-zone-highlight'
         )}
+        data-status={status}
+        data-collapsed="true"
+        data-empty={tasks.length === 0}
         style={{ width: COLLAPSED_COLUMN_WIDTH_REM, minWidth: COLLAPSED_COLUMN_WIDTH_REM, maxWidth: COLLAPSED_COLUMN_WIDTH_REM }}
       >
         {/* Expand button at top */}
-        <div className="flex justify-center p-2 border-b border-white/5">
+        <div className="flex justify-center border-b border-border/70 p-2">
           <Tooltip delayDuration={200}>
             <TooltipTrigger asChild>
               <Button
@@ -386,15 +389,18 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
       <div
         ref={setNodeRef}
         className={cn(
-          'flex flex-1 flex-col rounded-xl border border-white/5 bg-linear-to-b from-secondary/30 to-transparent backdrop-blur-sm transition-all duration-200',
+          'forge-glass-board-column flex flex-1 flex-col rounded-xl border border-border/70 bg-linear-to-b from-secondary/30 to-transparent backdrop-blur-sm transition-all duration-200',
           !columnWidth && 'min-w-80 max-w-[30rem]',
           getColumnBorderColor(),
           'border-t-2',
           isOver && 'drop-zone-highlight'
         )}
+        data-status={status}
+        data-collapsed="false"
+        data-empty={tasks.length === 0}
       >
         {/* Column header - enhanced styling */}
-        <div className="flex items-center justify-between p-4 border-b border-white/5">
+        <div className="flex items-center justify-between border-b border-border/70 p-4">
         <div className="flex items-center gap-2.5">
           {/* Collapse button */}
           {onToggleCollapsed && (
@@ -461,7 +467,7 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
                   className={cn(
                     'h-7 w-7 transition-colors',
                     isLocked
-                      ? 'text-amber-500 bg-amber-500/10 hover:bg-amber-500/20'
+                      ? 'bg-warning/10 text-warning hover:bg-warning/20'
                       : 'hover:bg-muted-foreground/10 hover:text-muted-foreground'
                   )}
                   onClick={onToggleLocked}
@@ -482,7 +488,7 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors"
+                  className="h-7 w-7 transition-colors hover:bg-info/10 hover:text-info"
                   onClick={onQueueAll}
                   title={t('queue.queueAll')}
                 >
@@ -506,7 +512,7 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors"
+              className="h-7 w-7 transition-colors hover:bg-info/10 hover:text-info"
               onClick={onQueueSettings}
               title={t('kanban.queueSettings')}
             >
@@ -565,7 +571,7 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
               {tasks.length === 0 ? (
                 <div
                   className={cn(
-                    'empty-column-dropzone flex flex-col items-center justify-center py-6',
+                    'forge-glass-board-empty empty-column-dropzone flex flex-col items-center justify-center px-3 py-6 text-center',
                     isOver && 'active'
                   )}
                 >
@@ -1427,7 +1433,7 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="forge-glass-board flex h-full flex-col" data-empty={tasks.length === 0}>
       {/* Kanban header with refresh button and expand all */}
       {(onRefresh || collapsedColumnCount >= 3) && (
         <div className="flex items-center justify-between px-6 pt-4 pb-2">
@@ -1469,7 +1475,10 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex flex-1 gap-4 overflow-x-auto p-6">
+        <div className={cn(
+          'forge-glass-board-columns flex flex-1 gap-4 overflow-x-auto p-6',
+          tasks.length === 0 && 'items-start'
+        )}>
           {TASK_STATUS_COLUMNS.map((status) => (
             <DroppableColumn
               key={status}

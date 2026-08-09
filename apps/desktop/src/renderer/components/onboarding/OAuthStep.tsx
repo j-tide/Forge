@@ -28,6 +28,7 @@ import { AuthTerminal } from '../settings/AuthTerminal';
 import { loadClaudeProfiles as loadGlobalClaudeProfiles } from '../../stores/claude-profile-store';
 import { useToast } from '../../hooks/use-toast';
 import type { ClaudeProfile } from '../../../shared/types';
+import { getPreviewClaudeProfileConfigDir } from '../../../shared/constants/preview-paths';
 
 interface OAuthStepProps {
   onNext: () => void;
@@ -127,7 +128,7 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
       const result = await window.electronAPI.saveClaudeProfile({
         id: `profile-${Date.now()}`,
         name: profileName,
-        configDir: `~/.claude-profiles/${profileSlug}`,
+        configDir: getPreviewClaudeProfileConfigDir(profileName),
         isDefault: false,
         createdAt: new Date()
       });

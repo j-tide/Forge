@@ -25,6 +25,7 @@ import { useClaudeProfileStore, loadClaudeProfiles } from '../stores/claude-prof
 import { useToast } from '../hooks/use-toast';
 import { debugError } from '../../shared/utils/debug-logger';
 import type { SDKRateLimitInfo } from '../../shared/types';
+import { getPreviewClaudeProfileConfigDir } from '../../shared/constants/preview-paths';
 
 const CLAUDE_UPGRADE_URL = 'https://claude.ai/upgrade';
 
@@ -144,13 +145,12 @@ export function SDKRateLimitModal() {
     try {
       // Create a new profile - the backend will set the proper configDir
       const profileName = newProfileName.trim();
-      const profileSlug = profileName.toLowerCase().replace(/\s+/g, '-');
 
       const result = await window.electronAPI.saveClaudeProfile({
         id: `profile-${Date.now()}`,
         name: profileName,
         // Use a placeholder - the backend will resolve the actual path
-        configDir: `~/.claude-profiles/${profileSlug}`,
+        configDir: getPreviewClaudeProfileConfigDir(profileName),
         isDefault: false,
         createdAt: new Date()
       });

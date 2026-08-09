@@ -62,7 +62,7 @@ export function TaskModalLayout({
         {/* Semi-transparent overlay */}
         <DialogPrimitive.Overlay
           className={cn(
-            'fixed inset-0 z-50 bg-black/60',
+            'forge-glass-task-overlay fixed inset-0 z-50 bg-background/70 backdrop-blur-sm',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
           )}
@@ -71,10 +71,10 @@ export function TaskModalLayout({
         {/* Full-height modal content - matches TaskDetailModal exactly */}
         <DialogPrimitive.Content
           className={cn(
-            'fixed left-[50%] top-4 z-50',
+            'forge-glass-task-modal fixed left-[50%] top-4 z-50',
             'translate-x-[-50%]',
             'w-[95vw] max-w-5xl h-[calc(100vh-32px)]',
-            'bg-card border border-border rounded-xl',
+            'rounded-2xl border border-border bg-card',
             'shadow-2xl overflow-hidden flex flex-col',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
@@ -86,7 +86,7 @@ export function TaskModalLayout({
             {/* Main content area */}
             <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
               {/* Header */}
-              <div className="px-6 py-5 border-b border-border shrink-0">
+              <div className="forge-glass-task-modal-header shrink-0 border-b border-border px-5 py-4 sm:px-6 sm:py-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <DialogPrimitive.Title className="text-xl font-semibold leading-tight text-foreground">
@@ -113,21 +113,21 @@ export function TaskModalLayout({
               </div>
 
               {/* Scrollable body */}
-              <ScrollArea className="flex-1 min-h-0">
-                <div className="p-6">
+              <ScrollArea className="forge-glass-task-modal-body min-h-0 flex-1">
+                <div className="p-5 sm:p-6">
                   {children}
                 </div>
               </ScrollArea>
 
               {/* Footer */}
-              <div className="px-6 py-4 border-t border-border shrink-0 bg-muted/30">
+              <div className="forge-glass-task-modal-footer shrink-0 border-t border-border bg-muted/30 px-5 py-4 sm:px-6">
                 {footer}
               </div>
             </div>
 
             {/* Optional sidebar */}
             {sidebar && sidebarOpen && (
-              <div className="w-80 border-l border-border flex-shrink-0 overflow-hidden">
+              <div className="forge-glass-task-modal-sidebar w-72 flex-shrink-0 overflow-hidden border-l border-border xl:w-80">
                 {sidebar}
               </div>
             )}

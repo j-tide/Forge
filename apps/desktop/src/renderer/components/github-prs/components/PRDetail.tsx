@@ -126,7 +126,7 @@ export function PRDetail({
   // a hybrid push/pull architecture:
   //
   // Backend (PRLogCollector in pr-handlers.ts):
-  //   - Writes logs to disk every 3 entries: .auto-claude/github/pr/logs_${prNumber}.json
+  //   - Writes logs to disk every 3 entries: .forge-glass-preview/github/pr/logs_${prNumber}.json
   //   - Emits GITHUB_PR_LOGS_UPDATED IPC events after each save
   //   - Tracks phase status: pending → active → completed/failed
   //

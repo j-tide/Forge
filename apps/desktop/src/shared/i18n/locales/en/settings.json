@@ -7,7 +7,7 @@
   "sections": {
     "appearance": {
       "title": "Appearance",
-      "description": "Customize how Aperant looks"
+      "description": "Customize the Forge Glass Preview interface"
     },
     "display": {
       "title": "Display",
@@ -34,8 +34,8 @@
       "description": "Claude accounts & API endpoints"
     },
     "updates": {
-      "title": "Updates",
-      "description": "Aperant updates"
+      "title": "About",
+      "description": "Preview identity and version"
     },
     "notifications": {
       "title": "Notifications",
@@ -252,7 +252,7 @@
   },
   "theme": {
     "title": "Appearance",
-    "description": "Customize how Aperant looks",
+    "description": "Customize the Forge Glass Preview interface",
     "mode": "Mode",
     "modeDescription": "Choose between light and dark themes",
     "light": "Light",
@@ -270,14 +270,14 @@
     "tabTerminalFonts": "Terminal Fonts",
     "ide": {
       "label": "Preferred IDE",
-      "description": "Aperant will open worktrees in this editor",
+      "description": "Open task worktrees in this editor",
       "placeholder": "Select IDE...",
       "customPath": "Custom IDE Path",
       "customPathPlaceholder": "/path/to/your/ide"
     },
     "terminal": {
       "label": "Preferred Terminal",
-      "description": "Aperant will open terminal sessions here",
+      "description": "Open terminal sessions here",
       "placeholder": "Select terminal...",
       "customPath": "Custom Terminal Path",
       "customPathPlaceholder": "/path/to/your/terminal"
@@ -304,8 +304,11 @@
     }
   },
   "updates": {
-    "title": "Updates",
-    "description": "Manage Aperant updates",
+    "title": "About Forge Glass Preview",
+    "description": "Preview identity and version",
+    "previewDescription": "Installed preview version",
+    "previewUnavailable": "App updates are unavailable in Forge Glass Preview. Install future releases manually.",
+    "previewOrigin": "Independent derivative of Aperant v2.8.0-beta.6, licensed under AGPL-3.0.",
     "appUpdateReady": "App Update Ready",
     "newVersion": "New Version",
     "released": "Released",
@@ -855,7 +858,8 @@
     "description": "Access logs and debug information for troubleshooting",
     "errorReporting": {
       "label": "Anonymous Error Reporting",
-      "description": "Send crash reports to help improve Aperant. No personal data or code is collected."
+      "description": "Optional crash reporting for Forge Glass Preview, when this build has a configured reporting endpoint.",
+      "previewDescription": "Optional crash reporting for Forge Glass Preview, when this build has a configured reporting endpoint."
     },
     "openLogsFolder": "Open Logs Folder",
     "copyDebugInfo": "Copy Debug Info",

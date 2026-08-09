@@ -16,12 +16,12 @@ interface PrivacyStepProps {
 /**
  * Onboarding step for anonymous error reporting opt-in.
  * Explains what data is collected and what is never collected.
- * Enabled by default to help improve the app.
+ * Reporting is off until the user opts in.
  */
 export function PrivacyStep({ onNext, onBack }: PrivacyStepProps) {
   const { t } = useTranslation(['onboarding', 'common']);
   const { settings, updateSettings } = useSettingsStore();
-  const [sentryEnabled, setSentryEnabled] = useState(settings.sentryEnabled ?? true);
+  const [sentryEnabled, setSentryEnabled] = useState(settings.sentryEnabled ?? false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +60,7 @@ export function PrivacyStep({ onNext, onBack }: PrivacyStepProps) {
             </div>
           </div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">
-            {t('onboarding:privacy.title')}
+            {t('onboarding:privacy.previewTitle', 'Optional error reporting')}
           </h1>
           <p className="mt-2 text-muted-foreground">
             {t('onboarding:privacy.subtitle')}
