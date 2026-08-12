@@ -1,0 +1,237 @@
+{
+  "actions": {
+    "completed": "任务已完成",
+    "loadingPlan": "正在加载计划…"
+  },
+  "tabs": {
+    "overview": "概览",
+    "subtasks": "子任务（{{count}}）",
+    "logs": "日志"
+  },
+  "subtasks": {
+    "fraction": "子任务 {{completed}}/{{total}}",
+    "empty": "尚无子任务",
+    "emptyHint": "完成规划后将在这里显示实施子任务",
+    "completed": "已完成 {{completed}} / {{total}}",
+    "verification": "验证："
+  },
+  "warnings": {
+    "stuckTitle": "任务可能已中断",
+    "stuckDescription": "任务显示正在运行，但未发现活跃进程。应用崩溃或进程意外终止可能导致此情况。",
+    "recovering": "正在恢复…",
+    "recover": "恢复并重启任务",
+    "incompleteTitle": "任务未完成",
+    "resume": "继续任务",
+    "incompleteDescription": "任务已有规格和实施计划，但尚未完成子任务（{{completed}}/{{total}}）。进程可能在生成规格时中断。请继续任务以恢复实施。"
+  },
+  "progress": {
+    "currentSubtask": "子任务：{{subtask}}",
+    "title": "进度",
+    "planning": "规划（0–20%）",
+    "coding": "开发（20–80%）",
+    "review": "AI 审查（80–95%）",
+    "complete": "完成（95–100%）"
+  },
+  "phases": {
+    "idle": "空闲",
+    "planning": "规划",
+    "coding": "开发",
+    "rate_limit_paused": "限流暂停",
+    "auth_failure_paused": "需要认证",
+    "qa_review": "AI 审查",
+    "qa_fixing": "修复问题",
+    "complete": "已完成",
+    "failed": "失败",
+    "validation": "验证"
+  },
+  "metadata": {
+    "created": "创建于 {{time}}",
+    "updated": "更新于 {{time}}",
+    "rationale": "任务依据",
+    "problemSolved": "解决的问题",
+    "targetAudience": "目标用户",
+    "dependencies": "依赖",
+    "acceptanceCriteria": "验收标准",
+    "affectedFiles": "涉及文件"
+  },
+  "profiles": {
+    "auto": {
+      "name": "自动（优化）",
+      "description": "各阶段使用 Opus，并优化思考强度"
+    },
+    "complex": {
+      "name": "复杂任务",
+      "description": "适用于需要深入分析的复杂多步骤实施"
+    },
+    "balanced": {
+      "name": "均衡",
+      "description": "适用于多数任务，兼顾速度和质量"
+    },
+    "quick": {
+      "name": "快速修改",
+      "description": "适用于简单变更和快速修复"
+    }
+  },
+  "thinking": {
+    "low": "低",
+    "medium": "中",
+    "high": "高",
+    "xhigh": "极高"
+  },
+  "logs": {
+    "empty": "暂无日志",
+    "emptyHint": "任务运行后将在这里显示日志",
+    "interrupted": "已中断",
+    "running": "运行中",
+    "complete": "已完成",
+    "failed": "失败",
+    "pending": "等待中",
+    "done": "已完成",
+    "hideOutput": "收起输出",
+    "showOutput": "展开输出",
+    "less": "收起",
+    "more": "展开",
+    "entries": "（{{count}} 条记录）",
+    "model": "模型：{{model}}",
+    "thinking": "思考强度：{{level}}"
+  },
+  "tools": {
+    "reading": "读取文件",
+    "searchingFiles": "搜索文件",
+    "searchingCode": "搜索代码",
+    "editing": "编辑文件",
+    "writing": "写入文件",
+    "running": "执行命令"
+  },
+  "severity": {
+    "low": "低",
+    "medium": "中",
+    "high": "高",
+    "critical": "严重"
+  },
+  "ideation": {
+    "code_improvements": "代码改进",
+    "ui_ux_improvements": "界面与体验改进",
+    "documentation_gaps": "文档",
+    "security_hardening": "安全加固",
+    "performance_optimizations": "性能优化",
+    "code_quality": "代码质量"
+  },
+  "source": {
+    "ideation": "改进建议",
+    "manual": "手工创建",
+    "imported": "导入",
+    "insights": "项目问答",
+    "roadmap": "路线图",
+    "linear": "Linear",
+    "github": "GitHub",
+    "gitlab": "GitLab"
+  },
+  "errors": {
+    "mergePreview": "合并预览：{{error}}",
+    "worktreeStatus": "工作区状态：{{error}}",
+    "mergePreviewFailed": "无法加载合并预览",
+    "worktreeStatusFailed": "无法加载工作区状态",
+    "workspaceFailed": "加载工作区信息时发生意外错误",
+    "cannotResume": "无法继续任务",
+    "planLoadFailed": "无法加载实施计划。请重试或检查任务文件。",
+    "deleteFailed": "无法删除任务",
+    "mergeFailed": "无法合并变更",
+    "mergeUnknown": "合并时发生未知错误",
+    "discardFailed": "无法丢弃变更"
+  },
+  "images": {
+    "max": "最多可添加 {{count}} 张图片",
+    "invalid": "图片类型不受支持。允许的类型：{{types}}",
+    "tooLarge": "图片大小超过 {{size}} MB 上限",
+    "pasteFailed": "无法处理粘贴的图片",
+    "dropFailed": "无法处理拖入的图片"
+  },
+  "review": {
+    "loadingWorkspace": "正在加载工作区信息…",
+    "humanReviewRequired": "需要人工审查",
+    "noWorkspace": "未找到工作区",
+    "planReviewDescription": "编码前需要人工审查。请检查 spec.md，确认是否需要修改。",
+    "noWorkspaceDescription": "未找到此任务的隔离工作区。相关修改可能直接写入了你的项目。",
+    "updating": "正在更新…",
+    "proceedToCoding": "继续编码",
+    "stagedInProject": "修改已暂存到项目",
+    "stagedDescriptionDated": "此任务的修改已于 {{date}} 暂存到主项目。",
+    "stagedDescription": "此任务的修改已暂存到主项目。",
+    "and": "和",
+    "conflictPreview": "合并冲突预览",
+    "potentialConflicts": "检测到 {{count}} 处潜在冲突。",
+    "autoMergeableCount": "其中 {{count}} 处可自动合并。",
+    "severity": {
+      "none": "无",
+      "low": "低",
+      "medium": "中",
+      "high": "高",
+      "critical": "严重"
+    },
+    "autoMerge": "自动合并",
+    "location": "位置：",
+    "reason": "原因：",
+    "strategy": "策略：",
+    "noConflicts": "未检测到冲突",
+    "conflictsFound": "发现 {{count}} 处冲突",
+    "stageResolvesConflicts": "点击“暂存修改”后，AI 将自动合并这些冲突。",
+    "filesToMerge": "待合并文件：{{count}}",
+    "autoMergeable": "可自动合并：{{count}}",
+    "aiResolved": "AI 已解决：{{count}}",
+    "manualReview": "需人工审查：{{count}}",
+    "discardBuild": "丢弃构建修改",
+    "discardConfirm": "确定要丢弃 <strong>“{{title}}”</strong> 的全部修改吗？",
+    "discardWarning": "此操作将永久删除隔离工作区及全部未提交修改，并将任务移回规划状态。",
+    "filesChanged": "修改文件：",
+    "lines": "行数：",
+    "discarding": "正在丢弃…",
+    "changedFiles": "修改的文件",
+    "noChanges": "未发现修改",
+    "fileStatus": {
+      "added": "新增",
+      "deleted": "删除",
+      "modified": "修改",
+      "renamed": "重命名"
+    },
+    "noChangedFiles": "未发现修改的文件",
+    "readyForReview": "构建已就绪，可开始审查",
+    "view": "查看",
+    "openIn": "在 {{app}} 中打开",
+    "uncommittedChanges": "主项目中有 {{count}} 处未提交修改",
+    "uncommittedHint": "请先在终端中提交或暂存这些修改，再暂存任务修改，以免发生冲突。",
+    "checkingConflicts": "正在检查冲突…",
+    "checkConflicts": "检查冲突",
+    "commitCount": "{{count}} 次提交",
+    "requestChanges": "请求修改",
+    "feedbackDescription": "发现问题？请说明需要修复的内容，AI 将继续处理。",
+    "feedbackPlaceholder": "描述问题或需要的修改…",
+    "submitting": "正在提交…",
+    "terminal": "终端",
+    "commitExample": "git commit -m \"提交说明\"",
+    "potentialConflicts_one": "检测到 {{count}} 处潜在冲突。",
+    "potentialConflicts_other": "检测到 {{count}} 处潜在冲突。",
+    "conflictsFound_one": "发现 {{count}} 处冲突",
+    "conflictsFound_other": "发现 {{count}} 处冲突",
+    "uncommittedChanges_one": "主项目中有 {{count}} 处未提交修改",
+    "uncommittedChanges_other": "主项目中有 {{count}} 处未提交修改",
+    "commitCount_one": "{{count}} 次提交",
+    "commitCount_other": "{{count}} 次提交",
+    "changesStaged": "变更已暂存到主项目"
+  },
+  "category": {
+    "feature": "功能",
+    "bug_fix": "缺陷修复",
+    "refactoring": "重构",
+    "documentation": "文档",
+    "security": "安全",
+    "performance": "性能",
+    "ui_ux": "界面与体验",
+    "infrastructure": "基础设施",
+    "testing": "测试"
+  },
+  "verificationType": {
+    "command": "命令",
+    "browser": "浏览器"
+  }
+}

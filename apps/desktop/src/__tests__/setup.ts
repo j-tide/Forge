@@ -4,6 +4,7 @@
 import { vi, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, rmSync, existsSync } from 'fs';
 import path from 'path';
+import i18n from '../shared/i18n';
 
 // Mock localStorage for tests that need it
 const localStorageMock = (() => {
@@ -51,7 +52,11 @@ if (typeof global.requestAnimationFrame === 'undefined') {
 export const TEST_DATA_DIR = '/tmp/auto-claude-ui-tests';
 
 // Create fresh test directory before each test
-beforeEach(() => {
+// Legacy behavior fixtures explicitly use English; locale tests switch deliberately.
+beforeEach(async () => {
+  await i18n.changeLanguage('en');
+  const { setAppLanguage } = await vi.importActual<typeof import('../main/app-language')>('../main/app-language');
+  setAppLanguage('en');
   // Clear localStorage
   localStorageMock.clear();
 

@@ -1,0 +1,17 @@
+{
+  "hero": {
+    "title": "欢迎使用 Forge Glass Preview",
+    "subtitle": "在此预览版中体验桌面任务工作流"
+  },
+  "actions": {
+    "newProject": "新建项目",
+    "openProject": "打开项目"
+  },
+  "recentProjects": {
+    "title": "最近的项目",
+    "empty": "还没有项目",
+    "emptyDescription": "新建项目或打开已有项目，即可开始使用",
+    "openFolder": "打开文件夹",
+    "openProjectAriaLabel": "打开项目 {{name}}"
+  }
+}

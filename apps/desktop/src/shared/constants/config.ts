@@ -62,7 +62,7 @@ export const DEFAULT_APP_SETTINGS = {
   // Beta updates opt-in (receive pre-release versions)
   betaUpdates: false,
   // Language preference (default to English)
-  language: 'en' as const,
+  language: 'zh-CN' as const,
   // A derivative install does not opt users into upstream error reporting.
   sentryEnabled: false,
   // Auto-name Claude terminals based on initial message (enabled by default)

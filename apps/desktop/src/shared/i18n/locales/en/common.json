@@ -431,7 +431,9 @@
       "agentActivity": "Agent Activity",
       "showMore": "Show {{count}} more",
       "hideMore": "Hide {{count}} more"
-    }
+    },
+    "verdictOutdated": "AI verdict may be outdated",
+    "rerunReviewSuggestion": "Consider re-running the review after resolving these issues."
   },
   "downloads": {
     "toggleExpand": "Toggle download details",

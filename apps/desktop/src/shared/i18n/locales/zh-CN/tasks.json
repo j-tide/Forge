@@ -1,0 +1,369 @@
+{
+  "refreshTasks": "刷新任务",
+  "status": {
+    "backlog": "待规划",
+    "queue": "排队中",
+    "todo": "待办",
+    "in_progress": "进行中",
+    "review": "审查中",
+    "prCreated": "已创建合并请求",
+    "complete": "已完成",
+    "archived": "已归档"
+  },
+  "actions": {
+    "start": "开始",
+    "stop": "停止",
+    "recover": "恢复",
+    "resume": "继续",
+    "archive": "归档",
+    "delete": "删除",
+    "view": "查看详情",
+    "viewPR": "查看合并请求",
+    "moveTo": "移至",
+    "taskActions": "任务操作",
+    "selectTask": "选择任务：{{title}}"
+  },
+  "labels": {
+    "running": "运行中",
+    "aiReview": "AI 审查",
+    "needsReview": "待审查",
+    "pending": "待处理",
+    "stuck": "已卡住",
+    "incomplete": "未完成",
+    "recovering": "正在恢复…",
+    "needsRecovery": "需要恢复",
+    "needsResume": "等待继续"
+  },
+  "reviewReason": {
+    "completed": "已完成",
+    "hasErrors": "存在错误",
+    "qaIssues": "质量检查发现问题",
+    "approvePlan": "审批计划",
+    "stopped": "已停止"
+  },
+  "tooltips": {
+    "archiveTask": "归档任务",
+    "archiveAllDone": "归档所有已完成任务",
+    "viewPR": "在浏览器中打开合并请求"
+  },
+  "creation": {
+    "title": "新建任务",
+    "description": "描述你想实现的内容",
+    "placeholder": "描述你的任务…"
+  },
+  "empty": {
+    "title": "还没有任务",
+    "description": "创建第一个任务，开始工作"
+  },
+  "columns": {
+    "backlog": "规划中",
+    "queue": "排队中",
+    "in_progress": "进行中",
+    "ai_review": "AI 审查",
+    "human_review": "人工审查",
+    "done": "已完成",
+    "pr_created": "已创建合并请求",
+    "error": "出错"
+  },
+  "kanban": {
+    "emptyBacklog": "暂无规划中的任务",
+    "emptyBacklogHint": "添加任务，开始工作",
+    "emptyQueue": "队列为空",
+    "emptyQueueHint": "达到并行任务上限后，任务会在这里等待",
+    "emptyInProgress": "暂无运行中的任务",
+    "emptyInProgressHint": "从“规划中”开始一个任务",
+    "emptyAiReview": "暂无审查中的任务",
+    "emptyAiReviewHint": "AI 会审查已完成的任务",
+    "emptyHumanReview": "暂无待审查内容",
+    "emptyHumanReviewHint": "任务会在这里等待你的批准",
+    "emptyDone": "暂无已完成任务",
+    "emptyDoneHint": "已批准的任务会显示在这里",
+    "emptyDefault": "暂无任务",
+    "dropHere": "拖放到这里",
+    "showArchived": "显示已归档任务",
+    "addTaskAriaLabel": "添加新的待规划任务",
+    "queueAllAriaLabel": "将所有任务移入队列",
+    "closeTaskDetailsAriaLabel": "关闭任务详情",
+    "editTask": "编辑任务",
+    "cannotEditWhileRunning": "任务运行时无法编辑",
+    "worktreeCleanupTitle": "清理工作树",
+    "worktreeCleanupStaged": "此任务的更改已暂存，且仍有工作树。是否清理该工作树？",
+    "worktreeCleanupNotStaged": "此任务的工作树中有尚未合并的更改。删除工作树后可将任务标记为完成；也可以取消，先审查更改。",
+    "keepWorktree": "保留工作树",
+    "deleteWorktree": "删除工作树并标记完成",
+    "refreshTasks": "刷新任务",
+    "queueSettings": "队列设置",
+    "orderSaveFailedTitle": "排序未保存",
+    "orderSaveFailedDescription": "任务排序已在界面中更新，但无法保存到存储。刷新后将丢失本次排序。",
+    "selectAll": "全选",
+    "deselectAll": "取消全选",
+    "selectedCount": "已选 {{count}} 项",
+    "selectedCountOne": "已选 {{count}} 个任务",
+    "selectedCountOther": "已选 {{count}} 个任务",
+    "createPRs": "创建合并请求",
+    "deleteSelected": "删除",
+    "deleteConfirmTitle": "删除所选任务",
+    "deleteConfirmDescription": "确定要永久删除这些任务吗？",
+    "deleteWarning": "此操作无法撤销。所有任务文件，包括规格、实施计划和生成的代码，都将从项目中永久删除。",
+    "tasksToDelete": "将删除的任务",
+    "deleteConfirmButton": "删除 {{count}} 个任务",
+    "deleteSuccess": "已成功删除 {{count}} 个任务",
+    "deleteError": "部分任务删除失败",
+    "clearSelection": "清除选择",
+    "collapseColumn": "折叠此列",
+    "expandColumn": "展开此列",
+    "resizeColumn": "调整列宽",
+    "lockColumn": "锁定列宽",
+    "unlockColumn": "解锁列宽",
+    "columnLocked": "列宽已锁定",
+    "expandAll": "展开所有列"
+  },
+  "queue": {
+    "limitReached": "已达到并行任务上限（{{current}}/{{max}}），任务已移入队列。",
+    "movedToQueue": "任务已移入队列。",
+    "autoPromoted": "任务已从队列自动移至“进行中”。",
+    "capacityAvailable": "“进行中”还有 {{count}} 个可用名额。",
+    "queueAll": "全部加入队列",
+    "queueAllSuccess": "已将 {{count}} 个任务移入队列。",
+    "settings": {
+      "title": "队列设置",
+      "description": "设置“进行中”看板最多可同时运行的任务数量",
+      "maxParallelLabel": "并行任务上限",
+      "minValueError": "至少为 1",
+      "maxValueError": "不能超过 10",
+      "hint": "达到上限后，新任务会先在队列中等待，再移至“进行中”",
+      "saved": "队列设置已保存",
+      "saveFailed": "队列设置保存失败",
+      "retry": "请重试"
+    },
+    "autoSwap": {
+      "title": "已切换代理配置",
+      "description": "已从 {{from}} 切换为 {{to}}（{{reason}}）",
+      "batchTitle_one": "已切换 {{count}} 个代理配置",
+      "batchTitle_other": "已切换 {{count}} 个代理配置",
+      "batchDescription": "任务已重新分配至：{{profiles}}"
+    },
+    "blocked": {
+      "title": "队列暂时无法继续",
+      "description": "所有代理配置都已达到容量上限。有代理配置可用时，任务将继续执行。"
+    }
+  },
+  "execution": {
+    "phases": {
+      "idle": "空闲",
+      "planning": "规划中",
+      "coding": "开发中",
+      "rate_limit_paused": "已达速率限制",
+      "auth_failure_paused": "需要认证",
+      "reviewing": "审查中",
+      "fixing": "修复中",
+      "complete": "已完成",
+      "failed": "已失败"
+    },
+    "labels": {
+      "interrupted": "已中断",
+      "progress": "进度",
+      "entry": "条记录",
+      "entries": "条记录"
+    },
+    "shortPhases": {
+      "plan": "规划",
+      "code": "开发",
+      "qa": "质检"
+    }
+  },
+  "files": {
+    "title": "文件",
+    "tab": "文件",
+    "noSpecPath": "暂无规格文件",
+    "noFiles": "未找到文件",
+    "loading": "正在加载文件…",
+    "loadingContent": "正在加载内容…",
+    "errorLoading": "文件加载失败",
+    "errorLoadingContent": "文件内容加载失败",
+    "retry": "重试",
+    "selectFile": "选择文件以查看内容",
+    "openInIDE": "在 IDE 中打开"
+  },
+  "metadata": {
+    "fastMode": "快速",
+    "severity": "严重程度",
+    "pullRequest": "合并请求",
+    "showMore": "展开更多",
+    "showLess": "收起"
+  },
+  "images": {
+    "removeImageAriaLabel": "移除图片 {{filename}}",
+    "pasteHint": "提示：使用 {{shortcut}} 直接粘贴截图，添加参考图片。"
+  },
+  "imagePreview": {
+    "close": "关闭预览",
+    "unavailable": "图片不可用",
+    "description": "{{filename}} 的预览",
+    "doubleClickHint": "双击放大",
+    "lowResolution": "低分辨率预览"
+  },
+  "notifications": {
+    "backgroundTaskTitle": "任务正在后台继续运行",
+    "backgroundTaskDescription": "任务仍在运行。你可以重新打开此对话框查看进度。"
+  },
+  "wizard": {
+    "createTitle": "新建任务",
+    "createDescription": "描述你想实现的内容。AI 会分析你的需求并生成详细规格。",
+    "descriptionPlaceholder": "描述你想实现的功能、修复的问题或改进。请尽量明确需求、限制和预期行为。输入 @ 可引用文件。",
+    "draftRestored": "草稿已恢复",
+    "startFresh": "重新开始",
+    "hideFiles": "隐藏文件",
+    "browseFiles": "浏览文件",
+    "creating": "正在创建…",
+    "createTask": "创建任务",
+    "worktreeNotice": {
+      "title": "隔离工作区",
+      "description": "此任务会在隔离的 Git 工作树中运行。在你选择合并之前，主分支不会受到影响。"
+    },
+    "gitOptions": {
+      "title": "Git 选项（可选）",
+      "baseBranchLabel": "基准分支（可选）",
+      "useProjectDefault": "使用项目默认分支",
+      "useProjectDefaultWithBranch": "使用项目默认分支（{{branch}}）",
+      "searchBranches": "搜索分支…",
+      "noBranchesFound": "未找到分支",
+      "helpText": "指定创建此任务工作树时使用的基准分支。留空则使用项目配置的默认分支。",
+      "pushNewBranchesLabel": "自动推送新分支",
+      "pushNewBranchesDescription": "自动将此任务分支推送到 GitHub 并设置上游跟踪。关闭后，分支仅保留在本地。",
+      "useWorktreeLabel": "使用隔离工作区（推荐）",
+      "useWorktreeDescription": "在独立的 Git 工作树中创建更改，合并前可以安全审查。关闭后会直接在你的项目中开发，速度更快但风险更高。"
+    },
+    "errors": {
+      "createFailed": "任务创建失败，请重试。",
+      "startFailed": "任务启动失败"
+    }
+  },
+  "feedback": {
+    "dragDropHint": "拖放图片或粘贴截图",
+    "imageAdded": "图片已添加",
+    "maxImagesError": "最多可添加 {{count}} 张图片",
+    "invalidTypeError": "图片类型无效。支持：{{types}}",
+    "removeImage": "移除图片",
+    "processingError": "图片处理失败"
+  },
+  "review": {
+    "mergeTooltip": "将任务工作树分支中的更改合并回基准分支。AI 会解决冲突。随后你可以选择保留或删除工作树。"
+  },
+  "edit": {
+    "title": "编辑任务",
+    "description": "更新任务标题、描述、分类、图片和设置。更改将保存到规格文件。",
+    "saveChanges": "保存更改",
+    "errors": {
+      "updateFailed": "任务更新失败，请重试。"
+    }
+  },
+  "form": {
+    "description": "描述",
+    "descriptionPlaceholder": "描述你想实现的功能、修复的问题或改进。请尽量明确需求、限制和预期行为。",
+    "imageAddedSuccess": "图片已添加！",
+    "taskTitle": "任务标题",
+    "titlePlaceholder": "留空则根据描述自动生成",
+    "titleHelpText": "留空时，会自动生成简短、清晰的标题。",
+    "classificationOptional": "分类（可选）",
+    "requireReviewLabel": "开发前需要人工审查",
+    "requireReviewDescription": "启用后，在开发阶段开始之前，你需要审查规格和实施计划。你可以批准、要求修改或提供反馈。",
+    "fastModeLabel": "快速模式",
+    "fastModeDescription": "使用相同的 Opus 4.6 模型，加快输出速度，但每个 token 的费用更高。",
+    "fastModeNotice": "需要在 Claude 订阅中启用“额外用量”。",
+    "errors": {
+      "descriptionRequired": "请填写描述",
+      "maxImagesReached": "最多可添加 5 张图片",
+      "invalidImageType": "图片类型无效。支持：PNG、JPEG、GIF、WebP",
+      "processPasteFailed": "粘贴的图片处理失败",
+      "processDropFailed": "拖放的图片处理失败"
+    },
+    "classification": {
+      "category": "类别",
+      "selectCategory": "选择类别",
+      "priority": "优先级",
+      "selectPriority": "选择优先级",
+      "complexity": "复杂度",
+      "selectComplexity": "选择复杂度",
+      "impact": "影响范围",
+      "selectImpact": "选择影响范围",
+      "helpText": "这些标签有助于整理任务和确定优先级。它们是可选的，也可用于筛选。",
+      "values": {
+        "category": {
+          "feature": "新功能",
+          "bug_fix": "问题修复",
+          "refactoring": "重构",
+          "documentation": "文档",
+          "security": "安全"
+        },
+        "priority": {
+          "low": "低",
+          "medium": "中",
+          "high": "高",
+          "urgent": "紧急"
+        },
+        "complexity": {
+          "trivial": "极低",
+          "small": "低",
+          "medium": "中",
+          "large": "高",
+          "complex": "复杂"
+        },
+        "impact": {
+          "low": "低影响",
+          "medium": "中等影响",
+          "high": "高影响",
+          "critical": "关键影响"
+        }
+      }
+    }
+  },
+  "subtasks": {
+    "untitled": "未命名子任务",
+    "expandAll": "全部展开",
+    "collapseAll": "全部折叠"
+  },
+  "bulkPR": {
+    "selectAllInColumn": "选择此列所有任务",
+    "deselectAllInColumn": "取消选择所有任务",
+    "selectionMode": "选择模式已启用",
+    "exitSelectionMode": "退出选择模式",
+    "noTasksToSelect": "暂无可选任务",
+    "confirmBulkAction": "确认对 {{count}} 个任务执行批量操作",
+    "processingTasks": "正在处理所选任务…"
+  },
+  "screenshot": {
+    "title": "截取屏幕",
+    "description": "选择要截取的屏幕或窗口，作为参考图片",
+    "capture": "截取",
+    "capturing": "正在截取…",
+    "noSources": "未找到屏幕或窗口",
+    "errors": {
+      "getSources": "获取截图来源失败",
+      "fetchSources": "获取截图来源失败",
+      "capture": "截图失败",
+      "captureFailed": "截图失败"
+    },
+    "devMode": {
+      "title": "截图功能不可用",
+      "description": "由于系统权限限制，开发模式下无法截取屏幕。",
+      "hint": "请使用外部截图工具，并通过 {{shortcut}} 直接粘贴到任务描述中。"
+    }
+  },
+  "deleteDialog": {
+    "title": "删除任务",
+    "confirmMessage": "确定要删除",
+    "destructiveWarning": "此操作无法撤销。所有任务文件，包括规格、实施计划和生成的代码，都将从项目中永久删除。",
+    "checkingChanges": "正在检查未提交的更改…",
+    "uncommittedChanges": "此任务的工作树中有 {{count}} 个未提交文件",
+    "uncommittedChangesHint": "这些更改尚未提交或合并。删除此任务将永久丢弃工作树中所有未提交的内容。",
+    "cancel": "取消",
+    "deletePermanently": "永久删除",
+    "deleting": "正在删除…"
+  },
+  "referenceImages": {
+    "title": "参考图片（可选）",
+    "description": "添加截图或设计稿等视觉参考，帮助 AI 理解你的需求。"
+  },
+  "untitled": "未命名任务"
+}

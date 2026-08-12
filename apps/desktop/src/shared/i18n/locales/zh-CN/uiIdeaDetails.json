@@ -1,0 +1,123 @@
+{
+  "labels": {
+    "effort": "工作量",
+    "files": "文件数",
+    "buildsUpon": "基于现有能力",
+    "implementationApproach": "实施方案",
+    "affectedFiles": "涉及文件",
+    "patterns": "遵循的模式",
+    "severity": "严重程度",
+    "category": "类别",
+    "breakingChange": "不兼容变更",
+    "breakingChangeDescription": "此重构可能导致现有代码或测试不兼容。",
+    "currentState": "当前状态",
+    "proposedChange": "建议变更",
+    "codeExample": "代码示例",
+    "metrics": "指标",
+    "lines": "行数",
+    "complexity": "复杂度",
+    "duplicateLines": "重复行数",
+    "testCoverage": "测试覆盖率",
+    "bestPractice": "最佳实践",
+    "prerequisites": "前置条件",
+    "targetAudience": "目标读者",
+    "currentDocumentation": "现有文档",
+    "proposedContent": "建议内容",
+    "affectedAreas": "涉及范围",
+    "priority": "优先级",
+    "impact": "影响程度",
+    "expectedImprovement": "预期改善",
+    "implementation": "实施方法",
+    "tradeoffs": "取舍",
+    "vulnerability": "漏洞",
+    "currentRisk": "当前风险",
+    "remediation": "修复方法",
+    "references": "参考资料",
+    "compliance": "合规要求",
+    "userBenefit": "用户收益",
+    "affectedComponents": "涉及组件"
+  },
+  "effort": {
+    "trivial": "极小",
+    "small": "小",
+    "medium": "中",
+    "large": "大",
+    "complex": "复杂"
+  },
+  "status": {
+    "draft": "草稿",
+    "selected": "已选择",
+    "converted": "已转为任务",
+    "dismissed": "已忽略",
+    "archived": "已归档"
+  },
+  "severity": {
+    "low": "低",
+    "medium": "中",
+    "high": "高",
+    "critical": "严重",
+    "suggestion": "建议",
+    "minor": "轻微",
+    "major": "较大"
+  },
+  "impact": {
+    "low": "低",
+    "medium": "中",
+    "high": "高",
+    "critical": "严重"
+  },
+  "audience": {
+    "developers": "开发者",
+    "users": "用户",
+    "contributors": "贡献者",
+    "maintainers": "维护者"
+  },
+  "uiuxCategories": {
+    "usability": "易用性",
+    "accessibility": "可访问性",
+    "performance": "性能",
+    "visual": "视觉设计",
+    "interaction": "交互"
+  },
+  "documentationCategories": {
+    "readme": "README",
+    "api_docs": "API 文档",
+    "inline_comments": "代码注释",
+    "examples": "示例与教程",
+    "architecture": "架构文档",
+    "troubleshooting": "故障排查指南"
+  },
+  "securityCategories": {
+    "authentication": "身份认证",
+    "authorization": "授权",
+    "input_validation": "输入校验",
+    "data_protection": "数据保护",
+    "dependencies": "依赖",
+    "configuration": "配置",
+    "secrets_management": "凭据管理"
+  },
+  "performanceCategories": {
+    "bundle_size": "构建体积",
+    "runtime": "运行性能",
+    "memory": "内存使用",
+    "database": "数据库查询",
+    "network": "网络请求",
+    "rendering": "渲染",
+    "caching": "缓存"
+  },
+  "qualityCategories": {
+    "large_files": "过大文件",
+    "code_smells": "代码异味",
+    "complexity": "高复杂度",
+    "duplication": "重复代码",
+    "naming": "命名规范",
+    "structure": "文件结构",
+    "linting": "代码检查问题",
+    "testing": "测试覆盖率",
+    "types": "类型安全",
+    "dependencies": "依赖问题",
+    "dead_code": "无用代码",
+    "git_hygiene": "Git 规范"
+  },
+  "impactBadge": "{{impact}}影响"
+}

@@ -1,0 +1,37 @@
+{
+  "auth": {
+    "unknownProfile": "未知账户",
+    "tokenExpired": "你的认证令牌已过期。",
+    "tokenInvalid": "你的认证令牌无效。",
+    "tokenMissing": "未找到认证令牌。",
+    "authFailed": "认证失败。",
+    "title": "需要登录",
+    "profileLabel": "账户",
+    "description": "请重新登录 Claude 账户，以继续使用 Forge Glass Preview。",
+    "taskAffected": "受影响的任务",
+    "technicalDetails": "技术详情",
+    "goToSettings": "打开设置"
+  },
+  "queuePosition": "第 {{position}} 位，共 {{total}} 个",
+  "recommended": "推荐",
+  "yourAccount": "你的账户",
+  "defaultAccount": "默认账户",
+  "switchAccountRetry": "切换到另一个 Claude 账户后重试：",
+  "unknownInitials": "?",
+  "sources": {
+    "changelog": "更新日志生成",
+    "task": "任务执行",
+    "roadmap": "路线图生成",
+    "ideation": "创意分析",
+    "titleGenerator": "标题生成",
+    "claude": "Claude 操作"
+  },
+  "swapReasons": {
+    "proactive": "可用额度更多",
+    "reactive": "已达到用量限制",
+    "capacity": "可用额度",
+    "rate_limit": "已达到用量限制",
+    "manual": "手动选择",
+    "recovery": "故障恢复"
+  }
+}

@@ -10,6 +10,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import { IPC_CHANNELS, DEFAULT_APP_SETTINGS, DEFAULT_AGENT_PROFILES, SPELL_CHECK_LANGUAGE_MAP, DEFAULT_SPELL_CHECK_LANGUAGE, sanitizeThinkingLevel, VALID_THINKING_LEVELS } from '../../shared/constants';
 import { setAppLanguage } from '../app-language';
+import { nativeText } from '../localized-text';
+import { isSupportedLanguage, normalizeLanguage } from '../../shared/constants/i18n';
 import type {
   AppSettings,
   IPCResult
@@ -286,6 +288,8 @@ export function registerSettingsHandlers(
       const savedSettings = readSettingsFile();
       const settings: AppSettings = { ...DEFAULT_APP_SETTINGS, ...savedSettings };
       let needsSave = false;
+      settings.language = normalizeLanguage(settings.language);
+      setAppLanguage(settings.language);
 
       // Migration: Set agent profile to 'auto' for users who haven't made a selection (one-time)
       // This ensures new users get the optimized 'auto' profile as the default
@@ -428,6 +432,9 @@ export function registerSettingsHandlers(
     IPC_CHANNELS.SETTINGS_SAVE,
     async (_, settings: Partial<AppSettings>): Promise<IPCResult> => {
       try {
+        if (settings.language !== undefined && !isSupportedLanguage(settings.language)) {
+          return { success: false, error: nativeText('language.unsupported') };
+        }
         // Load current settings using shared helper
         const savedSettings = readSettingsFile();
         const currentSettings = { ...DEFAULT_APP_SETTINGS, ...savedSettings };
@@ -447,6 +454,7 @@ export function registerSettingsHandlers(
         }
 
         writeFileSync(settingsPath, JSON.stringify(newSettings, null, 2), 'utf-8');
+        setAppLanguage(normalizeLanguage(newSettings.language));
 
         // Apply Python path if changed
         if (settings.pythonPath || settings.autoBuildPath) {
@@ -582,7 +590,7 @@ export function registerSettingsHandlers(
 
       const result = await dialog.showOpenDialog(mainWindow, {
         properties: ['openDirectory'],
-        title: 'Select Project Directory'
+        title: nativeText('dialog.selectProjectDirectory')
       });
 
       if (result.canceled || result.filePaths.length === 0) {
@@ -829,10 +837,10 @@ export function registerSettingsHandlers(
     async (_, language: string): Promise<IPCResult<{ success: boolean }>> => {
       try {
         // Validate language parameter
-        if (!language || typeof language !== 'string') {
+        if (!isSupportedLanguage(language)) {
           return {
             success: false,
-            error: 'Invalid language parameter'
+            error: nativeText('language.invalid')
           };
         }
 
@@ -851,11 +859,11 @@ export function registerSettingsHandlers(
         );
 
         // Fallback to default if none of the preferred languages are available
-        const languagesToSet = validLanguages.length > 0
+        const languagesToSet = language === 'zh-CN' ? [] : validLanguages.length > 0
           ? validLanguages
           : (availableLanguages.includes(DEFAULT_SPELL_CHECK_LANGUAGE) ? [DEFAULT_SPELL_CHECK_LANGUAGE] : []);
 
-        if (languagesToSet.length > 0) {
+        if (languagesToSet.length > 0 || language === 'zh-CN') {
           session.defaultSession.setSpellCheckerLanguages(languagesToSet);
           console.log(`[SPELLCHECK] Languages set to: ${languagesToSet.join(', ')} for app language: ${language}`);
         } else {
@@ -870,7 +878,7 @@ export function registerSettingsHandlers(
         console.error('[SPELLCHECK_SET_LANGUAGES] Error:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to set spell check languages'
+          error: error instanceof Error ? error.message : nativeText('language.spellcheckFailed')
         };
       }
     }

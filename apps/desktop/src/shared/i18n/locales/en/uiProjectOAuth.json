@@ -1,0 +1,73 @@
+{
+  "buttons": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "retry": "Retry",
+    "cancel": "Cancel"
+  },
+  "errors": {
+    "unknown": "Unknown error",
+    "authentication": "Authentication failed",
+    "authenticationTitle": "Authentication Failed"
+  },
+  "github": {
+    "cliRequired": "GitHub CLI Required",
+    "cliDescription": "The GitHub CLI (gh) is required for OAuth authentication. This provides a secure way to authenticate without manually creating tokens.",
+    "installCli": "Install GitHub CLI",
+    "installed": "I've Installed It",
+    "installInstructions": "Installation instructions:",
+    "linuxVisit": "Linux: Visit",
+    "connect": "Connect to GitHub",
+    "connectDescription": "Click the button below to authenticate with GitHub. This will open your browser where you can authorize the application.",
+    "cliVersion": "Using GitHub CLI {{version}}",
+    "authenticate": "Authenticate with GitHub",
+    "authenticating": "Authenticating…",
+    "browserInstructions": "Please complete the authentication in your browser. This window will update automatically.",
+    "waiting": "Waiting for authentication flow to start…",
+    "oneTimeCode": "Your one-time code",
+    "enterCode": "Enter this code in your browser to complete authentication.",
+    "copyCode": "Copy this code, then open the link below to authenticate.",
+    "openUrl": "Open {{url}}",
+    "connected": "Successfully Connected",
+    "connectedAs": "Connected as {{username}}",
+    "accountConnected": "Your GitHub account is now connected",
+    "timeoutTitle": "Authentication Timed Out",
+    "manualTitle": "Complete Authentication Manually",
+    "manualDescription": "The browser couldn't be opened automatically. Please visit the URL below to complete authentication:",
+    "openBrowser": "Open URL in Browser",
+    "codeReminder": "When prompted, enter this code:",
+    "errors": {
+      "timeout": "Authentication timed out. The authentication window was open for too long. Please try again.",
+      "checkCli": "Failed to check GitHub CLI",
+      "token": "Failed to get token"
+    }
+  },
+  "claude": {
+    "authenticateTitle": "Authenticate with Claude",
+    "authenticateDescription": "Connect your Claude account to use AI features.",
+    "authenticateTerminalInfo": "This opens Claude CLI in a terminal so you can sign in.",
+    "completeAuthTitle": "Complete Authentication",
+    "terminalOpened": "A terminal window has opened with Claude CLI.",
+    "completeStepsTitle": "Complete these steps in the terminal:",
+    "stepTypeLogin": "Type <code>/login</code> and press Enter",
+    "stepBrowserOpen": "Your browser will open for Claude authentication",
+    "stepCompleteOAuth": "Complete the OAuth flow in your browser",
+    "stepReturnAndVerify": "Return here and click <strong>Verify Authentication</strong>",
+    "verifyAuth": "Verify Authentication",
+    "verifyingAuth": "Verifying Authentication…",
+    "checkingCredentials": "Checking your Claude credentials.",
+    "successTitle": "Successfully Authenticated!",
+    "connectedAs": "Connected as {{email}}",
+    "credentialsSaved": "Your Claude credentials have been saved",
+    "canUseFeatures": "Claude authentication is ready. Feature availability depends on the current configuration.",
+    "authFailed": "Authentication Failed",
+    "skipForNow": "Skip for now",
+    "authNotDetected": "Authentication not detected. Please complete /login in the terminal first.",
+    "noProfileSelected": "No profile selected for verification",
+    "errors": {
+      "profiles": "Failed to get Claude profiles",
+      "terminal": "Failed to open terminal for authentication",
+      "verification": "Verification failed"
+    }
+  }
+}

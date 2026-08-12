@@ -1,77 +1,29 @@
-import i18n from 'i18next';
+/// <reference types="vite/client" />
+import i18n, { type Resource, type ResourceKey } from 'i18next';
 import { initReactI18next } from 'react-i18next';
-
-// Import English translation resources
-import enCommon from './locales/en/common.json';
-import enNavigation from './locales/en/navigation.json';
-import enSettings from './locales/en/settings.json';
-import enTasks from './locales/en/tasks.json';
-import enWelcome from './locales/en/welcome.json';
-import enOnboarding from './locales/en/onboarding.json';
-import enDialogs from './locales/en/dialogs.json';
-import enGitlab from './locales/en/gitlab.json';
-import enTaskReview from './locales/en/taskReview.json';
-import enTerminal from './locales/en/terminal.json';
-import enErrors from './locales/en/errors.json';
-
-// Import French translation resources
-import frCommon from './locales/fr/common.json';
-import frNavigation from './locales/fr/navigation.json';
-import frSettings from './locales/fr/settings.json';
-import frTasks from './locales/fr/tasks.json';
-import frWelcome from './locales/fr/welcome.json';
-import frOnboarding from './locales/fr/onboarding.json';
-import frDialogs from './locales/fr/dialogs.json';
-import frGitlab from './locales/fr/gitlab.json';
-import frTaskReview from './locales/fr/taskReview.json';
-import frTerminal from './locales/fr/terminal.json';
-import frErrors from './locales/fr/errors.json';
+import { DEFAULT_LANGUAGE } from '../constants/i18n';
 
 export const defaultNS = 'common';
-
-export const resources = {
-  en: {
-    common: enCommon,
-    navigation: enNavigation,
-    settings: enSettings,
-    tasks: enTasks,
-    welcome: enWelcome,
-    onboarding: enOnboarding,
-    dialogs: enDialogs,
-    gitlab: enGitlab,
-    taskReview: enTaskReview,
-    terminal: enTerminal,
-    errors: enErrors
-  },
-  fr: {
-    common: frCommon,
-    navigation: frNavigation,
-    settings: frSettings,
-    tasks: frTasks,
-    welcome: frWelcome,
-    onboarding: frOnboarding,
-    dialogs: frDialogs,
-    gitlab: frGitlab,
-    taskReview: frTaskReview,
-    terminal: frTerminal,
-    errors: frErrors
-  }
-} as const;
-
-i18n
-  .use(initReactI18next)
-  .init({
-    resources,
-    lng: 'en', // Default language (will be overridden by settings)
-    fallbackLng: 'en',
-    defaultNS,
-    ns: ['common', 'navigation', 'settings', 'tasks', 'welcome', 'onboarding', 'dialogs', 'gitlab', 'taskReview', 'terminal', 'errors'],
-    interpolation: {
-      escapeValue: false // React already escapes values
-    },
-    react: {
-      useSuspense: false // Disable suspense for Electron compatibility
-    }
-  });
+// Every locale namespace is bundled through the same registry. No runtime file access.
+const localeModules = import.meta.glob<ResourceKey>('./locales/*/*.json', { eager: true, import: 'default' });
+export const resources: Resource = {};
+for (const [file, translations] of Object.entries(localeModules)) {
+  const [, language, namespace] = file.match(/\/locales\/([^/]+)\/([^/]+)\.json$/) ?? [];
+  if (!language || !namespace) throw new Error(`Invalid translation resource: ${file}`);
+  resources[language] ??= {};
+  resources[language][namespace] = translations;
+}
+const namespaces = Object.keys(resources.en);
+i18n.use(initReactI18next).init({
+  resources,
+  lng: DEFAULT_LANGUAGE,
+  fallbackLng: 'en',
+  supportedLngs: ['zh-CN', 'en', 'fr'],
+  load: 'currentOnly',
+  defaultNS,
+  ns: namespaces,
+  interpolation: { escapeValue: false },
+  react: { useSuspense: false }
+});
 
 export default i18n;

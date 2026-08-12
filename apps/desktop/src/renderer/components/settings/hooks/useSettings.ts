@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSettingsStore, saveSettings as saveSettingsToStore, loadSettings as loadSettingsFromStore } from '../../../stores/settings-store';
 import type { AppSettings } from '../../../../shared/types';
+import i18n from '../../../../shared/i18n';
 import { UI_SCALE_DEFAULT } from '../../../../shared/constants';
 
 /**
@@ -29,9 +30,15 @@ export function useSettings() {
     uiScale: currentSettings.uiScale ?? UI_SCALE_DEFAULT
   });
 
-  // Sync with store
+  // Merge only changed store fields so an immediately saved language choice
+  // cannot discard unrelated form edits awaiting the main Save action.
+  const previousStoreSettings = useRef(currentSettings);
   useEffect(() => {
-    setSettings(currentSettings);
+    const previous = previousStoreSettings.current;
+    previousStoreSettings.current = currentSettings;
+    const changes = Object.fromEntries(Object.entries(currentSettings).filter(([key, value]) =>
+      value !== previous[key as keyof AppSettings]));
+    setSettings((draft) => ({ ...draft, ...changes }));
   }, [currentSettings]);
 
   // Load settings on mount
@@ -59,11 +66,11 @@ export function useSettings() {
         applyTheme(settings.theme);
         return true;
       } else {
-        setError('Failed to save settings');
+        setError(i18n.t('localeControls:saveFailed'));
         return false;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : i18n.t('localeControls:unknownError'));
       return false;
     } finally {
       setIsSaving(false);

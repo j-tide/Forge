@@ -135,6 +135,17 @@
       "saved": "Queue settings saved",
       "saveFailed": "Failed to save queue settings",
       "retry": "Please try again"
+    },
+    "autoSwap": {
+      "title": "Profile Swapped",
+      "description": "Switched from {{from}} to {{to}} ({{reason}})",
+      "batchTitle_one": "{{count}} Profile Swap",
+      "batchTitle_other": "{{count}} Profile Swaps",
+      "batchDescription": "Tasks redistributed to: {{profiles}}"
+    },
+    "blocked": {
+      "title": "Queue Blocked",
+      "description": "All profiles are at capacity. Tasks will resume when a profile becomes available."
     }
   },
   "execution": {
@@ -353,5 +364,6 @@
   "referenceImages": {
     "title": "Reference Images (optional)",
     "description": "Add visual references like screenshots or designs to help the AI understand your requirements."
-  }
+  },
+  "untitled": "Untitled task"
 }

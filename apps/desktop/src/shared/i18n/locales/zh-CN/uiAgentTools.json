@@ -1,0 +1,147 @@
+{
+  "title": "MCP 服务器概览",
+  "forProject": "项目：{{name}}",
+  "mcpCount": "{{count}} 个 MCP",
+  "mcpServers": "MCP 服务器",
+  "availableTools": "可用工具",
+  "textOnly": "仅文本（无工具）",
+  "testConnection": "测试连接",
+  "test": "测试",
+  "edit": "编辑",
+  "delete": "删除",
+  "healthCheckFailed": "健康检查失败",
+  "connectionTestFailed": "连接测试失败",
+  "agentCount_one": "（{{count}} 个智能体）",
+  "agentCount_other": "（{{count}} 个智能体）",
+  "thinking": {
+    "low": "低",
+    "medium": "中",
+    "high": "高",
+    "xhigh": "最高"
+  },
+  "categories": {
+    "spec": "需求规格",
+    "build": "开发",
+    "qa": "质量检查",
+    "utility": "辅助工具",
+    "ideation": "创意规划"
+  },
+  "tools": {
+    "Read": "读取文件",
+    "Glob": "查找文件",
+    "Grep": "搜索内容",
+    "Write": "写入文件",
+    "Edit": "编辑文件",
+    "Bash": "执行命令",
+    "WebFetch": "读取网页",
+    "WebSearch": "搜索网页"
+  },
+  "agents": {
+    "spec_gatherer": {
+      "name": "需求收集",
+      "description": "收集用户的初始需求"
+    },
+    "spec_researcher": {
+      "name": "需求调研",
+      "description": "验证外部集成与 API"
+    },
+    "spec_writer": {
+      "name": "规格编写",
+      "description": "创建 spec.md 需求文档"
+    },
+    "spec_critic": {
+      "name": "规格审查",
+      "description": "通过深入分析检查需求规格"
+    },
+    "spec_discovery": {
+      "name": "项目探索",
+      "description": "初步探索并分析项目"
+    },
+    "spec_context": {
+      "name": "规格上下文",
+      "description": "从现有代码库构建上下文"
+    },
+    "spec_validation": {
+      "name": "规格验证",
+      "description": "验证需求规格的完整性和质量"
+    },
+    "planner": {
+      "name": "规划者",
+      "description": "创建包含子任务的实施计划"
+    },
+    "coder": {
+      "name": "开发者",
+      "description": "实现各个子任务"
+    },
+    "qa_reviewer": {
+      "name": "质量审查",
+      "description": "验证验收标准，并根据项目类型使用 Electron 或 Puppeteer"
+    },
+    "qa_fixer": {
+      "name": "质量修复",
+      "description": "修复质量检查发现的问题，并根据项目类型使用 Electron 或 Puppeteer"
+    },
+    "pr_reviewer": {
+      "name": "PR 审查",
+      "description": "审查 GitHub 拉取请求"
+    },
+    "commit_message": {
+      "name": "提交说明",
+      "description": "生成提交说明"
+    },
+    "merge_resolver": {
+      "name": "合并冲突处理",
+      "description": "解决合并冲突"
+    },
+    "insights": {
+      "name": "代码洞察",
+      "description": "提取代码洞察"
+    },
+    "analysis": {
+      "name": "代码分析",
+      "description": "结合上下文查询分析代码库"
+    },
+    "batch_analysis": {
+      "name": "批量分析",
+      "description": "批量处理问题或事项"
+    },
+    "ideation": {
+      "name": "创意构思",
+      "description": "生成新功能创意"
+    },
+    "roadmap_discovery": {
+      "name": "路线图探索",
+      "description": "发现路线图事项"
+    },
+    "pr_template_filler": {
+      "name": "PR 描述生成",
+      "description": "根据模板使用 AI 生成 PR 描述"
+    }
+  },
+  "servers": {
+    "context7": {
+      "name": "Context7",
+      "description": "通过 @upstash/context7-mcp 查询库和框架文档"
+    },
+    "memory": {
+      "name": "记忆",
+      "description": "用于跨会话上下文的知识图谱。需要 GRAPHITI_MCP_URL 环境变量。"
+    },
+    "auto-claude": {
+      "name": "Aperant 工具",
+      "description": "跟踪开发进度、会话上下文，并记录发现和注意事项"
+    },
+    "linear": {
+      "name": "Linear",
+      "description": "通过 Linear API 管理项目。需要 LINEAR_API_KEY 环境变量。"
+    },
+    "electron": {
+      "name": "Electron MCP",
+      "description": "通过 Chrome DevTools Protocol 自动操作桌面应用。需要 ELECTRON_MCP_ENABLED=true。"
+    },
+    "puppeteer": {
+      "name": "Puppeteer MCP",
+      "description": "为非 Electron 的网页前端提供浏览器自动化"
+    }
+  }
+}

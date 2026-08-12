@@ -1,0 +1,132 @@
+{
+  "agentProfiles": {
+    "title": "智能体配置",
+    "subtitle": "选择模型与思考强度的预设配置",
+    "description": "智能体配置提供 Claude 模型与思考强度的预设。创建新任务时，这些配置会作为默认值；你可以在任务创建向导中单独调整。",
+    "thinkingBadge": "{{level}}思考强度",
+    "thinkingLevels": {
+      "low": "低",
+      "medium": "中",
+      "high": "高",
+      "xhigh": "超高"
+    },
+    "presets": {
+      "auto": {
+        "name": "自动（优化）",
+        "description": "所有阶段使用 Opus，并优化各阶段的思考强度"
+      },
+      "complex": {
+        "name": "复杂任务",
+        "description": "适合需要深入分析的复杂、多步骤实现"
+      },
+      "balanced": {
+        "name": "均衡",
+        "description": "兼顾速度与质量，适合大多数任务"
+      },
+      "quick": {
+        "name": "快速修改",
+        "description": "适合简单修改与快速修复"
+      }
+    }
+  },
+  "app": {
+    "initializeFailed": "无法初始化 Forge Glass Preview，请重试。",
+    "unexpectedError": "发生了意外错误"
+  },
+  "ipc": {
+    "taskError": "任务 {{taskId}}：{{error}}",
+    "roadmapReady": "路线图已就绪",
+    "generationFailed": "生成失败",
+    "generationStopped": "生成已停止"
+  },
+  "graphics": {
+    "webglFailed": "无法创建 WebGL 上下文"
+  },
+  "stores": {
+    "unknownError": "未知错误",
+    "failedLoadVersions": "无法加载版本",
+    "noVersionSelected": "尚未选择版本",
+    "failedPreflight": "无法执行发布前检查",
+    "versionNotFound": "找不到该版本",
+    "startingRelease": "正在开始发布…",
+    "failedSaveProfile": "无法保存配置",
+    "failedUpdateProfile": "无法更新配置",
+    "failedDeleteProfile": "无法删除配置",
+    "failedSetActiveProfile": "无法切换当前配置",
+    "connectionSuccessful": "连接成功",
+    "credentialsValid": "API 凭据验证成功。",
+    "failedTestConnection": "无法测试连接",
+    "connectionTestFailed": "连接测试失败",
+    "failedDiscoverModels": "无法获取模型列表",
+    "failedLoadSettings": "无法加载设置",
+    "failedLoadProfiles": "无法加载配置列表",
+    "failedLoadChangelog": "无法加载更新日志数据",
+    "failedLoadTaskSpecs": "无法加载任务规格",
+    "failedLoadGitData": "无法加载 Git 数据",
+    "failedLoadCommits": "无法加载提交记录",
+    "failedLoadCommitsPreview": "无法加载提交预览",
+    "selectChangelogTask": "请至少选择一个要纳入更新日志的任务",
+    "noFilteredCommits": "当前选项下没有提交记录，请调整筛选条件。",
+    "selectBranches": "请选择基准分支和比较分支",
+    "differentBranches": "基准分支和比较分支不能相同",
+    "noBranchCommits": "所选分支之间没有提交记录",
+    "loadingTaskSpecs": "正在加载任务规格…",
+    "preparingCommits": "正在准备提交数据…",
+    "failedStartChangelog": "无法开始生成更新日志",
+    "noChangelogSave": "没有可保存的更新日志",
+    "failedSaveChangelog": "无法保存更新日志",
+    "noChangelogCopy": "没有可复制的更新日志",
+    "failedCopyClipboard": "无法复制到剪贴板",
+    "roadmapGenerating": "正在生成路线图…",
+    "startingRoadmap": "正在开始生成路线图…",
+    "refreshingRoadmap": "正在刷新路线图…",
+    "generationStopped": "生成已停止",
+    "failedLoadGitLabIssues": "无法加载 GitLab 议题",
+    "failedGitLabConnection": "无法检查 GitLab 连接",
+    "startingInvestigation": "正在开始调查…",
+    "failedImportGitLabIssues": "无法导入 GitLab 议题",
+    "failedLoadTasks": "无法加载任务",
+    "failedCreateTask": "无法创建任务",
+    "failedRecoverTask": "无法恢复任务",
+    "failedDeleteTask": "无法删除任务",
+    "failedArchiveTasks": "无法归档任务",
+    "failedLoadEnvironment": "无法加载环境配置",
+    "failedLoadDirectory": "无法加载目录",
+    "processingMessage": "正在处理你的消息…",
+    "receivingResponse": "正在接收回复…",
+    "failedLoadProjects": "无法加载项目",
+    "failedAddProject": "无法添加项目",
+    "failedInitializeProject": "无法初始化项目",
+    "failedLoadContext": "无法加载项目上下文",
+    "failedRefreshIndex": "无法刷新项目索引",
+    "startingIdeationParallel": "正在并行生成创意…",
+    "ideationTimeout": "生成超时。可能已生成部分创意，请查看结果。",
+    "generationTimeout": "⚠ 生成超时",
+    "stoppingIdeation": "正在停止生成创意…",
+    "processStopped": "进程已停止",
+    "ideationStopped": "创意生成已停止",
+    "refreshIdeationParallel": "正在并行刷新创意…",
+    "ideasDismissed": "所有创意已忽略",
+    "ideaArchived": "创意已归档",
+    "ideaDeleted": "创意已删除",
+    "ideationComplete": "创意生成完成",
+    "ideationGenerationComplete": "创意生成完成！",
+    "failedLoadGitHubIssues": "无法加载 GitHub 议题",
+    "failedLoadMoreIssues": "无法加载更多议题",
+    "failedImportGitHubIssues": "无法导入 GitHub 议题",
+    "failedGitHubConnection": "无法检查 GitHub 连接",
+    "terminalTitle": "终端 {{number}}",
+    "failedDeleteTasks": "无法删除 {{count}} 个任务",
+    "invalidSourceMode": "无效的数据来源模式：{{mode}}",
+    "usingTool": "正在使用 {{tool}}…",
+    "generatingIdeationTypes": "正在并行生成 {{count}} 类创意…",
+    "refreshingIdeationTypes": "正在并行刷新 {{count}} 类创意…",
+    "ideasDeleted": "已删除 {{count}} 个创意",
+    "addingIdeationTypes": "正在添加 {{count}} 类新创意…",
+    "generatingAdditionalTypes": "正在生成另外 {{count}} 类创意…",
+    "ideationTypeComplete": "✓ {{type}} 已完成，生成 {{count}} 个创意",
+    "ideationTypesComplete": "已完成 {{completed}}/{{total}} 类创意",
+    "ideationTypeFailed": "✗ {{type}} 失败",
+    "providerError": "错误：{{error}}"
+  }
+}

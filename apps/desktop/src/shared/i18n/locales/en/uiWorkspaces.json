@@ -1,0 +1,101 @@
+{
+  "worktrees": {
+    "selectProject": "Select a project to view worktrees",
+    "title": "Worktrees",
+    "description": "Manage isolated workspaces for your tasks",
+    "errorTitle": "Error",
+    "emptyTitle": "No worktrees",
+    "emptyDescription": "Worktrees are created automatically when tasks build features. You can also create terminal worktrees from Agent Terminals.",
+    "taskSection": "Task worktrees",
+    "terminalSection": "Terminal worktrees",
+    "filesChanged": "{{count}} files changed",
+    "commitsAhead": "{{count}} commits ahead",
+    "mergeTo": "Merge to {{branch}}",
+    "copyPath": "Copy path",
+    "delete": "Delete",
+    "created": "Created {{date}}",
+    "close": "Close",
+    "cancel": "Cancel",
+    "deleting": "Deleting…",
+    "errors": {
+      "loadTasks": "Failed to load task worktrees",
+      "load": "Failed to load worktrees",
+      "taskMissing": "Task not found for this worktree",
+      "merge": "Merge failed",
+      "delete": "Failed to delete worktree",
+      "deleteTerminal": "Failed to delete terminal worktree"
+    },
+    "merge": {
+      "title": "Merge worktree",
+      "description": "Merge changes from this worktree into the base branch.",
+      "sourceBranch": "Source branch",
+      "targetBranch": "Target branch",
+      "changes": "Changes",
+      "summary": "{{commits}} commits, {{files}} files",
+      "success": "Merge successful",
+      "failed": "Merge failed",
+      "conflicts": "Conflicting files:",
+      "merging": "Merging…",
+      "action": "Merge"
+    },
+    "deleteDialog": {
+      "title": "Delete worktree?",
+      "description": "This will permanently delete the worktree and all uncommitted changes.",
+      "irreversible": "This action cannot be undone."
+    },
+    "deleteTerminalDialog": {
+      "title": "Delete terminal worktree?",
+      "description": "This will permanently delete the worktree and its branch. Any uncommitted changes will be lost."
+    }
+  },
+  "workspace": {
+    "title": "Create workspace",
+    "description": "Group related projects together for cross-repo specs and validation.",
+    "name": "Name",
+    "namePlaceholder": "My app workspace",
+    "descriptionLabel": "Description (optional)",
+    "descriptionPlaceholder": "Backend, frontend, and mobile apps for my app",
+    "projects": "Projects",
+    "addProject": "Add a project…",
+    "allProjectsAdded": "All projects have been added",
+    "noProjects": "No projects available",
+    "removeProject": "Remove {{name}} from workspace",
+    "cancel": "Cancel",
+    "creating": "Creating…",
+    "errors": {
+      "nameRequired": "Workspace name is required",
+      "apiUnavailable": "Workspace API not available",
+      "createFailed": "Failed to create workspace"
+    },
+    "roles": {
+      "backend": {
+        "label": "Backend",
+        "description": "API server, services"
+      },
+      "frontend": {
+        "label": "Frontend",
+        "description": "Web application"
+      },
+      "mobile": {
+        "label": "Mobile",
+        "description": "Mobile app"
+      },
+      "shared": {
+        "label": "Shared",
+        "description": "Shared types and utilities"
+      },
+      "api": {
+        "label": "API gateway",
+        "description": "Gateway, BFF"
+      },
+      "worker": {
+        "label": "Worker",
+        "description": "Background jobs"
+      },
+      "other": {
+        "label": "Other",
+        "description": "Other project type"
+      }
+    }
+  }
+}

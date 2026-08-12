@@ -1,0 +1,225 @@
+{
+  "text001": "恢复默认（100%）",
+  "text002": "应用缩放设置",
+  "text003": "应用",
+  "text004": "检测中…",
+  "text005": "推荐",
+  "text006": "快速",
+  "text007": "高质量",
+  "text008": "已安装",
+  "text009": "开始下载…",
+  "text010": "选择项目…",
+  "text011": "尚无项目",
+  "text012": "添加项目…",
+  "text013": "外观模式",
+  "text014": "选择亮色、暗色或跟随系统",
+  "text015": "配色主题",
+  "text016": "选择界面的配色方案",
+  "text017": "背景色",
+  "text018": "强调色",
+  "text019": "选择项目后查看和编辑设置",
+  "text020": "请先初始化自动构建后再配置",
+  "text021": "启用 GitHub Issues",
+  "text022": "同步 GitHub Issue 并自动创建任务",
+  "text023": "已通过 GitHub CLI 连接",
+  "text024": "当前登录账号：",
+  "text025": "使用其他令牌",
+  "text026": "GitHub 身份认证",
+  "text027": "手动输入令牌",
+  "text028": "个人访问令牌",
+  "text029": "改用 OAuth",
+  "text030": "创建带有",
+  "text031": "权限范围的令牌，前往",
+  "text032": "GitHub 设置",
+  "text033": "ghp_xxxxxxxx 或 github_pat_xxxxxxxx",
+  "text034": "仓库",
+  "text035": "手动输入",
+  "text036": "正在加载仓库…",
+  "text037": "选择仓库…",
+  "text038": "搜索仓库…",
+  "text039": "没有匹配的仓库",
+  "text040": "未找到仓库",
+  "text041": "已选择：",
+  "text042": "格式：",
+  "text043": "（例如 facebook/react）",
+  "text044": "连接状态",
+  "text045": "检查中…",
+  "text046": "可用 Issue",
+  "text047": "从侧栏打开 GitHub Issues，可查看、分析 Issue 并据此创建任务。",
+  "text048": "加载时自动同步",
+  "text049": "项目加载时自动获取 Issue",
+  "text050": "启用 Linear 同步",
+  "text051": "自动创建和更新 Linear Issue",
+  "text052": "API 密钥",
+  "text053": "获取 API 密钥，请前往",
+  "text054": "Linear 设置",
+  "text055": "+ 个任务可导入",
+  "text056": "导入已有任务",
+  "text057": "选择要导入为自动构建任务的 Linear Issue。",
+  "text058": "从 Linear 导入任务",
+  "text059": "实时同步",
+  "text060": "自动导入 Linear 中新建的任务",
+  "text061": "开启后，新建的 Linear Issue 将自动导入为自动构建任务。请在下方配置团队和项目筛选条件，控制导入范围。",
+  "text062": "团队 ID（可选）",
+  "text063": "自动检测",
+  "text064": "项目 ID（可选）",
+  "text065": "自动创建",
+  "text066": "通用",
+  "mode": {
+    "light": "亮色",
+    "dark": "暗色",
+    "system": "跟随系统"
+  },
+  "themes": {
+    "default": {
+      "name": "默认",
+      "description": "Oscura 风格与淡黄强调色"
+    },
+    "dusk": {
+      "name": "暮色",
+      "description": "偏暖配色，暗色模式更柔和"
+    },
+    "lime": {
+      "name": "青柠",
+      "description": "清新青柠与紫色强调色"
+    },
+    "ocean": {
+      "name": "海洋",
+      "description": "沉静的蓝色调"
+    },
+    "retro": {
+      "name": "复古",
+      "description": "温暖怀旧的琥珀色"
+    },
+    "neo": {
+      "name": "霓彩",
+      "description": "现代粉色与洋红色"
+    },
+    "forest": {
+      "name": "森林",
+      "description": "自然的绿色调"
+    },
+    "forge-glass": {
+      "name": "Forge 磨砂玻璃",
+      "description": "银白与浅蓝磨砂工作区"
+    }
+  },
+  "customOption": "自定义…",
+  "toolsDetectFailed": "工具检测失败",
+  "debugLoadFailed": "诊断信息加载失败",
+  "debugLogsFailed": "日志文件夹打开失败",
+  "debugCopyFailed": "诊断信息复制失败",
+  "notConnected": "未连接",
+  "connectionFailed": "连接失败",
+  "ollamaModel0": "Qwen3 32B：适合代码任务",
+  "ollamaModel1": "Qwen3 8B：轻快实用",
+  "ollamaModel2": "DeepSeek R1 32B：推理能力较强",
+  "ollamaModel3": "DeepSeek R1 8B：紧凑推理模型",
+  "ollamaModel4": "Mistral Codestral：专注代码任务",
+  "ollamaModel5": "Llama 3.3 70B：大型通用模型",
+  "ollamaModel6": "Llama 3.3：通用模型",
+  "downloadFailed": "下载失败",
+  "downloadFailedModel": "下载 {{model}} 失败",
+  "missing_debug_errorReporting_saveFailed": "错误报告设置保存失败",
+  "missing_devtools_customPath": "自定义路径",
+  "missing_modelSelect_configureProvider": "配置",
+  "missing_modelSelect_capabilities_thinking": "推理",
+  "missing_modelSelect_capabilities_tools": "工具调用",
+  "missing_modelSelect_capabilities_vision": "视觉",
+  "missing_modelSelect_customModel": "自定义模型 ID",
+  "missing_modelSelect_customModelPlaceholder": "输入模型 ID…",
+  "missing_modelSelect_useCustomModel": "使用",
+  "decreaseScale": "缩小 {{step}}%",
+  "increaseScale": "放大 {{step}}%",
+  "modelContextWindow": "上下文 {{size}}",
+  "removeProject": "从 Forge 移除 {{name}}",
+  "features": {
+    "insights": {
+      "label": "代码问答",
+      "description": "询问与代码库有关的问题"
+    },
+    "ideation": {
+      "label": "创意",
+      "description": "生成新功能与改进建议"
+    },
+    "roadmap": {
+      "label": "路线图",
+      "description": "制定功能发展路线图"
+    },
+    "githubIssues": {
+      "label": "GitHub Issues",
+      "description": "自动分类 Issue 并添加标签"
+    },
+    "githubPrs": {
+      "label": "GitHub PR 审查",
+      "description": "AI 辅助拉取请求审查"
+    },
+    "utility": {
+      "label": "辅助任务",
+      "description": "生成提交说明并处理合并冲突"
+    },
+    "naming": {
+      "label": "AI 命名",
+      "description": "生成任务标题与终端标签名称"
+    }
+  },
+  "modelDescriptions": {
+    "opus": "能力最强",
+    "opus-1m": "百万上下文",
+    "sonnet": "均衡",
+    "opus-4_5": "旧版",
+    "haiku": "快速",
+    "gpt-5_3-codex": "智能体 编程",
+    "gpt-5_2": "旗舰",
+    "gpt-5_2-codex": "编程",
+    "gpt-5_1-codex-mini": "快速编程",
+    "gpt-5-nano": "快速经济",
+    "o3": "推理",
+    "o4-mini": "快速推理",
+    "gemini-2_5-pro": "进阶",
+    "gemini-2_5-flash": "快速推理",
+    "gemini-2_5-flash-lite": "经济",
+    "gemini-2_0-flash": "旧版",
+    "mistral-large-latest": "旗舰",
+    "mistral-small-latest": "快速",
+    "meta-llama_llama-4-maverick": "多模态",
+    "llama-3_3-70b-versatile": "快速推理",
+    "grok-4-0709": "旗舰",
+    "grok-3": "文本",
+    "grok-3-mini": "快速推理",
+    "glm-5": "旗舰",
+    "glm-4_7": "上一代旗舰",
+    "glm-4_6v": "多模态",
+    "glm-4_5-flash": "快速"
+  },
+  "thinkingLevels": {
+    "low": "低",
+    "medium": "中",
+    "high": "高",
+    "xhigh": "极高"
+  },
+  "providerDescriptions": {
+    "anthropic": "Claude 模型",
+    "openai": "GPT 与 Codex 模型",
+    "google": "Gemini 模型",
+    "openrouter": "访问多家服务的 300 多款模型",
+    "zai": "GLM 模型",
+    "xai": "Grok 模型",
+    "mistral": "Mistral 与 Codestral 模型",
+    "groq": "高速 LLaMA 推理",
+    "amazon-bedrock": "AWS 托管模型",
+    "azure": "Azure 托管的 OpenAI 模型",
+    "ollama": "本地开源模型",
+    "openai-compatible": "兼容 OpenAI 的 API（OpenRouter、代理或本地服务）"
+  },
+  "providerNames": {
+    "openai-compatible": "自定义服务"
+  },
+  "unknownError": "未知错误",
+  "authFailed": "身份认证失败",
+  "unexpectedError": "发生意外错误",
+  "profileCreateFailed": "配置创建失败",
+  "branchesLoadFailed": "分支加载失败",
+  "repositoriesLoadFailed": "仓库加载失败",
+  "projectsLoadFailed": "项目加载失败"
+}

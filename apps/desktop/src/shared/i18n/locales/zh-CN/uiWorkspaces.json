@@ -1,0 +1,101 @@
+{
+  "worktrees": {
+    "selectProject": "选择项目以查看隔离工作区",
+    "title": "隔离工作区",
+    "description": "管理任务使用的隔离工作区",
+    "errorTitle": "错误",
+    "emptyTitle": "暂无隔离工作区",
+    "emptyDescription": "任务开发时会自动创建隔离工作区。你也可以在「智能体 终端」中创建终端工作区。",
+    "taskSection": "任务工作区",
+    "terminalSection": "终端工作区",
+    "filesChanged": "{{count}} 个文件已更改",
+    "commitsAhead": "领先 {{count}} 次提交",
+    "mergeTo": "合并到 {{branch}}",
+    "copyPath": "复制路径",
+    "delete": "删除",
+    "created": "创建于 {{date}}",
+    "close": "关闭",
+    "cancel": "取消",
+    "deleting": "正在删除…",
+    "errors": {
+      "loadTasks": "无法加载任务工作区",
+      "load": "无法加载隔离工作区",
+      "taskMissing": "找不到此工作区关联的任务",
+      "merge": "合并失败",
+      "delete": "无法删除隔离工作区",
+      "deleteTerminal": "无法删除终端工作区"
+    },
+    "merge": {
+      "title": "合并工作区",
+      "description": "将此工作区的更改合并到基础分支。",
+      "sourceBranch": "来源分支",
+      "targetBranch": "目标分支",
+      "changes": "更改",
+      "summary": "{{commits}} 次提交，{{files}} 个文件",
+      "success": "合并成功",
+      "failed": "合并失败",
+      "conflicts": "存在冲突的文件：",
+      "merging": "正在合并…",
+      "action": "合并"
+    },
+    "deleteDialog": {
+      "title": "删除隔离工作区？",
+      "description": "此操作将永久删除工作区及其中所有未提交的更改。",
+      "irreversible": "此操作无法撤销。"
+    },
+    "deleteTerminalDialog": {
+      "title": "删除终端工作区？",
+      "description": "此操作将永久删除工作区及其分支，所有未提交的更改都将丢失。"
+    }
+  },
+  "workspace": {
+    "title": "创建项目组",
+    "description": "将相关项目组织在一起，用于跨仓库需求和验证。",
+    "name": "名称",
+    "namePlaceholder": "我的应用项目组",
+    "descriptionLabel": "描述（可选）",
+    "descriptionPlaceholder": "我的应用的后端、前端和移动端项目",
+    "projects": "项目",
+    "addProject": "添加项目…",
+    "allProjectsAdded": "已添加全部项目",
+    "noProjects": "暂无可用项目",
+    "removeProject": "将 {{name}} 从项目组中移除",
+    "cancel": "取消",
+    "creating": "正在创建…",
+    "errors": {
+      "nameRequired": "请输入项目组名称",
+      "apiUnavailable": "项目组服务不可用",
+      "createFailed": "无法创建项目组"
+    },
+    "roles": {
+      "backend": {
+        "label": "后端",
+        "description": "API 服务和后台服务"
+      },
+      "frontend": {
+        "label": "前端",
+        "description": "Web 应用"
+      },
+      "mobile": {
+        "label": "移动端",
+        "description": "移动应用"
+      },
+      "shared": {
+        "label": "共享",
+        "description": "共享类型和工具"
+      },
+      "api": {
+        "label": "API 网关",
+        "description": "网关和面向前端的后端"
+      },
+      "worker": {
+        "label": "后台任务",
+        "description": "后台作业"
+      },
+      "other": {
+        "label": "其他",
+        "description": "其他项目类型"
+      }
+    }
+  }
+}

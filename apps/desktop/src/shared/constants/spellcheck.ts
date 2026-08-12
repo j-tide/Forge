@@ -13,6 +13,8 @@
 export const SPELL_CHECK_LANGUAGE_MAP: Record<string, string[]> = {
   en: ['en-US', 'en-GB'],
   fr: ['fr-FR', 'fr'],
+  // Chromium does not ship a Chinese dictionary; do not underline Chinese as English.
+  'zh-CN': [],
 };
 
 /**
@@ -27,4 +29,5 @@ export const DEFAULT_SPELL_CHECK_LANGUAGE = 'en-US';
 export const ADD_TO_DICTIONARY_LABELS: Record<string, string> = {
   en: 'Add to Dictionary',
   fr: 'Ajouter au dictionnaire',
+  'zh-CN': '加入词典',
 };

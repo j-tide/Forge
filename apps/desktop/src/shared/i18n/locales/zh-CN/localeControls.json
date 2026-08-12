@@ -1,0 +1,9 @@
+{
+  "savedAutomatically": "自动保存，无需重启。",
+  "saving": "正在保存语言…",
+  "saveFailed": "设置保存失败，请重试。",
+  "unknownError": "未知错误",
+  "unsupported": "不支持的界面语言",
+  "invalidLanguage": "无效的语言参数",
+  "spellcheckFailed": "拼写检查语言设置失败"
+}

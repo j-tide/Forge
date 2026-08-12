@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import { Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { Label } from '../ui/label';
 import { SettingsSection } from './SettingsSection';
-import { useSettingsStore } from '../../stores/settings-store';
-import { AVAILABLE_LANGUAGES, type SupportedLanguage } from '../../../shared/constants/i18n';
+import { saveSettings } from '../../stores/settings-store';
+import { AVAILABLE_LANGUAGES, DEFAULT_LANGUAGE, type SupportedLanguage } from '../../../shared/constants/i18n';
 import type { AppSettings } from '../../../shared/types';
 
 interface LanguageSettingsProps {
@@ -14,23 +15,30 @@ interface LanguageSettingsProps {
 
 /**
  * Language settings section for interface language selection
- * Changes apply immediately for live preview, saved on "Save Settings"
+ * Changes persist immediately and apply without reopening the application.
  */
 export function LanguageSettings({ settings, onSettingsChange }: LanguageSettingsProps) {
   const { t, i18n } = useTranslation('settings');
-  const updateStoreSettings = useSettingsStore((state) => state.updateSettings);
+  const { t: localeText } = useTranslation('localeControls');
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const currentLanguage = settings.language ?? DEFAULT_LANGUAGE;
 
-  const currentLanguage = settings.language ?? 'en';
-
-  const handleLanguageChange = (newLanguage: SupportedLanguage) => {
-    // Update local draft state
-    onSettingsChange({ ...settings, language: newLanguage });
-
-    // Apply immediately to store for live preview
-    updateStoreSettings({ language: newLanguage });
-
-    // Change i18n language immediately for live preview
-    i18n.changeLanguage(newLanguage);
+  const handleLanguageChange = async (newLanguage: SupportedLanguage) => {
+    if (isSaving || newLanguage === currentLanguage) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      // Persist just this preference; unrelated unsaved settings remain a draft.
+      if (!await saveSettings({ language: newLanguage })) {
+        setError(localeText('saveFailed'));
+        return;
+      }
+      onSettingsChange({ ...settings, language: newLanguage });
+      await i18n.changeLanguage(newLanguage);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -52,6 +60,9 @@ export function LanguageSettings({ settings, onSettingsChange }: LanguageSetting
               return (
                 <button
                   key={lang.value}
+                  type="button"
+                  aria-pressed={isSelected}
+                  disabled={isSaving}
                   onClick={() => handleLanguageChange(lang.value)}
                   className={cn(
                     'flex items-center gap-3 p-4 rounded-lg border-2 transition-all',
@@ -70,6 +81,8 @@ export function LanguageSettings({ settings, onSettingsChange }: LanguageSetting
               );
             })}
           </div>
+          <p className="text-sm text-muted-foreground" role="status">{isSaving ? localeText('saving') : localeText('savedAutomatically')}</p>
+          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
         </div>
       </div>
     </SettingsSection>
