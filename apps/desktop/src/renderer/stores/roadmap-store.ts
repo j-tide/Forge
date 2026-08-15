@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import { createActor } from 'xstate';
 import type { Actor } from 'xstate';
@@ -324,7 +325,7 @@ export const useRoadmapStore = create<RoadmapState>((set) => ({
           actor.send({ type: 'RESET' });
           actor.send({ type: 'START_GENERATION' });
         }
-        event = { type: 'GENERATION_ERROR', error: status.error ?? 'Unknown error' };
+        event = { type: 'GENERATION_ERROR', error: status.error ?? i18n.t('uiRuntime:stores.unknownError') };
         break;
       }
       case 'idle': {
@@ -750,7 +751,7 @@ export async function loadRoadmap(projectId: string): Promise<void> {
       store.setGenerationStatus({
         phase: persistedProgress.phase !== 'idle' ? persistedProgress.phase : 'analyzing',
         progress: persistedProgress.progress,
-        message: persistedProgress.message || 'Roadmap generation in progress...',
+        message: persistedProgress.message || i18n.t('uiRuntime:stores.roadmapGenerating'),
         startedAt: parseDate(persistedProgress.startedAt) ?? new Date(),
         lastActivityAt: parseDate(persistedProgress.lastActivityAt) ?? new Date()
       });
@@ -759,7 +760,7 @@ export async function loadRoadmap(projectId: string): Promise<void> {
       store.setGenerationStatus({
         phase: 'analyzing',
         progress: 0,
-        message: 'Roadmap generation in progress...',
+        message: i18n.t('uiRuntime:stores.roadmapGenerating'),
         startedAt: new Date(),
         lastActivityAt: new Date()
       });
@@ -814,7 +815,7 @@ export function generateRoadmap(
   useRoadmapStore.getState().setGenerationStatus({
     phase: 'analyzing',
     progress: 0,
-    message: 'Starting roadmap generation...'
+    message: i18n.t('uiRuntime:stores.startingRoadmap')
   });
   window.electronAPI.generateRoadmap(projectId, enableCompetitorAnalysis, refreshCompetitorAnalysis);
 }
@@ -832,7 +833,7 @@ export function refreshRoadmap(
   useRoadmapStore.getState().setGenerationStatus({
     phase: 'analyzing',
     progress: 0,
-    message: 'Refreshing roadmap...'
+    message: i18n.t('uiRuntime:stores.refreshingRoadmap')
   });
   window.electronAPI.refreshRoadmap(projectId, enableCompetitorAnalysis, refreshCompetitorAnalysis);
 }
@@ -850,7 +851,7 @@ export async function stopRoadmap(projectId: string): Promise<boolean> {
   store.setGenerationStatus({
     phase: 'idle',
     progress: 0,
-    message: 'Generation stopped'
+    message: i18n.t('uiRuntime:stores.generationStopped')
   });
 
   const result = await window.electronAPI.stopRoadmap(projectId);

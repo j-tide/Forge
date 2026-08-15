@@ -78,7 +78,8 @@ const isFilesTabEnabled = () => {
 
 // Separate component to use hooks only when task exists
 function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals, onOpenInbuiltTerminal }: { open: boolean; task: Task; onOpenChange: (open: boolean) => void; onSwitchToTerminals?: () => void; onOpenInbuiltTerminal?: (id: string, cwd: string) => void }) {
-  const { t } = useTranslation(['tasks']);
+  const { t } = useTranslation(['tasks', 'common']);
+  const { t: uiT } = useTranslation('uiTasks');
   const { toast } = useToast();
   const state = useTaskDetail({ task });
   const activeProject = useProjectStore(s => s.getActiveProject());
@@ -98,7 +99,7 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
         if (!isValid) {
           toast({
             title: 'Cannot Resume Task',
-            description: 'Failed to load implementation plan. Please try again or check the task files.',
+            description: uiT('errors.planLoadFailed'),
             variant: 'destructive',
             duration: 5000,
           });
@@ -148,7 +149,7 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
       state.setShowDeleteDialog(false);
       onOpenChange(false);
     } else {
-      state.setDeleteError(result.error || 'Failed to delete task');
+      state.setDeleteError(result.error || uiT('errors.deleteFailed'));
     }
     state.setIsDeleting(false);
   };
@@ -161,17 +162,17 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
       if (result.success && result.data?.success) {
         if (state.stageOnly && result.data.staged) {
           state.setWorkspaceError(null);
-          state.setStagedSuccess(result.data.message || 'Changes staged in main project');
+          state.setStagedSuccess(result.data.message || uiT('review.changesStaged'));
           state.setStagedProjectPath(result.data.projectPath);
           state.setSuggestedCommitMessage(result.data.suggestedCommitMessage);
         } else {
           onOpenChange(false);
         }
       } else {
-        state.setWorkspaceError(result.data?.message || result.error || 'Failed to merge changes');
+        state.setWorkspaceError(result.data?.message || result.error || uiT('errors.mergeFailed'));
       }
     } catch (error) {
-      state.setWorkspaceError(error instanceof Error ? error.message : 'Unknown error during merge');
+      state.setWorkspaceError(error instanceof Error ? error.message : uiT('errors.mergeUnknown'));
     } finally {
       state.setIsMerging(false);
     }
@@ -185,7 +186,7 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
       state.setShowDiscardDialog(false);
       onOpenChange(false);
     } else {
-      state.setWorkspaceError(result.data?.message || result.error || 'Failed to discard changes');
+      state.setWorkspaceError(result.data?.message || result.error || uiT('errors.discardFailed'));
     }
     state.setIsDiscarding(false);
   };
@@ -253,12 +254,12 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
           {state.isRecovering ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Recovering...
+              {t('tasks:labels.recovering')}
             </>
           ) : (
             <>
               <RotateCcw className="mr-2 h-4 w-4" />
-              Recover Task
+              {t('tasks:actions.recover')}
             </>
           )}
         </Button>
@@ -271,12 +272,12 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
           {state.isLoadingPlan ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading Plan...
+              {uiT('actions.loadingPlan')}
             </>
           ) : (
             <>
               <Play className="mr-2 h-4 w-4" />
-              Resume Task
+              {t('tasks:actions.resume')}
             </>
           )}
         </Button>
@@ -292,12 +293,12 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
           {state.isRunning ? (
             <>
               <Square className="mr-2 h-4 w-4" />
-              Stop Task
+              {t('tasks:actions.stop')}
             </>
           ) : (
             <>
               <Play className="mr-2 h-4 w-4" />
-              Start Task
+              {t('tasks:actions.start')}
             </>
           )}
         </Button>
@@ -384,12 +385,12 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                       {state.isStuck ? (
                         <Badge variant="warning" className="text-xs flex items-center gap-1 animate-pulse">
                           <AlertTriangle className="h-3 w-3" />
-                          Stuck
+                          {t('tasks:labels.stuck')}
                         </Badge>
                       ) : state.isIncomplete ? (
                         <Badge variant="warning" className="text-xs flex items-center gap-1">
                             <AlertTriangle className="h-3 w-3" />
-                            Incomplete
+                            {t('tasks:labels.incomplete')}
                           </Badge>
                       ) : (
                         <>
@@ -404,10 +405,10 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                               variant={task.reviewReason === 'completed' ? 'success' : task.reviewReason === 'errors' ? 'destructive' : 'warning'}
                               className="text-xs"
                             >
-                              {task.reviewReason === 'completed' ? 'Completed' :
-                               task.reviewReason === 'errors' ? 'Has Errors' :
-                               task.reviewReason === 'plan_review' ? 'Approve Plan' :
-                               task.reviewReason === 'stopped' ? 'Stopped' : 'QA Issues'}
+                              {task.reviewReason === 'completed' ? t('tasks:reviewReason.completed') :
+                               task.reviewReason === 'errors' ? t('tasks:reviewReason.hasErrors') :
+                               task.reviewReason === 'plan_review' ? t('tasks:reviewReason.approvePlan') :
+                               task.reviewReason === 'stopped' ? t('tasks:reviewReason.stopped') : t('tasks:reviewReason.qaIssues')}
                             </Badge>
                           )}
                         </>
@@ -415,7 +416,7 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                       {/* Compact progress indicator */}
                       {totalSubtasks > 0 && (
                         <span className="text-xs text-muted-foreground ml-1">
-                          {completedSubtasks}/{totalSubtasks} subtasks
+                          {uiT('subtasks.fraction', { completed: completedSubtasks, total: totalSubtasks })}
                         </span>
                       )}
                     </div>
@@ -445,7 +446,7 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                       className="hover:bg-muted transition-colors"
                     >
                       <X className="h-5 w-5" />
-                      <span className="sr-only">Close</span>
+                      <span className="sr-only">{t('common:buttons.close')}</span>
                     </Button>
                   </DialogPrimitive.Close>
                 </div>
@@ -482,19 +483,19 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                     value="overview"
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm"
                   >
-                    Overview
+                    {uiT('tabs.overview')}
                   </TabsTrigger>
                   <TabsTrigger
                     value="subtasks"
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm"
                   >
-                    Subtasks ({task.subtasks.length})
+                    {uiT('tabs.subtasks', { count: task.subtasks.length })}
                   </TabsTrigger>
                   <TabsTrigger
                     value="logs"
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm"
                   >
-                    Logs
+                    {uiT('tabs.logs')}
                   </TabsTrigger>
                   {showFilesTab && (
                     <TabsTrigger
@@ -601,12 +602,12 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                 disabled={state.isRunning && !state.isStuck}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete Task
+                {t('tasks:actions.delete')}
               </Button>
               <div className="flex-1" />
               {renderPrimaryAction()}
               <Button variant="outline" onClick={handleClose}>
-                Close
+                {t('common:buttons.close')}
               </Button>
             </div>
           </DialogPrimitive.Content>

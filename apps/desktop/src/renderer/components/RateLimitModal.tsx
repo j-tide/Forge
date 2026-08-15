@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, ExternalLink, Clock, RefreshCw, User, ChevronDown, Check, Zap, Star, Plus } from 'lucide-react';
 import {
@@ -29,7 +29,7 @@ import { getPreviewClaudeProfileConfigDir } from '../../shared/constants/preview
 const CLAUDE_UPGRADE_URL = 'https://claude.ai/upgrade';
 
 export function RateLimitModal() {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'uiShellAuth']);
   const { isModalOpen, rateLimitInfo, hideRateLimitModal, clearPendingRateLimit } = useRateLimitStore();
   const { profiles, activeProfileId, isSwitching } = useClaudeProfileStore();
   const { toast } = useToast();
@@ -38,6 +38,7 @@ export function RateLimitModal() {
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [isAddingProfile, setIsAddingProfile] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
+  const newProfileNameRef = useRef<HTMLInputElement>(null);
 
   // Load profiles and auto-switch settings when modal opens
   useEffect(() => {
@@ -253,7 +254,7 @@ export function RateLimitModal() {
                             <span className="truncate flex items-center gap-2">
                               {profile.name}
                               {profile.id === rateLimitInfo?.suggestedProfileId && (
-                                <Star className="h-3 w-3 text-yellow-500" aria-label="Recommended" />
+                                <Star className="h-3 w-3 text-yellow-500" aria-label={t('uiShellAuth:recommended')} />
                               )}
                             </span>
                             {selectedProfileId === profile.id && (
@@ -265,8 +266,7 @@ export function RateLimitModal() {
                         <DropdownMenuItem
                           onClick={() => {
                             // Focus the add account input
-                            const input = document.querySelector('input[placeholder*="Account name"]') as HTMLInputElement;
-                            if (input) input.focus();
+                            newProfileNameRef.current?.focus();
                           }}
                           className="flex items-center gap-2 text-muted-foreground"
                         >
@@ -331,6 +331,7 @@ export function RateLimitModal() {
                 </p>
                 <div className="flex items-center gap-2">
                   <Input
+                    ref={newProfileNameRef}
                     placeholder={t('rateLimit.accountNamePlaceholder')}
                     value={newProfileName}
                     onChange={(e) => setNewProfileName(e.target.value)}

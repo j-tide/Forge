@@ -65,7 +65,7 @@ const createSafeLink = (opensInNewWindowText: string) => {
  * Shows when a new app version is available and handles download/install workflow
  */
 export function AppUpdateNotification() {
-  const { t } = useTranslation(["dialogs", "common"]);
+  const { t, i18n } = useTranslation(["dialogs", "common"]);
   const [isOpen, setIsOpen] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<AppUpdateAvailableEvent | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<AppUpdateProgress | null>(null);
@@ -197,7 +197,7 @@ export function AppUpdateNotification() {
                 {updateInfo.releaseDate && (
                   <p className="text-xs text-muted-foreground mt-1">
                     {t("dialogs:appUpdate.released", "Released")}{" "}
-                    {new Date(updateInfo.releaseDate).toLocaleDateString()}
+                    {new Date(updateInfo.releaseDate).toLocaleDateString(i18n.resolvedLanguage)}
                   </p>
                 )}
               </div>

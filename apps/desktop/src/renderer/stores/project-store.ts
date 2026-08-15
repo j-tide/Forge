@@ -1,3 +1,4 @@
+import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import type { Project, ProjectSettings, AutoBuildVersionInfo, InitializationResult } from '../../shared/types';
 
@@ -319,10 +320,10 @@ export async function loadProjects(): Promise<void> {
         }
       }
     } else {
-      store.setError(result.error || 'Failed to load projects');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedLoadProjects'));
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Unknown error');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
   } finally {
     store.setLoading(false);
   }
@@ -343,11 +344,11 @@ export async function addProject(projectPath: string): Promise<Project | null> {
       store.openProjectTab(result.data.id);
       return result.data;
     } else {
-      store.setError(result.error || 'Failed to add project');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedAddProject'));
       return null;
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Unknown error');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
     return null;
   }
 }
@@ -447,11 +448,11 @@ export async function initializeProject(
       return result.data;
     }
     console.log('[ProjectStore] IPC failed or no data, setting error');
-    store.setError(result.error || 'Failed to initialize project');
+    store.setError(result.error || i18n.t('uiRuntime:stores.failedInitializeProject'));
     return null;
   } catch (error) {
     console.error('[ProjectStore] Exception during initializeProject:', error);
-    store.setError(error instanceof Error ? error.message : 'Unknown error');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
     return null;
   }
 }

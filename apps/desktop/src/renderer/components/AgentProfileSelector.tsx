@@ -86,6 +86,7 @@ export function AgentProfileSelector({
   disabled
 }: AgentProfileSelectorProps) {
   const { t } = useTranslation('settings');
+  const { t: uiT } = useTranslation('uiTasks');
   const { provider: activeProvider } = useActiveProvider();
   const [showPhaseDetails, setShowPhaseDetails] = useState(false);
 
@@ -191,15 +192,15 @@ export function AgentProfileSelector({
     if (profile) {
       return {
         icon: iconMap[profile.icon || 'Scale'] || Scale,
-        label: profile.name,
-        description: profile.description
+        label: uiT(`profiles.${profile.id}.name`, { defaultValue: profile.name }),
+        description: uiT(`profiles.${profile.id}.description`, { defaultValue: profile.description })
       };
     }
     // Default to auto profile (the actual default)
     return {
       icon: Sparkles,
-      label: 'Auto (Optimized)',
-      description: 'Uses Opus across all phases with optimized thinking levels'
+      label: uiT('profiles.auto.name'),
+      description: uiT('profiles.auto.description')
     };
   };
 
@@ -236,9 +237,9 @@ export function AgentProfileSelector({
                   <div className="flex items-center gap-2">
                     <ProfileIcon className="h-4 w-4 shrink-0" />
                     <div>
-                      <span className="font-medium">{profile.name}</span>
+                      <span className="font-medium">{uiT(`profiles.${profile.id}.name`, { defaultValue: profile.name })}</span>
                       <span className="ml-2 text-xs text-muted-foreground">
-                        ({modelLabel} + {profile.thinkingLevel})
+                        ({modelLabel} + {uiT(`thinking.${profile.thinkingLevel}`)})
                       </span>
                     </div>
                   </div>

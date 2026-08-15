@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 /**
  * useImageUpload - Shared hook for handling image paste and drag-drop in task forms
  *
@@ -72,15 +73,6 @@ interface UseImageUploadReturn {
   remainingSlots: number;
 }
 
-// Default error messages (English fallbacks)
-const DEFAULT_ERROR_MESSAGES: Required<ImageUploadErrorMessages> = {
-  maxImagesReached: `Maximum of ${MAX_IMAGES_PER_TASK} images allowed`,
-  invalidImageType: `Invalid image type. Allowed: ${ALLOWED_IMAGE_TYPES_DISPLAY}`,
-  imageTooLarge: `Image exceeds maximum size of ${Math.round(MAX_IMAGE_SIZE / 1024 / 1024)}MB`,
-  processPasteFailed: 'Failed to process pasted image',
-  processDropFailed: 'Failed to process dropped image'
-};
-
 export function useImageUpload({
   images,
   onImagesChange,
@@ -89,15 +81,20 @@ export function useImageUpload({
   errorMessages = {},
   onFileReferenceDrop
 }: UseImageUploadOptions): UseImageUploadReturn {
+  const { t: uiT } = useTranslation('uiTasks');
   const [isDragOver, setIsDragOver] = useState(false);
   const [pasteSuccess, setPasteSuccess] = useState(false);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Merge custom error messages with defaults (memoized to prevent useCallback invalidation)
   const errors = useMemo<Required<ImageUploadErrorMessages>>(() => ({
-    ...DEFAULT_ERROR_MESSAGES,
+    maxImagesReached: uiT('images.max', { count: MAX_IMAGES_PER_TASK }),
+    invalidImageType: uiT('images.invalid', { types: ALLOWED_IMAGE_TYPES_DISPLAY }),
+    imageTooLarge: uiT('images.tooLarge', { size: Math.round(MAX_IMAGE_SIZE / 1024 / 1024) }),
+    processPasteFailed: uiT('images.pasteFailed'),
+    processDropFailed: uiT('images.dropFailed'),
     ...errorMessages
-  }), [errorMessages]);
+  }), [errorMessages, uiT]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

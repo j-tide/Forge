@@ -316,7 +316,9 @@ export function App() {
       i18n.changeLanguage(settings.language);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Only run when settings.language changes, not on every i18n object change
-  }, [settings.language, i18n.language, i18n.changeLanguage]);
+  }, [settings.language, i18n]);
+
+  useEffect(() => { document.documentElement.lang = i18n.language; }, [i18n.language]);
 
   // Sync spell check language with i18n language
   useEffect(() => {
@@ -747,14 +749,14 @@ export function App() {
       } else {
         // Initialization failed - show error but keep dialog open
         console.warn('[InitDialog] Initialization failed, showing error');
-        const errorMessage = result?.error || 'Failed to initialize Aperant. Please try again.';
+        const errorMessage = result?.error || t('uiRuntime:app.initializeFailed');
         setInitError(errorMessage);
         setIsInitializing(false);
       }
     } catch (error) {
       // Unexpected error occurred
       console.error('[InitDialog] Unexpected error during initialization:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      const errorMessage = error instanceof Error ? error.message : t('uiRuntime:app.unexpectedError');
       setInitError(errorMessage);
       setIsInitializing(false);
     }

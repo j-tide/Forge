@@ -1,4 +1,5 @@
 import { Brain, Scale, Zap, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { DEFAULT_AGENT_PROFILES, AVAILABLE_MODELS, THINKING_LEVELS } from '../../shared/constants';
 import { useSettingsStore, saveSettings } from '../stores/settings-store';
@@ -18,6 +19,7 @@ const iconMap: Record<string, React.ElementType> = {
  * Displays preset agent profiles for quick model/thinking level configuration
  */
 export function AgentProfiles() {
+  const { t } = useTranslation('uiRuntime');
   const settings = useSettingsStore((state) => state.settings);
   const selectedProfileId = settings.selectedAgentProfile || 'auto';
 
@@ -38,7 +40,7 @@ export function AgentProfiles() {
    */
   const getThinkingLabel = (thinkingValue: string): string => {
     const level = THINKING_LEVELS.find((l) => l.value === thinkingValue);
-    return level?.label || thinkingValue;
+    return level ? t(`agentProfiles.thinkingLevels.${thinkingValue}`, { defaultValue: level.label }) : thinkingValue;
   };
 
   /**
@@ -50,6 +52,7 @@ export function AgentProfiles() {
 
     return (
       <button
+        type="button"
         key={profile.id}
         onClick={() => handleSelectProfile(profile.id)}
         className={cn(
@@ -84,9 +87,9 @@ export function AgentProfiles() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground">{profile.name}</h3>
+            <h3 className="font-semibold text-foreground">{t(`agentProfiles.presets.${profile.id}.name`, { defaultValue: profile.name })}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {profile.description}
+              {t(`agentProfiles.presets.${profile.id}.description`, { defaultValue: profile.description })}
             </p>
 
             {/* Model and thinking level badges */}
@@ -95,7 +98,7 @@ export function AgentProfiles() {
                 {getModelLabel(profile.model)}
               </span>
               <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                {getThinkingLabel(profile.thinkingLevel)} Thinking
+                {t('agentProfiles.thinkingBadge', { level: getThinkingLabel(profile.thinkingLevel) })}
               </span>
             </div>
           </div>
@@ -110,9 +113,9 @@ export function AgentProfiles() {
       <div className="shrink-0 border-b border-border bg-background px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Agent Profiles</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('agentProfiles.title')}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Select a preset configuration for model and thinking level
+              {t('agentProfiles.subtitle')}
             </p>
           </div>
         </div>
@@ -124,9 +127,7 @@ export function AgentProfiles() {
           {/* Description */}
           <div className="rounded-lg bg-muted/50 p-4 mb-6">
             <p className="text-sm text-muted-foreground">
-              Agent profiles provide preset configurations for Claude model and thinking level.
-              When you create a new task, these settings will be used as defaults. You can always
-              override them in the task creation wizard.
+              {t('agentProfiles.description')}
             </p>
           </div>
 

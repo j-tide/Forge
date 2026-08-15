@@ -107,7 +107,7 @@ export function Sidebar({
   activeView = 'kanban',
   onViewChange
 }: SidebarProps) {
-  const { t } = useTranslation(['navigation', 'dialogs', 'common', 'welcome']);
+  const { t } = useTranslation(['navigation', 'dialogs', 'common', 'welcome', 'uiShell']);
   const projects = useProjectStore((state) => state.projects);
   const selectedProjectId = useProjectStore((state) => state.selectedProjectId);
   const settings = useSettingsStore((state) => state.settings);
@@ -432,6 +432,7 @@ export function Sidebar({
                   size={isCollapsed ? "icon" : "sm"}
                   className={isCollapsed ? "" : "flex-1 justify-start gap-2"}
                   onClick={onSettingsClick}
+                  aria-label={t('actions.settings')}
                 >
                   <Settings className="h-4 w-4" />
                   {!isCollapsed && t('actions.settings')}
@@ -482,6 +483,7 @@ export function Sidebar({
                 className="forge-glass-new-task-button w-full"
                 size={isCollapsed ? "icon" : "default"}
                 onClick={onNewTaskClick}
+                aria-label={t('actions.newTask')}
                 disabled={!selectedProjectId || !selectedProject?.autoBuildPath}
               >
                 <Plus className={isCollapsed ? "h-4 w-4" : "mr-2 h-4 w-4"} />
@@ -508,7 +510,7 @@ export function Sidebar({
             <DialogDescription>{t('welcome:hero.subtitle')}</DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Forge Glass Preview is independently modified from Aperant v2.8.0-beta.6, licensed under AGPL-3.0.
+            {t('uiShell:about.provenance')}
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowHelpDialog(false)}>

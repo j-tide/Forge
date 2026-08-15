@@ -42,7 +42,7 @@ interface OAuthStepProps {
  * reusing patterns from IntegrationSettings.tsx.
  */
 export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
-  const { t } = useTranslation(['onboarding', 'common']);
+  const { t } = useTranslation(['onboarding', 'common', 'uiShellOnboarding']);
   const { toast } = useToast();
 
   // Claude Profiles state
@@ -80,7 +80,7 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
   );
 
   // Reusable function to load Claude profiles
-  const loadClaudeProfiles = async () => {
+  const loadClaudeProfiles = useCallback(async () => {
     setIsLoadingProfiles(true);
     setError(null);
     try {
@@ -92,11 +92,11 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
         await loadGlobalClaudeProfiles();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profiles');
+      setError(err instanceof Error ? err.message : t('uiShellOnboarding:profilesLoadFailed'));
     } finally {
       setIsLoadingProfiles(false);
     }
-  };
+  }, [t]);
 
   // Load Claude profiles on mount
   useEffect(() => {
@@ -120,7 +120,7 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
 
       // Validate that sanitized slug is not empty (e.g., "!!!" becomes "")
       if (!profileSlug) {
-        setError('Profile name must contain at least one letter or number');
+        setError(t('uiShellOnboarding:profileNameInvalid'));
         setIsAddingProfile(false);
         return;
       }
@@ -158,7 +158,7 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add profile');
+      setError(err instanceof Error ? err.message : t('uiShellOnboarding:profileAddFailed'));
       toast({
         variant: 'destructive',
         title: t('oauth.toast.addProfileFailed'),
@@ -178,7 +178,7 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
         await loadClaudeProfiles();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete profile');
+      setError(err instanceof Error ? err.message : t('uiShellOnboarding:profileDeleteFailed'));
     } finally {
       setDeletingProfileId(null);
     }
@@ -204,7 +204,7 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
         await loadClaudeProfiles();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to rename profile');
+      setError(err instanceof Error ? err.message : t('uiShellOnboarding:profileRenameFailed'));
     } finally {
       setEditingProfileId(null);
       setEditingProfileName('');
@@ -220,7 +220,7 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
         await loadGlobalClaudeProfiles();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set active profile');
+      setError(err instanceof Error ? err.message : t('uiShellOnboarding:profileActiveFailed'));
     }
   };
 
@@ -251,7 +251,7 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
   const handleAuthenticateProfile = async (profileId: string) => {
     // Find the profile name for display
     const profile = claudeProfiles.find(p => p.id === profileId);
-    const profileName = profile?.name || 'Profile';
+    const profileName = profile?.name || t('uiShellOnboarding:profile');
 
     setAuthenticatingProfileId(profileId);
     setError(null);
@@ -275,7 +275,7 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
 
       console.warn('[OAuthStep] Auth terminal ready:', result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to authenticate profile');
+      setError(err instanceof Error ? err.message : t('uiShellOnboarding:profileAuthenticateFailed'));
       alert(t('oauth.alerts.authStartFailedMessage'));
       setAuthenticatingProfileId(null);
     }
@@ -324,7 +324,7 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save token');
+      setError(err instanceof Error ? err.message : t('uiShellOnboarding:tokenSaveFailed'));
       toast({
         variant: 'destructive',
         title: t('oauth.toast.tokenSaveFailed'),
@@ -460,6 +460,7 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
                                   variant="ghost"
                                   size="icon"
                                   onClick={handleRenameProfile}
+                                  aria-label={t('common:buttons.save')}
                                   className="h-7 w-7 text-success hover:text-success hover:bg-success/10"
                                 >
                                   <Check className="h-3 w-3" />
@@ -468,6 +469,7 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
                                   variant="ghost"
                                   size="icon"
                                   onClick={cancelEditingProfile}
+                                  aria-label={t('common:buttons.cancel')}
                                   className="h-7 w-7 text-muted-foreground hover:text-foreground"
                                 >
                                   <X className="h-3 w-3" />
@@ -605,6 +607,7 @@ export function OAuthStep({ onNext, onBack, onSkip }: OAuthStepProps) {
                                 <button
                                   type="button"
                                   onClick={() => setShowManualToken(!showManualToken)}
+                                  aria-label={t(showManualToken ? 'oauth.buttons.hideToken' : 'oauth.buttons.showToken')}
                                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                 >
                                   {showManualToken ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}

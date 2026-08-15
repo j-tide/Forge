@@ -31,7 +31,6 @@ import type { ClaudeUsageSnapshot, ProfileUsageSummary } from '../../shared/type
 import type { AppSection } from './settings/AppSettings';
 import { useSettingsStore, saveSettings } from '../stores/settings-store';
 import { useActiveProvider } from '../hooks/useActiveProvider';
-import { PROVIDER_REGISTRY } from '@shared/constants/providers';
 import type { ProviderAccount, BuiltinProvider } from '../../shared/types/provider-account';
 
 /**
@@ -112,8 +111,9 @@ const getBarColorClass = (percent: number): string => {
   return 'bg-green-500';
 };
 
-const getProviderName = (providerId: string): string => {
-  return PROVIDER_REGISTRY.find(p => p.id === providerId)?.name ?? providerId;
+const getProviderName = (providerId: string, t: (key: string) => string): string => {
+  const key = PROVIDER_I18N_KEYS[providerId];
+  return key ? t(key) : providerId;
 };
 
 /**
@@ -127,7 +127,7 @@ const accountHasUsageMonitoring = (account: { provider: string; authType?: strin
 };
 
 export function UsageIndicator() {
-  const { t, i18n } = useTranslation(['common']);
+  const { t, i18n } = useTranslation(['common', 'uiShellAuth']);
   const [usage, setUsage] = useState<ClaudeUsageSnapshot | null>(null);
   const [otherProfiles, setOtherProfiles] = useState<ProfileUsageSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -174,7 +174,7 @@ export function UsageIndicator() {
    */
   const getInitials = (name: string): string => {
     if (!name || name.trim().length === 0) {
-      return 'UN'; // Unknown
+      return t('uiShellAuth:unknownInitials');
     }
     const words = name.trim().split(/\s+/);
     if (words.length >= 2) {
@@ -256,7 +256,7 @@ export function UsageIndicator() {
             <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold border ${
               PROVIDER_BADGE_COLORS[activeAccount.provider] ?? PROVIDER_BADGE_COLORS['openai-compatible']
             }`}>
-              {getProviderName(activeAccount.provider)}
+              {getProviderName(activeAccount.provider, t)}
             </span>
           </div>
           <div className={`font-medium text-xs truncate ${showReauth ? 'text-destructive' : 'text-primary'}`}>
@@ -881,7 +881,7 @@ export function UsageIndicator() {
                           <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold border ${
                             PROVIDER_BADGE_COLORS[account.provider] ?? PROVIDER_BADGE_COLORS['openai-compatible']
                           }`}>
-                            {getProviderName(account.provider)}
+                            {getProviderName(account.provider, t)}
                           </span>
                           <button
                             onClick={(e) => handleSwapAccount(e, account.id)}
@@ -1010,7 +1010,7 @@ export function UsageIndicator() {
                           <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold border ${
                             PROVIDER_BADGE_COLORS[account.provider] ?? PROVIDER_BADGE_COLORS['openai-compatible']
                           }`}>
-                            {getProviderName(account.provider)}
+                            {getProviderName(account.provider, t)}
                           </span>
                           <button
                             onClick={(e) => handleSwapAccount(e, account.id)}
@@ -1181,7 +1181,7 @@ export function UsageIndicator() {
                           <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold border ${
                             PROVIDER_BADGE_COLORS[account.provider] ?? PROVIDER_BADGE_COLORS['openai-compatible']
                           }`}>
-                            {getProviderName(account.provider)}
+                            {getProviderName(account.provider, t)}
                           </span>
                           <button
                             onClick={(e) => handleSwapAccount(e, account.id)}
@@ -1478,7 +1478,7 @@ export function UsageIndicator() {
                         <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold border ${
                           PROVIDER_BADGE_COLORS[account.provider] ?? PROVIDER_BADGE_COLORS['openai-compatible']
                         }`}>
-                          {getProviderName(account.provider)}
+                          {getProviderName(account.provider, t)}
                         </span>
                         <button
                           onClick={(e) => handleSwapAccount(e, account.id)}

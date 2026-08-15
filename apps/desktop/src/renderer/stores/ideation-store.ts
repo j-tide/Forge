@@ -1,3 +1,4 @@
+import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import type {
   IdeationSession,
@@ -416,11 +417,11 @@ export function generateIdeation(projectId: string): void {
   store.clearSession();
   store.setIsGenerating(true);
   store.initializeTypeStates(config.enabledTypes);
-  store.addLog('Starting ideation generation in parallel...');
+  store.addLog(i18n.t('uiRuntime:stores.startingIdeationParallel'));
   store.setGenerationStatus({
     phase: 'generating',
     progress: 0,
-    message: `Generating ${config.enabledTypes.length} ideation types in parallel...`
+    message: i18n.t('uiRuntime:stores.generatingIdeationTypes', { count: config.enabledTypes.length })
   });
 
   const timeoutId = setTimeout(() => {
@@ -436,9 +437,9 @@ export function generateIdeation(projectId: string): void {
         phase: 'error',
         progress: 0,
         message: '',
-        error: 'Generation timed out. Some ideas may have been generated - check the results.'
+        error: i18n.t('uiRuntime:stores.ideationTimeout')
       });
-      currentState.addLog('⚠ Generation timed out');
+      currentState.addLog(i18n.t('uiRuntime:stores.generationTimeout'));
     }
   }, GENERATION_TIMEOUT_MS);
   generationTimeoutIds.set(projectId, timeoutId);
@@ -455,11 +456,11 @@ export async function stopIdeation(projectId: string): Promise<boolean> {
   }
 
   store.setIsGenerating(false);
-  store.addLog('Stopping ideation generation...');
+  store.addLog(i18n.t('uiRuntime:stores.stoppingIdeation'));
   store.setGenerationStatus({
     phase: 'idle',
     progress: 0,
-    message: 'Generation stopped'
+    message: i18n.t('uiRuntime:stores.generationStopped')
   });
 
   const result = await window.electronAPI.stopIdeation(projectId);
@@ -471,9 +472,9 @@ export async function stopIdeation(projectId: string): Promise<boolean> {
 
   if (!result.success) {
     // Backend couldn't find/stop the process (likely already finished/crashed)
-    store.addLog('Process already stopped');
+    store.addLog(i18n.t('uiRuntime:stores.processStopped'));
   } else {
-    store.addLog('Ideation generation stopped');
+    store.addLog(i18n.t('uiRuntime:stores.ideationStopped'));
   }
 
   return result.success;
@@ -489,11 +490,11 @@ export async function refreshIdeation(projectId: string): Promise<void> {
   store.clearSession();
   store.setIsGenerating(true);
   store.initializeTypeStates(config.enabledTypes);
-  store.addLog('Refreshing ideation in parallel...');
+  store.addLog(i18n.t('uiRuntime:stores.refreshIdeationParallel'));
   store.setGenerationStatus({
     phase: 'generating',
     progress: 0,
-    message: `Refreshing ${config.enabledTypes.length} ideation types in parallel...`
+    message: i18n.t('uiRuntime:stores.refreshingIdeationTypes', { count: config.enabledTypes.length })
   });
   window.electronAPI.refreshIdeation(projectId, config);
 }
@@ -503,7 +504,7 @@ export async function dismissAllIdeasForProject(projectId: string): Promise<bool
   const result = await window.electronAPI.dismissAllIdeas(projectId);
   if (result.success) {
     store.dismissAllIdeas();
-    store.addLog('All ideas dismissed');
+    store.addLog(i18n.t('uiRuntime:stores.ideasDismissed'));
   }
   return result.success;
 }
@@ -513,7 +514,7 @@ export async function archiveIdeaForProject(projectId: string, ideaId: string): 
   const result = await window.electronAPI.archiveIdea(projectId, ideaId);
   if (result.success) {
     store.archiveIdea(ideaId);
-    store.addLog('Idea archived');
+    store.addLog(i18n.t('uiRuntime:stores.ideaArchived'));
   }
   return result.success;
 }
@@ -523,7 +524,7 @@ export async function deleteIdeaForProject(projectId: string, ideaId: string): P
   const result = await window.electronAPI.deleteIdea(projectId, ideaId);
   if (result.success) {
     store.deleteIdea(ideaId);
-    store.addLog('Idea deleted');
+    store.addLog(i18n.t('uiRuntime:stores.ideaDeleted'));
   }
   return result.success;
 }
@@ -534,7 +535,7 @@ export async function deleteMultipleIdeasForProject(projectId: string, ideaIds: 
   if (result.success) {
     store.deleteMultipleIdeas(ideaIds);
     store.clearSelection();
-    store.addLog(`${ideaIds.length} ideas deleted`);
+    store.addLog(i18n.t('uiRuntime:stores.ideasDeleted', { count: ideaIds.length }));
   }
   return result.success;
 }
@@ -557,11 +558,11 @@ export function appendIdeation(projectId: string, typesToAdd: IdeationType[]): v
   });
   store.initializeTypeStates(typesToAdd);
 
-  store.addLog(`Adding ${typesToAdd.length} new ideation types...`);
+  store.addLog(i18n.t('uiRuntime:stores.addingIdeationTypes', { count: typesToAdd.length }));
   store.setGenerationStatus({
     phase: 'generating',
     progress: 0,
-    message: `Generating ${typesToAdd.length} additional ideation types...`
+    message: i18n.t('uiRuntime:stores.generatingAdditionalTypes', { count: typesToAdd.length })
   });
 
   const appendConfig = {
@@ -699,7 +700,7 @@ export function setupIdeationListeners(): () => void {
       }
 
       store().addIdeasForType(ideationType, ideas);
-      store().addLog(`✓ ${ideationType} completed with ${ideas.length} ideas`);
+      store().addLog(i18n.t('uiRuntime:stores.ideationTypeComplete', { type: ideationType, count: ideas.length }));
 
       // Update progress based on completed types
       // Calculate with the expected state since React 18 batches state updates.
@@ -722,7 +723,7 @@ export function setupIdeationListeners(): () => void {
       store().setGenerationStatus({
         phase: 'generating',
         progress,
-        message: `${completedCount}/${totalTypes} ideation types complete`
+        message: i18n.t('uiRuntime:stores.ideationTypesComplete', { completed: completedCount, total: totalTypes })
       });
     }
   );
@@ -739,7 +740,7 @@ export function setupIdeationListeners(): () => void {
       }
 
       store().setTypeState(ideationType as IdeationType, 'failed');
-      store().addLog(`✗ ${ideationType} failed`);
+      store().addLog(i18n.t('uiRuntime:stores.ideationTypeFailed', { type: ideationType }));
     }
   );
 
@@ -771,9 +772,9 @@ export function setupIdeationListeners(): () => void {
     store().setGenerationStatus({
       phase: 'complete',
       progress: 100,
-      message: 'Ideation complete'
+      message: i18n.t('uiRuntime:stores.ideationComplete')
     });
-    store().addLog('Ideation generation complete!');
+    store().addLog(i18n.t('uiRuntime:stores.ideationGenerationComplete'));
   });
 
   const unsubError = window.electronAPI.onIdeationError((projectId, error) => {
@@ -794,7 +795,7 @@ export function setupIdeationListeners(): () => void {
       message: '',
       error
     });
-    store().addLog(`Error: ${error}`);
+    store().addLog(i18n.t('uiRuntime:stores.providerError', { error }));
   });
 
   const unsubStopped = window.electronAPI.onIdeationStopped((projectId) => {
@@ -812,9 +813,9 @@ export function setupIdeationListeners(): () => void {
     store().setGenerationStatus({
       phase: 'idle',
       progress: 0,
-      message: 'Generation stopped'
+      message: i18n.t('uiRuntime:stores.generationStopped')
     });
-    store().addLog('Ideation generation stopped');
+    store().addLog(i18n.t('uiRuntime:stores.ideationStopped'));
   });
 
   return () => {

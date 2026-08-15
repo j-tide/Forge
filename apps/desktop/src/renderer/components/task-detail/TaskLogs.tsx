@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useMemo } from 'react';
 import {
   Terminal,
@@ -23,7 +24,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../ui/colla
 import { cn } from '../../lib/utils';
 import { useSettingsStore } from '../../stores/settings-store';
 import type { Task, TaskLogs, TaskLogPhase, TaskPhaseLog, TaskLogEntry, TaskMetadata } from '../../../shared/types';
-import type { PhaseModelConfig, ThinkingLevel } from '../../../shared/types/settings';
+import type { PhaseModelConfig } from '../../../shared/types/settings';
 import type { BuiltinProvider } from '../../../shared/types/provider-account';
 import { getProviderModelLabel } from '@shared/utils/model-display';
 
@@ -38,12 +39,6 @@ interface TaskLogsProps {
   onLogsScroll: (e: React.UIEvent<HTMLDivElement>) => void;
   onTogglePhase: (phase: TaskLogPhase) => void;
 }
-
-const PHASE_LABELS: Record<TaskLogPhase, string> = {
-  planning: 'Planning',
-  coding: 'Coding',
-  validation: 'Validation'
-};
 
 const PHASE_ICONS: Record<TaskLogPhase, typeof Pencil> = {
   planning: Pencil,
@@ -66,13 +61,6 @@ const LOG_PHASE_TO_CONFIG_PHASE: Record<TaskLogPhase, keyof PhaseModelConfig> = 
 };
 
 // Short labels for thinking levels
-const THINKING_SHORT_LABELS: Record<ThinkingLevel, string> = {
-  low: 'Low',
-  medium: 'Med',
-  high: 'High',
-  xhigh: 'XHigh'
-};
-
 // Resolve a model shorthand to a display label, using provider context when available
 function resolveModelLabel(model: string, provider?: string): string {
   if (provider) {
@@ -99,7 +87,7 @@ function getPhaseConfig(
     const provider = metadata.phaseProviders?.[configPhase] ?? metadata.provider;
     return {
       model: resolveModelLabel(model, provider),
-      thinking: THINKING_SHORT_LABELS[thinking] || thinking
+      thinking
     };
   }
 
@@ -107,7 +95,7 @@ function getPhaseConfig(
   if (metadata.model && metadata.thinkingLevel) {
     return {
       model: resolveModelLabel(metadata.model, metadata.provider),
-      thinking: THINKING_SHORT_LABELS[metadata.thinkingLevel] || metadata.thinkingLevel
+      thinking: metadata.thinkingLevel
     };
   }
 
@@ -125,6 +113,7 @@ export function TaskLogs({
   onLogsScroll,
   onTogglePhase
 }: TaskLogsProps) {
+  const { t: uiT } = useTranslation('uiTasks');
   return (
     <div
       ref={logsContainerRef}
@@ -162,8 +151,8 @@ export function TaskLogs({
         ) : (
           <div className="text-center text-sm text-muted-foreground py-8">
             <Terminal className="mx-auto mb-2 h-8 w-8 opacity-50" />
-            <p>No logs yet</p>
-            <p className="text-xs mt-1">Logs will appear here when the task runs</p>
+            <p>{uiT('logs.empty')}</p>
+            <p className="text-xs mt-1">{uiT('logs.emptyHint')}</p>
           </div>
         )}
       </div>
@@ -183,6 +172,7 @@ interface PhaseLogSectionProps {
 }
 
 function PhaseLogSection({ phase, phaseLog, isExpanded, onToggle, isTaskStuck, isTaskSettled, phaseConfig }: PhaseLogSectionProps) {
+  const { t: uiT } = useTranslation('uiTasks');
   const Icon = PHASE_ICONS[phase];
   const logOrder = useSettingsStore(s => s.settings.logOrder);
   // If the task is in a settled state (human_review, done, etc.), any "active" phase
@@ -207,34 +197,34 @@ function PhaseLogSection({ phase, phaseLog, isExpanded, onToggle, isTaskStuck, i
           return (
             <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/30 flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" />
-              Interrupted
+              {uiT('logs.interrupted')}
             </Badge>
           );
         }
         return (
           <Badge variant="outline" className="text-xs bg-info/10 text-info border-info/30 flex items-center gap-1">
             <Loader2 className="h-3 w-3 animate-spin" />
-            Running
+            {uiT('logs.running')}
           </Badge>
         );
       case 'completed':
         return (
           <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30 flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3" />
-            Complete
+            {uiT('logs.complete')}
           </Badge>
         );
       case 'failed':
         return (
           <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/30 flex items-center gap-1">
             <XCircle className="h-3 w-3" />
-            Failed
+            {uiT('logs.failed')}
           </Badge>
         );
       default:
         return (
           <Badge variant="secondary" className="text-xs text-muted-foreground">
-            Pending
+            {uiT('logs.pending')}
           </Badge>
         );
     }
@@ -263,10 +253,10 @@ function PhaseLogSection({ phase, phaseLog, isExpanded, onToggle, isTaskStuck, i
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             )}
             <Icon className={cn('h-4 w-4', isInterrupted ? 'text-warning' : status === 'active' ? PHASE_COLORS[phase].split(' ')[0] : 'text-muted-foreground')} />
-            <span className="font-medium text-sm">{PHASE_LABELS[phase]}</span>
+            <span className="font-medium text-sm">{uiT(`phases.${phase}`)}</span>
             {hasEntries && (
               <span className="text-xs text-muted-foreground">
-                ({phaseLog?.entries.length} entries)
+                {uiT('logs.entries', { count: phaseLog?.entries.length ?? 0 })}
               </span>
             )}
           </div>
@@ -274,14 +264,14 @@ function PhaseLogSection({ phase, phaseLog, isExpanded, onToggle, isTaskStuck, i
             {/* Model and thinking level indicator */}
             {phaseConfig && (
               <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                <div className="flex items-center gap-0.5" title={`Model: ${phaseConfig.model}`}>
+                <div className="flex items-center gap-0.5" title={uiT('logs.model', { model: phaseConfig.model })}>
                   <Cpu className="h-3 w-3" />
                   <span>{phaseConfig.model}</span>
                 </div>
                 <span className="text-muted-foreground/50">|</span>
-                <div className="flex items-center gap-0.5" title={`Thinking: ${phaseConfig.thinking}`}>
+                <div className="flex items-center gap-0.5" title={uiT('logs.thinking', { level: uiT(`thinking.${uiT(`thinking.${phaseConfig.thinking}`, { defaultValue: phaseConfig.thinking })}`, { defaultValue: phaseConfig.thinking }) })}>
                   <Brain className="h-3 w-3" />
-                  <span>{phaseConfig.thinking}</span>
+                  <span>{uiT(`thinking.${phaseConfig.thinking}`, { defaultValue: phaseConfig.thinking })}</span>
                 </div>
               </div>
             )}
@@ -292,7 +282,7 @@ function PhaseLogSection({ phase, phaseLog, isExpanded, onToggle, isTaskStuck, i
       <CollapsibleContent>
         <div className="mt-1 ml-6 border-l-2 border-border pl-4 py-2 space-y-1">
           {!hasEntries ? (
-            <p className="text-xs text-muted-foreground italic">No logs yet</p>
+            <p className="text-xs text-muted-foreground italic">{uiT('logs.empty')}</p>
           ) : (
             displayedEntries.map((entry) => (
               <LogEntry key={`${entry.timestamp}-${entry.type}-${entry.content}`} entry={entry} />
@@ -310,23 +300,24 @@ interface LogEntryProps {
 }
 
 function LogEntry({ entry }: LogEntryProps) {
+  const { t: uiT, i18n } = useTranslation('uiTasks');
   const [isExpanded, setIsExpanded] = useState(false);
   const hasDetail = Boolean(entry.detail);
 
   const getToolInfo = (toolName: string) => {
     switch (toolName) {
       case 'Read':
-        return { icon: FileText, label: 'Reading', color: 'text-blue-500 bg-blue-500/10' };
+        return { icon: FileText, label: uiT('tools.reading'), color: 'text-blue-500 bg-blue-500/10' };
       case 'Glob':
-        return { icon: FolderSearch, label: 'Searching files', color: 'text-amber-500 bg-amber-500/10' };
+        return { icon: FolderSearch, label: uiT('tools.searchingFiles'), color: 'text-amber-500 bg-amber-500/10' };
       case 'Grep':
-        return { icon: Search, label: 'Searching code', color: 'text-green-500 bg-green-500/10' };
+        return { icon: Search, label: uiT('tools.searchingCode'), color: 'text-green-500 bg-green-500/10' };
       case 'Edit':
-        return { icon: Pencil, label: 'Editing', color: 'text-purple-500 bg-purple-500/10' };
+        return { icon: Pencil, label: uiT('tools.editing'), color: 'text-purple-500 bg-purple-500/10' };
       case 'Write':
-        return { icon: FileCode, label: 'Writing', color: 'text-cyan-500 bg-cyan-500/10' };
+        return { icon: FileCode, label: uiT('tools.writing'), color: 'text-cyan-500 bg-cyan-500/10' };
       case 'Bash':
-        return { icon: Terminal, label: 'Running', color: 'text-orange-500 bg-orange-500/10' };
+        return { icon: Terminal, label: uiT('tools.running'), color: 'text-orange-500 bg-orange-500/10' };
       default:
         return { icon: Wrench, label: toolName, color: 'text-muted-foreground bg-muted' };
     }
@@ -336,7 +327,7 @@ function LogEntry({ entry }: LogEntryProps) {
     try {
       const date = new Date(timestamp);
       // Use system locale for date and time formatting
-      return date.toLocaleString();
+      return date.toLocaleString(i18n.language);
     } catch {
       return '';
     }
@@ -377,7 +368,7 @@ function LogEntry({ entry }: LogEntryProps) {
           <div className={cn('inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs', color, 'opacity-60')}>
             <Icon className="h-3 w-3" />
             <CheckCircle2 className="h-3 w-3 text-success" />
-            <span className="text-muted-foreground">Done</span>
+            <span className="text-muted-foreground">{uiT('logs.done')}</span>
           </div>
           {hasDetail && (
             <button
@@ -391,12 +382,12 @@ function LogEntry({ entry }: LogEntryProps) {
               {isExpanded ? (
                 <>
                   <ChevronDown className="h-2.5 w-2.5" />
-                  <span>Hide output</span>
+                  <span>{uiT('logs.hideOutput')}</span>
                 </>
               ) : (
                 <>
                   <ChevronRight className="h-2.5 w-2.5" />
-                  <span>Show output</span>
+                  <span>{uiT('logs.showOutput')}</span>
                 </>
               )}
             </button>
@@ -485,12 +476,12 @@ function LogEntry({ entry }: LogEntryProps) {
             {isExpanded ? (
               <>
                 <ChevronDown className="h-2.5 w-2.5" />
-                <span>Less</span>
+                <span>{uiT('logs.less')}</span>
               </>
             ) : (
               <>
                 <ChevronRight className="h-2.5 w-2.5" />
-                <span>More</span>
+                <span>{uiT('logs.more')}</span>
               </>
             )}
           </button>

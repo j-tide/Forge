@@ -53,7 +53,7 @@ const PROVIDER_I18N_KEYS: Record<string, string> = {
 
 export function AuthStatusIndicator() {
   const { providerAccounts, settings } = useSettingsStore();
-  const { t } = useTranslation(['common']);
+  const { t } = useTranslation(['common', 'uiShellAuth']);
 
   // Track usage data for warning badge
   const [usage, setUsage] = useState<ClaudeUsageSnapshot | null>(null);
@@ -258,7 +258,7 @@ export function AuthStatusIndicator() {
                         <span className="text-[10px]">{t('common:usage.queuePosition')}</span>
                       </div>
                       <span className="font-medium text-[10px]">
-                        #{queuePosition.position} of {queuePosition.total}
+                        {t('uiShellAuth:queuePosition', { position: queuePosition.position, total: queuePosition.total })}
                       </span>
                     </div>
                   )}

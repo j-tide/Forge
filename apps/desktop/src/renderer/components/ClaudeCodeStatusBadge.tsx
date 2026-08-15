@@ -50,7 +50,8 @@ const VERSION_RECHECK_DELAY_MS = 5000;
  * Shows installation status and provides quick access to install/update.
  */
 export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps) {
-  const { t } = useTranslation(["common", "navigation"]);
+  const { t, i18n } = useTranslation(["common", "navigation", "uiAdditional"]);
+  const localizeError = (error: string) => error.startsWith("uiAdditional:") ? t(error) : error;
   const [status, setStatus] = useState<StatusType>("loading");
   const [versionInfo, setVersionInfo] = useState<ClaudeCodeVersionInfo | null>(null);
   const [isInstalling, setIsInstalling] = useState(false);
@@ -117,11 +118,11 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
       if (result.success && result.data) {
         setAvailableVersions(result.data.versions);
       } else {
-        setVersionsError(result.error || "Failed to load versions");
+        setVersionsError(result.error || "uiAdditional:cli.loadVersionsFailed");
       }
     } catch (err) {
       console.error("Failed to fetch versions:", err);
-      setVersionsError("Failed to load versions");
+      setVersionsError("uiAdditional:cli.loadVersionsFailed");
     } finally {
       setIsLoadingVersions(false);
     }
@@ -141,11 +142,11 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
       if (result.success && result.data) {
         setInstallations(result.data.installations);
       } else {
-        setInstallationsError(result.error || "Failed to load installations");
+        setInstallationsError(result.error || "uiAdditional:cli.loadInstallationsFailed");
       }
     } catch (err) {
       console.error("Failed to fetch installations:", err);
-      setInstallationsError("Failed to load installations");
+      setInstallationsError("uiAdditional:cli.loadInstallationsFailed");
     } finally {
       setIsLoadingInstallations(false);
     }
@@ -184,7 +185,7 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
     setInstallError(null);
     try {
       if (!window.electronAPI?.installClaudeCode) {
-        setInstallError("Installation not available");
+        setInstallError("uiAdditional:cli.installUnavailable");
         setIsInstalling(false);
         return;
       }
@@ -197,11 +198,11 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
           checkVersion();
         }, VERSION_RECHECK_DELAY_MS);
       } else {
-        setInstallError(result.error || "Installation failed");
+        setInstallError(result.error || "uiAdditional:cli.installFailed");
       }
     } catch (err) {
       console.error("Failed to install Claude Code:", err);
-      setInstallError(err instanceof Error ? err.message : "Installation failed");
+      setInstallError(err instanceof Error ? err.message : "uiAdditional:cli.installFailed");
     } finally {
       setIsInstalling(false);
     }
@@ -217,7 +218,7 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
 
     try {
       if (!window.electronAPI?.installClaudeCodeVersion) {
-        setInstallError("Version switching not available");
+        setInstallError("uiAdditional:cli.versionSwitchUnavailable");
         return;
       }
 
@@ -229,11 +230,11 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
           checkVersion();
         }, VERSION_RECHECK_DELAY_MS);
       } else {
-        setInstallError(result.error || "Failed to switch version");
+        setInstallError(result.error || "uiAdditional:cli.versionSwitchFailed");
       }
     } catch (err) {
       console.error("Failed to switch Claude Code version:", err);
-      setInstallError(err instanceof Error ? err.message : "Failed to switch version");
+      setInstallError(err instanceof Error ? err.message : "uiAdditional:cli.versionSwitchFailed");
     } finally {
       setIsInstalling(false);
       setSelectedVersion(null);
@@ -250,7 +251,7 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
 
     try {
       if (!window.electronAPI?.setClaudeCodeActivePath) {
-        setInstallError("Path switching not available");
+        setInstallError("uiAdditional:cli.pathSwitchUnavailable");
         return;
       }
 
@@ -263,11 +264,11 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
           fetchInstallations();
         }, VERSION_RECHECK_DELAY_MS);
       } else {
-        setInstallError(result.error || "Failed to switch CLI path");
+        setInstallError(result.error || "uiAdditional:cli.pathSwitchFailed");
       }
     } catch (err) {
       console.error("Failed to switch Claude CLI path:", err);
-      setInstallError(err instanceof Error ? err.message : "Failed to switch CLI path");
+      setInstallError(err instanceof Error ? err.message : "uiAdditional:cli.pathSwitchFailed");
     } finally {
       setIsInstalling(false);
       setSelectedInstallation(null);
@@ -387,12 +388,12 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
               <span className="truncate">Claude Code</span>
               {status === "outdated" && (
                 <span className="ml-auto text-[10px] bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-1.5 py-0.5 rounded">
-                  {t("common:update", "Update")}
+                  {t("uiAdditional:cli.update")}
                 </span>
               )}
               {status === "not-found" && (
                 <span className="ml-auto text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded">
-                  {t("common:install", "Install")}
+                  {t("uiAdditional:cli.install")}
                 </span>
               )}
             </Button>
@@ -457,7 +458,7 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
               {lastChecked && (
                 <div className="flex justify-between text-muted-foreground">
                   <span>{t("navigation:claudeCode.lastChecked", "Last checked")}:</span>
-                  <span>{lastChecked.toLocaleTimeString()}</span>
+                  <span>{lastChecked.toLocaleTimeString(i18n.language)}</span>
                 </div>
               )}
             </div>
@@ -478,8 +479,8 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
                   <Download className="h-3 w-3" />
                 )}
                 {status === "outdated"
-                  ? t("common:update", "Update")
-                  : t("common:install", "Install")}
+                  ? t("uiAdditional:cli.update")
+                  : t("uiAdditional:cli.install")}
               </Button>
             )}
             <Button
@@ -490,7 +491,7 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
               disabled={status === "loading"}
             >
               <RefreshCw className={cn("h-3 w-3", status === "loading" && "animate-spin")} />
-              {t("common:refresh", "Refresh")}
+              {t("common:buttons.refresh")}
             </Button>
           </div>
 
@@ -498,7 +499,7 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
           {installError && (
             <div className="text-xs p-2 bg-destructive/10 text-destructive rounded-md flex items-center gap-2">
               <AlertTriangle className="h-3 w-3 shrink-0" />
-              <span>{installError}</span>
+              <span>{localizeError(installError)}</span>
             </div>
           )}
 
@@ -519,7 +520,7 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
                       isLoadingVersions
                         ? t("navigation:claudeCode.loadingVersions", "Loading versions...")
                         : versionsError
-                          ? t("navigation:claudeCode.failedToLoadVersions", "Failed to load versions")
+                          ? t("navigation:claudeCode.failedToLoadVersions", "uiAdditional:cli.loadVersionsFailed")
                           : t("navigation:claudeCode.selectVersion", "Select version")
                     }
                   />
@@ -565,7 +566,7 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
                       isLoadingInstallations
                         ? t("navigation:claudeCode.loadingInstallations", "Loading installations...")
                         : installationsError
-                          ? t("navigation:claudeCode.failedToLoadInstallations", "Failed to load installations")
+                          ? t("navigation:claudeCode.failedToLoadInstallations", "uiAdditional:cli.loadInstallationsFailed")
                           : t("navigation:claudeCode.selectInstallation", "Select installation")
                     }
                   />
@@ -584,7 +585,7 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
                           {installation.path.split(/[/\\]/).slice(-2).join('/') || installation.path}
                         </span>
                         <span className="text-muted-foreground text-[9px]">
-                          {installation.version ? `v${installation.version}` : t("navigation:claudeCode.versionUnknown", "version unknown")} ({installation.source})
+                          {installation.version ? `v${installation.version}` : t("navigation:claudeCode.versionUnknown", "version unknown")} ({t(`uiAdditional:cli.sources.${installation.source}`, { defaultValue: installation.source })})
                           {installation.isActive && ` - ${t("navigation:claudeCode.activeInstallation", "Active")}`}
                         </span>
                       </div>
@@ -637,7 +638,7 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("common:cancel", "Cancel")}</AlertDialogCancel>
+            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={performInstall}>
               {t("navigation:claudeCode.updateAnyway", "Open Terminal & Update")}
             </AlertDialogAction>
@@ -669,7 +670,7 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setSelectedVersion(null)}>
-              {t("common:cancel", "Cancel")}
+              {t("common:buttons.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction onClick={performVersionSwitch}>
               {t("navigation:claudeCode.switchAnyway", "Open Terminal & Switch")}
@@ -697,7 +698,7 @@ export function ClaudeCodeStatusBadge({ className }: ClaudeCodeStatusBadgeProps)
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setSelectedInstallation(null)}>
-              {t("common:cancel", "Cancel")}
+              {t("common:buttons.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction onClick={performPathSwitch}>
               {t("navigation:claudeCode.switchInstallationConfirm", "Switch")}

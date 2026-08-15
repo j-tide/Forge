@@ -1,3 +1,4 @@
+import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import type { ProjectEnvConfig } from '../../shared/types';
 
@@ -92,7 +93,7 @@ export async function loadProjectEnvConfig(projectId: string): Promise<ProjectEn
     } else {
       // Use setEnvConfigOnly to update config without clearing the error we're about to set
       currentStore.setEnvConfigOnly(projectId, null);
-      currentStore.setError(result.error || 'Failed to load environment config');
+      currentStore.setError(result.error || i18n.t('uiRuntime:stores.failedLoadEnvironment'));
       return null;
     }
   } catch (error) {
@@ -106,7 +107,7 @@ export async function loadProjectEnvConfig(projectId: string): Promise<ProjectEn
 
     // Use setEnvConfigOnly to update config without clearing the error we're about to set
     currentStore.setEnvConfigOnly(projectId, null);
-    currentStore.setError(error instanceof Error ? error.message : 'Unknown error');
+    currentStore.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
     return null;
   } finally {
     // Get fresh store state for final loading state update

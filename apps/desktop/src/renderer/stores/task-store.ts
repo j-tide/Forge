@@ -1,3 +1,4 @@
+import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { Task, TaskStatus, SubtaskStatus, ImplementationPlan, Subtask, TaskMetadata, ExecutionProgress, ExecutionPhase, ReviewReason, TaskDraft, ImageAttachment, TaskOrderState } from '../../shared/types';
@@ -718,11 +719,11 @@ export async function loadTasks(projectId: string, options?: { forceRefresh?: bo
       store.setTasks(result.data);
     } else {
       debugWarn('[TaskStore.loadTasks] Failed to load tasks:', result.error);
-      store.setError(result.error || 'Failed to load tasks');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedLoadTasks'));
     }
   } catch (error) {
     debugWarn('[TaskStore.loadTasks] Exception while loading tasks:', error);
-    store.setError(error instanceof Error ? error.message : 'Unknown error');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
   } finally {
     store.setLoading(false);
   }
@@ -745,11 +746,11 @@ export async function createTask(
       store.addTask(result.data);
       return result.data;
     } else {
-      store.setError(result.error || 'Failed to create task');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedCreateTask'));
       return null;
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Unknown error');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
     return null;
   }
 }
@@ -961,13 +962,13 @@ export async function recoverStuckTask(
 
     return {
       success: false,
-      message: result.error || 'Failed to recover task'
+      message: result.error || i18n.t('uiRuntime:stores.failedRecoverTask')
     };
   } catch (error) {
     console.error('Error recovering stuck task:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError')
     };
   }
 }
@@ -995,13 +996,13 @@ export async function deleteTask(
 
     return {
       success: false,
-      error: result.error || 'Failed to delete task'
+      error: result.error || i18n.t('uiRuntime:stores.failedDeleteTask')
     };
   } catch (error) {
     console.error('Error deleting task:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError')
     };
   }
 }
@@ -1037,7 +1038,7 @@ export async function deleteTasks(
     if (failedIds.length > 0) {
       return {
         success: false,
-        error: `Failed to delete ${failedIds.length} task(s)`,
+        error: i18n.t('uiRuntime:stores.failedDeleteTasks', { count: failedIds.length }),
         failedIds
       };
     }
@@ -1047,7 +1048,7 @@ export async function deleteTasks(
     console.error('Error deleting tasks:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError')
     };
   }
 }
@@ -1072,13 +1073,13 @@ export async function archiveTasks(
 
     return {
       success: false,
-      error: result.error || 'Failed to archive tasks'
+      error: result.error || i18n.t('uiRuntime:stores.failedArchiveTasks')
     };
   } catch (error) {
     console.error('Error archiving tasks:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError')
     };
   }
 }

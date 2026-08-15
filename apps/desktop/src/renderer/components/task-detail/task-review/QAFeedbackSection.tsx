@@ -41,6 +41,7 @@ export function QAFeedbackSection({
   onImagesChange
 }: QAFeedbackSectionProps) {
   const { t } = useTranslation('tasks');
+  const { t: uiT } = useTranslation('uiTasks');
 
   // Feature is enabled when onImagesChange callback is provided
   const imageUploadEnabled = !!onImagesChange;
@@ -131,7 +132,7 @@ export function QAFeedbackSection({
         });
       } catch (error) {
         console.error('[QAFeedbackSection] Failed to process pasted image:', error);
-        setError(t('feedback.processingError', 'Failed to process pasted image'));
+        setError(t('feedback.processingError'));
       }
     }
 
@@ -238,7 +239,7 @@ export function QAFeedbackSection({
           });
         } catch (error) {
           console.error('[QAFeedbackSection] Failed to process dropped image:', error);
-          setError(t('feedback.processingError', 'Failed to process dropped image'));
+          setError(t('feedback.processingError'));
         }
       }
 
@@ -268,16 +269,16 @@ export function QAFeedbackSection({
     <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">
       <h3 className="font-medium text-sm text-foreground mb-2 flex items-center gap-2">
         <AlertCircle className="h-4 w-4 text-warning" />
-        {t('feedback.requestChanges', 'Request Changes')}
+        {uiT('review.requestChanges')}
       </h3>
       <p className="text-sm text-muted-foreground mb-3">
-        {t('feedback.description', 'Found issues? Describe what needs to be fixed and the AI will continue working on it.')}
+        {uiT('review.feedbackDescription')}
       </p>
 
       {/* Textarea with paste/drop support */}
       <Textarea
         ref={textareaRef}
-        placeholder={t('feedback.placeholder', 'Describe the issues or changes needed...')}
+        placeholder={uiT('review.feedbackPlaceholder')}
         value={feedback}
         onChange={(e) => onFeedbackChange(e.target.value)}
         onPaste={handlePaste}
@@ -365,12 +366,12 @@ export function QAFeedbackSection({
         {isSubmitting ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            {t('feedback.submitting', 'Submitting...')}
+            {uiT('review.submitting')}
           </>
         ) : (
           <>
             <RotateCcw className="mr-2 h-4 w-4" />
-            {t('feedback.requestChanges', 'Request Changes')}
+            {uiT('review.requestChanges')}
           </>
         )}
       </Button>

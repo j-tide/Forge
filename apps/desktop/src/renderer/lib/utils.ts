@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import i18n from '../../shared/i18n';
 
 /**
  * Utility function to merge Tailwind CSS classes
@@ -22,20 +23,36 @@ export function calculateProgress(subtasks: { status: string }[]): number {
 /**
  * Format a date as a relative time string
  * @param date Date to format
- * @returns Relative time string (e.g., "2 hours ago")
+ * @param locale Locale to use; defaults to the currently selected interface language
+ * @returns Relative time string (e.g., "2h ago" or "2小时前")
  */
-export function formatRelativeTime(date: Date): string {
+export function formatRelativeTime(date: Date, locale: string = i18n.language || 'en'): string {
   const now = new Date();
-  const diffMs = now.getTime() - new Date(date).getTime();
-  const diffMins = Math.floor(diffMs / 60000);
+  const parsedDate = new Date(date);
+  const diffMs = now.getTime() - parsedDate.getTime();
+  const isFuture = diffMs < 0;
+  const isChinese = locale.toLowerCase().startsWith('zh');
+  const diffMins = Math.floor(Math.abs(diffMs) / 60000);
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return new Date(date).toLocaleDateString();
+  if (diffMins < 1) {
+    return isChinese ? (isFuture ? '即将' : '刚刚') : (isFuture ? 'in a moment' : 'just now');
+  }
+
+  const formatUnit = (count: number, unit: 'minute' | 'hour' | 'day', suffix: string): string => {
+    if (isChinese) {
+      return new Intl.RelativeTimeFormat(locale, { numeric: 'always', style: 'short' })
+        .format(isFuture ? count : -count, unit);
+    }
+    // Keep the compact English format used by existing cards and metadata.
+    return isFuture ? `in ${count}${suffix}` : `${count}${suffix} ago`;
+  };
+
+  if (diffMins < 60) return formatUnit(diffMins, 'minute', 'm');
+  if (diffHours < 24) return formatUnit(diffHours, 'hour', 'h');
+  if (diffDays < 7) return formatUnit(diffDays, 'day', 'd');
+  return parsedDate.toLocaleDateString(locale);
 }
 
 /**

@@ -21,23 +21,23 @@ interface AuthFailureModalProps {
  */
 export function AuthFailureModal({ onOpenSettings }: AuthFailureModalProps) {
   const { isModalOpen, authFailureInfo, hideAuthFailureModal, clearAuthFailure } = useAuthFailureStore();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'uiShellAuth']);
 
   if (!authFailureInfo) return null;
 
-  const profileName = authFailureInfo.profileName || t('auth.failure.unknownProfile', 'Unknown Profile');
+  const profileName = authFailureInfo.profileName || t('uiShellAuth:auth.unknownProfile');
 
   // Get user-friendly message for the auth failure type
   const getFailureMessage = () => {
     switch (authFailureInfo.failureType) {
       case 'expired':
-        return t('auth.failure.tokenExpired', 'Your authentication token has expired.');
+        return t('uiShellAuth:auth.tokenExpired');
       case 'invalid':
-        return t('auth.failure.tokenInvalid', 'Your authentication token is invalid.');
+        return t('uiShellAuth:auth.tokenInvalid');
       case 'missing':
-        return t('auth.failure.tokenMissing', 'No authentication token found.');
+        return t('uiShellAuth:auth.tokenMissing');
       default:
-        return t('auth.failure.authFailed', 'Authentication failed.');
+        return t('uiShellAuth:auth.authFailed');
     }
   };
 
@@ -62,10 +62,10 @@ export function AuthFailureModal({ onOpenSettings }: AuthFailureModalProps) {
             </div>
             <div>
               <DialogTitle className="text-lg">
-                {t('auth.failure.title', 'Authentication Required')}
+                {t('uiShellAuth:auth.title')}
               </DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground">
-                {t('auth.failure.profileLabel', 'Profile')}: {profileName}
+                {t('uiShellAuth:auth.profileLabel')}: {profileName}
               </DialogDescription>
             </div>
           </div>
@@ -76,13 +76,13 @@ export function AuthFailureModal({ onOpenSettings }: AuthFailureModalProps) {
             {failureMessage}
           </p>
           <p className="text-sm text-muted-foreground">
-            {t('auth.failure.description', 'Please re-authenticate your Claude profile to continue using Aperant.')}
+            {t('uiShellAuth:auth.description')}
           </p>
 
           {authFailureInfo.taskId && (
             <div className="rounded-md bg-muted p-3 text-xs">
               <p className="text-muted-foreground">
-                {t('auth.failure.taskAffected', 'Task affected')}: <span className="font-mono">{authFailureInfo.taskId}</span>
+                {t('uiShellAuth:auth.taskAffected')}: <span className="font-mono">{authFailureInfo.taskId}</span>
               </p>
             </div>
           )}
@@ -90,7 +90,7 @@ export function AuthFailureModal({ onOpenSettings }: AuthFailureModalProps) {
           {authFailureInfo.originalError && (
             <details className="text-xs">
               <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                {t('auth.failure.technicalDetails', 'Technical details')}
+                {t('uiShellAuth:auth.technicalDetails')}
               </summary>
               <pre className="mt-2 rounded-md bg-muted p-2 overflow-x-auto whitespace-pre-wrap break-all">
                 {authFailureInfo.originalError}
@@ -101,11 +101,11 @@ export function AuthFailureModal({ onOpenSettings }: AuthFailureModalProps) {
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={handleDismiss} className="sm:mr-auto">
-            {t('labels.dismiss', 'Dismiss')}
+            {t('labels.dismiss')}
           </Button>
           <Button onClick={handleGoToSettings} className="gap-2">
             <Settings className="h-4 w-4" />
-            {t('auth.failure.goToSettings', 'Go to Settings')}
+            {t('uiShellAuth:auth.goToSettings')}
           </Button>
         </DialogFooter>
       </DialogContent>

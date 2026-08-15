@@ -1,3 +1,4 @@
+import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import { createActor } from 'xstate';
 import type { ActorRefFrom } from 'xstate';
@@ -213,7 +214,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
 
     const newTerminal: Terminal = {
       id: uuid(),
-      title: `Terminal ${state.terminals.length + 1}`,
+      title: i18n.t('uiRuntime:stores.terminalTitle', { number: state.terminals.length + 1 }),
       status: 'idle',
       cwd: cwd || process.env.HOME || '~',
       createdAt: new Date(),

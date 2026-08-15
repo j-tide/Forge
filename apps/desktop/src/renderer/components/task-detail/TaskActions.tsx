@@ -47,6 +47,7 @@ export function TaskActions({
   onShowDeleteDialog
 }: TaskActionsProps) {
   const { t } = useTranslation(['tasks']);
+  const { t: uiT } = useTranslation('uiTasks');
   return (
     <>
       <div className="p-4">
@@ -60,12 +61,12 @@ export function TaskActions({
             {isRecovering ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Recovering...
+                {t('tasks:labels.recovering')}
               </>
             ) : (
               <>
                 <RotateCcw className="mr-2 h-4 w-4" />
-                Recover Task
+                {t('tasks:actions.recover')}
               </>
             )}
           </Button>
@@ -76,7 +77,7 @@ export function TaskActions({
             onClick={onStartStop}
           >
             <Play className="mr-2 h-4 w-4" />
-            Resume Task
+            {t('tasks:actions.resume')}
           </Button>
         ) : (task.status === 'backlog' || task.status === 'in_progress') && (
           <Button
@@ -87,12 +88,12 @@ export function TaskActions({
             {isRunning ? (
               <>
                 <Square className="mr-2 h-4 w-4" />
-                Stop Task
+                {t('tasks:actions.stop')}
               </>
             ) : (
               <>
                 <Play className="mr-2 h-4 w-4" />
-                Start Task
+                {t('tasks:actions.start')}
               </>
             )}
           </Button>
@@ -100,7 +101,7 @@ export function TaskActions({
         {task.status === 'done' && (
           <div className="completion-state text-sm">
             <CheckCircle2 className="h-5 w-5" />
-            <span className="font-medium">Task completed successfully</span>
+            <span className="font-medium">{uiT('actions.completed')}</span>
           </div>
         )}
 
@@ -113,7 +114,7 @@ export function TaskActions({
           disabled={isRunning && !isStuck}
         >
           <Trash2 className="mr-2 h-4 w-4" />
-          Delete Task
+          {t('tasks:actions.delete')}
         </Button>
       </div>
 

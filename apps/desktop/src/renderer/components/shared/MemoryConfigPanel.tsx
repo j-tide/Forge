@@ -57,6 +57,7 @@ interface MemoryConfigPanelProps {
  */
 export function MemoryConfigPanel({ config, onChange, disabled = false }: MemoryConfigPanelProps) {
   const { t } = useTranslation('onboarding');
+  const { t: tShared } = useTranslation('uiShellShared');
 
   return (
     <div className="space-y-6">
@@ -140,8 +141,8 @@ export function MemoryConfigPanel({ config, onChange, disabled = false }: Memory
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="text-embedding-3-small">text-embedding-3-small (default, cheapest)</SelectItem>
-                    <SelectItem value="text-embedding-3-large">text-embedding-3-large (higher quality)</SelectItem>
+                    <SelectItem value="text-embedding-3-small">{tShared('embeddingSmall', { model: 'text-embedding-3-small' })}</SelectItem>
+                    <SelectItem value="text-embedding-3-large">{tShared('embeddingLarge', { model: 'text-embedding-3-large' })}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -213,7 +214,7 @@ export function MemoryConfigPanel({ config, onChange, disabled = false }: Memory
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gemini-embedding-001">gemini-embedding-001 (default)</SelectItem>
+                    <SelectItem value="gemini-embedding-001">{tShared('embeddingDefault', { model: 'gemini-embedding-001' })}</SelectItem>
                     <SelectItem value="text-embedding-004">text-embedding-004</SelectItem>
                   </SelectContent>
                 </Select>
@@ -241,7 +242,7 @@ export function MemoryConfigPanel({ config, onChange, disabled = false }: Memory
                 <PasswordInput
                   value={config.azureOpenaiApiKey}
                   onChange={(value) => onChange({ azureOpenaiApiKey: value })}
-                  placeholder="Azure API Key"
+                  placeholder={tShared('azureApiKey')}
                 />
               </div>
               <div className="space-y-1">

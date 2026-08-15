@@ -9,10 +9,30 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, } from '@testing-library/react';
+import { render as renderComponent, screen, fireEvent, } from '@testing-library/react';
+import { createInstance } from 'i18next';
+import { I18nextProvider } from 'react-i18next';
+import enOnboarding from '../../../shared/i18n/locales/en/uiShellOnboarding.json';
+import zhOnboarding from '../../../shared/i18n/locales/zh-CN/uiShellOnboarding.json';
 import '@testing-library/jest-dom';
 import { AuthChoiceStep } from './AuthChoiceStep';
 import type { APIProfile } from '@shared/types/profile';
+
+const translations = createInstance();
+translations.init({
+  lng: 'en',
+  fallbackLng: 'en',
+  defaultNS: 'uiShellOnboarding',
+  resources: {
+    en: { uiShellOnboarding: enOnboarding },
+    'zh-CN': { uiShellOnboarding: zhOnboarding }
+  },
+  interpolation: { escapeValue: false }
+});
+
+const render = (element: React.ReactNode) => renderComponent(
+  <I18nextProvider i18n={translations}>{element}</I18nextProvider>
+);
 
 // Mock the settings store
 const mockGoToNext = vi.fn();
@@ -59,7 +79,8 @@ vi.mock('../settings/ProfileEditDialog', () => ({
 }));
 
 describe('AuthChoiceStep', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await translations.changeLanguage('en');
     vi.clearAllMocks();
     // Reset profiles state to ensure clean state for each test
     mockProfiles = [];
@@ -116,6 +137,16 @@ describe('AuthChoiceStep', () => {
       const iconContainers = document.querySelectorAll('.bg-primary\\/10');
       expect(iconContainers.length).toBeGreaterThanOrEqual(2);
     });
+  });
+
+  it('switches authentication UI to Chinese without changing the authentication choices', async () => {
+    await translations.changeLanguage('zh-CN');
+    render(<AuthChoiceStep onNext={mockGoToNext} onBack={mockGoToPrevious} onSkip={mockSkipWizard} />);
+
+    expect(screen.getByText('选择认证方式')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('auth-option-oauth'));
+    expect(mockGoToNext).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Choose Your Authentication Method')).not.toBeInTheDocument();
   });
 
   describe('OAuth Button Handler', () => {

@@ -28,7 +28,8 @@ export function StagedSuccessMessage({
   onClose,
   onReviewAgain
 }: StagedSuccessMessageProps) {
-  const { t } = useTranslation(['taskReview']);
+  const { t } = useTranslation(['taskReview', 'common']);
+  const { t: uiT } = useTranslation('uiTasks');
   const [commitMessage, setCommitMessage] = useState(suggestedCommitMessage || '');
   const [copied, setCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -61,7 +62,7 @@ export function StagedSuccessMessage({
 
       const statusResult = await persistTaskStatus(task.id, 'done');
       if (!statusResult.success) {
-        setError(t('taskReview:stagedSuccess.errors.worktreeDeletedButStatusFailed', { error: statusResult.error || 'Unknown error' }));
+        setError(t('taskReview:stagedSuccess.errors.worktreeDeletedButStatusFailed', { error: statusResult.error || t('common:errors.unknownError') }));
         return;
       }
 
@@ -171,8 +172,8 @@ export function StagedSuccessMessage({
       <div className="bg-background/50 rounded-lg p-3 mb-3">
         <p className="text-xs text-muted-foreground mb-2">{t('taskReview:stagedSuccess.nextSteps')}</p>
         <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-          <li>{t('taskReview:stagedSuccess.reviewChanges')} <code className="bg-background px-1 rounded">git status</code> and <code className="bg-background px-1 rounded">git diff --staged</code></li>
-          <li>{t('taskReview:stagedSuccess.commitWhenReady')} <code className="bg-background px-1 rounded">git commit -m "your message"</code></li>
+          <li>{t('taskReview:stagedSuccess.reviewChanges')} <code className="bg-background px-1 rounded">git status</code> {uiT('review.and')} <code className="bg-background px-1 rounded">git diff --staged</code></li>
+          <li>{t('taskReview:stagedSuccess.commitWhenReady')} <code className="bg-background px-1 rounded">{uiT('review.commitExample')}</code></li>
           <li>{t('taskReview:stagedSuccess.pushToRemote')}</li>
         </ol>
       </div>

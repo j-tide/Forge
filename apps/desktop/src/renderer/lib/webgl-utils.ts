@@ -4,6 +4,7 @@
  * Feature detection and compatibility checks for WebGL rendering.
  * Inspired by Hyper's WebGL2 detection patterns.
  */
+import i18n from '../../shared/i18n';
 
 /**
  * Check if WebGL2 is supported in the current browser
@@ -155,7 +156,7 @@ export function testWebGLContext(): {
     if (!gl) {
       return {
         success: false,
-        error: 'Failed to create WebGL context',
+        error: i18n.t('uiRuntime:graphics.webglFailed'),
       };
     }
 

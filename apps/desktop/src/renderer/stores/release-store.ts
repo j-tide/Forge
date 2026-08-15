@@ -1,3 +1,4 @@
+import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import type {
   ReleaseableVersion,
@@ -106,10 +107,10 @@ export async function loadReleaseableVersions(projectId: string): Promise<void> 
         }
       }
     } else {
-      store.setError(result.error || 'Failed to load versions');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedLoadVersions'));
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Failed to load versions');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedLoadVersions'));
   } finally {
     store.setIsLoadingVersions(false);
   }
@@ -123,7 +124,7 @@ export async function runPreflightCheck(projectId: string): Promise<void> {
   const version = store.selectedVersion;
 
   if (!version) {
-    store.setError('No version selected');
+    store.setError(i18n.t('uiRuntime:stores.noVersionSelected'));
     return;
   }
 
@@ -135,10 +136,10 @@ export async function runPreflightCheck(projectId: string): Promise<void> {
     if (result.success && result.data) {
       store.setPreflightStatus(result.data);
     } else {
-      store.setError(result.error || 'Failed to run pre-flight checks');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedPreflight'));
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Failed to run pre-flight checks');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedPreflight'));
   } finally {
     store.setIsRunningPreflight(false);
   }
@@ -152,14 +153,14 @@ export function createRelease(projectId: string): void {
   const version = store.selectedVersion;
 
   if (!version) {
-    store.setError('No version selected');
+    store.setError(i18n.t('uiRuntime:stores.noVersionSelected'));
     return;
   }
 
   // Find the version to get its content
   const versionInfo = store.releaseableVersions.find(v => v.version === version);
   if (!versionInfo) {
-    store.setError('Version not found');
+    store.setError(i18n.t('uiRuntime:stores.versionNotFound'));
     return;
   }
 
@@ -168,7 +169,7 @@ export function createRelease(projectId: string): void {
   store.setReleaseProgress({
     stage: 'checking',
     progress: 0,
-    message: 'Starting release...'
+    message: i18n.t('uiRuntime:stores.startingRelease')
   });
 
   window.electronAPI.createRelease({

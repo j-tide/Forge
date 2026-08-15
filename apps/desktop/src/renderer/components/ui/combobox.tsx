@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown, Search } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
@@ -43,15 +44,19 @@ const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
       value,
       onValueChange,
       options,
-      placeholder = 'Select...',
-      searchPlaceholder = 'Search...',
-      emptyMessage = 'No results found',
+      placeholder,
+      searchPlaceholder,
+      emptyMessage,
       disabled = false,
       className,
       id,
     },
     ref
   ) => {
+    const { t } = useTranslation('uiShellShared');
+    const triggerPlaceholder = placeholder ?? t('select');
+    const inputPlaceholder = searchPlaceholder ?? t('search');
+    const emptyLabel = emptyMessage ?? t('noResults');
     const [open, setOpen] = React.useState(false);
     const [search, setSearch] = React.useState('');
     const [focusedIndex, setFocusedIndex] = React.useState(-1);
@@ -61,7 +66,7 @@ const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
 
     // Find the selected option's label
     const selectedOption = options.find((opt) => opt.value === value);
-    const displayValue = selectedOption?.label || placeholder;
+    const displayValue = selectedOption?.label || triggerPlaceholder;
 
     // Filter options based on search
     const filteredOptions = React.useMemo(() => {
@@ -211,7 +216,7 @@ const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
               aria-activedescendant={activeDescendant}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={searchPlaceholder}
+              placeholder={inputPlaceholder}
               className={cn(
                 'flex h-10 w-full bg-transparent py-3 px-2 text-sm',
                 'placeholder:text-muted-foreground',
@@ -223,10 +228,10 @@ const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
 
           {/* Options list */}
           <ScrollArea className="max-h-[300px]">
-            <div id={listboxId} role="listbox" aria-label={searchPlaceholder || placeholder} className="p-1">
+            <div id={listboxId} role="listbox" aria-label={inputPlaceholder || triggerPlaceholder} className="p-1">
               {filteredOptions.length === 0 ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">
-                  {emptyMessage}
+                  {emptyLabel}
                 </div>
               ) : (
                 filteredOptions.map((option, index) => {

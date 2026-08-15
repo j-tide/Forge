@@ -28,6 +28,7 @@ export function TaskHeader({
   onEdit
 }: TaskHeaderProps) {
   const { t } = useTranslation(['tasks', 'errors']);
+  const { t: uiT } = useTranslation('uiTasks');
 
   // Handle JSON error suffix with i18n
   const displayTitle = useMemo(() => {
@@ -60,16 +61,16 @@ export function TaskHeader({
           {isStuck ? (
             <Badge variant="warning" className="text-xs flex items-center gap-1 animate-pulse">
               <AlertTriangle className="h-3 w-3" />
-              Stuck
+              {t('tasks:labels.stuck')}
             </Badge>
           ) : isIncomplete ? (
             <>
               <Badge variant="warning" className="text-xs flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                Incomplete
+                {t('tasks:labels.incomplete')}
               </Badge>
               <Badge variant="outline" className="text-xs text-orange-400">
-                {taskProgress.completed}/{taskProgress.total} subtasks
+                {uiT('subtasks.fraction', { completed: taskProgress.completed, total: taskProgress.total })}
               </Badge>
             </>
           ) : (
@@ -85,10 +86,10 @@ export function TaskHeader({
                   variant={task.reviewReason === 'completed' ? 'success' : task.reviewReason === 'errors' ? 'destructive' : 'warning'}
                   className="text-xs"
                 >
-                  {task.reviewReason === 'completed' ? 'Completed' :
-                   task.reviewReason === 'errors' ? 'Has Errors' :
-                   task.reviewReason === 'plan_review' ? 'Approve Plan' :
-                   task.reviewReason === 'stopped' ? 'Stopped' : 'QA Issues'}
+                  {task.reviewReason === 'completed' ? t('tasks:reviewReason.completed') :
+                   task.reviewReason === 'errors' ? t('tasks:reviewReason.hasErrors') :
+                   task.reviewReason === 'plan_review' ? t('tasks:reviewReason.approvePlan') :
+                   task.reviewReason === 'stopped' ? t('tasks:reviewReason.stopped') : t('tasks:reviewReason.qaIssues')}
                 </Badge>
               )}
             </>

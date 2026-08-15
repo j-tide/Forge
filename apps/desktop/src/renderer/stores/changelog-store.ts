@@ -1,3 +1,4 @@
+import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import type {
   ChangelogTask,
@@ -298,7 +299,7 @@ export async function loadChangelogData(projectId: string): Promise<void> {
       store.setExistingChangelog(changelogResult.data);
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Failed to load changelog data');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedLoadChangelog'));
   }
 }
 
@@ -311,7 +312,7 @@ export async function loadTaskSpecs(projectId: string, taskIds: string[]): Promi
       store.setLoadedSpecs(result.data);
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Failed to load task specs');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedLoadTaskSpecs'));
   }
 }
 
@@ -367,7 +368,7 @@ export async function loadGitData(projectId: string): Promise<void> {
       }
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Failed to load git data');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedLoadGitData'));
   } finally {
     store.setIsLoadingGitData(false);
   }
@@ -414,11 +415,11 @@ export async function loadCommitsPreview(projectId: string): Promise<void> {
     if (result.success && result.data) {
       store.setPreviewCommits(result.data);
     } else {
-      store.setError(result.error || 'Failed to load commits');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedLoadCommits'));
       store.setPreviewCommits([]);
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Failed to load commits preview');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedLoadCommitsPreview'));
     store.setPreviewCommits([]);
   } finally {
     store.setIsLoadingCommits(false);
@@ -442,25 +443,25 @@ export async function generateChangelog(projectId: string): Promise<void> {
   // Validate based on source mode
   if (store.sourceMode === 'tasks') {
     if (store.selectedTaskIds.length === 0) {
-      store.setError('Please select at least one task to include in the changelog');
+      store.setError(i18n.t('uiRuntime:stores.selectChangelogTask'));
       return;
     }
   } else if (store.sourceMode === 'git-history') {
     if (store.previewCommits.length === 0) {
-      store.setError('No commits found for the selected options. Please adjust your filters.');
+      store.setError(i18n.t('uiRuntime:stores.noFilteredCommits'));
       return;
     }
   } else if (store.sourceMode === 'branch-diff') {
     if (!store.baseBranch || !store.compareBranch) {
-      store.setError('Please select both base and compare branches');
+      store.setError(i18n.t('uiRuntime:stores.selectBranches'));
       return;
     }
     if (store.baseBranch === store.compareBranch) {
-      store.setError('Base and compare branches must be different');
+      store.setError(i18n.t('uiRuntime:stores.differentBranches'));
       return;
     }
     if (store.previewCommits.length === 0) {
-      store.setError('No commits found between the selected branches');
+      store.setError(i18n.t('uiRuntime:stores.noBranchCommits'));
       return;
     }
   }
@@ -472,8 +473,8 @@ export async function generateChangelog(projectId: string): Promise<void> {
     progress: 0,
     message:
       store.sourceMode === 'tasks'
-        ? 'Loading task specifications...'
-        : 'Preparing commit data...'
+        ? i18n.t('uiRuntime:stores.loadingTaskSpecs')
+        : i18n.t('uiRuntime:stores.preparingCommits')
   });
 
   // Build the generation request based on source mode
@@ -520,15 +521,15 @@ export async function generateChangelog(projectId: string): Promise<void> {
       });
     } else {
       // This should never happen due to validation, but handle it for TypeScript
-      throw new Error(`Invalid source mode: ${store.sourceMode}`);
+      throw new Error(i18n.t('uiRuntime:stores.invalidSourceMode', { mode: store.sourceMode }));
     }
 
     // Check if generation started successfully
     if (!result.success) {
-      handleGenerationError(store, result.error || 'Failed to start changelog generation');
+      handleGenerationError(store, result.error || i18n.t('uiRuntime:stores.failedStartChangelog'));
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Failed to start changelog generation';
+    const errorMessage = error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedStartChangelog');
     handleGenerationError(store, errorMessage);
   }
 }
@@ -540,7 +541,7 @@ export async function saveChangelog(
   const store = useChangelogStore.getState();
 
   if (!store.generatedChangelog) {
-    store.setError('No changelog to save');
+    store.setError(i18n.t('uiRuntime:stores.noChangelogSave'));
     return false;
   }
 
@@ -554,11 +555,11 @@ export async function saveChangelog(
     if (result.success) {
       return true;
     } else {
-      store.setError(result.error || 'Failed to save changelog');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedSaveChangelog'));
       return false;
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Failed to save changelog');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedSaveChangelog'));
     return false;
   }
 }
@@ -567,7 +568,7 @@ export function copyChangelogToClipboard(): boolean {
   const store = useChangelogStore.getState();
 
   if (!store.generatedChangelog) {
-    store.setError('No changelog to copy');
+    store.setError(i18n.t('uiRuntime:stores.noChangelogCopy'));
     return false;
   }
 
@@ -575,7 +576,7 @@ export function copyChangelogToClipboard(): boolean {
     navigator.clipboard.writeText(store.generatedChangelog);
     return true;
   } catch (_error) {
-    store.setError('Failed to copy to clipboard');
+    store.setError(i18n.t('uiRuntime:stores.failedCopyClipboard'));
     return false;
   }
 }

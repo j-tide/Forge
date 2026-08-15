@@ -1,3 +1,4 @@
+import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import type { FileNode } from '../../shared/types';
 
@@ -95,7 +96,7 @@ export const useFileExplorerStore = create<FileExplorerState>((set, get) => ({
       const result = await window.electronAPI.listDirectory(dirPath);
 
       if (!result.success || !result.data) {
-        throw new Error(result.error || 'Failed to load directory');
+        throw new Error(result.error || i18n.t('uiRuntime:stores.failedLoadDirectory'));
       }
 
       // Cache the result
@@ -109,7 +110,7 @@ export const useFileExplorerStore = create<FileExplorerState>((set, get) => ({
 
       return result.data;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError');
       set((state) => {
         const newLoading = new Map(state.isLoading);
         newLoading.set(dirPath, false);

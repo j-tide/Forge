@@ -9,7 +9,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import '../../../../shared/i18n';
+import i18n from '../../../../shared/i18n';
 import { CreatePRDialog } from './CreatePRDialog';
 import type { Task, WorktreeStatus } from '../../../../shared/types';
 
@@ -53,7 +53,8 @@ describe('CreatePRDialog', () => {
     deletions: 50
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
     vi.clearAllMocks();
     mockOnCreatePR.mockResolvedValue({ success: true, prUrl: 'https://github.com/test/pr/1' });
   });

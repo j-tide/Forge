@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import i18n from '../../shared/i18n';
 import { unstable_batchedUpdates } from 'react-dom';
 import { useTaskStore } from '../stores/task-store';
 import { useRoadmapStore } from '../stores/roadmap-store';
@@ -193,7 +194,7 @@ export function useIpcListeners(): void {
         // Filter by project to prevent multi-project interference (issue #723)
         if (!isTaskForCurrentProject(projectId)) return;
         // Errors are not batched - show immediately
-        setError(`Task ${taskId}: ${error}`);
+        setError(i18n.t('uiRuntime:ipc.taskError', { taskId, error }));
         appendLog(taskId, `[ERROR] ${error}`);
       }
     );
@@ -288,7 +289,7 @@ export function useIpcListeners(): void {
           useRoadmapStore.getState().setGenerationStatus({
             phase: 'complete',
             progress: 100,
-            message: 'Roadmap ready'
+            message: i18n.t('uiRuntime:ipc.roadmapReady')
           });
         }
       }
@@ -309,7 +310,7 @@ export function useIpcListeners(): void {
           useRoadmapStore.getState().setGenerationStatus({
             phase: 'error',
             progress: 0,
-            message: 'Generation failed',
+            message: i18n.t('uiRuntime:ipc.generationFailed'),
             error
           });
         }
@@ -330,7 +331,7 @@ export function useIpcListeners(): void {
           useRoadmapStore.getState().setGenerationStatus({
             phase: 'idle',
             progress: 0,
-            message: 'Generation stopped'
+            message: i18n.t('uiRuntime:ipc.generationStopped')
           });
         }
       }

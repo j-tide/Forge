@@ -17,7 +17,7 @@ interface MemoryStepProps {
  * Shows a simplified view: header, MemoryConfigPanel, and Back/Skip/Save buttons.
  */
 export function MemoryStep({ onNext, onBack }: MemoryStepProps) {
-  const { t } = useTranslation('onboarding');
+  const { t } = useTranslation(['onboarding', 'uiShellOnboarding']);
   const { settings, updateSettings } = useSettingsStore();
 
   const [config, setConfig] = useState<MemoryPanelConfig>({
@@ -99,10 +99,10 @@ export function MemoryStep({ onNext, onBack }: MemoryStepProps) {
         updateSettings(storeUpdate);
         onNext();
       } else {
-        setError(result?.error || 'Failed to save memory configuration');
+        setError(result?.error || t('uiShellOnboarding:memorySaveFailed'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error occurred');
+      setError(err instanceof Error ? err.message : t('uiShellOnboarding:unknownError'));
     } finally {
       setIsSaving(false);
     }

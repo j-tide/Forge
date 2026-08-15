@@ -25,15 +25,10 @@ import { Button } from '../ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { cn, formatRelativeTime } from '../../lib/utils';
 import {
-  TASK_CATEGORY_LABELS,
   TASK_CATEGORY_COLORS,
-  TASK_COMPLEXITY_LABELS,
   TASK_COMPLEXITY_COLORS,
-  TASK_IMPACT_LABELS,
   TASK_IMPACT_COLORS,
-  TASK_PRIORITY_LABELS,
   TASK_PRIORITY_COLORS,
-  IDEATION_TYPE_LABELS,
   JSON_ERROR_PREFIX
 } from '../../../shared/constants';
 import type { Task, TaskCategory } from '../../../shared/types';
@@ -59,7 +54,8 @@ interface TaskMetadataProps {
 const COLLAPSED_HEIGHT = 200;
 
 export function TaskMetadata({ task }: TaskMetadataProps) {
-  const { t } = useTranslation(['tasks', 'errors']);
+  const { t, i18n } = useTranslation(['tasks', 'errors']);
+  const { t: uiT } = useTranslation('uiTasks');
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasOverflow, setHasOverflow] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -114,7 +110,7 @@ export function TaskMetadata({ task }: TaskMetadataProps) {
                   const Icon = CategoryIcon[task.metadata.category!];
                   return <Icon className="h-3 w-3 mr-1" />;
                 })()}
-                {TASK_CATEGORY_LABELS[task.metadata.category]}
+                {uiT(`category.${task.metadata.category}`)}
               </Badge>
             )}
             {/* Priority */}
@@ -123,7 +119,7 @@ export function TaskMetadata({ task }: TaskMetadataProps) {
                 variant="outline"
                 className={cn('text-xs', TASK_PRIORITY_COLORS[task.metadata.priority])}
               >
-                {TASK_PRIORITY_LABELS[task.metadata.priority]}
+                {t(`tasks:form.classification.values.priority.${task.metadata.priority}`)}
               </Badge>
             )}
             {/* Complexity */}
@@ -132,7 +128,7 @@ export function TaskMetadata({ task }: TaskMetadataProps) {
                 variant="outline"
                 className={cn('text-xs', TASK_COMPLEXITY_COLORS[task.metadata.complexity])}
               >
-                {TASK_COMPLEXITY_LABELS[task.metadata.complexity]}
+                {t(`tasks:form.classification.values.complexity.${task.metadata.complexity}`)}
               </Badge>
             )}
             {/* Impact */}
@@ -141,7 +137,7 @@ export function TaskMetadata({ task }: TaskMetadataProps) {
                 variant="outline"
                 className={cn('text-xs', TASK_IMPACT_COLORS[task.metadata.impact])}
               >
-                {TASK_IMPACT_LABELS[task.metadata.impact]}
+                {t(`tasks:form.classification.values.impact.${task.metadata.impact}`)}
               </Badge>
             )}
             {/* Security Severity */}
@@ -151,15 +147,15 @@ export function TaskMetadata({ task }: TaskMetadataProps) {
                 className={cn('text-xs', TASK_IMPACT_COLORS[task.metadata.securitySeverity])}
               >
                 <Shield className="h-3 w-3 mr-1" />
-                {task.metadata.securitySeverity}
+                {uiT(`severity.${task.metadata.securitySeverity}`)}
               </Badge>
             )}
             {/* Source Type */}
             {task.metadata?.sourceType && (
               <Badge variant="secondary" className="text-xs">
                 {task.metadata.sourceType === 'ideation' && task.metadata.ideationType
-                  ? IDEATION_TYPE_LABELS[task.metadata.ideationType] || task.metadata.ideationType
-                  : task.metadata.sourceType}
+                  ? uiT(`ideation.${task.metadata.ideationType}`, { defaultValue: task.metadata.ideationType })
+                  : uiT(`source.${task.metadata.sourceType}`, { defaultValue: task.metadata.sourceType })}
               </Badge>
             )}
           </div>
@@ -169,10 +165,10 @@ export function TaskMetadata({ task }: TaskMetadataProps) {
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <Clock className="h-3 w-3" />
-            Created {formatRelativeTime(task.createdAt)}
+            {uiT('metadata.created', { time: formatRelativeTime(task.createdAt, i18n.language) })}
           </span>
           <span className="text-border">•</span>
-          <span>Updated {formatRelativeTime(task.updatedAt)}</span>
+          <span>{uiT('metadata.updated', { time: formatRelativeTime(task.updatedAt, i18n.language) })}</span>
         </div>
       </div>
 
@@ -237,7 +233,7 @@ export function TaskMetadata({ task }: TaskMetadataProps) {
             <div>
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
                 <Lightbulb className="h-3 w-3 text-warning" />
-                Rationale
+                {uiT('metadata.rationale')}
               </h3>
               <p className="text-sm text-foreground/80">{task.metadata.rationale}</p>
             </div>
@@ -248,7 +244,7 @@ export function TaskMetadata({ task }: TaskMetadataProps) {
             <div>
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
                 <Target className="h-3 w-3 text-success" />
-                Problem Solved
+                {uiT('metadata.problemSolved')}
               </h3>
               <p className="text-sm text-foreground/80">{task.metadata.problemSolved}</p>
             </div>
@@ -259,7 +255,7 @@ export function TaskMetadata({ task }: TaskMetadataProps) {
             <div>
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
                 <Users className="h-3 w-3 text-info" />
-                Target Audience
+                {uiT('metadata.targetAudience')}
               </h3>
               <p className="text-sm text-foreground/80">{task.metadata.targetAudience}</p>
             </div>
@@ -270,7 +266,7 @@ export function TaskMetadata({ task }: TaskMetadataProps) {
             <div>
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
                 <GitBranch className="h-3 w-3 text-purple-400" />
-                Dependencies
+                {uiT('metadata.dependencies')}
               </h3>
               <ul className="text-sm text-foreground/80 list-disc list-inside space-y-0.5">
                 {task.metadata.dependencies.map((dep, idx) => (
@@ -307,7 +303,7 @@ export function TaskMetadata({ task }: TaskMetadataProps) {
             <div>
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
                 <ListChecks className="h-3 w-3 text-success" />
-                Acceptance Criteria
+                {uiT('metadata.acceptanceCriteria')}
               </h3>
               <ul className="text-sm text-foreground/80 list-disc list-inside space-y-0.5">
                 {task.metadata.acceptanceCriteria.map((criteria, idx) => (
@@ -322,7 +318,7 @@ export function TaskMetadata({ task }: TaskMetadataProps) {
             <div>
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
                 <FileCode className="h-3 w-3" />
-                Affected Files
+                {uiT('metadata.affectedFiles')}
               </h3>
               <div className="flex flex-wrap gap-1">
                 {task.metadata.affectedFiles.map((file, idx) => (

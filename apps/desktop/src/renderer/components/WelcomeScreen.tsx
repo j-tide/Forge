@@ -19,7 +19,7 @@ export function WelcomeScreen({
   onOpenProject,
   onSelectProject
 }: WelcomeScreenProps) {
-  const { t } = useTranslation(['welcome', 'common', 'dialogs']);
+  const { t, i18n } = useTranslation(['welcome', 'common', 'dialogs']);
 
   // Sort projects by updatedAt (most recent first)
   const recentProjects = [...projects]
@@ -37,7 +37,7 @@ export function WelcomeScreen({
     if (diffMins < 60) return t('common:time.minutesAgo', { count: diffMins });
     if (diffHours < 24) return t('common:time.hoursAgo', { count: diffHours });
     if (diffDays < 7) return t('common:time.daysAgo', { count: diffDays });
-    return new Date(date).toLocaleDateString();
+    return new Date(date).toLocaleDateString(i18n.resolvedLanguage);
   };
 
   const projectActions = (
@@ -99,7 +99,7 @@ export function WelcomeScreen({
                           </span>
                           {project.autoBuildPath && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/20 text-success shrink-0">
-                              {t('dialogs:initialize.projectInitialized')}
+                              {t('dialogs:update.projectInitialized')}
                             </span>
                           )}
                         </div>

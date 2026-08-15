@@ -25,7 +25,7 @@ interface AddProjectModalProps {
 }
 
 export function AddProjectModal({ open, onOpenChange, onProjectAdded }: AddProjectModalProps) {
-  const { t } = useTranslation('dialogs');
+  const { t } = useTranslation(['dialogs', 'uiShell']);
   const [step, setStep] = useState<ModalStep>('choose');
   const [projectName, setProjectName] = useState('');
   const [projectLocation, setProjectLocation] = useState('');
@@ -118,7 +118,7 @@ export function AddProjectModal({ open, onOpenChange, onProjectAdded }: AddProje
       );
 
       if (!result.success || !result.data) {
-        setError(result.error || 'Failed to create project folder');
+        setError(result.error || t('uiShell:project.createFolderFailed'));
         return;
       }
 
@@ -161,6 +161,7 @@ export function AddProjectModal({ open, onOpenChange, onProjectAdded }: AddProje
       <div className="py-4 space-y-3">
         {/* Open Existing Option */}
         <button
+          type="button"
           onClick={handleOpenExisting}
           className={cn(
             'w-full flex items-center gap-4 p-4 rounded-xl border border-border',
@@ -183,6 +184,7 @@ export function AddProjectModal({ open, onOpenChange, onProjectAdded }: AddProje
 
         {/* Create New Option */}
         <button
+          type="button"
           onClick={() => setStep('create-form')}
           className={cn(
             'w-full flex items-center gap-4 p-4 rounded-xl border border-border',

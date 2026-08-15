@@ -1,3 +1,4 @@
+import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import type {
   ProjectIndex,
@@ -113,10 +114,10 @@ export async function loadProjectContext(projectId: string): Promise<void> {
       store.setMemoryState(result.data.memoryState);
       store.setRecentMemories(result.data.recentMemories || []);
     } else {
-      store.setIndexError(result.error || 'Failed to load project context');
+      store.setIndexError(result.error || i18n.t('uiRuntime:stores.failedLoadContext'));
     }
   } catch (error) {
-    store.setIndexError(error instanceof Error ? error.message : 'Unknown error');
+    store.setIndexError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
   } finally {
     store.setIndexLoading(false);
     store.setMemoryLoading(false);
@@ -136,10 +137,10 @@ export async function refreshProjectIndex(projectId: string): Promise<void> {
     if (result.success && result.data) {
       store.setProjectIndex(result.data);
     } else {
-      store.setIndexError(result.error || 'Failed to refresh project index');
+      store.setIndexError(result.error || i18n.t('uiRuntime:stores.failedRefreshIndex'));
     }
   } catch (error) {
-    store.setIndexError(error instanceof Error ? error.message : 'Unknown error');
+    store.setIndexError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
   } finally {
     store.setIndexLoading(false);
   }

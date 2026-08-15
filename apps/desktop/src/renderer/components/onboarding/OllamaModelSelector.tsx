@@ -36,7 +36,7 @@ interface OllamaModelSelectorProps {
 const RECOMMENDED_MODELS: OllamaModel[] = [
   {
     name: 'qwen3-embedding:4b',
-    description: 'Qwen3 4B - Balanced quality and speed',
+    description: 'qwenBalanced',
     size_estimate: '3.1 GB',
     dim: 2560,
     installed: false,
@@ -44,7 +44,7 @@ const RECOMMENDED_MODELS: OllamaModel[] = [
   },
   {
     name: 'qwen3-embedding:8b',
-    description: 'Qwen3 8B - Best embedding quality',
+    description: 'qwenQuality',
     size_estimate: '6.0 GB',
     dim: 4096,
     installed: false,
@@ -52,7 +52,7 @@ const RECOMMENDED_MODELS: OllamaModel[] = [
   },
   {
     name: 'qwen3-embedding:0.6b',
-    description: 'Qwen3 0.6B - Smallest and fastest',
+    description: 'qwenFast',
     size_estimate: '494 MB',
     dim: 1024,
     installed: false,
@@ -60,14 +60,14 @@ const RECOMMENDED_MODELS: OllamaModel[] = [
   },
   {
     name: 'embeddinggemma',
-    description: "Google's lightweight embedding model",
+    description: 'gemmaDescription',
     size_estimate: '621 MB',
     dim: 768,
     installed: false,
   },
   {
     name: 'nomic-embed-text',
-    description: 'Popular general-purpose embeddings',
+    description: 'nomicDescription',
     size_estimate: '274 MB',
     dim: 768,
     installed: false,
@@ -110,6 +110,7 @@ export function OllamaModelSelector({
   baseUrl,
 }: OllamaModelSelectorProps) {
   const { t } = useTranslation('onboarding');
+  const { t: tm } = useTranslation('uiShellOnboardingMemory');
   const [models, setModels] = useState<OllamaModel[]>(RECOMMENDED_MODELS);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -210,14 +211,14 @@ export function OllamaModelSelector({
     } catch (err) {
       if (!abortSignal?.aborted) {
         console.error('Failed to check Ollama models:', err);
-        setError('Failed to check Ollama models');
+        setError(tm('checkModelsFailed'));
       }
     } finally {
       if (!abortSignal?.aborted) {
         setIsLoading(false);
       }
     }
-  }, [baseUrl]);
+  }, [baseUrl, tm]);
 
   /**
    * Install Ollama by opening terminal with the official install command.
@@ -239,10 +240,10 @@ export function OllamaModelSelector({
           checkInstalledModels();
         }, 5000);
       } else {
-        setError(result?.error || 'Failed to start Ollama installation');
+        setError(result?.error || tm('installStartFailed'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to install Ollama');
+      setError(err instanceof Error ? err.message : tm('installFailed'));
     } finally {
       setIsInstalling(false);
     }
@@ -281,12 +282,12 @@ export function OllamaModelSelector({
          // Refresh the model list
          await checkInstalledModels();
        } else {
-         const errorMsg = result?.error || `Failed to download ${modelName}`;
+         const errorMsg = result?.error || tm('modelDownloadFailed', { model: modelName });
          failDownload(modelName, errorMsg);
          setError(errorMsg);
        }
      } catch (err) {
-       const errorMsg = err instanceof Error ? err.message : 'Download failed';
+       const errorMsg = err instanceof Error ? err.message : tm('downloadFailed');
        failDownload(modelName, errorMsg);
        setError(errorMsg);
      }
@@ -315,7 +316,7 @@ export function OllamaModelSelector({
     return (
       <div className={cn('flex items-center justify-center py-8', className)}>
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-sm text-muted-foreground">Checking Ollama models...</span>
+        <span className="ml-2 text-sm text-muted-foreground">{tm('checkingModels')}</span>
       </div>
     );
   }
@@ -480,30 +481,30 @@ export function OllamaModelSelector({
                      <div className="flex items-center gap-2">
                        <span className="text-sm font-medium">{model.name}</span>
                        <span className="text-xs text-muted-foreground">
-                         ({model.dim} dim)
+                         {tm('dimensions', { count: model.dim })}
                        </span>
                        {model.badge === 'recommended' && (
                          <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
-                           Recommended
+                           {tm('recommended')}
                          </span>
                        )}
                        {model.badge === 'quality' && (
                          <span className="inline-flex items-center rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-400">
-                           Highest Quality
+                           {tm('highestQuality')}
                          </span>
                        )}
                        {model.badge === 'fast' && (
                          <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
-                           Fastest
+                           {tm('fastest')}
                          </span>
                        )}
                        {model.installed && (
                          <span className="inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-xs text-success">
-                           Installed
+                           {tm('installed')}
                          </span>
                        )}
                      </div>
-                     <p className="text-xs text-muted-foreground">{model.description}</p>
+                     <p className="text-xs text-muted-foreground">{tm(model.description)}</p>
                    </div>
                  </div>
 
@@ -522,12 +523,12 @@ export function OllamaModelSelector({
                      {isCurrentlyDownloading ? (
                        <>
                          <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                         Downloading...
+                         {tm('downloading')}
                        </>
                      ) : (
                        <>
                          <Download className="h-3.5 w-3.5 mr-1.5" />
-                         Download
+                         {tm('download')}
                          {model.size_estimate && (
                            <span className="ml-1 text-muted-foreground">
                              ({model.size_estimate})
@@ -557,7 +558,7 @@ export function OllamaModelSelector({
                    {/* Progress info: percentage, speed, time remaining */}
                    <div className="flex items-center justify-between text-xs text-muted-foreground">
                      <span className="font-medium text-foreground">
-                       {progress && progress.percentage > 0 ? `${Math.round(progress.percentage)}%` : 'Starting download...'}
+                       {progress && progress.percentage > 0 ? `${Math.round(progress.percentage)}%` : tm('downloadStarting')}
                      </span>
                      <div className="flex items-center gap-2">
                        {progress?.speed && <span>{progress.speed}</span>}
@@ -572,7 +573,7 @@ export function OllamaModelSelector({
        </div>
 
       <p className="text-xs text-muted-foreground">
-        Select an installed model for semantic search. Memory works with keyword search even without embeddings.
+        {tm('selectModelNote')}
       </p>
     </div>
   );

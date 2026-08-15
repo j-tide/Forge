@@ -1,3 +1,4 @@
+import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import type {
   InsightsSession,
@@ -274,7 +275,7 @@ export function sendMessage(projectId: string, message: string, modelConfig?: In
   store.clearToolsUsed(); // Clear tools from previous response
   store.setStatus({
     phase: 'thinking',
-    message: 'Processing your message...'
+    message: i18n.t('uiRuntime:stores.processingMessage')
   });
 
   // Use provided modelConfig, or fall back to session's config
@@ -412,7 +413,7 @@ export function setupInsightsListeners(): () => void {
             store().setCurrentTool(null); // Clear tool when receiving text
             store().setStatus({
               phase: 'streaming',
-              message: 'Receiving response...'
+              message: i18n.t('uiRuntime:stores.receivingResponse')
             });
           }
           break;
@@ -429,7 +430,7 @@ export function setupInsightsListeners(): () => void {
             });
             store().setStatus({
               phase: 'streaming',
-              message: `Using ${chunk.tool.name}...`
+              message: i18n.t('uiRuntime:stores.usingTool', { tool: chunk.tool.name })
             });
           }
           break;

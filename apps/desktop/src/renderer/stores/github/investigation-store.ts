@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { create } from 'zustand';
 import type {
   GitHubInvestigationStatus,
@@ -48,7 +49,7 @@ export function investigateGitHubIssue(
     phase: 'fetching',
     issueNumber,
     progress: 0,
-    message: 'Starting investigation...'
+    message: i18n.t('uiRuntime:stores.startingInvestigation')
   });
   store.setInvestigationResult(null);
 

@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { create } from 'zustand';
 import type { GitHubSyncStatus } from '../../../shared/types';
 
@@ -55,11 +56,11 @@ export async function checkGitHubConnection(projectId: string): Promise<GitHubSy
       store.setSyncStatus(result.data);
       return result.data;
     } else {
-      store.setConnectionError(result.error || 'Failed to check GitHub connection');
+      store.setConnectionError(result.error || i18n.t('uiRuntime:stores.failedGitHubConnection'));
       return null;
     }
   } catch (error) {
-    store.setConnectionError(error instanceof Error ? error.message : 'Unknown error');
+    store.setConnectionError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
     return null;
   }
 }

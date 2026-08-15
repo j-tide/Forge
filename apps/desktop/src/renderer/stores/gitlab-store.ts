@@ -1,3 +1,4 @@
+import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import type {
   GitLabIssue,
@@ -125,10 +126,10 @@ export async function loadGitLabIssues(projectId: string, state?: 'opened' | 'cl
     if (result.success && result.data) {
       store.setIssues(result.data);
     } else {
-      store.setError(result.error || 'Failed to load GitLab issues');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedLoadGitLabIssues'));
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Unknown error');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
   } finally {
     store.setLoading(false);
   }
@@ -143,11 +144,11 @@ export async function checkGitLabConnection(projectId: string): Promise<GitLabSy
       store.setSyncStatus(result.data);
       return result.data;
     } else {
-      store.setError(result.error || 'Failed to check GitLab connection');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedGitLabConnection'));
       return null;
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Unknown error');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
     return null;
   }
 }
@@ -158,7 +159,7 @@ export function investigateGitLabIssue(projectId: string, issueIid: number, sele
     phase: 'fetching',
     issueIid,
     progress: 0,
-    message: 'Starting investigation...'
+    message: i18n.t('uiRuntime:stores.startingInvestigation')
   });
   store.setInvestigationResult(null);
 
@@ -177,11 +178,11 @@ export async function importGitLabIssues(
     if (result.success) {
       return true;
     } else {
-      store.setError(result.error || 'Failed to import GitLab issues');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedImportGitLabIssues'));
       return false;
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Unknown error');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
     return false;
   } finally {
     store.setLoading(false);

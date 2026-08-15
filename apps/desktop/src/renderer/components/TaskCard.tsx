@@ -16,15 +16,10 @@ import {
 import { cn, formatRelativeTime, sanitizeMarkdownForDisplay } from '../lib/utils';
 import { PhaseProgressIndicator } from './PhaseProgressIndicator';
 import {
-  TASK_CATEGORY_LABELS,
   TASK_CATEGORY_COLORS,
   TASK_COMPLEXITY_COLORS,
-  TASK_COMPLEXITY_LABELS,
   TASK_IMPACT_COLORS,
-  TASK_IMPACT_LABELS,
   TASK_PRIORITY_COLORS,
-  TASK_PRIORITY_LABELS,
-  EXECUTION_PHASE_LABELS,
   EXECUTION_PHASE_BADGE_COLORS,
   TASK_STATUS_COLUMNS,
   TASK_STATUS_LABELS,
@@ -133,7 +128,8 @@ export const TaskCard = memo(function TaskCard({
   isSelected,
   onToggleSelect
 }: TaskCardProps) {
-  const { t } = useTranslation(['tasks', 'errors']);
+  const { t, i18n } = useTranslation(['tasks', 'errors']);
+  const { t: uiT } = useTranslation('uiTasks');
   const { toast } = useToast();
   const [isStuck, setIsStuck] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
@@ -169,10 +165,10 @@ export const TaskCard = memo(function TaskCard({
     return task.title;
   }, [task.title, t]);
 
-  // Memoize relative time (recalculates only when updatedAt changes)
+  // Recompute relative time when either the timestamp or interface language changes.
   const relativeTime = useMemo(
-    () => formatRelativeTime(task.updatedAt),
-    [task.updatedAt]
+    () => formatRelativeTime(task.updatedAt, i18n.language),
+    [task.updatedAt, i18n.language]
   );
 
   // Memoize status menu items to avoid recreating on every render
@@ -412,7 +408,7 @@ export const TaskCard = memo(function TaskCard({
                 )}
               >
                 <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                {EXECUTION_PHASE_LABELS[executionPhase]}
+                {uiT(`phases.${executionPhase}`)}
               </Badge>
             )}
              {/* Status badge - hide when execution phase badge is showing */}
@@ -464,7 +460,7 @@ export const TaskCard = memo(function TaskCard({
                     return <Icon className="h-2.5 w-2.5 mr-0.5" />;
                   })()
                 )}
-                {TASK_CATEGORY_LABELS[task.metadata.category]}
+                {uiT(`category.${task.metadata.category}`)}
               </Badge>
             )}
             {/* Impact badge - high visibility for important tasks */}
@@ -473,7 +469,7 @@ export const TaskCard = memo(function TaskCard({
                 variant="outline"
                 className={cn('text-[10px] px-1.5 py-0', TASK_IMPACT_COLORS[task.metadata.impact])}
               >
-                {TASK_IMPACT_LABELS[task.metadata.impact]}
+                {t(`tasks:form.classification.values.impact.${task.metadata.impact}`)}
               </Badge>
             )}
             {/* Complexity badge */}
@@ -482,7 +478,7 @@ export const TaskCard = memo(function TaskCard({
                 variant="outline"
                 className={cn('text-[10px] px-1.5 py-0', TASK_COMPLEXITY_COLORS[task.metadata.complexity])}
               >
-                {TASK_COMPLEXITY_LABELS[task.metadata.complexity]}
+                {t(`tasks:form.classification.values.complexity.${task.metadata.complexity}`)}
               </Badge>
             )}
             {/* Priority badge - only show urgent/high */}
@@ -491,7 +487,7 @@ export const TaskCard = memo(function TaskCard({
                 variant="outline"
                 className={cn('text-[10px] px-1.5 py-0', TASK_PRIORITY_COLORS[task.metadata.priority])}
               >
-                {TASK_PRIORITY_LABELS[task.metadata.priority]}
+                {t(`tasks:form.classification.values.priority.${task.metadata.priority}`)}
               </Badge>
             )}
             {/* Security severity - always show */}

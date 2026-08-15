@@ -111,6 +111,7 @@ export function WorkspaceStatus({
   onOpenInbuiltTerminal
 }: WorkspaceStatusProps) {
   const { t } = useTranslation(['taskReview', 'common', 'tasks']);
+  const { t: uiT } = useTranslation('uiTasks');
   const { settings } = useSettingsStore();
   const preferredIDE = settings.preferredIDE || 'vscode';
   const preferredTerminal = settings.preferredTerminal || 'system';
@@ -287,7 +288,7 @@ export function WorkspaceStatus({
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-medium text-sm text-foreground flex items-center gap-2">
             <GitBranch className="h-4 w-4 text-purple-400" />
-            Build Ready for Review
+            {uiT('review.readyForReview')}
           </h3>
           <Button
             variant="ghost"
@@ -296,7 +297,7 @@ export function WorkspaceStatus({
             className="h-7 px-2 text-xs"
           >
             <Eye className="h-3.5 w-3.5 mr-1" />
-            View
+            {uiT('review.view')}
           </Button>
         </div>
 
@@ -308,7 +309,7 @@ export function WorkspaceStatus({
           </span>
           <span className="flex items-center gap-1.5 text-muted-foreground">
             <GitCommit className="h-3.5 w-3.5" />
-            <span className="font-medium text-foreground">{worktreeStatus.commitCount || 0}</span> commits
+            <span className="font-medium text-foreground">{worktreeStatus.commitCount || 0}</span> {t('taskReview:pr.labels.commits')}
           </span>
           <span className="flex items-center gap-1 text-success">
             <Plus className="h-3.5 w-3.5" />
@@ -346,7 +347,7 @@ export function WorkspaceStatus({
               className="h-7 px-2 text-xs"
             >
               <Code className="h-3.5 w-3.5 mr-1" />
-              Open in {IDE_LABELS[preferredIDE]}
+              {uiT('review.openIn', { app: IDE_LABELS[preferredIDE] })}
             </Button>
             <Button
               variant="outline"
@@ -355,7 +356,7 @@ export function WorkspaceStatus({
               className="h-7 px-2 text-xs"
             >
               <Terminal className="h-3.5 w-3.5 mr-1" />
-              Open in {TERMINAL_LABELS[preferredTerminal]}
+              {uiT('review.openIn', { app: TERMINAL_LABELS[preferredTerminal] === 'Terminal' ? uiT('review.terminal') : TERMINAL_LABELS[preferredTerminal] })}
             </Button>
           </div>
         )}
@@ -377,10 +378,10 @@ export function WorkspaceStatus({
             <AlertTriangle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-warning">
-                {uncommittedCount} uncommitted {uncommittedCount === 1 ? 'change' : 'changes'} in main project
+                {uiT('review.uncommittedChanges', { count: uncommittedCount })}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Commit or stash them in your terminal before staging to avoid conflicts.
+                {uiT('review.uncommittedHint')}
               </p>
             </div>
           </div>
@@ -390,7 +391,7 @@ export function WorkspaceStatus({
         {isLoadingPreview && !mergePreview && (
           <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Checking for conflicts...
+            {uiT('review.checkingConflicts')}
           </div>
         )}
 
@@ -461,7 +462,7 @@ export function WorkspaceStatus({
                       {hasPathMappedMerges ? t('taskReview:merge.status.filesRenamed') : t('taskReview:merge.status.branchBehind')}
                     </span>
                     <span className="text-xs text-muted-foreground ml-2">
-                      {t('taskReview:merge.status.aiWillResolve')} ({hasPathMappedMerges ? `${pathMappedAIMergeCount} ${t('taskReview:merge.status.files')}` : `${commitsBehind} commits`})
+                      {t('taskReview:merge.status.aiWillResolve')} ({hasPathMappedMerges ? `${pathMappedAIMergeCount} ${t('taskReview:merge.status.files')}` : uiT('review.commitCount', { count: commitsBehind })})
                     </span>
                   </div>
                 </>
@@ -573,7 +574,7 @@ export function WorkspaceStatus({
               className="flex-1"
             >
               <GitMerge className="mr-2 h-4 w-4" />
-              Check for Conflicts
+              {uiT('review.checkConflicts')}
             </Button>
           )}
 
@@ -585,7 +586,7 @@ export function WorkspaceStatus({
               className="flex-1"
             >
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Checking for conflicts...
+              {uiT('review.checkingConflicts')}
             </Button>
           )}
 

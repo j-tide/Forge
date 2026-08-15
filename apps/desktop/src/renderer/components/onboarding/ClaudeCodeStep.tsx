@@ -20,7 +20,7 @@ type DetectionStatus = 'loading' | 'installed' | 'outdated' | 'not-found' | 'err
  * and provides one-click installation/update functionality.
  */
 export function ClaudeCodeStep({ onNext, onBack, onSkip }: ClaudeCodeStepProps) {
-  const { t } = useTranslation('onboarding');
+  const { t } = useTranslation(['onboarding', 'uiShellOnboarding']);
   const [status, setStatus] = useState<DetectionStatus>('loading');
   const [versionInfo, setVersionInfo] = useState<ClaudeCodeVersionInfo | null>(null);
   const [isInstalling, setIsInstalling] = useState(false);
@@ -37,7 +37,7 @@ export function ClaudeCodeStep({ onNext, onBack, onSkip }: ClaudeCodeStepProps) 
       if (!window.electronAPI?.checkClaudeCodeVersion) {
         console.warn('[ClaudeCodeStep] Version check API not available');
         setStatus('error');
-        setError('Version check API not available');
+        setError(t('uiShellOnboarding:versionApiUnavailable'));
         return;
       }
 
@@ -55,14 +55,14 @@ export function ClaudeCodeStep({ onNext, onBack, onSkip }: ClaudeCodeStepProps) 
         }
       } else {
         setStatus('error');
-        setError(result.error || 'Failed to check version');
+        setError(result.error || t('uiShellOnboarding:versionCheckFailed'));
       }
     } catch (err) {
       console.error('Failed to check Claude Code version:', err);
       setStatus('error');
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : t('uiShellOnboarding:unknown'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     checkVersion();
@@ -75,7 +75,7 @@ export function ClaudeCodeStep({ onNext, onBack, onSkip }: ClaudeCodeStepProps) 
 
     try {
       if (!window.electronAPI?.installClaudeCode) {
-        setError('Install API not available');
+        setError(t('uiShellOnboarding:installApiUnavailable'));
         return;
       }
 
@@ -88,10 +88,10 @@ export function ClaudeCodeStep({ onNext, onBack, onSkip }: ClaudeCodeStepProps) 
           checkVersion();
         }, 5000);
       } else {
-        setError(result.error || 'Failed to start installation');
+        setError(result.error || t('uiShellOnboarding:installStartFailed'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : t('uiShellOnboarding:unknown'));
     } finally {
       setIsInstalling(false);
     }
@@ -125,7 +125,7 @@ export function ClaudeCodeStep({ onNext, onBack, onSkip }: ClaudeCodeStepProps) 
       case 'not-found':
         return t('claudeCode.status.notFound', 'Not Installed');
       case 'error':
-        return error || 'Error checking status';
+        return error || t('uiShellOnboarding:statusCheckFailed');
     }
   };
 
@@ -293,20 +293,20 @@ export function ClaudeCodeStep({ onNext, onBack, onSkip }: ClaudeCodeStepProps) 
         {/* Navigation buttons */}
         <div className="flex justify-between mt-8 pt-6 border-t border-border">
           <Button variant="outline" onClick={onBack}>
-            {t('common:back', 'Back')}
+            {t('common:buttons.back')}
           </Button>
 
           <div className="flex gap-3">
             <Button variant="ghost" onClick={onSkip}>
-              {t('common:skip', 'Skip')}
+              {t('common:buttons.skip')}
             </Button>
             <Button
               onClick={onNext}
               disabled={status === 'loading'}
             >
               {status === 'installed'
-                ? t('common:continue', 'Continue')
-                : t('common:continueAnyway', 'Continue Anyway')
+                ? t('common:buttons.continue')
+                : t('uiShellOnboarding:continueAnyway')
               }
             </Button>
           </div>

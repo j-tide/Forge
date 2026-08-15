@@ -1,4 +1,5 @@
 import { Eye, FileCode } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -26,16 +27,18 @@ export function DiffViewDialog({
   worktreeDiff,
   onOpenChange
 }: DiffViewDialogProps) {
+  const { t } = useTranslation('common');
+  const { t: uiT } = useTranslation('uiTasks');
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5 text-purple-400" />
-            Changed Files
+            {uiT('review.changedFiles')}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {worktreeDiff?.summary || 'No changes found'}
+            {worktreeDiff?.summary || uiT('review.noChanges')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="flex-1 overflow-auto min-h-0 -mx-6 px-6">
@@ -67,7 +70,7 @@ export function DiffViewDialog({
                         file.status === 'renamed' && 'bg-warning/10 text-warning'
                       )}
                     >
-                      {file.status}
+                      {uiT(`review.fileStatus.${file.status}`, { defaultValue: file.status })}
                     </Badge>
                     <span className="text-xs text-success">+{file.additions}</span>
                     <span className="text-xs text-destructive">-{file.deletions}</span>
@@ -77,12 +80,12 @@ export function DiffViewDialog({
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              No changed files found
+              {uiT('review.noChangedFiles')}
             </div>
           )}
         </div>
         <AlertDialogFooter className="mt-4">
-          <AlertDialogCancel>Close</AlertDialogCancel>
+          <AlertDialogCancel>{t('buttons.close')}</AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

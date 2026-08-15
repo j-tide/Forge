@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState, useMemo, forwardRef, useImper
 import { useDroppable, useDndContext } from '@dnd-kit/core';
 import '@xterm/xterm/css/xterm.css';
 import { FileDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { useTerminalStore } from '../stores/terminal-store';
 import { useSettingsStore } from '../stores/settings-store';
@@ -64,6 +65,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   isExpanded,
   onToggleExpand,
 }, ref) {
+  const { t } = useTranslation('uiTerminal');
   const isMountedRef = useRef(true);
   const isCreatedRef = useRef(false);
   // Track deliberate terminal recreation (e.g., worktree switching)
@@ -753,12 +755,12 @@ Please confirm you're ready by saying: I'm ready to work on ${selectedTask.title
     } catch (err) {
       console.error('Failed to open in IDE:', err);
       toast({
-        title: 'Failed to open IDE',
-        description: err instanceof Error ? err.message : 'Could not launch IDE',
+        title: t('ide.openFailed'),
+        description: err instanceof Error ? err.message : t('ide.launchFailed'),
         variant: 'destructive',
       });
     }
-  }, [terminal?.worktreeConfig?.worktreePath, settings.preferredIDE, settings.customIDEPath, toast]);
+  }, [terminal?.worktreeConfig?.worktreePath, settings.preferredIDE, settings.customIDEPath, toast, t]);
 
   // Get backlog tasks for worktree dialog
   const backlogTasks = tasks.filter((t) => t.status === 'backlog');
@@ -791,14 +793,14 @@ Please confirm you're ready by saying: I'm ready to work on ${selectedTask.title
         <div className="absolute inset-0 bg-info/10 z-10 flex items-center justify-center pointer-events-none">
           <div className="flex items-center gap-2 bg-info/90 text-info-foreground px-3 py-2 rounded-md">
             <FileDown className="h-4 w-4" />
-            <span className="text-sm font-medium">Drop to insert path</span>
+            <span className="text-sm font-medium">{t('dropPath')}</span>
           </div>
         </div>
       )}
 
       <TerminalHeader
         terminalId={id}
-        title={terminal?.title || 'Terminal'}
+        title={terminal?.title || t('title')}
         status={terminal?.status || 'idle'}
         isCLIMode={terminal?.isCLIMode || false}
         tasks={tasks}

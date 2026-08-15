@@ -1,3 +1,4 @@
+import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import type { AppSettings, PerProviderAgentConfig } from '../../shared/types';
 import type { APIProfile, ProfileFormData, TestConnectionResult, ModelInfo } from '@shared/types/profile';
@@ -134,13 +135,13 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         return true;
       }
       set({
-        profilesError: result.error || 'Failed to save profile',
+        profilesError: result.error || i18n.t('uiRuntime:stores.failedSaveProfile'),
         profilesLoading: false
       });
       return false;
     } catch (error) {
       set({
-        profilesError: error instanceof Error ? error.message : 'Failed to save profile',
+        profilesError: error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedSaveProfile'),
         profilesLoading: false
       });
       return false;
@@ -161,13 +162,13 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         return true;
       }
       set({
-        profilesError: result.error || 'Failed to update profile',
+        profilesError: result.error || i18n.t('uiRuntime:stores.failedUpdateProfile'),
         profilesLoading: false
       });
       return false;
     } catch (error) {
       set({
-        profilesError: error instanceof Error ? error.message : 'Failed to update profile',
+        profilesError: error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedUpdateProfile'),
         profilesLoading: false
       });
       return false;
@@ -187,13 +188,13 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         return true;
       }
       set({
-        profilesError: result.error || 'Failed to delete profile',
+        profilesError: result.error || i18n.t('uiRuntime:stores.failedDeleteProfile'),
         profilesLoading: false
       });
       return false;
     } catch (error) {
       set({
-        profilesError: error instanceof Error ? error.message : 'Failed to delete profile',
+        profilesError: error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedDeleteProfile'),
         profilesLoading: false
       });
       return false;
@@ -209,13 +210,13 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         return true;
       }
       set({
-        profilesError: result.error || 'Failed to set active profile',
+        profilesError: result.error || i18n.t('uiRuntime:stores.failedSetActiveProfile'),
         profilesLoading: false
       });
       return false;
     } catch (error) {
       set({
-        profilesError: error instanceof Error ? error.message : 'Failed to set active profile',
+        profilesError: error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedSetActiveProfile'),
         profilesLoading: false
       });
       return false;
@@ -232,12 +233,10 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         set({ testConnectionResult: result.data, isTestingConnection: false });
 
         // Show toast on success
-        // TODO: Use i18n translation keys (settings:connection.successTitle, settings:connection.successDescription)
-        // Note: Zustand stores can't use useTranslation() hook - need to pass t() or use i18n.t()
         if (result.data.success) {
           toast({
-            title: 'Connection successful',
-            description: 'Your API credentials are valid.'
+            title: i18n.t('uiRuntime:stores.connectionSuccessful'),
+            description: i18n.t('uiRuntime:stores.credentialsValid')
           });
         }
         return result.data;
@@ -247,13 +246,13 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       const errorResult: TestConnectionResult = {
         success: false,
         errorType: 'unknown',
-        message: result.error || 'Failed to test connection'
+        message: result.error || i18n.t('uiRuntime:stores.failedTestConnection')
       };
       set({ testConnectionResult: errorResult, isTestingConnection: false });
       toast({
         variant: 'destructive',
-        title: 'Connection test failed',
-        description: result.error || 'Failed to test connection'
+        title: i18n.t('uiRuntime:stores.connectionTestFailed'),
+        description: result.error || i18n.t('uiRuntime:stores.failedTestConnection')
       });
       return errorResult;
     } catch (error) {
@@ -261,13 +260,13 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       const errorResult: TestConnectionResult = {
         success: false,
         errorType: 'unknown',
-        message: error instanceof Error ? error.message : 'Failed to test connection'
+        message: error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedTestConnection')
       };
       set({ testConnectionResult: errorResult, isTestingConnection: false });
       toast({
         variant: 'destructive',
-        title: 'Connection test failed',
-        description: error instanceof Error ? error.message : 'Failed to test connection'
+        title: i18n.t('uiRuntime:stores.connectionTestFailed'),
+        description: error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedTestConnection')
       });
       return errorResult;
     }
@@ -304,11 +303,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       }
 
       // Error from IPC layer
-      set({ modelsError: result.error || 'Failed to discover models', modelsLoading: false });
+      set({ modelsError: result.error || i18n.t('uiRuntime:stores.failedDiscoverModels'), modelsLoading: false });
       return null;
     } catch (error) {
       set({
-        modelsError: error instanceof Error ? error.message : 'Failed to discover models',
+        modelsError: error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedDiscoverModels'),
         modelsLoading: false
       });
       return null;
@@ -493,7 +492,7 @@ export async function loadSettings(): Promise<void> {
     // Note: If result.success is false, we intentionally do NOT mark settings as loaded.
     // This means Sentry will drop events, which is the safe default for privacy.
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Failed to load settings');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedLoadSettings'));
     // Note: On exception, we intentionally do NOT mark settings as loaded.
     // Sentry's beforeSend will drop events, respecting potential user opt-out.
   } finally {
@@ -549,7 +548,7 @@ export async function loadProfiles(): Promise<void> {
       store.setProfiles(result.data.profiles, result.data.activeProfileId);
     }
   } catch (error) {
-    store.setProfilesError(error instanceof Error ? error.message : 'Failed to load profiles');
+    store.setProfilesError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.failedLoadProfiles'));
   } finally {
     store.setProfilesLoading(false);
   }

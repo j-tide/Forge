@@ -34,7 +34,7 @@ function getFileIcon(filename: string) {
 }
 
 export function TaskFiles({ task }: TaskFilesProps) {
-  const { t } = useTranslation(['tasks']);
+  const { t } = useTranslation(['tasks', 'common']);
   const { settings } = useSettingsStore();
 
   // State for file listing
@@ -61,7 +61,7 @@ export function TaskFiles({ task }: TaskFilesProps) {
     try {
       const result = await window.electronAPI.listDirectory(task.specsPath);
       if (!result.success || !result.data) {
-        throw new Error(result.error || 'Failed to load directory');
+        throw new Error(result.error || t('tasks:files.errorLoading'));
       }
 
       // Filter to only show allowed file types
@@ -78,11 +78,11 @@ export function TaskFiles({ task }: TaskFilesProps) {
 
       setFiles(filteredFiles);
     } catch (err) {
-      setFilesError(err instanceof Error ? err.message : 'Unknown error');
+      setFilesError(err instanceof Error ? err.message : t('common:errors.unknownError'));
     } finally {
       setIsLoadingFiles(false);
     }
-  }, [task.specsPath]);
+  }, [task.specsPath, t]);
 
   // Load file content
   const loadFileContent = useCallback(async (filePath: string) => {
@@ -94,15 +94,15 @@ export function TaskFiles({ task }: TaskFilesProps) {
     try {
       const result = await window.electronAPI.readFile(filePath);
       if (!result.success || result.data === undefined) {
-        throw new Error(result.error || 'Failed to read file');
+        throw new Error(result.error || t('tasks:files.errorLoadingContent'));
       }
       setFileContent(result.data);
     } catch (err) {
-      setContentError(err instanceof Error ? err.message : 'Unknown error');
+      setContentError(err instanceof Error ? err.message : t('common:errors.unknownError'));
     } finally {
       setIsLoadingContent(false);
     }
-  }, []);
+  }, [t]);
 
   // Reset state when task.specsPath changes
   useEffect(() => {

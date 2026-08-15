@@ -18,7 +18,7 @@ interface SwapNotification {
 }
 
 export function ProactiveSwapListener() {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'uiShellAuth']);
   const [notification, setNotification] = useState<SwapNotification | null>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -69,7 +69,7 @@ export function ProactiveSwapListener() {
               <strong>{notification.toProfile}</strong>
               <br />
               <span className="text-[10px]">
-                {t('notification.swapReason', { reason: notification.reason })}
+                {t('notification.swapReason', { reason: t(`uiShellAuth:swapReasons.${notification.reason}`, { defaultValue: notification.reason }) })}
               </span>
             </p>
           </div>
@@ -78,6 +78,7 @@ export function ProactiveSwapListener() {
             size="icon"
             className="h-6 w-6 flex-shrink-0"
             onClick={handleDismiss}
+            aria-label={t('labels.dismiss')}
           >
             <X className="h-3 w-3" />
           </Button>

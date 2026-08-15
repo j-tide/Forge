@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { create } from 'zustand';
 import type { GitHubIssue } from '../../../shared/types';
 
@@ -143,10 +144,10 @@ export async function loadGitHubIssues(
       store.setHasMore(result.data.hasMore);
       store.setCurrentPage(1);
     } else {
-      store.setError(result.error || 'Failed to load GitHub issues');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedLoadGitHubIssues'));
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Unknown error');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
   } finally {
     store.setLoading(false);
   }
@@ -188,10 +189,10 @@ export async function loadMoreGitHubIssues(
       store.setHasMore(result.data.hasMore);
       store.setCurrentPage(nextPage);
     } else {
-      store.setError(result.error || 'Failed to load more issues');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedLoadMoreIssues'));
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Unknown error');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
   } finally {
     store.setLoadingMore(false);
   }
@@ -220,11 +221,11 @@ export async function importGitHubIssues(
     if (result.success) {
       return true;
     } else {
-      store.setError(result.error || 'Failed to import GitHub issues');
+      store.setError(result.error || i18n.t('uiRuntime:stores.failedImportGitHubIssues'));
       return false;
     }
   } catch (error) {
-    store.setError(error instanceof Error ? error.message : 'Unknown error');
+    store.setError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
     return false;
   } finally {
     store.setLoading(false);
