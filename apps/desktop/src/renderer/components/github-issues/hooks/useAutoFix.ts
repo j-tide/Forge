@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type {
   AutoFixConfig,
@@ -10,6 +11,7 @@ import type {
  * Hook for managing auto-fix state with batching support
  */
 export function useAutoFix(projectId: string | undefined) {
+  const { t } = useTranslation('common');
   const [config, setConfig] = useState<AutoFixConfig | null>(null);
   const [queue, setQueue] = useState<AutoFixQueueItem[]>([]);
   const [batches, setBatches] = useState<IssueBatch[]>([]);
@@ -139,13 +141,13 @@ export function useAutoFix(projectId: string | undefined) {
       setBatchProgress({
         phase: 'analyzing',
         progress: 0,
-        message: 'Starting batch analysis...',
+        message: t('uiIntegrations:github.issues.startingAnalysis'),
         totalIssues: issueNumbers?.length ?? 0,
         batchCount: 0,
       });
       window.electronAPI.github.batchAutoFix(projectId, issueNumbers);
     },
-    [projectId]
+    [projectId, t]
   );
 
   // Toggle auto-fix enabled (polling will handle new issues)

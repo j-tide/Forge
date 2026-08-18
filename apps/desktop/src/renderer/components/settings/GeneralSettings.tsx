@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Label } from '../ui/label';
@@ -29,9 +30,7 @@ interface ToolDetectionDisplayProps {
 function ToolDetectionDisplay({ info, isLoading, t }: ToolDetectionDisplayProps) {
   if (isLoading) {
     return (
-      <div className="text-xs text-muted-foreground mt-1">
-        Detecting...
-      </div>
+      <div className="text-xs text-muted-foreground mt-1">{i18n.t('uiSettings:text004')}</div>
     );
   }
 

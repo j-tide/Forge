@@ -64,7 +64,7 @@ export function PRHeader({ pr, isLoadingFiles = false }: PRHeaderProps) {
           asChild
           className="h-8 w-8 text-muted-foreground hover:text-foreground"
         >
-          <a href={pr.htmlUrl} target="_blank" rel="noopener noreferrer">
+          <a href={pr.htmlUrl} target="_blank" rel="noopener noreferrer" aria-label={t('uiIntegrations:github.prs.openOnGitHub')}>
             <ExternalLink className="h-4 w-4" />
           </a>
         </Button>
@@ -148,7 +148,7 @@ export function PRHeader({ pr, isLoadingFiles = false }: PRHeaderProps) {
                     variant="outline"
                     className={cn("text-[10px] px-1.5 py-0 shrink-0", getFileStatusStyle(file.status))}
                   >
-                    {file.status}
+                    {t(`uiIntegrations:github.prs.${({ added: 'fileAdded', removed: 'fileRemoved', deleted: 'fileRemoved', modified: 'fileModified', changed: 'fileModified', renamed: 'fileRenamed' } as Record<string, string>)[file.status.toLowerCase()] || 'fileUnknown'}`)}
                   </Badge>
                   <div className="flex items-center gap-1.5 text-xs font-mono shrink-0">
                     <span className="text-emerald-500 flex items-center gap-0.5">

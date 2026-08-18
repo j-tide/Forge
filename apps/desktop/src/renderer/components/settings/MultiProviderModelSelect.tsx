@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, Search, Check, Brain, Eye, Wrench, ExternalLink, Loader2 } from 'lucide-react';
@@ -324,7 +325,7 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
                           className="flex items-center gap-1 text-[10px] text-primary hover:underline"
                           onClick={e => e.stopPropagation()}
                         >
-                          {t('settings:modelSelect.configureProvider', { defaultValue: 'Configure' })}
+                          {i18n.t('uiSettings:missing_modelSelect_configureProvider')}
                           <ExternalLink className="h-2.5 w-2.5" />
                         </a>
                       )}
@@ -351,7 +352,7 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
                               <span className="font-medium">{model.label}</span>
                               {model.description && (
                                 <span className="text-[10px] text-muted-foreground shrink-0">
-                                  {model.description}
+                                  {model.provider === 'openai-compatible' || model.provider === 'ollama' ? model.description : i18n.t(`uiSettings:modelDescriptions.${model.value.replaceAll('.', '_').replaceAll('/', '_')}`, { defaultValue: model.description })}
                                 </span>
                               )}
                               {model.apiKeyOnly && openaiHasMixedAuth && (
@@ -363,24 +364,24 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
                             {model.capabilities && (
                               <div className="flex items-center gap-2 mt-0.5">
                                 <span className="text-[10px] text-muted-foreground">
-                                  {t('settings:modelSelect.contextWindow', {
+                                  {i18n.t('uiSettings:modelContextWindow', {
                                     size: formatContextWindow(model.capabilities.contextWindow),
                                     defaultValue: `${formatContextWindow(model.capabilities.contextWindow)} context`
                                   })}
                                 </span>
                                 <div className="flex items-center gap-1">
                                   {model.capabilities.thinking && (
-                                    <span title={t('settings:modelSelect.capabilities.thinking', { defaultValue: 'Thinking' })}>
+                                    <span title={i18n.t('uiSettings:missing_modelSelect_capabilities_thinking')}>
                                       <Brain className="h-2.5 w-2.5 text-muted-foreground" />
                                     </span>
                                   )}
                                   {model.capabilities.tools && (
-                                    <span title={t('settings:modelSelect.capabilities.tools', { defaultValue: 'Tools' })}>
+                                    <span title={i18n.t('uiSettings:missing_modelSelect_capabilities_tools')}>
                                       <Wrench className="h-2.5 w-2.5 text-muted-foreground" />
                                     </span>
                                   )}
                                   {model.capabilities.vision && (
-                                    <span title={t('settings:modelSelect.capabilities.vision', { defaultValue: 'Vision' })}>
+                                    <span title={i18n.t('uiSettings:missing_modelSelect_capabilities_vision')}>
                                       <Eye className="h-2.5 w-2.5 text-muted-foreground" />
                                     </span>
                                   )}
@@ -403,14 +404,14 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
           {/* Custom model ID input */}
           <div className="border-t border-border p-2 space-y-1">
             <p className="text-[10px] text-muted-foreground px-1">
-              {t('settings:modelSelect.customModel', { defaultValue: 'Custom model ID' })}
+              {i18n.t('uiSettings:missing_modelSelect_customModel')}
             </p>
             <div className="flex gap-1.5">
               <Input
                 value={customInput}
                 onChange={e => setCustomInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleCustomSubmit()}
-                placeholder={t('settings:modelSelect.customModelPlaceholder', { defaultValue: 'Enter model ID...' })}
+                placeholder={i18n.t('uiSettings:missing_modelSelect_customModelPlaceholder')}
                 className="h-7 text-xs"
               />
               <button
@@ -423,7 +424,7 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
                   'disabled:opacity-50 disabled:cursor-not-allowed'
                 )}
               >
-                {t('settings:modelSelect.useCustomModel', { defaultValue: 'Use' })}
+                {i18n.t('uiSettings:missing_modelSelect_useCustomModel')}
               </button>
             </div>
           </div>

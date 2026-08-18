@@ -299,7 +299,7 @@ export function CustomMcpDialog({
           {/* Description (optional) */}
           <div className="space-y-2">
             <Label htmlFor="description">
-              {t('mcp.serverDescription')} <span className="text-muted-foreground">({t('common:optional')})</span>
+              {t('mcp.serverDescription')} <span className="text-muted-foreground">({t('common:labels.optional')})</span>
             </Label>
             <Input
               id="description"
@@ -379,7 +379,7 @@ export function CustomMcpDialog({
               {/* Authentication Token (simplified) */}
               <div className="space-y-2">
                 <Label htmlFor="bearerToken">
-                  {t('mcp.authToken')} <span className="text-muted-foreground">({t('common:optional')})</span>
+                  {t('mcp.authToken')} <span className="text-muted-foreground">({t('common:labels.optional')})</span>
                 </Label>
                 <Input
                   id="bearerToken"
@@ -425,7 +425,7 @@ export function CustomMcpDialog({
                         onClick={addHeader}
                         disabled={!headerKey.trim() || !headerValue.trim()}
                       >
-                        {t('common:add')}
+                        {t('common:buttons.add')}
                       </Button>
                     </div>
                     {/* Show non-Authorization headers */}
@@ -460,10 +460,10 @@ export function CustomMcpDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('common:cancel')}
+            {t('common:buttons.cancel')}
           </Button>
           <Button onClick={handleSave} disabled={!isValid}>
-            {isEditing ? t('common:save') : t('mcp.addServer')}
+            {isEditing ? t('common:buttons.save') : t('mcp.addServer')}
           </Button>
         </DialogFooter>
       </DialogContent>

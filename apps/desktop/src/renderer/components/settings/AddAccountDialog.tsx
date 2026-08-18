@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, CheckCircle2, AlertCircle, Terminal, Plus, X } from 'lucide-react';
@@ -154,7 +155,7 @@ export function AddAccountDialog({
           break;
         case 'error':
           setOauthStatus('error');
-          setOauthError(data.message ?? 'Unknown error');
+          setOauthError(data.message ?? i18n.t('uiSettings:unknownError'));
           break;
       }
     });
@@ -295,11 +296,11 @@ export function AddAccountDialog({
             }, 800);
         } else {
           setOauthStatus('error');
-          setOauthError(result.error ?? 'Authentication failed');
+          setOauthError(result.error ?? i18n.t('uiSettings:authFailed'));
         }
       } catch (err) {
         setOauthStatus('error');
-        setOauthError(err instanceof Error ? err.message : 'Unexpected error');
+        setOauthError(err instanceof Error ? err.message : i18n.t('uiSettings:unexpectedError'));
       }
       return;
     }
@@ -322,7 +323,7 @@ export function AddAccountDialog({
 
         if (!profileResult.success || !profileResult.data) {
           setOauthStatus('error');
-          setOauthError('Failed to create profile');
+          setOauthError(i18n.t('uiSettings:profileCreateFailed'));
           return;
         }
 
@@ -338,11 +339,11 @@ export function AddAccountDialog({
         setOauthEmail(result.data.email ?? null);
       } else {
         setOauthStatus('error');
-        setOauthError(result.error ?? 'Authentication failed');
+        setOauthError(result.error ?? i18n.t('uiSettings:authFailed'));
       }
     } catch (err) {
       setOauthStatus('error');
-      setOauthError(err instanceof Error ? err.message : 'Unexpected error');
+      setOauthError(err instanceof Error ? err.message : i18n.t('uiSettings:unexpectedError'));
     }
   }, [name, t, toast, isCodexOAuth, isEditing, editAccount, provider, addProviderAccount, updateProviderAccount, handleDuplicateEmailError, onOpenChange, refreshUsageData]);
 

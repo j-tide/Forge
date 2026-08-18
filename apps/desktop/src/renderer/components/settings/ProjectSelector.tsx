@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../../../shared/i18n';
 import { useState, useCallback } from 'react';
 import { FolderOpen, Plus, Trash2 } from 'lucide-react';
 import {
@@ -23,6 +25,7 @@ export function ProjectSelector({
   onProjectChange,
   onProjectAdded
 }: ProjectSelectorProps) {
+  useTranslation('uiSettings');
   const projects = useProjectStore((state) => state.projects);
   const [showAddModal, setShowAddModal] = useState(false);
   const [open, setOpen] = useState(false);
@@ -57,13 +60,13 @@ export function ProjectSelector({
         <SelectTrigger className="w-full [&_span]:truncate">
           <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <SelectValue placeholder="Select a project..." className="truncate min-w-0 flex-1" />
+            <SelectValue placeholder={i18n.t('uiSettings:text010')} className="truncate min-w-0 flex-1" />
           </div>
         </SelectTrigger>
         <SelectContent className="min-w-(--radix-select-trigger-width) max-w-(--radix-select-trigger-width)">
           {projects.length === 0 ? (
             <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-              <p>No projects yet</p>
+              <p>{i18n.t('uiSettings:text011')}</p>
             </div>
           ) : (
             projects.map((project) => (
@@ -79,6 +82,7 @@ export function ProjectSelector({
                   onPointerDown={(e) => {
                     e.stopPropagation();
                   }}
+                  aria-label={i18n.t('uiSettings:removeProject', { name: project.name })}
                   onClick={(e) => handleRemoveProject(project.id, e)}
                 >
                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -90,7 +94,7 @@ export function ProjectSelector({
           <SelectItem value="__add_new__">
             <div className="flex items-center gap-2">
               <Plus className="h-4 w-4 shrink-0" />
-              <span>Add Project...</span>
+              <span>{i18n.t('uiSettings:text012')}</span>
             </div>
           </SelectItem>
         </SelectContent>

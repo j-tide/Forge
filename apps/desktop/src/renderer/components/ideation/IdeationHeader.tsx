@@ -41,6 +41,7 @@ export function IdeationHeader({
   canAddMore
 }: IdeationHeaderProps) {
   const { t } = useTranslation('common');
+  const { t: ti } = useTranslation('uiKnowledgeIdeas');
   const hasSelection = selectedCount > 0;
   return (
     <div className="shrink-0 border-b border-border p-4 bg-card/50">
@@ -48,11 +49,11 @@ export function IdeationHeader({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Lightbulb className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Ideation</h2>
-            <Badge variant="outline">{totalIdeas} ideas</Badge>
+            <h2 className="text-lg font-semibold">{ti('title')}</h2>
+            <Badge variant="outline">{ti('count', { count: totalIdeas })}</Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            AI-generated feature ideas for your project
+            {ti('subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -60,7 +61,7 @@ export function IdeationHeader({
           {hasSelection ? (
             <>
               <Badge variant="secondary" className="mr-1">
-                {selectedCount} selected
+                {ti('selected', { count: selectedCount })}
               </Badge>
               <Button
                 variant="outline"
@@ -69,7 +70,7 @@ export function IdeationHeader({
                 onClick={onDeleteSelected}
               >
                 <Trash2 className="h-4 w-4 mr-1" />
-                Delete
+                {ti('delete')}
               </Button>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -142,7 +143,7 @@ export function IdeationHeader({
                   aria-label={t('accessibility.addMoreAriaLabel')}
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Add More
+                  {ti('addMore')}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('accessibility.addMoreAriaLabel')}</TooltipContent>

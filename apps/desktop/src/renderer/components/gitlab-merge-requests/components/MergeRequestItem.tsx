@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { GitMerge, GitPullRequest, Lock, ExternalLink } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import type { GitLabMergeRequest } from '../../../../shared/types';
@@ -9,6 +10,7 @@ interface MergeRequestItemProps {
 }
 
 export function MergeRequestItem({ mr, isSelected, onClick }: MergeRequestItemProps) {
+  const { t, i18n } = useTranslation('uiIntegrations');
   const stateColors = {
     opened: 'text-success',
     closed: 'text-destructive',
@@ -27,7 +29,7 @@ export function MergeRequestItem({ mr, isSelected, onClick }: MergeRequestItemPr
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString(i18n.resolvedLanguage || i18n.language, { month: 'short', day: 'numeric' });
   };
 
   return (
@@ -69,12 +71,13 @@ export function MergeRequestItem({ mr, isSelected, onClick }: MergeRequestItemPr
             )}
           </div>
           <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-            <span>by {mr.author.username}</span>
+            <span>{t('uiIntegrations:gitlab.by', { author: mr.author.username })}</span>
             <span>•</span>
             <span>{formatDate(mr.createdAt)}</span>
           </div>
         </div>
         <a
+          aria-label={t('uiIntegrations:gitlab.openGitLab')}
           href={mr.webUrl}
           target="_blank"
           rel="noopener noreferrer"

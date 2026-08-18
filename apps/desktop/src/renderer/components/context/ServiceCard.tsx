@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Database, CheckCircle, FileCode, Globe, Code, Package } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -20,6 +21,7 @@ interface ServiceCardProps {
 }
 
 export function ServiceCard({ name, service }: ServiceCardProps) {
+  const { t: tk } = useTranslation('uiKnowledgeContext');
   const Icon = serviceTypeIcons[service.type || 'unknown'];
   const colorClass = serviceTypeColors[service.type || 'unknown'];
 
@@ -32,7 +34,7 @@ export function ServiceCard({ name, service }: ServiceCardProps) {
             {name}
           </CardTitle>
           <Badge variant="outline" className={cn('capitalize text-xs', colorClass)}>
-            {service.type || 'unknown'}
+            {tk(`serviceTypes.${service.type || 'unknown'}`, { defaultValue: service.type || tk('serviceTypes.unknown') })}
           </Badge>
         </div>
         {service.path && (
@@ -77,31 +79,31 @@ export function ServiceCard({ name, service }: ServiceCardProps) {
           {service.testing && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <CheckCircle className="h-3 w-3 shrink-0" />
-              <span>Testing: {service.testing}</span>
+              <span>{tk('testing', { value: service.testing })}</span>
             </div>
           )}
           {service.orm && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Database className="h-3 w-3 shrink-0" />
-              <span>ORM: {service.orm}</span>
+              <span>{tk('orm', { value: service.orm })}</span>
             </div>
           )}
           {service.default_port && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Globe className="h-3 w-3 shrink-0" />
-              <span>Port: {service.default_port}</span>
+              <span>{tk('port', { value: service.default_port })}</span>
             </div>
           )}
           {service.styling && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Code className="h-3 w-3 shrink-0" />
-              <span>Styling: {service.styling}</span>
+              <span>{tk('styling', { value: service.styling })}</span>
             </div>
           )}
           {service.state_management && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Package className="h-3 w-3 shrink-0" />
-              <span>State: {service.state_management}</span>
+              <span>{tk('stateManagement', { value: service.state_management })}</span>
             </div>
           )}
         </div>
@@ -109,7 +111,7 @@ export function ServiceCard({ name, service }: ServiceCardProps) {
         {/* Apple Frameworks (iOS/Swift) */}
         {service.apple_frameworks && service.apple_frameworks.length > 0 && (
           <div className="pt-2 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-1.5">Apple Frameworks</p>
+            <p className="text-xs text-muted-foreground mb-1.5">{tk('appleFrameworks')}</p>
             <div className="flex flex-wrap gap-1">
               {service.apple_frameworks.map((fw) => (
                 <Badge key={fw} variant="secondary" className="text-xs">
@@ -123,7 +125,7 @@ export function ServiceCard({ name, service }: ServiceCardProps) {
         {/* SPM Dependencies (iOS/Swift) */}
         {service.spm_dependencies && service.spm_dependencies.length > 0 && (
           <div className="pt-2 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-1.5">SPM Dependencies</p>
+            <p className="text-xs text-muted-foreground mb-1.5">{tk('spmDependencies')}</p>
             <div className="flex flex-wrap gap-1">
               {service.spm_dependencies.map((dep) => (
                 <Badge key={dep} variant="outline" className="text-xs font-mono">
@@ -145,7 +147,7 @@ export function ServiceCard({ name, service }: ServiceCardProps) {
         {/* Key Directories */}
         {service.key_directories && Object.keys(service.key_directories).length > 0 && (
           <div className="pt-2 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-1.5">Key Directories</p>
+            <p className="text-xs text-muted-foreground mb-1.5">{tk('keyDirectories')}</p>
             <div className="flex flex-wrap gap-1">
               {Object.entries(service.key_directories).slice(0, 6).map(([dir, info]) => (
                 <Tooltip key={dir}>

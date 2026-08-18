@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 /**
  * Hook for loading Linear projects for a selected team
  */
@@ -9,6 +10,7 @@ export function useLinearProjects(
   projectId: string,
   selectedTeamId: string
 ) {
+  const { t } = useTranslation('uiIntegrations');
   const [projects, setProjects] = useState<LinearProject[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,17 +33,17 @@ export function useLinearProjects(
         if (result.success && result.data) {
           setProjects(result.data);
         } else {
-          setError(result.error || 'Failed to load projects');
+          setError(result.error || t('uiIntegrations:linear.loadProjectsFailed'));
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(err instanceof Error ? err.message : t('uiIntegrations:linear.unknownError'));
       } finally {
         setIsLoadingProjects(false);
       }
     };
 
     loadProjects();
-  }, [projectId, selectedTeamId]);
+  }, [projectId, selectedTeamId, t]);
 
   return { projects, isLoadingProjects, error, setError };
 }

@@ -90,6 +90,7 @@ export function AddFeatureDialog({
   defaultPhaseId
 }: AddFeatureDialogProps) {
   const { t } = useTranslation('dialogs');
+  const { t: tk } = useTranslation('uiKnowledge');
 
   // Form state
   const [title, setTitle] = useState('');
@@ -144,7 +145,7 @@ export function AddFeatureDialog({
       const newFeatureId = addFeature({
         title: title.trim(),
         description: description.trim(),
-        rationale: rationale.trim() || `User-created feature for ${title.trim()}`,
+        rationale: rationale.trim() || tk('userCreatedRationale', { title: title.trim() }),
         priority,
         complexity,
         impact,
@@ -162,7 +163,7 @@ export function AddFeatureDialog({
         // Get the project ID from the roadmap
         const result = await window.electronAPI.saveRoadmap(roadmap.projectId, roadmap);
         if (!result.success) {
-          throw new Error(result.error || 'Failed to save roadmap');
+          throw new Error(result.error || tk('saveFailed'));
         }
       }
 
@@ -281,9 +282,9 @@ export function AddFeatureDialog({
                   <SelectValue placeholder={t('addFeature.selectPriority')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(ROADMAP_PRIORITY_LABELS).map(([value, label]) => (
+                  {Object.entries(ROADMAP_PRIORITY_LABELS).map(([value]) => (
                     <SelectItem key={value} value={value}>
-                      {label}
+                      {tk(`priority.${value}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>

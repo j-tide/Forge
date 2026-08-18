@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Route, ChevronDown, ChevronRight, Lock } from 'lucide-react';
 import { Badge } from '../../ui/badge';
@@ -13,6 +14,7 @@ interface APIRoutesSectionProps {
 }
 
 export function APIRoutesSection({ api }: APIRoutesSectionProps) {
+  const { t: tk } = useTranslation('uiKnowledgeContext');
   const [expanded, setExpanded] = useState(false);
 
   if (!api || api.total_routes === 0) {
@@ -28,7 +30,7 @@ export function APIRoutesSection({ api }: APIRoutesSectionProps) {
       <CollapsibleTrigger className="flex w-full items-center justify-between text-xs font-medium hover:text-foreground">
         <div className="flex items-center gap-2">
           <Route className="h-3 w-3" />
-          API Routes ({api.total_routes})
+          {tk('apiRoutes', { count: api.total_routes })}
         </div>
         {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
       </CollapsibleTrigger>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   PRData,
   PRReviewResult,
@@ -68,6 +69,7 @@ export function useGitHubPRs(
   projectId?: string,
   options: UseGitHubPRsOptions = {}
 ): UseGitHubPRsResult {
+  const { t } = useTranslation("common");
   const { isActive = true } = options;
   const [prs, setPrs] = useState<PRData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -218,16 +220,16 @@ export function useGitHubPRs(
         } else {
           setIsConnected(false);
           setRepoFullName(null);
-          setError(connectionResult.error || "Failed to check connection");
+          setError(connectionResult.error || t('uiIntegrations:github.prs.checkConnectionFailed'));
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch PRs");
+        setError(err instanceof Error ? err.message : t('uiIntegrations:github.prs.fetchPRsFailed'));
         setIsConnected(false);
       } finally {
         setIsLoading(false);
       }
     },
-    [projectId, getPRReviewState]
+    [projectId, getPRReviewState, t]
   );
 
   // Initial load
@@ -523,12 +525,12 @@ export function useGitHubPRs(
         requestProjectId === currentProjectIdRef.current &&
         requestGeneration === fetchGenerationRef.current
       ) {
-        setError(err instanceof Error ? err.message : "Failed to load more PRs");
+        setError(err instanceof Error ? err.message : t('uiIntegrations:github.prs.loadMoreFailed'));
       }
     } finally {
       setIsLoadingMore(false);
     }
-  }, [projectId, endCursor, hasMore, isLoadingMore, getPRReviewState]);
+  }, [projectId, endCursor, hasMore, isLoadingMore, getPRReviewState, t]);
 
   const runReview = useCallback(
     (prNumber: number) => {
@@ -563,11 +565,11 @@ export function useGitHubPRs(
         setNewCommitsCheckAction(projectId, prNumber, result);
         return result;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to check for new commits");
+        setError(err instanceof Error ? err.message : t('uiIntegrations:github.prs.checkCommitsFailed'));
         return { hasNewCommits: false, newCommitCount: 0 };
       }
     },
-    [projectId, setNewCommitsCheckAction]
+    [projectId, setNewCommitsCheckAction, t]
   );
 
   const cancelReview = useCallback(
@@ -580,11 +582,11 @@ export function useGitHubPRs(
         const success = await window.electronAPI.github.cancelPRReview(projectId, prNumber);
         return success;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to cancel review");
+        setError(err instanceof Error ? err.message : t('uiIntegrations:github.prs.cancelReviewFailed'));
         return false;
       }
     },
-    [projectId]
+    [projectId, t]
   );
 
   const postReview = useCallback(
@@ -614,11 +616,11 @@ export function useGitHubPRs(
         }
         return success;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to post review");
+        setError(err instanceof Error ? err.message : t('uiIntegrations:github.prs.postReviewFailed'));
         return false;
       }
     },
-    [projectId]
+    [projectId, t]
   );
 
   const postComment = useCallback(
@@ -628,11 +630,11 @@ export function useGitHubPRs(
       try {
         return await window.electronAPI.github.postPRComment(projectId, prNumber, body);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to post comment");
+        setError(err instanceof Error ? err.message : t('uiIntegrations:github.prs.postCommentFailed'));
         return false;
       }
     },
-    [projectId]
+    [projectId, t]
   );
 
   const mergePR = useCallback(
@@ -650,11 +652,11 @@ export function useGitHubPRs(
         }
         return success;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to merge PR");
+        setError(err instanceof Error ? err.message : t('uiIntegrations:github.prs.mergeFailed'));
         return false;
       }
     },
-    [projectId, fetchPRs]
+    [projectId, fetchPRs, t]
   );
 
   const assignPR = useCallback(
@@ -669,11 +671,11 @@ export function useGitHubPRs(
         }
         return success;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to assign user");
+        setError(err instanceof Error ? err.message : t('uiIntegrations:github.prs.assignFailed'));
         return false;
       }
     },
-    [projectId, fetchPRs]
+    [projectId, fetchPRs, t]
   );
 
   const markReviewPosted = useCallback(
@@ -708,7 +710,7 @@ export function useGitHubPRs(
         }
       }
     },
-    [projectId, getPRReviewState]
+    [projectId, getPRReviewState, t]
   );
 
   return {

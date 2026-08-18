@@ -1041,7 +1041,7 @@ ${t('prReview.blockedStatusMessageFooter')}`;
         // Pass prNumber explicitly to avoid race conditions with PR selection changes
         await onMarkReviewPosted?.(currentPr);
       } else if (!success && pr.number === currentPr) {
-        setBlockedStatusError('Failed to post comment');
+        setBlockedStatusError(t('uiIntegrations:github.prs.postCommentFailed'));
       }
     } catch (err) {
       console.error('Failed to post blocked status comment:', err);

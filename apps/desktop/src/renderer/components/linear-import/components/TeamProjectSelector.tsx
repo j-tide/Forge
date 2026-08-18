@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 /**
  * Team and project selection dropdowns
  */
@@ -33,17 +34,18 @@ export function TeamProjectSelector({
   onTeamChange,
   onProjectChange
 }: TeamProjectSelectorProps) {
+  const { t } = useTranslation('uiIntegrations');
   return (
     <div className="flex gap-4 shrink-0">
       <div className="flex-1 space-y-2">
-        <Label className="text-sm font-medium text-foreground">Team</Label>
+        <Label className="text-sm font-medium text-foreground">{t('uiIntegrations:linear.team')}</Label>
         <Select
           value={selectedTeamId}
           onValueChange={onTeamChange}
           disabled={isLoadingTeams}
         >
           <SelectTrigger>
-            <SelectValue placeholder={isLoadingTeams ? 'Loading...' : 'Select a team'} />
+            <SelectValue placeholder={isLoadingTeams ? t('uiIntegrations:linear.loading') : t('uiIntegrations:linear.chooseTeam')} />
           </SelectTrigger>
           <SelectContent>
             {teams.map(team => (
@@ -56,17 +58,17 @@ export function TeamProjectSelector({
       </div>
 
       <div className="flex-1 space-y-2">
-        <Label className="text-sm font-medium text-foreground">Project (Optional)</Label>
+        <Label className="text-sm font-medium text-foreground">{t('uiIntegrations:linear.projectOptional')}</Label>
         <Select
           value={selectedProjectId || '__all__'}
           onValueChange={(value) => onProjectChange(value === '__all__' ? '' : value)}
           disabled={isLoadingProjects || !selectedTeamId}
         >
           <SelectTrigger>
-            <SelectValue placeholder={isLoadingProjects ? 'Loading...' : 'All projects'} />
+            <SelectValue placeholder={isLoadingProjects ? t('uiIntegrations:linear.loading') : t('uiIntegrations:linear.allProjects')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">All projects</SelectItem>
+            <SelectItem value="__all__">{t('uiIntegrations:linear.allProjects')}</SelectItem>
             {projects.map(project => (
               <SelectItem key={project.id} value={project.id}>
                 {project.name}

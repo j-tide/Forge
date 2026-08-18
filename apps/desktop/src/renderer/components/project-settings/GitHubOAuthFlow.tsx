@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Github,
   Loader2,
@@ -41,6 +42,7 @@ const AUTH_TIMEOUT_MS = 5 * 60 * 1000;
  * Guides users through authenticating with GitHub using the gh CLI
  */
 export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
+  const { t } = useTranslation('uiProjectOAuth');
   const [status, setStatus] = useState<'checking' | 'need-install' | 'need-auth' | 'authenticating' | 'success' | 'error'>('checking');
   const [error, setError] = useState<string | null>(null);
   const [_cliInstalled, setCliInstalled] = useState(false);
@@ -90,10 +92,10 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
   const handleAuthTimeout = useCallback(() => {
     debugLog('Authentication timeout triggered after 5 minutes');
     setIsTimeout(true);
-    setError('Authentication timed out. The authentication window was open for too long. Please try again.');
+    setError(t('github.errors.timeout'));
     setStatus('error');
     authTimeoutRef.current = null;
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (hasCheckedRef.current) {
@@ -156,7 +158,7 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
 
       if (!cliResult.success) {
         debugLog('checkGitHubCli failed:', cliResult.error);
-        setError(cliResult.error || 'Failed to check GitHub CLI');
+        setError(cliResult.error || t('github.errors.checkCli'));
         setStatus('error');
         return;
       }
@@ -188,7 +190,7 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
       }
     } catch (err) {
       debugLog('Error in checkGitHubStatus:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : t('errors.unknown'));
       setStatus('error');
     }
   };
@@ -211,12 +213,12 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
         onSuccess(tokenResult.data.token, username);
       } else {
         debugLog('Failed to get token:', tokenResult.error);
-        setError(tokenResult.error || 'Failed to get token');
+        setError(tokenResult.error || t('github.errors.token'));
         setStatus('error');
       }
     } catch (err) {
       debugLog('Error in fetchAndNotifyToken:', err);
-      setError(err instanceof Error ? err.message : 'Failed to get token');
+      setError(err instanceof Error ? err.message : t('github.errors.token'));
       setStatus('error');
     }
   };
@@ -268,7 +270,7 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
       } else {
         debugLog('Auth failed:', result.error);
         // Include fallback URL info in error message if available
-        const errorMessage = result.error || 'Authentication failed';
+        const errorMessage = result.error || t('errors.authentication');
         setError(errorMessage);
         // Keep authUrl from response for fallback display
         if (result.data?.fallbackUrl) {
@@ -280,7 +282,7 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
       // Clear timeout on error
       clearAuthTimeout();
       debugLog('Error in handleStartAuth:', err);
-      setError(err instanceof Error ? err.message : 'Authentication failed');
+      setError(err instanceof Error ? err.message : t('errors.authentication'));
       setStatus('error');
     }
   };
@@ -339,19 +341,18 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                 <Terminal className="h-6 w-6 text-warning shrink-0 mt-0.5" />
                 <div className="flex-1 space-y-3">
                   <h3 className="text-lg font-medium text-foreground">
-                    GitHub CLI Required
+                    {t('github.cliRequired')}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    The GitHub CLI (gh) is required for OAuth authentication. This provides a secure
-                    way to authenticate without manually creating tokens.
+                    {t('github.cliDescription')}
                   </p>
                   <div className="flex gap-3">
                     <Button onClick={handleOpenGhInstall} className="gap-2">
                       <ExternalLink className="h-4 w-4" />
-                      Install GitHub CLI
+                      {t('github.installCli')}
                     </Button>
                     <Button variant="outline" onClick={handleRetry}>
-                      I've Installed It
+                      {t('github.installed')}
                     </Button>
                   </div>
                 </div>
@@ -364,11 +365,11 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
               <div className="flex items-start gap-3">
                 <Info className="h-5 w-5 text-info shrink-0 mt-0.5" />
                 <div className="flex-1 text-sm text-muted-foreground">
-                  <p className="font-medium text-foreground mb-2">Installation instructions:</p>
+                  <p className="font-medium text-foreground mb-2">{t('github.installInstructions')}</p>
                   <ul className="space-y-1 list-disc list-inside">
                     <li>macOS: <code className="px-1.5 py-0.5 bg-muted rounded font-mono text-xs">brew install gh</code></li>
                     <li>Windows: <code className="px-1.5 py-0.5 bg-muted rounded font-mono text-xs">winget install GitHub.cli</code></li>
-                    <li>Linux: Visit <a href="https://cli.github.com/" target="_blank" rel="noopener noreferrer" className="text-info hover:underline">cli.github.com</a></li>
+                    <li>{t('github.linuxVisit')} <a href="https://cli.github.com/" target="_blank" rel="noopener noreferrer" className="text-info hover:underline">cli.github.com</a></li>
                   </ul>
                 </div>
               </div>
@@ -386,15 +387,14 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                 <Github className="h-6 w-6 text-info shrink-0 mt-0.5" />
                 <div className="flex-1 space-y-3">
                   <h3 className="text-lg font-medium text-foreground">
-                    Connect to GitHub
+                    {t('github.connect')}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Click the button below to authenticate with GitHub. This will open your browser
-                    where you can authorize the application.
+                    {t('github.connectDescription')}
                   </p>
                   {cliVersion && (
                     <p className="text-xs text-muted-foreground">
-                      Using GitHub CLI {cliVersion}
+                      {t('github.cliVersion', { version: cliVersion })}
                     </p>
                   )}
                 </div>
@@ -405,7 +405,7 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
           <div className="flex justify-center">
             <Button onClick={handleStartAuth} size="lg" className="gap-2">
               <Github className="h-5 w-5" />
-              Authenticate with GitHub
+              {t('github.authenticate')}
             </Button>
           </div>
         </div>
@@ -420,12 +420,12 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                 <Loader2 className="h-6 w-6 animate-spin text-info shrink-0" />
                 <div className="flex-1">
                   <h3 className="text-lg font-medium text-foreground">
-                    Authenticating...
+                    {t('github.authenticating')}
                   </h3>
                   <p className="text-sm text-muted-foreground mt-1">
                     {browserOpened
-                      ? 'Please complete the authentication in your browser. This window will update automatically.'
-                      : 'Waiting for authentication flow to start...'}
+                      ? t('github.browserInstructions')
+                      : t('github.waiting')}
                   </p>
                 </div>
               </div>
@@ -439,7 +439,7 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                 <div className="text-center space-y-4">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-foreground">
-                      Your one-time code
+                      {t('github.oneTimeCode')}
                     </p>
                     <div className="flex items-center justify-center gap-3">
                       <code className="text-3xl font-mono font-bold tracking-widest text-primary px-4 py-2 bg-primary/10 rounded-lg">
@@ -454,12 +454,12 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                         {codeCopied ? (
                           <>
                             <Check className="h-4 w-4 mr-1 text-success" />
-                            Copied
+                            {t('buttons.copied')}
                           </>
                         ) : (
                           <>
                             <Copy className="h-4 w-4 mr-1" />
-                            Copy
+                            {t('buttons.copy')}
                           </>
                         )}
                       </Button>
@@ -469,8 +469,8 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                   <div className="text-sm text-muted-foreground space-y-2">
                     <p>
                       {browserOpened
-                        ? 'Enter this code in your browser to complete authentication.'
-                        : 'Copy this code, then open the link below to authenticate.'}
+                        ? t('github.enterCode')
+                        : t('github.copyCode')}
                     </p>
                     {!browserOpened && authUrl && (
                       <Button
@@ -479,7 +479,7 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                         className="text-info hover:text-info/80 p-0 h-auto gap-1"
                       >
                         <ExternalLink className="h-4 w-4" />
-                        Open {authUrl}
+                        {t('github.openUrl', { url: authUrl })}
                       </Button>
                     )}
                   </div>
@@ -498,10 +498,10 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
               <CheckCircle2 className="h-6 w-6 text-success shrink-0 mt-0.5" />
               <div className="flex-1">
                 <h3 className="text-lg font-medium text-success">
-                  Successfully Connected
+                  {t('github.connected')}
                 </h3>
                 <p className="text-sm text-success/80 mt-1">
-                  {username ? `Connected as ${username}` : 'Your GitHub account is now connected'}
+                  {username ? t('github.connectedAs', { username }) : t('github.accountConnected')}
                 </p>
               </div>
             </div>
@@ -522,7 +522,7 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                 )}
                 <div className="flex-1">
                   <h3 className={`text-lg font-medium ${isTimeout ? 'text-warning' : 'text-destructive'}`}>
-                    {isTimeout ? 'Authentication Timed Out' : 'Authentication Failed'}
+                    {isTimeout ? t('github.timeoutTitle') : t('errors.authenticationTitle')}
                   </h3>
                   <p className={`text-sm mt-1 ${isTimeout ? 'text-warning/80' : 'text-destructive/80'}`}>{error}</p>
                 </div>
@@ -539,10 +539,10 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                     <Info className="h-5 w-5 text-warning shrink-0 mt-0.5" />
                     <div className="flex-1">
                       <h3 className="text-base font-medium text-foreground">
-                        Complete Authentication Manually
+                        {t('github.manualTitle')}
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        The browser couldn't be opened automatically. Please visit the URL below to complete authentication:
+                        {t('github.manualDescription')}
                       </p>
                     </div>
                   </div>
@@ -573,12 +573,12 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                         {urlCopied ? (
                           <>
                             <Check className="h-4 w-4 mr-1 text-success" />
-                            Copied
+                            {t('buttons.copied')}
                           </>
                         ) : (
                           <>
                             <Copy className="h-4 w-4 mr-1" />
-                            Copy
+                            {t('buttons.copy')}
                           </>
                         )}
                       </Button>
@@ -590,7 +590,7 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                       className="gap-2"
                     >
                       <ExternalLink className="h-4 w-4" />
-                      Open URL in Browser
+                      {t('github.openBrowser')}
                     </Button>
                   </div>
 
@@ -598,7 +598,7 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                   {deviceCode && (
                     <div className="pt-2 border-t border-warning/20">
                       <p className="text-sm text-muted-foreground">
-                        When prompted, enter this code:{' '}
+                        {t('github.codeReminder')}{' '}
                         <code className="font-mono font-bold text-primary px-2 py-0.5 bg-primary/10 rounded">
                           {deviceCode}
                         </code>
@@ -612,11 +612,11 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
 
           <div className="flex justify-center gap-3">
             <Button onClick={handleStartAuth} variant="outline">
-              Retry
+              {t('buttons.retry')}
             </Button>
             {onCancel && (
               <Button onClick={onCancel} variant="ghost">
-                Cancel
+                {t('buttons.cancel')}
               </Button>
             )}
           </div>
@@ -627,7 +627,7 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
       {status !== 'error' && status !== 'success' && onCancel && (
         <div className="flex justify-center pt-2">
           <Button onClick={onCancel} variant="ghost">
-            Cancel
+            {t('buttons.cancel')}
           </Button>
         </div>
       )}

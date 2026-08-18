@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { useState } from 'react';
 import { Monitor, ZoomIn, ZoomOut, RotateCcw, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -147,7 +148,7 @@ export function DisplaySettings({ settings, onSettingsChange }: DisplaySettingsP
                     'hover:bg-accent text-muted-foreground hover:text-foreground',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
                   )}
-                  title="Reset to default (100%)"
+                  title={i18n.t('uiSettings:text001')}
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                 </button>
@@ -170,7 +171,7 @@ export function DisplaySettings({ settings, onSettingsChange }: DisplaySettingsP
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent'
               )}
-              title={`Decrease scale by ${UI_SCALE_STEP}%`}
+              title={i18n.t('uiSettings:decreaseScale', { step: UI_SCALE_STEP })}
             >
               <ZoomOut className="h-4 w-4" />
             </button>
@@ -214,7 +215,7 @@ export function DisplaySettings({ settings, onSettingsChange }: DisplaySettingsP
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent'
               )}
-              title={`Increase scale by ${UI_SCALE_STEP}%`}
+              title={i18n.t('uiSettings:increaseScale', { step: UI_SCALE_STEP })}
             >
               <ZoomIn className="h-4 w-4" />
             </button>
@@ -228,10 +229,10 @@ export function DisplaySettings({ settings, onSettingsChange }: DisplaySettingsP
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary'
               )}
-              title="Apply scale changes"
+              title={i18n.t('uiSettings:text002')}
             >
               <Check className="h-4 w-4" />
-              <span className="text-sm font-medium">Apply</span>
+              <span className="text-sm font-medium">{i18n.t('uiSettings:text003')}</span>
             </button>
           </div>
 

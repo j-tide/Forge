@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import type { ChangelogTask, ChangelogSourceMode, GitCommit } from '../../../shared/types';
 
 export interface SummaryInfo {
@@ -18,7 +19,7 @@ export function getSummaryInfo(
         count: selectedTaskIds.length,
         label: 'task',
         details: selectedTasks.slice(0, 3).map((t) => t.title).join(', ') +
-          (selectedTasks.length > 3 ? ` +${selectedTasks.length - 3} more` : '')
+          (selectedTasks.length > 3 ? i18n.t('uiChangelogExtra:more', { count: selectedTasks.length - 3 }) : '')
       };
     case 'git-history':
     case 'branch-diff':
@@ -26,7 +27,7 @@ export function getSummaryInfo(
         count: previewCommits.length,
         label: 'commit',
         details: previewCommits.slice(0, 3).map((c) => c.subject.substring(0, 40)).join(', ') +
-          (previewCommits.length > 3 ? ` +${previewCommits.length - 3} more` : '')
+          (previewCommits.length > 3 ? i18n.t('uiChangelogExtra:more', { count: previewCommits.length - 3 }) : '')
       };
     default:
       return { count: 0, label: 'item', details: '' };
@@ -42,10 +43,10 @@ export function getVersionBumpDescription(versionReason: string | null): string 
 
   switch (versionReason) {
     case 'breaking':
-      return 'Major version bump (breaking changes detected)';
+      return i18n.t('uiChangelogExtra:majorBump');
     case 'feature':
-      return 'Minor version bump (new features detected)';
+      return i18n.t('uiChangelogExtra:minorBump');
     default:
-      return 'Patch version bump (fixes/improvements)';
+      return i18n.t('uiChangelogExtra:patchBump');
   }
 }

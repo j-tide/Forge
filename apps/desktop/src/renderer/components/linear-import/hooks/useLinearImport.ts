@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 /**
  * Hook for managing the Linear import operation
  */
@@ -9,6 +10,7 @@ export function useLinearImport(
   projectId: string,
   onImportComplete?: (result: LinearImportResult) => void
 ) {
+  const { t } = useTranslation('uiIntegrations');
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<LinearImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,15 +35,15 @@ export function useLinearImport(
             onImportComplete?.(result.data);
           }
         } else {
-          setError(result.error || 'Failed to import issues');
+          setError(result.error || t('uiIntegrations:linear.importFailed'));
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(err instanceof Error ? err.message : t('uiIntegrations:linear.unknownError'));
       } finally {
         setIsImporting(false);
       }
     },
-    [projectId, onImportComplete]
+    [projectId, onImportComplete, t]
   );
 
   return {

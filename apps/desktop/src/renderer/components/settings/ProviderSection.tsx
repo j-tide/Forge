@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
@@ -54,7 +55,7 @@ export function ProviderSection({
           )}
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-foreground">{provider.name}</span>
+              <span className="text-sm font-semibold text-foreground">{i18n.t(`uiSettings:providerNames.${provider.id}`, { defaultValue: provider.name })}</span>
               {accounts.length > 0 && (
                 <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded font-medium">
                   {accounts.length}
@@ -66,7 +67,7 @@ export function ProviderSection({
                 </span>
               )}
             </div>
-            <span className="text-xs text-muted-foreground">{provider.description}</span>
+            <span className="text-xs text-muted-foreground">{i18n.t(`uiSettings:providerDescriptions.${provider.id}`, { defaultValue: provider.description })}</span>
           </div>
         </div>
       </button>

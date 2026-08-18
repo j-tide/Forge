@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../../../../shared/i18n';
 import { Radio, Import, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -29,16 +31,15 @@ export function LinearIntegration({
   isCheckingLinear,
   onOpenLinearImport
 }: LinearIntegrationProps) {
+  useTranslation('uiSettings');
   if (!envConfig) return null;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
-          <Label className="font-normal text-foreground">Enable Linear Sync</Label>
-          <p className="text-xs text-muted-foreground">
-            Create and update Linear issues automatically
-          </p>
+          <Label className="font-normal text-foreground">{i18n.t('uiSettings:text050')}</Label>
+          <p className="text-xs text-muted-foreground">{i18n.t('uiSettings:text051')}</p>
         </div>
         <Switch
           checked={envConfig.linearEnabled}
@@ -49,17 +50,14 @@ export function LinearIntegration({
       {envConfig.linearEnabled && (
         <>
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-foreground">API Key</Label>
-            <p className="text-xs text-muted-foreground">
-              Get your API key from{' '}
+            <Label className="text-sm font-medium text-foreground">{i18n.t('uiSettings:text052')}</Label>
+            <p className="text-xs text-muted-foreground">{i18n.t('uiSettings:text053')}{' '}
               <a
                 href="https://linear.app/settings/api"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-info hover:underline"
-              >
-                Linear Settings
-              </a>
+              >{i18n.t('uiSettings:text054')}</a>
             </p>
             <div className="relative">
               <Input
@@ -119,21 +117,21 @@ interface ConnectionStatusProps {
 }
 
 function ConnectionStatus({ isChecking, connectionStatus }: ConnectionStatusProps) {
+  useTranslation('uiSettings');
   return (
     <div className="rounded-lg border border-border bg-muted/30 p-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-foreground">Connection Status</p>
+          <p className="text-sm font-medium text-foreground">{i18n.t('uiSettings:text044')}</p>
           <p className="text-xs text-muted-foreground">
-            {isChecking ? 'Checking...' :
+            {isChecking ? i18n.t('uiSettings:text045') :
               connectionStatus?.connected
                 ? `Connected${connectionStatus.teamName ? ` to ${connectionStatus.teamName}` : ''}`
-                : connectionStatus?.error || 'Not connected'}
+                : connectionStatus?.error || i18n.t('uiSettings:notConnected')}
           </p>
           {connectionStatus?.connected && connectionStatus.issueCount !== undefined && (
             <p className="text-xs text-muted-foreground mt-1">
-              {connectionStatus.issueCount}+ tasks available to import
-            </p>
+              {connectionStatus.issueCount}{i18n.t('uiSettings:text055')}</p>
           )}
         </div>
         {isChecking ? (
@@ -153,24 +151,21 @@ interface ImportTasksPromptProps {
 }
 
 function ImportTasksPrompt({ onOpenLinearImport }: ImportTasksPromptProps) {
+  useTranslation('uiSettings');
   return (
     <div className="rounded-lg border border-info/30 bg-info/5 p-3">
       <div className="flex items-start gap-3">
         <Import className="h-5 w-5 text-info mt-0.5" />
         <div className="flex-1">
-          <p className="text-sm font-medium text-foreground">Import Existing Tasks</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Select which Linear issues to import into AutoBuild as tasks.
-          </p>
+          <p className="text-sm font-medium text-foreground">{i18n.t('uiSettings:text056')}</p>
+          <p className="text-xs text-muted-foreground mt-1">{i18n.t('uiSettings:text057')}</p>
           <Button
             size="sm"
             variant="outline"
             className="mt-2"
             onClick={onOpenLinearImport}
           >
-            <Import className="h-4 w-4 mr-2" />
-            Import Tasks from Linear
-          </Button>
+            <Import className="h-4 w-4 mr-2" />{i18n.t('uiSettings:text058')}</Button>
         </div>
       </div>
     </div>
@@ -183,16 +178,15 @@ interface RealtimeSyncToggleProps {
 }
 
 function RealtimeSyncToggle({ enabled, onToggle }: RealtimeSyncToggleProps) {
+  useTranslation('uiSettings');
   return (
     <div className="flex items-center justify-between">
       <div className="space-y-0.5">
         <div className="flex items-center gap-2">
           <Radio className="h-4 w-4 text-info" />
-          <Label className="font-normal text-foreground">Real-time Sync</Label>
+          <Label className="font-normal text-foreground">{i18n.t('uiSettings:text059')}</Label>
         </div>
-        <p className="text-xs text-muted-foreground pl-6">
-          Automatically import new tasks created in Linear
-        </p>
+        <p className="text-xs text-muted-foreground pl-6">{i18n.t('uiSettings:text060')}</p>
       </div>
       <Switch checked={enabled} onCheckedChange={onToggle} />
     </div>
@@ -200,12 +194,10 @@ function RealtimeSyncToggle({ enabled, onToggle }: RealtimeSyncToggleProps) {
 }
 
 function RealtimeSyncWarning() {
+  useTranslation('uiSettings');
   return (
     <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 ml-6">
-      <p className="text-xs text-warning">
-        When enabled, new Linear issues will be automatically imported into AutoBuild.
-        Make sure to configure your team/project filters below to control which issues are imported.
-      </p>
+      <p className="text-xs text-warning">{i18n.t('uiSettings:text061')}</p>
     </div>
   );
 }
@@ -218,20 +210,21 @@ interface TeamProjectIdsProps {
 }
 
 function TeamProjectIds({ teamId, projectId, onTeamIdChange, onProjectIdChange }: TeamProjectIdsProps) {
+  useTranslation('uiSettings');
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">Team ID (Optional)</Label>
+        <Label className="text-sm font-medium text-foreground">{i18n.t('uiSettings:text062')}</Label>
         <Input
-          placeholder="Auto-detected"
+          placeholder={i18n.t('uiSettings:text063')}
           value={teamId}
           onChange={(e) => onTeamIdChange(e.target.value)}
         />
       </div>
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">Project ID (Optional)</Label>
+        <Label className="text-sm font-medium text-foreground">{i18n.t('uiSettings:text064')}</Label>
         <Input
-          placeholder="Auto-created"
+          placeholder={i18n.t('uiSettings:text065')}
           value={projectId}
           onChange={(e) => onProjectIdChange(e.target.value)}
         />

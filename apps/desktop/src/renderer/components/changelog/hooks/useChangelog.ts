@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState, useCallback } from 'react';
 import { useProjectStore } from '../../../stores/project-store';
 import {
@@ -15,6 +16,7 @@ import { loadTasks } from '../../../stores/task-store';
 export type WizardStep = 1 | 2 | 3;
 
 export function useChangelog() {
+  const { t } = useTranslation('uiChangelogExtra');
   const selectedProjectId = useProjectStore((state) => state.selectedProjectId);
 
   // Data state
@@ -139,10 +141,10 @@ export function useChangelog() {
             setGenerationProgress({
               stage: 'complete',
               progress: 100,
-              message: 'Changelog generated successfully!'
+              message: t('generated')
             });
           } else {
-            setError(result.error || 'Generation failed');
+            setError(result.error || t('generationFailed'));
           }
         }
       }
@@ -168,7 +170,7 @@ export function useChangelog() {
       cleanupComplete();
       cleanupError();
     };
-  }, [selectedProjectId, setError, setGenerationProgress, setIsGenerating, updateGeneratedChangelog]);
+  }, [selectedProjectId, t, setError, setGenerationProgress, setIsGenerating, updateGeneratedChangelog]);
 
   const handleGenerate = async () => {
     if (selectedProjectId) {

@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../../stores/settings-store';
 import { saveProviderAgentConfig } from '../../stores/settings-store';
@@ -72,10 +73,10 @@ export function FeatureModelSettings({ provider }: FeatureModelSettingsProps) {
           <div key={feature} className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium text-foreground">
-                {FEATURE_LABELS[feature].label}
+                {i18n.t(`uiSettings:features.${feature}.label`, { defaultValue: FEATURE_LABELS[feature].label })}
               </Label>
               <span className="text-xs text-muted-foreground">
-                {FEATURE_LABELS[feature].description}
+                {i18n.t(`uiSettings:features.${feature}.description`, { defaultValue: FEATURE_LABELS[feature].description })}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-3 max-w-md">

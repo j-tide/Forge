@@ -34,7 +34,7 @@ function formatElapsedTime(seconds: number): string {
  * @param timestamp - The Date object or timestamp to format
  * @returns Formatted relative time string
  */
-function formatTimeAgo(timestamp: Date | string | undefined): string {
+function formatTimeAgo(timestamp: Date | string | undefined, language: string): string {
   if (!timestamp) return '';
 
   const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
@@ -42,17 +42,18 @@ function formatTimeAgo(timestamp: Date | string | undefined): string {
   const diffMs = now.getTime() - date.getTime();
   const diffSecs = Math.floor(diffMs / 1000);
 
-  if (diffSecs < 5) return 'just now';
-  if (diffSecs < 60) return `${diffSecs}s ago`;
+  const relativeTime = new Intl.RelativeTimeFormat(language, { numeric: 'auto' });
+  if (diffSecs < 5) return relativeTime.format(0, 'second');
+  if (diffSecs < 60) return relativeTime.format(-diffSecs, 'second');
 
   const diffMins = Math.floor(diffSecs / 60);
-  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffMins < 60) return relativeTime.format(-diffMins, 'minute');
 
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffHours < 24) return relativeTime.format(-diffHours, 'hour');
 
   const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
+  return relativeTime.format(-diffDays, 'day');
 }
 
 /**
@@ -299,7 +300,7 @@ export function RoadmapGenerationProgress({
   className,
   onStop
 }: RoadmapGenerationProgressProps) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const { phase, progress, message, error, startedAt, lastActivityAt } = generationStatus;
   const reducedMotion = useReducedMotion();
   const [isStopping, setIsStopping] = useState(false);
@@ -357,17 +358,17 @@ export function RoadmapGenerationProgress({
     }
 
     // Calculate initial display
-    setLastActivityDisplay(formatTimeAgo(lastActivityAt));
+    setLastActivityDisplay(formatTimeAgo(lastActivityAt, i18n.language));
 
     // Update every 5 seconds to keep relative time current
     const intervalId = setInterval(() => {
-      setLastActivityDisplay(formatTimeAgo(lastActivityAt));
+      setLastActivityDisplay(formatTimeAgo(lastActivityAt, i18n.language));
     }, 5000);
 
     return () => {
       clearInterval(intervalId);
     };
-  }, [phase, lastActivityAt]);
+  }, [phase, lastActivityAt, i18n.language]);
 
   /**
    * Handle stop button click with error handling and double-click prevention

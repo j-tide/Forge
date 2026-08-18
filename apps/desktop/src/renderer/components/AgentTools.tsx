@@ -52,7 +52,6 @@ import { CustomMcpDialog } from './CustomMcpDialog';
 import { useTranslation } from 'react-i18next';
 import {
   AVAILABLE_MODELS,
-  THINKING_LEVELS,
 } from '../../shared/constants/models';
 import {
   useResolvedAgentSettings,
@@ -81,65 +80,59 @@ function getModelLabel(modelShort: string): string {
   return model?.label.replace('Claude ', '') || modelShort;
 }
 
-// Helper to get thinking label from level
-function getThinkingLabel(level: ThinkingLevel): string {
-  const thinking = THINKING_LEVELS.find(t => t.value === level);
-  return thinking?.label || level;
-}
-
 const AGENT_CONFIGS: Record<string, AgentConfig> = {
   // Spec Creation Phases - all use 'spec' phase settings
   spec_gatherer: {
-    label: 'Spec Gatherer',
-    description: 'Collects initial requirements from user',
+    label: 'agents.spec_gatherer.name',
+    description: 'agents.spec_gatherer.description',
     category: 'spec',
     tools: ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'],
     mcp_servers: [],
     settingsSource: { type: 'phase', phase: 'spec' },
   },
   spec_researcher: {
-    label: 'Spec Researcher',
-    description: 'Validates external integrations and APIs',
+    label: 'agents.spec_researcher.name',
+    description: 'agents.spec_researcher.description',
     category: 'spec',
     tools: ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'],
     mcp_servers: ['context7'],
     settingsSource: { type: 'phase', phase: 'spec' },
   },
   spec_writer: {
-    label: 'Spec Writer',
-    description: 'Creates the spec.md document',
+    label: 'agents.spec_writer.name',
+    description: 'agents.spec_writer.description',
     category: 'spec',
     tools: ['Read', 'Glob', 'Grep', 'Write', 'Edit', 'Bash'],
     mcp_servers: [],
     settingsSource: { type: 'phase', phase: 'spec' },
   },
   spec_critic: {
-    label: 'Spec Critic',
-    description: 'Self-critique using deep analysis',
+    label: 'agents.spec_critic.name',
+    description: 'agents.spec_critic.description',
     category: 'spec',
     tools: ['Read', 'Glob', 'Grep'],
     mcp_servers: [],
     settingsSource: { type: 'phase', phase: 'spec' },
   },
   spec_discovery: {
-    label: 'Spec Discovery',
-    description: 'Initial project discovery and analysis',
+    label: 'agents.spec_discovery.name',
+    description: 'agents.spec_discovery.description',
     category: 'spec',
     tools: ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'],
     mcp_servers: [],
     settingsSource: { type: 'phase', phase: 'spec' },
   },
   spec_context: {
-    label: 'Spec Context',
-    description: 'Builds context from existing codebase',
+    label: 'agents.spec_context.name',
+    description: 'agents.spec_context.description',
     category: 'spec',
     tools: ['Read', 'Glob', 'Grep'],
     mcp_servers: [],
     settingsSource: { type: 'phase', phase: 'spec' },
   },
   spec_validation: {
-    label: 'Spec Validation',
-    description: 'Validates spec completeness and quality',
+    label: 'agents.spec_validation.name',
+    description: 'agents.spec_validation.description',
     category: 'spec',
     tools: ['Read', 'Glob', 'Grep'],
     mcp_servers: [],
@@ -148,8 +141,8 @@ const AGENT_CONFIGS: Record<string, AgentConfig> = {
 
   // Build Phases
   planner: {
-    label: 'Planner',
-    description: 'Creates implementation plan with subtasks',
+    label: 'agents.planner.name',
+    description: 'agents.planner.description',
     category: 'build',
     tools: ['Read', 'Glob', 'Grep', 'Write', 'Edit', 'Bash', 'WebFetch', 'WebSearch'],
     mcp_servers: ['context7', 'memory', 'auto-claude'],
@@ -157,8 +150,8 @@ const AGENT_CONFIGS: Record<string, AgentConfig> = {
     settingsSource: { type: 'phase', phase: 'planning' },
   },
   coder: {
-    label: 'Coder',
-    description: 'Implements individual subtasks',
+    label: 'agents.coder.name',
+    description: 'agents.coder.description',
     category: 'build',
     tools: ['Read', 'Glob', 'Grep', 'Write', 'Edit', 'Bash', 'WebFetch', 'WebSearch'],
     mcp_servers: ['context7', 'memory', 'auto-claude'],
@@ -168,8 +161,8 @@ const AGENT_CONFIGS: Record<string, AgentConfig> = {
 
   // QA Phases
   qa_reviewer: {
-    label: 'QA Reviewer',
-    description: 'Validates acceptance criteria. Uses Electron or Puppeteer based on project type.',
+    label: 'agents.qa_reviewer.name',
+    description: 'agents.qa_reviewer.description',
     category: 'qa',
     tools: ['Read', 'Glob', 'Grep', 'Bash', 'WebFetch', 'WebSearch'],
     mcp_servers: ['context7', 'memory', 'auto-claude'],
@@ -177,8 +170,8 @@ const AGENT_CONFIGS: Record<string, AgentConfig> = {
     settingsSource: { type: 'phase', phase: 'qa' },
   },
   qa_fixer: {
-    label: 'QA Fixer',
-    description: 'Fixes QA-reported issues. Uses Electron or Puppeteer based on project type.',
+    label: 'agents.qa_fixer.name',
+    description: 'agents.qa_fixer.description',
     category: 'qa',
     tools: ['Read', 'Glob', 'Grep', 'Write', 'Edit', 'Bash', 'WebFetch', 'WebSearch'],
     mcp_servers: ['context7', 'memory', 'auto-claude'],
@@ -188,40 +181,40 @@ const AGENT_CONFIGS: Record<string, AgentConfig> = {
 
   // Utility Phases - use feature settings
   pr_reviewer: {
-    label: 'PR Reviewer',
-    description: 'Reviews GitHub pull requests',
+    label: 'agents.pr_reviewer.name',
+    description: 'agents.pr_reviewer.description',
     category: 'utility',
     tools: ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'],
     mcp_servers: ['context7'],
     settingsSource: { type: 'feature', feature: 'githubPrs' },
   },
   commit_message: {
-    label: 'Commit Message',
-    description: 'Generates commit messages',
+    label: 'agents.commit_message.name',
+    description: 'agents.commit_message.description',
     category: 'utility',
     tools: [],
     mcp_servers: [],
     settingsSource: { type: 'feature', feature: 'utility' },
   },
   merge_resolver: {
-    label: 'Merge Resolver',
-    description: 'Resolves merge conflicts',
+    label: 'agents.merge_resolver.name',
+    description: 'agents.merge_resolver.description',
     category: 'utility',
     tools: [],
     mcp_servers: [],
     settingsSource: { type: 'feature', feature: 'utility' },
   },
   insights: {
-    label: 'Insights',
-    description: 'Extracts code insights',
+    label: 'agents.insights.name',
+    description: 'agents.insights.description',
     category: 'utility',
     tools: ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'],
     mcp_servers: [],
     settingsSource: { type: 'feature', feature: 'insights' },
   },
   analysis: {
-    label: 'Analysis',
-    description: 'Codebase analysis with context lookup',
+    label: 'agents.analysis.name',
+    description: 'agents.analysis.description',
     category: 'utility',
     tools: ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'],
     mcp_servers: ['context7'],
@@ -229,8 +222,8 @@ const AGENT_CONFIGS: Record<string, AgentConfig> = {
     settingsSource: { type: 'feature', feature: 'insights' },
   },
   batch_analysis: {
-    label: 'Batch Analysis',
-    description: 'Batch processing of issues or items',
+    label: 'agents.batch_analysis.name',
+    description: 'agents.batch_analysis.description',
     category: 'utility',
     tools: ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'],
     mcp_servers: [],
@@ -240,24 +233,24 @@ const AGENT_CONFIGS: Record<string, AgentConfig> = {
 
   // Ideation & Roadmap - use feature settings
   ideation: {
-    label: 'Ideation',
-    description: 'Generates feature ideas',
+    label: 'agents.ideation.name',
+    description: 'agents.ideation.description',
     category: 'ideation',
     tools: ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'],
     mcp_servers: [],
     settingsSource: { type: 'feature', feature: 'ideation' },
   },
   roadmap_discovery: {
-    label: 'Roadmap Discovery',
-    description: 'Discovers roadmap items',
+    label: 'agents.roadmap_discovery.name',
+    description: 'agents.roadmap_discovery.description',
     category: 'ideation',
     tools: ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'],
     mcp_servers: ['context7'],
     settingsSource: { type: 'feature', feature: 'roadmap' },
   },
   pr_template_filler: {
-    label: 'PR Template Filler',
-    description: 'Generates AI-powered PR descriptions from templates',
+    label: 'agents.pr_template_filler.name',
+    description: 'agents.pr_template_filler.description',
     category: 'utility',
     tools: ['Read', 'Glob', 'Grep'],
     mcp_servers: [],
@@ -268,14 +261,14 @@ const AGENT_CONFIGS: Record<string, AgentConfig> = {
 // MCP Server descriptions - accurate per backend models.py
 const MCP_SERVERS: Record<string, { name: string; description: string; icon: React.ElementType; tools?: string[] }> = {
   context7: {
-    name: 'Context7',
-    description: 'Documentation lookup for libraries and frameworks via @upstash/context7-mcp',
+    name: 'servers.context7.name',
+    description: 'servers.context7.description',
     icon: Search,
     tools: ['mcp__context7__resolve-library-id', 'mcp__context7__query-docs'],
   },
   'memory': {
-    name: 'Memory',
-    description: 'Knowledge graph for cross-session context. Requires GRAPHITI_MCP_URL env var.',
+    name: 'servers.memory.name',
+    description: 'servers.memory.description',
     // Note: mcp__graphiti-memory__ tool names are the external MCP server's protocol names
     icon: Brain,
     tools: [
@@ -287,8 +280,8 @@ const MCP_SERVERS: Record<string, { name: string; description: string; icon: Rea
     ],
   },
   'auto-claude': {
-    name: 'Aperant Tools',
-    description: 'Build progress tracking, session context, discoveries & gotchas recording',
+    name: 'servers.auto-claude.name',
+    description: 'servers.auto-claude.description',
     icon: ListChecks,
     tools: [
       'mcp__auto-claude__update_subtask_status',
@@ -300,8 +293,8 @@ const MCP_SERVERS: Record<string, { name: string; description: string; icon: Rea
     ],
   },
   linear: {
-    name: 'Linear',
-    description: 'Project management via Linear API. Requires LINEAR_API_KEY env var.',
+    name: 'servers.linear.name',
+    description: 'servers.linear.description',
     icon: ClipboardList,
     tools: [
       'mcp__linear-server__list_teams',
@@ -313,8 +306,8 @@ const MCP_SERVERS: Record<string, { name: string; description: string; icon: Rea
     ],
   },
   electron: {
-    name: 'Electron MCP',
-    description: 'Desktop app automation via Chrome DevTools Protocol. Requires ELECTRON_MCP_ENABLED=true.',
+    name: 'servers.electron.name',
+    description: 'servers.electron.description',
     icon: Monitor,
     tools: [
       'mcp__electron__get_electron_window_info',
@@ -324,8 +317,8 @@ const MCP_SERVERS: Record<string, { name: string; description: string; icon: Rea
     ],
   },
   puppeteer: {
-    name: 'Puppeteer MCP',
-    description: 'Web browser automation for non-Electron web frontends.',
+    name: 'servers.puppeteer.name',
+    description: 'servers.puppeteer.description',
     icon: Globe,
     tools: [
       'mcp__puppeteer__puppeteer_connect_active_tab',
@@ -352,11 +345,11 @@ const ALL_MCP_SERVERS = [
 
 // Category metadata - neutral styling per design.json
 const CATEGORIES = {
-  spec: { label: 'Spec Creation', icon: FileCheck },
-  build: { label: 'Build', icon: Code },
-  qa: { label: 'QA', icon: CheckCircle2 },
-  utility: { label: 'Utility', icon: Wrench },
-  ideation: { label: 'Ideation', icon: Lightbulb },
+  spec: { label: 'categories.spec', icon: FileCheck },
+  build: { label: 'categories.build', icon: Code },
+  qa: { label: 'categories.qa', icon: CheckCircle2 },
+  utility: { label: 'categories.utility', icon: Wrench },
+  ideation: { label: 'categories.ideation', icon: Lightbulb },
 };
 
 interface AgentCardProps {
@@ -374,13 +367,19 @@ interface AgentCardProps {
 function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServerStates, customServers, onAddMcp, onRemoveMcp }: AgentCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const { t } = useTranslation(['settings']);
+  const { t } = useTranslation(['settings', 'uiAgentTools']);
   const category = CATEGORIES[config.category as keyof typeof CATEGORIES];
   const CategoryIcon = category.icon;
 
   // Build combined MCP server info including custom servers
   const allMcpServers = useMemo(() => {
-    const servers = { ...MCP_SERVERS };
+    const servers = Object.fromEntries(
+      Object.entries(MCP_SERVERS).map(([serverId, server]) => [serverId, {
+        ...server,
+        name: t(`uiAgentTools:${server.name}`),
+        description: t(`uiAgentTools:${server.description}`),
+      }])
+    );
     for (const custom of customServers) {
       servers[custom.id] = {
         name: custom.name,
@@ -389,7 +388,7 @@ function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServer
       };
     }
     return servers;
-  }, [customServers]);
+  }, [customServers, t]);
 
   // Calculate effective MCPs: defaults + adds - removes, then filter by project-level MCP states
   const effectiveMcps = useMemo(() => {
@@ -446,7 +445,7 @@ function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServer
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-medium text-sm text-foreground">{config.label}</h3>
+            <h3 className="font-medium text-sm text-foreground">{t(`uiAgentTools:${config.label}`)}</h3>
             <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-secondary text-secondary-foreground">
               {modelLabel}
             </span>
@@ -454,11 +453,11 @@ function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServer
               {thinkingLabel}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground truncate">{config.description}</p>
+          <p className="text-xs text-muted-foreground truncate">{t(`uiAgentTools:${config.description}`)}</p>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
           <span className="text-xs">
-            {effectiveMcps.length} MCP
+            {t('uiAgentTools:mcpCount', { count: effectiveMcps.length })}
           </span>
           {isExpanded ? (
             <ChevronDown className="h-4 w-4" />
@@ -475,7 +474,7 @@ function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServer
           <div>
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                MCP Servers
+                {t('uiAgentTools:mcpServers')}
               </h4>
               {availableMcps.length > 0 && (
                 <button
@@ -558,21 +557,22 @@ function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServer
           {/* Tools */}
           <div>
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-              Available Tools
+              {t('uiAgentTools:availableTools')}
             </h4>
             {config.tools.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {config.tools.map((tool) => (
                   <span
                     key={tool}
+                    title={tool}
                     className="px-2 py-1 bg-muted rounded text-xs font-mono"
                   >
-                    {tool}
+                    {t(`uiAgentTools:tools.${tool}`, { defaultValue: tool })}
                   </span>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Text-only (no tools)</p>
+              <p className="text-sm text-muted-foreground">{t('uiAgentTools:textOnly')}</p>
             )}
           </div>
         </div>
@@ -582,7 +582,7 @@ function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServer
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('mcp.addMcpTo', { agent: config.label })}</DialogTitle>
+            <DialogTitle>{t('mcp.addMcpTo', { agent: t(`uiAgentTools:${config.label}`) })}</DialogTitle>
             <DialogDescription>{t('mcp.addMcpDescription')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-4">
@@ -644,7 +644,7 @@ function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServer
 }
 
 export function AgentTools() {
-  const { t } = useTranslation(['settings']);
+  const { t } = useTranslation(['settings', 'uiAgentTools']);
   const settings = useSettingsStore((state) => state.settings);
   const projects = useProjectStore((state) => state.projects);
   const selectedProjectId = useProjectStore((state) => state.selectedProjectId);
@@ -918,13 +918,13 @@ export function AgentTools() {
           [server.id]: {
             serverId: server.id,
             status: 'unknown',
-            message: 'Health check failed',
+            message: t('uiAgentTools:healthCheckFailed'),
             checkedAt: new Date().toISOString(),
           }
         }));
       }
     }
-  }, [envConfig?.customMcpServers]);
+  }, [envConfig?.customMcpServers, t]);
 
   // Check health when custom servers change
   useEffect(() => {
@@ -958,7 +958,7 @@ export function AgentTools() {
         [server.id]: {
           serverId: server.id,
           status: 'unhealthy',
-          message: 'Connection test failed',
+          message: t('uiAgentTools:connectionTestFailed'),
           checkedAt: new Date().toISOString(),
         }
       }));
@@ -969,7 +969,7 @@ export function AgentTools() {
         return next;
       });
     }
-  }, []);
+  }, [t]);
 
   // Resolve agent settings using the centralized utility, scoped to the active provider
   // Resolution order: custom overrides -> selected profile's config -> global defaults
@@ -1031,10 +1031,10 @@ export function AgentTools() {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold text-foreground">MCP Server Overview</h1>
+              <h1 className="text-xl font-semibold text-foreground">{t('uiAgentTools:title')}</h1>
               {selectedProject && (
                 <span className="text-sm text-muted-foreground">
-                  for {selectedProject.name}
+                  {t('uiAgentTools:forProject', { name: selectedProject.name })}
                 </span>
               )}
             </div>
@@ -1108,11 +1108,11 @@ export function AgentTools() {
                   <div className="flex items-center gap-3">
                     <Brain className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <span className="text-sm font-medium">{t('settings:mcp.servers.memory.name')}</span>
+                      <span className="text-sm font-medium">{t('uiAdditional:memory.name')}</span>
                       <p className="text-xs text-muted-foreground">
                         {envConfig.memoryProviderConfig
-                          ? t('settings:mcp.servers.memory.description')
-                          : t('settings:mcp.servers.memory.notConfigured')}
+                          ? t('uiAdditional:memory.description')
+                          : t('uiAdditional:memory.notConfigured')}
                       </p>
                     </div>
                   </div>
@@ -1275,14 +1275,14 @@ export function AgentTools() {
                                 onClick={() => handleTestConnection(server)}
                                 disabled={isTesting}
                                 className="h-7 px-2 text-xs"
-                                title="Test Connection"
+                                title={t('uiAgentTools:testConnection')}
                               >
                                 {isTesting ? (
                                   <Loader2 className="h-3 w-3 animate-spin" />
                                 ) : (
                                   <RefreshCw className="h-3 w-3" />
                                 )}
-                                <span className="ml-1">Test</span>
+                                <span className="ml-1">{t('uiAgentTools:test')}</span>
                               </Button>
                               {/* Edit/Delete - show on hover */}
                               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1290,7 +1290,7 @@ export function AgentTools() {
                                   type="button"
                                   onClick={() => { setEditingCustomServer(server); setShowCustomMcpDialog(true); }}
                                   className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                                  title="Edit"
+                                  title={t('uiAgentTools:edit')}
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
                                 </button>
@@ -1298,7 +1298,7 @@ export function AgentTools() {
                                   type="button"
                                   onClick={() => handleDeleteCustomServer(server.id)}
                                   className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-                                  title="Delete"
+                                  title={t('uiAgentTools:delete')}
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
@@ -1341,10 +1341,10 @@ export function AgentTools() {
                   )}
                   <CategoryIcon className="h-4 w-4 text-muted-foreground" />
                   <h2 className="text-sm font-semibold text-foreground">
-                    {category.label}
+                    {t(`uiAgentTools:${category.label}`)}
                   </h2>
                   <span className="text-xs text-muted-foreground">
-                    ({agents.length} agents)
+                    {t('uiAgentTools:agentCount', { count: agents.length })}
                   </span>
                 </button>
 
@@ -1359,7 +1359,7 @@ export function AgentTools() {
                           id={id}
                           config={config}
                           modelLabel={getModelLabel(model)}
-                          thinkingLabel={getThinkingLabel(thinking)}
+                          thinkingLabel={t(`uiAgentTools:thinking.${thinking}`)}
                           overrides={envConfig?.agentMcpOverrides?.[id]}
                           mcpServerStates={envConfig?.mcpServers}
                           customServers={envConfig?.customMcpServers || []}

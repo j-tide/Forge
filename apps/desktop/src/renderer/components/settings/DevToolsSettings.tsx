@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Code, Terminal, RefreshCw, Loader2, Check, FolderOpen, AlertTriangle } from 'lucide-react';
@@ -110,10 +111,10 @@ export function DevToolsSettings({ settings, onSettingsChange }: DevToolsSetting
       if (result.success && result.data) {
         setDetectedTools(result.data as DetectedTools);
       } else {
-        setDetectError(result.error || 'Failed to detect tools');
+        setDetectError(result.error || i18n.t('uiSettings:toolsDetectFailed'));
       }
     } catch (err) {
-      setDetectError(err instanceof Error ? err.message : 'Failed to detect tools');
+      setDetectError(err instanceof Error ? err.message : i18n.t('uiSettings:toolsDetectFailed'));
     } finally {
       setIsDetecting(false);
     }
@@ -197,7 +198,7 @@ export function DevToolsSettings({ settings, onSettingsChange }: DevToolsSetting
   }
 
   // Add custom option last
-  ideOptions.push({ value: 'custom', label: 'Custom...', detected: false });
+  ideOptions.push({ value: 'custom', label: i18n.t('uiSettings:customOption'), detected: false });
 
   // Build Terminal options with detection status
   const terminalOptions: Array<{ value: SupportedTerminal; label: string; detected: boolean }> = [];
@@ -236,7 +237,7 @@ export function DevToolsSettings({ settings, onSettingsChange }: DevToolsSetting
   }
 
   // Add custom option last
-  terminalOptions.push({ value: 'custom', label: 'Custom...', detected: false });
+  terminalOptions.push({ value: 'custom', label: i18n.t('uiSettings:customOption'), detected: false });
 
   // Build CLI options with detection status
   const cliOptions: Array<{ value: SupportedCLI; label: string; detected: boolean }> = [];
@@ -262,7 +263,7 @@ export function DevToolsSettings({ settings, onSettingsChange }: DevToolsSetting
     }
   }
 
-  cliOptions.push({ value: 'custom', label: 'Custom...', detected: false });
+  cliOptions.push({ value: 'custom', label: i18n.t('uiSettings:customOption'), detected: false });
 
   return (
     <SettingsSection
@@ -327,7 +328,7 @@ export function DevToolsSettings({ settings, onSettingsChange }: DevToolsSetting
           {settings.preferredIDE === 'custom' && (
             <div className="mt-3 space-y-2">
               <Label htmlFor="custom-ide-path">
-                {t('devtools.customPath', 'Custom path')}
+                {i18n.t('uiSettings:missing_devtools_customPath')}
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -389,7 +390,7 @@ export function DevToolsSettings({ settings, onSettingsChange }: DevToolsSetting
           {settings.preferredTerminal === 'custom' && (
             <div className="mt-3 space-y-2">
               <Label htmlFor="custom-terminal-path">
-                {t('devtools.customPath', 'Custom path')}
+                {i18n.t('uiSettings:missing_devtools_customPath')}
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -451,7 +452,7 @@ export function DevToolsSettings({ settings, onSettingsChange }: DevToolsSetting
           {settings.preferredCLI === 'custom' && (
             <div className="mt-3 space-y-2">
               <Label htmlFor="custom-cli-path">
-                {t('devtools.customPath', 'Custom path')}
+                {i18n.t('uiSettings:missing_devtools_customPath')}
               </Label>
               <div className="flex gap-2">
                 <Input

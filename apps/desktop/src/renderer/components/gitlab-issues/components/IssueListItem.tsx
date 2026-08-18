@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { User, MessageCircle, Tag, Sparkles } from 'lucide-react';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
@@ -9,12 +10,8 @@ const GITLAB_ISSUE_STATE_COLORS: Record<string, string> = {
   closed: 'bg-purple-500/10 text-purple-500 border-purple-500/20'
 };
 
-const GITLAB_ISSUE_STATE_LABELS: Record<string, string> = {
-  opened: 'Open',
-  closed: 'Closed'
-};
-
 export function IssueListItem({ issue, isSelected, onClick, onInvestigate }: IssueListItemProps) {
+  const { t } = useTranslation('gitlab');
   return (
     <div
       role="button"
@@ -39,7 +36,7 @@ export function IssueListItem({ issue, isSelected, onClick, onInvestigate }: Iss
               variant="outline"
               className={`text-xs ${GITLAB_ISSUE_STATE_COLORS[issue.state] || ''}`}
             >
-              {GITLAB_ISSUE_STATE_LABELS[issue.state] || issue.state}
+              {t(`states.${issue.state}`, { defaultValue: issue.state })}
             </Badge>
             <span className="text-xs text-muted-foreground">#{issue.iid}</span>
           </div>
@@ -73,7 +70,7 @@ export function IssueListItem({ issue, isSelected, onClick, onInvestigate }: Iss
             e.stopPropagation();
             onInvestigate();
           }}
-          aria-label="Investigate issue"
+          aria-label={t('uiIntegrations:gitlab.investigate')}
         >
           <Sparkles className="h-4 w-4" />
         </Button>

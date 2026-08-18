@@ -118,11 +118,12 @@ function ListItem({
 }
 
 function ConfidenceBar({ confidence }: { confidence: number }) {
+  const { t: tk } = useTranslation('uiKnowledgeContext');
   const pct = Math.round(confidence * 100);
   const color =
     pct >= 80 ? 'bg-green-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500';
   return (
-    <div className="flex items-center gap-1.5" title={`Confidence: ${pct}%`}>
+    <div className="flex items-center gap-1.5" title={tk('confidence', { value: pct })}>
       <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
         <div className={cn('h-full rounded-full', color)} style={{ width: `${pct}%` }} />
       </div>
@@ -201,6 +202,7 @@ function WorkflowSteps({ steps, label }: { steps: string[]; label: string }) {
 }
 
 export function MemoryCard({ memory, onVerify, onPin, onDeprecate }: MemoryCardProps) {
+  const { t: tk } = useTranslation('uiKnowledgeContext');
   const { t } = useTranslation('common');
   const [expanded, setExpanded] = useState(false);
   const [filesExpanded, setFilesExpanded] = useState(false);
@@ -236,10 +238,9 @@ export function MemoryCard({ memory, onVerify, onPin, onDeprecate }: MemoryCardP
   const Icon = memoryTypeIcons[memory.type] || memoryTypeIcons.module_insight;
   const typeColor = memoryTypeColors[memory.type] || '';
   const typeLabel =
-    memoryTypeLabels[memory.type] ||
-    t(`memory.types.${memory.type}`, { defaultValue: memory.type.replace(/_/g, ' ') });
+    t(`memory.types.${memory.type}`, { defaultValue: memoryTypeLabels[memory.type] || memory.type.replace(/_/g, ' ') });
 
-  const sessionLabel = parsed?.session_number ? `Session #${parsed.session_number}` : null;
+  const sessionLabel = parsed?.session_number ? tk('sessionNumber', { number: parsed.session_number }) : null;
   const specId = parsed?.spec_id;
   const sourceLabel = t(`memory.sources.${memory.source}`, { defaultValue: memory.source });
   const sections = {
@@ -662,7 +663,7 @@ export function MemoryCard({ memory, onVerify, onPin, onDeprecate }: MemoryCardP
 
         {/* If no expandable content, show content inline for simple text-only memories */}
         {!hasContent && !memory.content && expanded && (
-          <p className="mt-4 text-xs text-muted-foreground italic">No additional details available.</p>
+          <p className="mt-4 text-xs text-muted-foreground italic">{tk('noDetails')}</p>
         )}
       </CardContent>
     </Card>

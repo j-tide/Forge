@@ -83,6 +83,7 @@ export function MemoriesTab({
   onPin,
   onDeprecate
 }: MemoriesTabProps) {
+  const { t: tk } = useTranslation('uiKnowledgeContext');
   const { t } = useTranslation('common');
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<MemoryFilterCategory>('all');
@@ -280,7 +281,7 @@ export function MemoriesTab({
               onChange={(e) => setLocalSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyDown}
             />
-            <Button onClick={handleSearch} disabled={searchLoading}>
+            <Button onClick={handleSearch} disabled={searchLoading} aria-label={tk('searchMemories')}>
               <Search className={cn('h-4 w-4', searchLoading && 'animate-pulse')} />
             </Button>
           </div>
@@ -299,7 +300,7 @@ export function MemoriesTab({
                         {result.type.replace('_', ' ')}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        Score: {result.score.toFixed(2)}
+                        {tk('score', { value: result.score.toFixed(2) })}
                       </span>
                     </div>
                     <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono max-h-40 overflow-auto">

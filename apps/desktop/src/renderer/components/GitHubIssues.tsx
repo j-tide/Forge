@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useProjectStore } from "../stores/project-store";
 import { useTaskStore } from "../stores/task-store";
@@ -22,6 +23,7 @@ import type { GitHubIssue } from "../../shared/types";
 import type { GitHubIssuesProps } from "./github-issues/types";
 
 export function GitHubIssues({ onOpenSettings, onNavigateToTask }: GitHubIssuesProps) {
+  const { t } = useTranslation('uiIntegrations');
   const projects = useProjectStore((state) => state.projects);
   const selectedProjectId = useProjectStore((state) => state.selectedProjectId);
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
@@ -197,7 +199,7 @@ export function GitHubIssues({ onOpenSettings, onNavigateToTask }: GitHubIssuesP
               autoFixQueueItem={getAutoFixQueueItem(selectedIssue.number)}
             />
           ) : (
-            <EmptyState message="Select an issue to view details" />
+            <EmptyState message={t('uiIntegrations:linear.githubSelectIssue')} />
           )}
         </div>
       </div>

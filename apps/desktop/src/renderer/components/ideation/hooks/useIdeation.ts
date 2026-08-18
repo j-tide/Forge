@@ -29,7 +29,7 @@ interface UseIdeationOptions {
 
 export function useIdeation(projectId: string, options: UseIdeationOptions = {}) {
   const { onGoToTask, showArchived: externalShowArchived } = options;
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('uiKnowledgeIdeas');
   const session = useIdeationStore((state) => state.session);
   const generationStatus = useIdeationStore((state) => state.generationStatus);
   const isGenerating = useIdeationStore((state) => state.isGenerating);
@@ -66,8 +66,8 @@ export function useIdeation(projectId: string, options: UseIdeationOptions = {})
     if (hasToken === false) {
       toast({
         variant: 'destructive',
-        title: t('errors.noProviderConfigured', 'No AI provider configured'),
-        description: t('errors.configureProviderFirst', 'Please add a provider account in Settings to use AI features.'),
+        title: t('providerErrorTitle'),
+        description: t('providerErrorDescription'),
       });
       return;
     }
@@ -78,8 +78,8 @@ export function useIdeation(projectId: string, options: UseIdeationOptions = {})
     if (hasToken === false) {
       toast({
         variant: 'destructive',
-        title: t('errors.noProviderConfigured', 'No AI provider configured'),
-        description: t('errors.configureProviderFirst', 'Please add a provider account in Settings to use AI features.'),
+        title: t('providerErrorTitle'),
+        description: t('providerErrorDescription'),
       });
       return;
     }
@@ -112,8 +112,8 @@ export function useIdeation(projectId: string, options: UseIdeationOptions = {})
     if (hasToken === false) {
       toast({
         variant: 'destructive',
-        title: t('errors.noProviderConfigured', 'No AI provider configured'),
-        description: t('errors.configureProviderFirst', 'Please add a provider account in Settings to use AI features.'),
+        title: t('providerErrorTitle'),
+        description: t('providerErrorDescription'),
       });
       return;
     }
@@ -150,8 +150,8 @@ export function useIdeation(projectId: string, options: UseIdeationOptions = {})
         // Show error toast when conversion fails (e.g., already converted, idea not found)
         toast({
           variant: 'destructive',
-          title: t('ideation.conversionFailed'),
-          description: result.error || t('ideation.conversionFailedDescription')
+          title: t('common:ideation.conversionFailed'),
+          description: result.error || t('common:ideation.conversionFailedDescription')
         });
       }
     } catch (error) {
@@ -159,8 +159,8 @@ export function useIdeation(projectId: string, options: UseIdeationOptions = {})
       console.error('Failed to convert idea to task:', error);
       toast({
         variant: 'destructive',
-        title: t('ideation.conversionError'),
-        description: t('ideation.conversionErrorDescription')
+        title: t('common:ideation.conversionError'),
+        description: t('common:ideation.conversionErrorDescription')
       });
     } finally {
       // Always clear converting state - update ref first, then state

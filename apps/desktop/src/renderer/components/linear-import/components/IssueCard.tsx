@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 /**
  * Individual issue card component
  */
@@ -21,6 +22,7 @@ interface IssueCardProps {
 }
 
 export function IssueCard({ issue, isSelected, onToggle }: IssueCardProps) {
+  const { t } = useTranslation('uiIntegrations');
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -57,7 +59,9 @@ export function IssueCard({ issue, isSelected, onToggle }: IssueCardProps) {
               variant="secondary"
               className={`text-xs ${PRIORITY_COLORS[issue.priority] || ''}`}
             >
-              {issue.priorityLabel}
+              {issue.priority >= 0 && issue.priority <= 4
+                ? t(`uiIntegrations:linear.priority${issue.priority}`)
+                : issue.priorityLabel}
             </Badge>
             {issue.labels.slice(0, 2).map(label => (
               <Badge
@@ -74,7 +78,7 @@ export function IssueCard({ issue, isSelected, onToggle }: IssueCardProps) {
             ))}
             {issue.labels.length > 2 && (
               <span className="text-xs text-muted-foreground">
-                +{issue.labels.length - 2} more
+                {t('uiIntegrations:linear.moreLabels', { count: issue.labels.length - 2 })}
               </span>
             )}
           </div>
@@ -95,12 +99,12 @@ export function IssueCard({ issue, isSelected, onToggle }: IssueCardProps) {
               {isExpanded ? (
                 <>
                   <ChevronUp className="h-3 w-3" />
-                  Hide description
+                  {t('uiIntegrations:linear.hideDescription')}
                 </>
               ) : (
                 <>
                   <ChevronDown className="h-3 w-3" />
-                  Show description
+                  {t('uiIntegrations:linear.showDescription')}
                 </>
               )}
             </button>
@@ -115,10 +119,10 @@ export function IssueCard({ issue, isSelected, onToggle }: IssueCardProps) {
           {/* Meta info */}
           <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
             {issue.assignee && (
-              <span>Assigned to {issue.assignee.name}</span>
+              <span>{t('uiIntegrations:linear.assignedTo', { name: issue.assignee.name })}</span>
             )}
             {issue.project && (
-              <span>Project: {issue.project.name}</span>
+              <span>{t('uiIntegrations:linear.projectName', { name: issue.project.name })}</span>
             )}
             <a
               href={issue.url}
@@ -128,7 +132,7 @@ export function IssueCard({ issue, isSelected, onToggle }: IssueCardProps) {
               className="flex items-center gap-1 hover:text-primary"
             >
               <ExternalLink className="h-3 w-3" />
-              View in Linear
+              {t('uiIntegrations:linear.viewInLinear')}
             </a>
           </div>
         </div>

@@ -14,7 +14,6 @@ import { useTranslation } from 'react-i18next';
 import { TaskOutcomeBadge, getTaskOutcomeColorClass } from './roadmap/TaskOutcomeBadge';
 import {
   ROADMAP_PRIORITY_COLORS,
-  ROADMAP_PRIORITY_LABELS,
   ROADMAP_COMPLEXITY_COLORS,
   ROADMAP_IMPACT_COLORS
 } from '../../shared/constants';
@@ -38,6 +37,7 @@ export function SortableFeatureCard({
   onArchive
 }: SortableFeatureCardProps) {
   const { t } = useTranslation('common');
+  const { t: tk } = useTranslation('uiKnowledge');
   const {
     attributes,
     listeners,
@@ -88,7 +88,7 @@ export function SortableFeatureCard({
                 variant="outline"
                 className={cn('text-[10px] px-1.5 py-0', ROADMAP_PRIORITY_COLORS[feature.priority])}
               >
-                {ROADMAP_PRIORITY_LABELS[feature.priority]}
+                {tk(`priority.${feature.priority}`)}
               </Badge>
               {phaseName && (
                 <Tooltip>
@@ -102,7 +102,7 @@ export function SortableFeatureCard({
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Phase: {phaseName}
+                    {tk('phaseValue', { name: phaseName })}
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -117,7 +117,7 @@ export function SortableFeatureCard({
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent>
-                    This feature addresses competitor pain points
+                    {tk('competitorHint')}
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -191,13 +191,13 @@ export function SortableFeatureCard({
             variant="outline"
             className={cn('text-[10px] px-1.5 py-0', ROADMAP_COMPLEXITY_COLORS[feature.complexity])}
           >
-            {feature.complexity}
+            {tk(`level.${feature.complexity}`)}
           </Badge>
           <Badge
             variant="outline"
             className={cn('text-[10px] px-1.5 py-0', ROADMAP_IMPACT_COLORS[feature.impact])}
           >
-            {feature.impact}
+            {tk(`level.${feature.impact}`)}
           </Badge>
           {/* Show vote count if from external source */}
           {feature.votes !== undefined && feature.votes > 0 && (
@@ -212,7 +212,7 @@ export function SortableFeatureCard({
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
-                {feature.votes} votes from user feedback
+                {tk('votes', { count: feature.votes })}
               </TooltipContent>
             </Tooltip>
           )}
@@ -224,11 +224,11 @@ export function SortableFeatureCard({
                   variant="outline"
                   className="text-[10px] px-1.5 py-0 text-orange-500 border-orange-500/30"
                 >
-                  {feature.source?.provider === 'canny' ? 'Canny' : 'External'}
+                  {feature.source?.provider === 'canny' ? 'Canny' : tk('external')}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
-                Imported from {feature.source?.provider}
+                {tk('importedFrom', { provider: feature.source?.provider })}
               </TooltipContent>
             </Tooltip>
           )}

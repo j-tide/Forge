@@ -22,7 +22,7 @@ const GITLAB_COMPLEXITY_COLORS: Record<string, string> = {
 };
 
 export function IssueDetail({ issue, onInvestigate, investigationResult, linkedTaskId, onViewTask }: IssueDetailProps) {
-  const { t } = useTranslation(['gitlab', 'common']);
+  const { t, i18n } = useTranslation(['gitlab', 'common']);
   // Determine which task ID to use - either already linked or just created
   const taskId = linkedTaskId || (investigationResult?.success ? investigationResult.taskId : undefined);
   const hasLinkedTask = !!taskId;
@@ -67,7 +67,7 @@ export function IssueDetail({ issue, onInvestigate, investigationResult, linkedT
           </div>
           <div className="flex items-center gap-1">
             <Clock className="h-4 w-4" />
-            {formatDate(issue.createdAt)}
+            {formatDate(issue.createdAt, i18n.resolvedLanguage || i18n.language)}
           </div>
           {issue.userNotesCount > 0 && (
             <div className="flex items-center gap-1">

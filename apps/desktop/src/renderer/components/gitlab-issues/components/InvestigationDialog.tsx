@@ -26,7 +26,7 @@ export function InvestigationDialog({
   onClose,
   projectId
 }: InvestigationDialogProps) {
-  const { t } = useTranslation('gitlab');
+  const { t, i18n } = useTranslation('gitlab');
   const [notes, setNotes] = useState<GitLabNote[]>([]);
   const [selectedNoteIds, setSelectedNoteIds] = useState<number[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
@@ -57,7 +57,7 @@ export function InvestigationDialog({
           if (!isMounted) return;
           console.error('Failed to fetch notes:', err);
           setFetchNotesError(
-            err instanceof Error ? err.message : 'Failed to load notes'
+            err instanceof Error ? err.message : t('uiIntegrations:gitlab.errors.loadNotes')
           );
         })
         .finally(() => {
@@ -70,7 +70,7 @@ export function InvestigationDialog({
         isMounted = false;
       };
     }
-  }, [open, selectedIssue, projectId]);
+  }, [open, selectedIssue, projectId, t]);
 
   const toggleNote = (noteId: number) => {
     setSelectedNoteIds(prev =>
@@ -162,7 +162,7 @@ export function InvestigationDialog({
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <span className="font-medium">{note.author.username}</span>
                             <span>•</span>
-                            <span>{formatDate(note.createdAt)}</span>
+                            <span>{formatDate(note.createdAt, i18n.resolvedLanguage || i18n.language)}</span>
                           </div>
                           <p className="text-sm text-foreground whitespace-pre-wrap break-words line-clamp-3">
                             {note.body}

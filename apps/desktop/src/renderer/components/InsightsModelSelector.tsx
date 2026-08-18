@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Brain, Scale, Zap, Sparkles, Sliders, Check } from 'lucide-react';
 import { Button } from './ui/button';
@@ -31,6 +32,7 @@ export function InsightsModelSelector({
   onConfigChange,
   disabled
 }: InsightsModelSelectorProps) {
+  const { t: tk } = useTranslation('uiKnowledgeContext');
   const [showCustomModal, setShowCustomModal] = useState(false);
 
   // Default to 'balanced' if no config, or if 'auto' profile was selected (not applicable for insights)
@@ -68,9 +70,9 @@ export function InsightsModelSelector({
   const getDisplayText = () => {
     if (selectedProfileId === 'custom' && currentConfig) {
       const modelLabel = AVAILABLE_MODELS.find(m => m.value === currentConfig.model)?.label || currentConfig.model;
-      return `${modelLabel} + ${currentConfig.thinkingLevel}`;
+      return `${modelLabel} + ${tk(`thinking.${currentConfig.thinkingLevel}`, { defaultValue: currentConfig.thinkingLevel })}`;
     }
-    return profile?.name || 'Balanced';
+    return tk(`profiles.${selectedProfileId}`, { defaultValue: profile?.name || tk('profiles.balanced') });
   };
 
   return (
@@ -82,7 +84,7 @@ export function InsightsModelSelector({
             size="sm"
             className="h-8 gap-2 px-2"
             disabled={disabled}
-            title={`Model: ${getDisplayText()}`}
+            title={tk('modelTitle', { model: getDisplayText() })}
           >
             <Icon className="h-4 w-4" />
             <span className="hidden text-xs text-muted-foreground sm:inline">
@@ -91,7 +93,7 @@ export function InsightsModelSelector({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
-          <DropdownMenuLabel>Agent Profile</DropdownMenuLabel>
+          <DropdownMenuLabel>{tk('agentProfile')}</DropdownMenuLabel>
           {DEFAULT_AGENT_PROFILES.filter(p => !p.isAutoProfile).map((p) => {
             const ProfileIcon = iconMap[p.icon || 'Brain'];
             const isSelected = selectedProfileId === p.id;
@@ -104,9 +106,9 @@ export function InsightsModelSelector({
               >
                 <ProfileIcon className="h-4 w-4 shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium">{p.name}</div>
+                  <div className="font-medium">{tk(`profiles.${p.id}`, { defaultValue: p.name })}</div>
                   <div className="truncate text-xs text-muted-foreground">
-                    {modelLabel} + {p.thinkingLevel}
+                    {modelLabel} + {tk(`thinking.${p.thinkingLevel}`, { defaultValue: p.thinkingLevel })}
                   </div>
                 </div>
                 {isSelected && (
@@ -122,9 +124,9 @@ export function InsightsModelSelector({
           >
             <Sliders className="h-4 w-4 shrink-0" />
             <div className="flex-1">
-              <div className="font-medium">Custom...</div>
+              <div className="font-medium">{tk('custom')}</div>
               <div className="text-xs text-muted-foreground">
-                Choose model & thinking level
+                {tk('chooseModel')}
               </div>
             </div>
             {selectedProfileId === 'custom' && (

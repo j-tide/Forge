@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 /**
  * Refactored Linear Task Import Modal
  * Main modal component that orchestrates the import workflow
@@ -31,6 +32,7 @@ export function LinearTaskImportModalRefactored({
   onOpenChange,
   onImportComplete
 }: LinearTaskImportModalProps) {
+  const { t } = useTranslation('uiIntegrations');
   // Use the orchestration hook to manage all state and handlers
   const {
     teams,
@@ -72,10 +74,10 @@ export function LinearTaskImportModalRefactored({
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <Download className="h-5 w-5" />
-            Import Linear Tasks
+            {t('uiIntegrations:linear.title')}
           </DialogTitle>
           <DialogDescription>
-            Select tasks from Linear to import into AutoBuild
+            {t('uiIntegrations:linear.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -143,7 +145,7 @@ export function LinearTaskImportModalRefactored({
 
         <DialogFooter className="shrink-0">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
-            {importResult?.success ? 'Done' : 'Cancel'}
+            {importResult?.success ? t('uiIntegrations:linear.done') : t('uiIntegrations:linear.cancel')}
           </Button>
           {!importResult?.success && (
             <Button
@@ -153,13 +155,12 @@ export function LinearTaskImportModalRefactored({
               {isImporting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Importing...
+                  {t('uiIntegrations:linear.importing')}
                 </>
               ) : (
                 <>
                   <Download className="mr-2 h-4 w-4" />
-                  Import {selectedIssueIds.size} Task
-                  {selectedIssueIds.size !== 1 ? 's' : ''}
+                  {t('uiIntegrations:linear.importCount', { count: selectedIssueIds.size })}
                 </>
               )}
             </Button>

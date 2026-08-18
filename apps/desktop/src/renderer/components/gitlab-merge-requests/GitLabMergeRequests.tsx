@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { Plus, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -13,6 +14,7 @@ interface GitLabMergeRequestsProps {
 }
 
 export function GitLabMergeRequests({ projectId, onOpenSettings }: GitLabMergeRequestsProps) {
+  const { t } = useTranslation('uiIntegrations');
   const [stateFilter, setStateFilter] = useState<'opened' | 'closed' | 'merged' | 'all'>('opened');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
@@ -56,7 +58,7 @@ export function GitLabMergeRequests({ projectId, onOpenSettings }: GitLabMergeRe
         <AlertCircle className="h-12 w-12 text-destructive mb-4" />
         <p className="text-sm text-muted-foreground text-center">{error}</p>
         <Button variant="outline" onClick={refresh} className="mt-4">
-          Try Again
+          {t('uiIntegrations:gitlab.tryAgain')}
         </Button>
       </div>
     );
@@ -82,7 +84,7 @@ export function GitLabMergeRequests({ projectId, onOpenSettings }: GitLabMergeRe
             size="sm"
           >
             <Plus className="h-4 w-4" />
-            New Merge Request
+            {t('uiIntegrations:gitlab.newMR')}
           </Button>
         </div>
       </div>
@@ -107,7 +109,7 @@ export function GitLabMergeRequests({ projectId, onOpenSettings }: GitLabMergeRe
           />
         ) : (
           <div className="flex items-center justify-center h-full text-muted-foreground">
-            Select a merge request to view details
+            {t('uiIntegrations:gitlab.selectMR')}
           </div>
         )}
       </div>

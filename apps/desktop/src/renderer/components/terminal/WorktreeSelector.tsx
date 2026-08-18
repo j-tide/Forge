@@ -382,8 +382,8 @@ export function WorktreeSelector({
               setDeleteWorktree(item.data);
             }}
             className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-            aria-label={t('common:delete')}
-            title={t('common:delete')}
+            aria-label={t('common:buttons.delete')}
+            title={t('common:buttons.delete')}
           >
             <Trash2 className="h-3 w-3" />
           </button>
@@ -514,9 +514,9 @@ export function WorktreeSelector({
     <AlertDialog open={!!deleteWorktree} onOpenChange={(open) => !open && setDeleteWorktree(null)}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{t('terminal:worktree.deleteTitle', 'Delete Worktree?')}</AlertDialogTitle>
+          <AlertDialogTitle>{t('terminal:worktree.deleteTitle')}</AlertDialogTitle>
           <AlertDialogDescription>
-            {t('terminal:worktree.deleteDescription', 'This will permanently delete the worktree and its branch. Any uncommitted changes will be lost.')}
+            {t('terminal:worktree.deleteDescription')}
             {deleteWorktree && (
               <span className="block mt-2 font-mono text-sm">
                 {deleteWorktree.name}
@@ -528,7 +528,7 @@ export function WorktreeSelector({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>{t('common:cancel')}</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>{t('common:buttons.cancel')}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDeleteWorktree}
             disabled={isDeleting}
@@ -537,12 +537,12 @@ export function WorktreeSelector({
             {isDeleting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                {t('common:deleting', 'Deleting...')}
+                {t('common:buttons.deleting')}
               </>
             ) : (
               <>
                 <Trash2 className="h-4 w-4 mr-2" />
-                {t('common:delete')}
+                {t('common:buttons.delete')}
               </>
             )}
           </AlertDialogAction>

@@ -1,3 +1,4 @@
+import i18n from '../../../../shared/i18n';
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Github, RefreshCw, KeyRound, Loader2, CheckCircle2, AlertCircle, User, Lock, Globe, ChevronDown, GitBranch } from 'lucide-react';
@@ -145,11 +146,11 @@ export function GitHubIntegration({
         }
       } else {
         debugLog('fetchBranches: Failed -', result.error || 'No data returned');
-        setBranchesError(result.error || 'Failed to load branches');
+        setBranchesError(result.error || i18n.t('uiSettings:branchesLoadFailed'));
       }
     } catch (err) {
       debugLog('fetchBranches: Exception:', err);
-      setBranchesError(err instanceof Error ? err.message : 'Failed to load branches');
+      setBranchesError(err instanceof Error ? err.message : i18n.t('uiSettings:branchesLoadFailed'));
     } finally {
       setIsLoadingBranches(false);
     }
@@ -168,11 +169,11 @@ export function GitHubIntegration({
         setRepos(result.data.repos);
         debugLog('Loaded repos:', result.data.repos.length);
       } else {
-        setReposError(result.error || 'Failed to load repositories');
+        setReposError(result.error || i18n.t('uiSettings:repositoriesLoadFailed'));
       }
     } catch (err) {
       debugLog('Error fetching repos:', err);
-      setReposError(err instanceof Error ? err.message : 'Failed to load repositories');
+      setReposError(err instanceof Error ? err.message : i18n.t('uiSettings:repositoriesLoadFailed'));
     } finally {
       setIsLoadingRepos(false);
     }
@@ -229,10 +230,8 @@ export function GitHubIntegration({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
-          <Label className="font-normal text-foreground">Enable GitHub Issues</Label>
-          <p className="text-xs text-muted-foreground">
-            Sync issues from GitHub and create tasks automatically
-          </p>
+          <Label className="font-normal text-foreground">{i18n.t('uiSettings:text021')}</Label>
+          <p className="text-xs text-muted-foreground">{i18n.t('uiSettings:text022')}</p>
         </div>
         <Switch
           checked={envConfig.githubEnabled}
@@ -250,11 +249,10 @@ export function GitHubIntegration({
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="h-5 w-5 text-success" />
                     <div>
-                      <p className="text-sm font-medium text-success">Connected via GitHub CLI</p>
+                      <p className="text-sm font-medium text-success">{i18n.t('uiSettings:text023')}</p>
                       {oauthUsername && (
                         <p className="text-xs text-success/80 flex items-center gap-1 mt-0.5">
-                          <User className="h-3 w-3" />
-                          Authenticated as {oauthUsername}
+                          <User className="h-3 w-3" />{i18n.t('uiSettings:text024')}{oauthUsername}
                         </p>
                       )}
                     </div>
@@ -264,9 +262,7 @@ export function GitHubIntegration({
                     size="sm"
                     onClick={handleSwitchToManual}
                     className="text-xs"
-                  >
-                    Use Different Token
-                  </Button>
+                  >{i18n.t('uiSettings:text025')}</Button>
                 </div>
               </div>
 
@@ -287,14 +283,12 @@ export function GitHubIntegration({
           {authMode === 'oauth' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium text-foreground">GitHub Authentication</Label>
+                <Label className="text-sm font-medium text-foreground">{i18n.t('uiSettings:text026')}</Label>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleSwitchToManual}
-                >
-                  Use Manual Token
-                </Button>
+                >{i18n.t('uiSettings:text027')}</Button>
               </div>
               <GitHubOAuthFlow
                 onSuccess={handleOAuthSuccess}
@@ -308,32 +302,27 @@ export function GitHubIntegration({
             <>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium text-foreground">Personal Access Token</Label>
+                  <Label className="text-sm font-medium text-foreground">{i18n.t('uiSettings:text028')}</Label>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleSwitchToOAuth}
                     className="gap-2"
                   >
-                    <KeyRound className="h-3 w-3" />
-                    Use OAuth Instead
-                  </Button>
+                    <KeyRound className="h-3 w-3" />{i18n.t('uiSettings:text029')}</Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Create a token with <code className="px-1 bg-muted rounded">repo</code> scope from{' '}
+                <p className="text-xs text-muted-foreground">{i18n.t('uiSettings:text030')}<code className="px-1 bg-muted rounded">repo</code>{i18n.t('uiSettings:text031')}{' '}
                   <a
                     href="https://github.com/settings/tokens/new?scopes=repo&description=Auto-Build-UI"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-info hover:underline"
-                  >
-                    GitHub Settings
-                  </a>
+                  >{i18n.t('uiSettings:text032')}</a>
                 </p>
                 <PasswordInput
                   value={envConfig.githubToken || ''}
                   onChange={(value) => updateEnvConfig({ githubToken: value })}
-                  placeholder="ghp_xxxxxxxx or github_pat_xxxxxxxx"
+                  placeholder={i18n.t('uiSettings:text033')}
                 />
               </div>
 
@@ -474,7 +463,7 @@ function RepositoryDropdown({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium text-foreground">Repository</Label>
+        <Label className="text-sm font-medium text-foreground">{i18n.t('uiSettings:text034')}</Label>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -490,9 +479,7 @@ function RepositoryDropdown({
             size="sm"
             onClick={onManualEntry}
             className="h-7 text-xs"
-          >
-            Enter Manually
-          </Button>
+          >{i18n.t('uiSettings:text035')}</Button>
         </div>
       </div>
 
@@ -512,9 +499,7 @@ function RepositoryDropdown({
         >
           {isLoading ? (
             <span className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading repositories...
-            </span>
+              <Loader2 className="h-4 w-4 animate-spin" />{i18n.t('uiSettings:text036')}</span>
           ) : selectedRepo ? (
             <span className="flex items-center gap-2">
               {selectedRepoData?.isPrivate ? (
@@ -525,7 +510,7 @@ function RepositoryDropdown({
               {selectedRepo}
             </span>
           ) : (
-            <span className="text-muted-foreground">Select a repository...</span>
+            <span className="text-muted-foreground">{i18n.t('uiSettings:text037')}</span>
           )}
           <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
@@ -535,7 +520,7 @@ function RepositoryDropdown({
             {/* Search filter */}
             <div className="p-2 border-b border-border">
               <Input
-                placeholder="Search repositories..."
+                placeholder={i18n.t('uiSettings:text038')}
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 className="h-8 text-sm"
@@ -547,7 +532,7 @@ function RepositoryDropdown({
             <div className="max-h-48 overflow-y-auto">
               {filteredRepos.length === 0 ? (
                 <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-                  {filter ? 'No matching repositories' : 'No repositories found'}
+                  {filter ? i18n.t('uiSettings:text039') : i18n.t('uiSettings:text040')}
                 </div>
               ) : (
                 filteredRepos.map((repo) => (
@@ -583,8 +568,7 @@ function RepositoryDropdown({
       </div>
 
       {selectedRepo && (
-        <p className="text-xs text-muted-foreground">
-          Selected: <code className="px-1 bg-muted rounded">{selectedRepo}</code>
+        <p className="text-xs text-muted-foreground">{i18n.t('uiSettings:text041')}<code className="px-1 bg-muted rounded">{selectedRepo}</code>
         </p>
       )}
     </div>
@@ -599,10 +583,8 @@ interface RepositoryInputProps {
 function RepositoryInput({ value, onChange }: RepositoryInputProps) {
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium text-foreground">Repository</Label>
-      <p className="text-xs text-muted-foreground">
-        Format: <code className="px-1 bg-muted rounded">owner/repo</code> (e.g., facebook/react)
-      </p>
+      <Label className="text-sm font-medium text-foreground">{i18n.t('uiSettings:text034')}</Label>
+      <p className="text-xs text-muted-foreground">{i18n.t('uiSettings:text042')}<code className="px-1 bg-muted rounded">owner/repo</code>{i18n.t('uiSettings:text043')}</p>
       <Input
         placeholder="owner/repository"
         value={value}
@@ -622,12 +604,12 @@ function ConnectionStatus({ isChecking, connectionStatus }: ConnectionStatusProp
     <div className="rounded-lg border border-border bg-muted/30 p-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-foreground">Connection Status</p>
+          <p className="text-sm font-medium text-foreground">{i18n.t('uiSettings:text044')}</p>
           <p className="text-xs text-muted-foreground">
-            {isChecking ? 'Checking...' :
+            {isChecking ? i18n.t('uiSettings:text045') :
               connectionStatus?.connected
                 ? `Connected to ${connectionStatus.repoFullName}`
-                : connectionStatus?.error || 'Not connected'}
+                : connectionStatus?.error || i18n.t('uiSettings:notConnected')}
           </p>
           {connectionStatus?.connected && connectionStatus.repoDescription && (
             <p className="text-xs text-muted-foreground mt-1 italic">
@@ -653,10 +635,8 @@ function IssuesAvailableInfo() {
       <div className="flex items-start gap-3">
         <Github className="h-5 w-5 text-info mt-0.5" />
         <div className="flex-1">
-          <p className="text-sm font-medium text-foreground">Issues Available</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Access GitHub Issues from the sidebar to view, investigate, and create tasks from issues.
-          </p>
+          <p className="text-sm font-medium text-foreground">{i18n.t('uiSettings:text046')}</p>
+          <p className="text-xs text-muted-foreground mt-1">{i18n.t('uiSettings:text047')}</p>
         </div>
       </div>
     </div>
@@ -674,11 +654,9 @@ function AutoSyncToggle({ enabled, onToggle }: AutoSyncToggleProps) {
       <div className="space-y-0.5">
         <div className="flex items-center gap-2">
           <RefreshCw className="h-4 w-4 text-info" />
-          <Label className="font-normal text-foreground">Auto-Sync on Load</Label>
+          <Label className="font-normal text-foreground">{i18n.t('uiSettings:text048')}</Label>
         </div>
-        <p className="text-xs text-muted-foreground pl-6">
-          Automatically fetch issues when the project loads
-        </p>
+        <p className="text-xs text-muted-foreground pl-6">{i18n.t('uiSettings:text049')}</p>
       </div>
       <Switch checked={enabled} onCheckedChange={onToggle} />
     </div>

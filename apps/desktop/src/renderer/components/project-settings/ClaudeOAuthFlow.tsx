@@ -24,7 +24,7 @@ interface ClaudeOAuthFlowProps {
  * auto-polling to avoid race conditions with keychain auto-reconnect.
  */
 export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('uiProjectOAuth');
   const [status, setStatus] = useState<'ready' | 'authenticating' | 'verifying' | 'success' | 'error'>('ready');
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState<string | undefined>();
@@ -51,7 +51,7 @@ export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
       const profilesResult = await window.electronAPI.getClaudeProfiles();
 
       if (!profilesResult.success || !profilesResult.data) {
-        throw new Error('Failed to get Claude profiles');
+        throw new Error(t('claude.errors.profiles'));
       }
 
       const activeProfileId = profilesResult.data.activeProfileId;
@@ -61,14 +61,14 @@ export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
       const result = await window.electronAPI.authenticateClaudeProfile(activeProfileId);
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to open terminal for authentication');
+        throw new Error(result.error || t('claude.errors.terminal'));
       }
 
       setAuthenticatingProfileId(activeProfileId);
       console.warn('[ClaudeOAuth] Terminal opened, waiting for user to complete /login...');
     } catch (err) {
       console.error('[ClaudeOAuth] Authentication failed:', err);
-      setError(err instanceof Error ? err.message : 'Authentication failed');
+      setError(err instanceof Error ? err.message : t('errors.authentication'));
       setStatus('error');
       hasStartedRef.current = false;
     }
@@ -76,7 +76,7 @@ export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
 
   const handleVerifyAuth = async () => {
     if (!authenticatingProfileId) {
-      setError(t('oauth.noProfileSelected'));
+      setError(t('claude.noProfileSelected'));
       return;
     }
 
@@ -98,12 +98,12 @@ export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
           onSuccess();
         }, 1500);
       } else {
-        setError(t('oauth.authNotDetected'));
+        setError(t('claude.authNotDetected'));
         setStatus('authenticating');
       }
     } catch (err) {
       console.error('[ClaudeOAuth] Verification failed:', err);
-      setError(err instanceof Error ? err.message : 'Verification failed');
+      setError(err instanceof Error ? err.message : t('claude.errors.verification'));
       setStatus('authenticating');
     }
   };
@@ -126,13 +126,13 @@ export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
                 <Key className="h-6 w-6 text-info shrink-0 mt-0.5" />
                 <div className="flex-1 space-y-3">
                   <h3 className="text-lg font-medium text-foreground">
-                    {t('oauth.authenticateTitle')}
+                    {t('claude.authenticateTitle')}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {t('oauth.authenticateDescription')}
+                    {t('claude.authenticateDescription')}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {t('oauth.authenticateTerminalInfo')}
+                    {t('claude.authenticateTerminalInfo')}
                   </p>
                 </div>
               </div>
@@ -142,7 +142,7 @@ export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
           <div className="flex justify-center">
             <Button onClick={handleStartAuth} size="lg" className="gap-2">
               <Key className="h-5 w-5" />
-              {t('oauth.authenticateTitle')}
+              {t('claude.authenticateTitle')}
             </Button>
           </div>
         </div>
@@ -157,10 +157,10 @@ export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
                 <Key className="h-6 w-6 text-info shrink-0" />
                 <div className="flex-1">
                   <h3 className="text-lg font-medium text-foreground">
-                    {t('oauth.completeAuthTitle')}
+                    {t('claude.completeAuthTitle')}
                   </h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {t('oauth.terminalOpened')}
+                    {t('claude.terminalOpened')}
                   </p>
                 </div>
               </div>
@@ -169,19 +169,21 @@ export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
                 <div className="flex items-start gap-2">
                   <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                   <div className="text-xs text-muted-foreground space-y-1">
-                    <p className="font-medium">{t('oauth.completeStepsTitle')}</p>
+                    <p className="font-medium">{t('claude.completeStepsTitle')}</p>
                     <ol className="list-decimal list-inside space-y-1 ml-2">
                       <li>
                         <Trans
-                          i18nKey="oauth.stepTypeLogin"
+                          ns="uiProjectOAuth"
+                          i18nKey="claude.stepTypeLogin"
                           components={{ code: <code className="font-mono bg-muted px-1 rounded" /> }}
                         />
                       </li>
-                      <li>{t('oauth.stepBrowserOpen')}</li>
-                      <li>{t('oauth.stepCompleteOAuth')}</li>
+                      <li>{t('claude.stepBrowserOpen')}</li>
+                      <li>{t('claude.stepCompleteOAuth')}</li>
                       <li>
                         <Trans
-                          i18nKey="oauth.stepReturnAndVerify"
+                          ns="uiProjectOAuth"
+                          i18nKey="claude.stepReturnAndVerify"
                           components={{ strong: <strong className="font-semibold" /> }}
                         />
                       </li>
@@ -199,7 +201,7 @@ export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
               <div className="flex justify-center gap-3">
                 <Button onClick={handleVerifyAuth} className="gap-2">
                   <CheckCircle2 className="h-4 w-4" />
-                  {t('oauth.verifyAuth')}
+                  {t('claude.verifyAuth')}
                 </Button>
               </div>
             </div>
@@ -215,10 +217,10 @@ export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
               <Loader2 className="h-6 w-6 animate-spin text-info shrink-0" />
               <div className="flex-1">
                 <h3 className="text-lg font-medium text-foreground">
-                  {t('oauth.verifyingAuth')}
+                  {t('claude.verifyingAuth')}
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {t('oauth.checkingCredentials')}
+                  {t('claude.checkingCredentials')}
                 </p>
               </div>
             </div>
@@ -234,14 +236,14 @@ export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
               <CheckCircle2 className="h-6 w-6 text-success shrink-0 mt-0.5" />
               <div className="flex-1">
                 <h3 className="text-lg font-medium text-success">
-                  {t('oauth.successTitle')}
+                  {t('claude.successTitle')}
                 </h3>
                 <p className="text-sm text-success/80 mt-1">
-                  {email ? t('oauth.connectedAs', { email }) : t('oauth.credentialsSaved')}
+                  {email ? t('claude.connectedAs', { email }) : t('claude.credentialsSaved')}
                 </p>
                 <div className="flex items-center gap-2 mt-3 text-xs text-success/70">
                   <Sparkles className="h-3 w-3" />
-                  <span>{t('oauth.canUseFeatures')}</span>
+                  <span>{t('claude.canUseFeatures')}</span>
                 </div>
               </div>
             </div>
@@ -258,7 +260,7 @@ export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
                 <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <h3 className="text-lg font-medium text-destructive">
-                    {t('oauth.authFailed')}
+                    {t('claude.authFailed')}
                   </h3>
                   <p className="text-sm text-destructive/80 mt-1">{error}</p>
                 </div>
@@ -284,7 +286,7 @@ export function ClaudeOAuthFlow({ onSuccess, onCancel }: ClaudeOAuthFlowProps) {
       {(status === 'ready' || status === 'authenticating') && onCancel && (
         <div className="flex justify-center pt-2">
           <Button onClick={onCancel} variant="ghost" size="sm">
-            {t('oauth.skipForNow')}
+            {t('claude.skipForNow')}
           </Button>
         </div>
       )}

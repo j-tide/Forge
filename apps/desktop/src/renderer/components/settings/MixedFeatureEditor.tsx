@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore, saveSettings } from '../../stores/settings-store';
 import { MultiProviderModelSelect } from './MultiProviderModelSelect';
@@ -114,10 +115,10 @@ export function MixedFeatureEditor() {
             {/* Feature label + description */}
             <div>
               <Label className="text-sm font-medium text-foreground">
-                {featureLabel.label}
+                {i18n.t(`uiSettings:features.${feature}.label`, { defaultValue: featureLabel.label })}
               </Label>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {featureLabel.description}
+                {i18n.t(`uiSettings:features.${feature}.description`, { defaultValue: featureLabel.description })}
               </p>
             </div>
 

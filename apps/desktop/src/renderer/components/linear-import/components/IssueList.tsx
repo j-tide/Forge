@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 /**
  * List of issues with loading/empty states
  */
@@ -26,6 +27,7 @@ export function IssueList({
   filterState,
   onToggleIssue
 }: IssueListProps) {
+  const { t } = useTranslation('uiIntegrations');
   if (isLoadingIssues) {
     return (
       <ScrollArea className="flex-1 -mx-6 px-6 min-h-0">
@@ -40,7 +42,7 @@ export function IssueList({
     return (
       <ScrollArea className="flex-1 -mx-6 px-6 min-h-0">
         <div className="text-center py-12 text-muted-foreground">
-          <p className="text-sm">Select a team to view issues</p>
+          <p className="text-sm">{t('uiIntegrations:linear.chooseTeamHint')}</p>
         </div>
       </ScrollArea>
     );
@@ -52,8 +54,8 @@ export function IssueList({
         <div className="text-center py-12 text-muted-foreground">
           <p className="text-sm">
             {searchQuery || filterState !== 'all'
-              ? 'No issues match your filters'
-              : 'No issues found'}
+              ? t('uiIntegrations:linear.noMatch')
+              : t('uiIntegrations:linear.noIssues')}
           </p>
         </div>
       </ScrollArea>

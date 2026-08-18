@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Archive, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -17,6 +18,7 @@ export function ArchiveTasksCard({
   selectedTaskIds,
   selectedTasks
 }: ArchiveTasksCardProps) {
+  const { t } = useTranslation('uiChangelogExtra');
   const [isArchiving, setIsArchiving] = useState(false);
   const [archiveSuccess, setArchiveSuccess] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
@@ -29,10 +31,10 @@ export function ArchiveTasksCard({
       if (result.success) {
         setArchiveSuccess(true);
       } else {
-        setArchiveError(result.error || 'Failed to archive tasks');
+        setArchiveError(result.error || t('archiveFailed'));
       }
     } catch (err) {
-      setArchiveError(err instanceof Error ? err.message : 'Failed to archive tasks');
+      setArchiveError(err instanceof Error ? err.message : t('archiveFailed'));
     } finally {
       setIsArchiving(false);
     }
@@ -43,7 +45,7 @@ export function ArchiveTasksCard({
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <Archive className="h-5 w-5" />
-          <CardTitle className="text-base">Archive Completed Tasks</CardTitle>
+          <CardTitle className="text-base">{t('archiveTitle')}</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
@@ -51,15 +53,13 @@ export function ArchiveTasksCard({
           <div className="flex items-center gap-2 text-success">
             <CheckCircle className="h-4 w-4" />
             <span className="text-sm">
-              {selectedTasks.length} task{selectedTasks.length !== 1 ? 's' : ''} archived!
+              {t('tasksArchived', { count: selectedTasks.length })}
             </span>
           </div>
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Archive {selectedTasks.length} task{selectedTasks.length !== 1 ? 's' : ''} to
-              clean up your Kanban board. Archived tasks can be viewed using the "Show
-              Archived" toggle.
+              {t('archiveHelp', { count: selectedTasks.length })}
             </p>
             {archiveError && (
               <div className="flex items-start gap-2 text-destructive text-sm">
@@ -76,12 +76,12 @@ export function ArchiveTasksCard({
               {isArchiving ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Archiving...
+                  {t('archiving')}
                 </>
               ) : (
                 <>
                   <Archive className="mr-2 h-4 w-4" />
-                  Archive {selectedTasks.length} Task{selectedTasks.length !== 1 ? 's' : ''}
+                  {t('archiveButton', { count: selectedTasks.length })}
                 </>
               )}
             </Button>

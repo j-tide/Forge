@@ -68,7 +68,7 @@ export function ChatHistorySidebar({
   showArchived = false,
   onToggleShowArchived
 }: ChatHistorySidebarProps) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
@@ -189,7 +189,7 @@ export function ChatHistorySidebar({
     } else if (diffDays < 7) {
       return t('insights.daysAgo', { count: diffDays });
     } else {
-      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      return d.toLocaleDateString(i18n.resolvedLanguage || i18n.language, { month: 'short', day: 'numeric' });
     }
   };
 

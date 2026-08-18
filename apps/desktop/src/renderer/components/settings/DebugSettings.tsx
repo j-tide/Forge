@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bug, FolderOpen, Copy, FileText, RefreshCw, Loader2, Check, AlertCircle, Shield } from 'lucide-react';
@@ -35,10 +36,10 @@ export function DebugSettings() {
         updateSettings({ sentryEnabled: checked });
         notifySentryStateChanged(checked);
       } else {
-        setError(t('debug.errorReporting.saveFailed', 'Failed to save error reporting setting'));
+        setError(i18n.t('uiSettings:missing_debug_errorReporting_saveFailed'));
       }
     } catch (_err) {
-      setError(t('debug.errorReporting.saveFailed', 'Failed to save error reporting setting'));
+      setError(i18n.t('uiSettings:missing_debug_errorReporting_saveFailed'));
     }
   };
 
@@ -49,7 +50,7 @@ export function DebugSettings() {
       const info = await window.electronAPI.getDebugInfo();
       setDebugInfo(info);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load debug info');
+      setError(err instanceof Error ? err.message : i18n.t('uiSettings:debugLoadFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -59,10 +60,10 @@ export function DebugSettings() {
     try {
       const result = await window.electronAPI.openLogsFolder();
       if (!result.success) {
-        setError(result.error || 'Failed to open logs folder');
+        setError(result.error || i18n.t('uiSettings:debugLogsFailed'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to open logs folder');
+      setError(err instanceof Error ? err.message : i18n.t('uiSettings:debugLogsFailed'));
     }
   };
 
@@ -73,10 +74,10 @@ export function DebugSettings() {
         setCopySuccess(true);
         setTimeout(() => setCopySuccess(false), 2000);
       } else {
-        setError(result.error || 'Failed to copy debug info');
+        setError(result.error || i18n.t('uiSettings:debugCopyFailed'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to copy debug info');
+      setError(err instanceof Error ? err.message : i18n.t('uiSettings:debugCopyFailed'));
     }
   };
 

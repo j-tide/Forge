@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { useTranslation } from 'react-i18next';
 import type { BuiltinProvider } from '@shared/types/provider-account';
 import {
@@ -149,7 +150,7 @@ export function ThinkingLevelSelect({
         <SelectContent>
           {levels.map((level) => (
             <SelectItem key={level.value} value={level.value}>
-              {level.label}
+              {i18n.t(`uiSettings:thinkingLevels.${level.value}`, { defaultValue: level.label })}
             </SelectItem>
           ))}
         </SelectContent>

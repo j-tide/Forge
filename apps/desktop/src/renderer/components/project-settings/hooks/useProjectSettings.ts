@@ -1,3 +1,4 @@
+import i18n from '../../../../shared/i18n';
 import { useState, useEffect, useRef } from 'react';
 import {
   updateProjectSettings,
@@ -156,10 +157,10 @@ export function useProjectSettings(
             // Update the shared store so other components (like Sidebar) can react
             setProjectEnvConfig(project.id, result.data);
           } else {
-            setEnvError(result.error || 'Failed to load environment config');
+            setEnvError(result.error || i18n.t('uiProjectSettings:loadEnvFailed'));
           }
         } catch (err) {
-          setEnvError(err instanceof Error ? err.message : 'Unknown error');
+          setEnvError(err instanceof Error ? err.message : i18n.t('uiProjectSettings:unknownError'));
         } finally {
           setIsLoadingEnv(false);
         }
@@ -183,7 +184,7 @@ export function useProjectSettings(
           setLinearConnectionStatus(result.data);
         }
       } catch {
-        setLinearConnectionStatus({ connected: false, error: 'Failed to check connection' });
+        setLinearConnectionStatus({ connected: false, error: i18n.t('uiProjectSettings:checkConnectionFailed') });
       } finally {
         setIsCheckingLinear(false);
       }
@@ -212,7 +213,7 @@ export function useProjectSettings(
           setGitHubConnectionStatus(status);
         }
       } catch {
-        setGitHubConnectionStatus({ connected: false, error: 'Failed to check connection' });
+        setGitHubConnectionStatus({ connected: false, error: i18n.t('uiProjectSettings:checkConnectionFailed') });
       } finally {
         setIsCheckingGitHub(false);
       }
@@ -238,7 +239,7 @@ export function useProjectSettings(
           setGitLabConnectionStatus(status.data);
         }
       } catch {
-        setGitLabConnectionStatus({ connected: false, error: 'Failed to check connection' });
+        setGitLabConnectionStatus({ connected: false, error: i18n.t('uiProjectSettings:checkConnectionFailed') });
       } finally {
         setIsCheckingGitLab(false);
       }
@@ -269,10 +270,10 @@ export function useProjectSettings(
           setProjectEnvConfig(project.id, envResult.data);
         }
       } else {
-        setError(result?.error || 'Failed to initialize');
+        setError(result?.error || i18n.t('uiProjectSettings:initializeFailed'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : i18n.t('uiProjectSettings:unknownError'));
     } finally {
       setIsUpdating(false);
     }
@@ -285,21 +286,21 @@ export function useProjectSettings(
     try {
       const success = await updateProjectSettings(project.id, settings);
       if (!success) {
-        setError('Failed to save settings');
+        setError(i18n.t('uiProjectSettings:saveSettingsFailed'));
         return;
       }
 
       if (envConfig) {
         const envResult = await window.electronAPI.updateProjectEnv(project.id, envConfig);
         if (!envResult.success) {
-          setError(envResult.error || 'Failed to save environment config');
+          setError(envResult.error || i18n.t('uiProjectSettings:saveEnvFailed'));
           return;
         }
       }
 
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : i18n.t('uiProjectSettings:unknownError'));
     } finally {
       setIsSaving(false);
     }
@@ -322,14 +323,14 @@ export function useProjectSettings(
       const result = await window.electronAPI.updateProjectEnv(project.id, newConfig);
       if (!result.success) {
         console.error('[useProjectSettings] Failed to auto-save env config:', result.error);
-        setEnvError(result.error || 'Failed to save environment config');
+        setEnvError(result.error || i18n.t('uiProjectSettings:saveEnvFailed'));
         // Note: We don't rollback the ref here because another concurrent call may have
         // already updated it. The error is shown to the user who can retry.
         return;
       }
     } catch (err) {
       console.error('[useProjectSettings] Error auto-saving env config:', err);
-      setEnvError(err instanceof Error ? err.message : 'Failed to save environment config');
+      setEnvError(err instanceof Error ? err.message : i18n.t('uiProjectSettings:saveEnvFailed'));
       // Note: We don't rollback the ref here for the same reason as above.
       return;
     }

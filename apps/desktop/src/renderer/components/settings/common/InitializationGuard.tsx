@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../../../../shared/i18n';
 import type { ReactNode } from 'react';
 
 interface InitializationGuardProps {
@@ -17,10 +19,10 @@ export function InitializationGuard({
   description: _description,
   children
 }: InitializationGuardProps) {
+  useTranslation('uiSettings');
   if (!initialized) {
     return (
-      <div className="rounded-lg border border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">
-        Initialize Auto-Build first to configure {title.toLowerCase()}
+      <div className="rounded-lg border border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">{i18n.t('uiSettings:text020')}{title.toLowerCase()}
       </div>
     );
   }

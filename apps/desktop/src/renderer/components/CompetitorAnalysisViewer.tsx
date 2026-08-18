@@ -28,6 +28,7 @@ export function CompetitorAnalysisViewer({
   projectId,
 }: CompetitorAnalysisViewerProps) {
   const { t } = useTranslation('common');
+  const { t: tk } = useTranslation('uiKnowledge');
   const [showAddDialog, setShowAddDialog] = useState(false);
 
   if (!analysis) return null;
@@ -127,7 +128,7 @@ export function CompetitorAnalysisViewer({
                               }
                               className="mt-0.5"
                             >
-                              {painPoint.severity}
+                              {tk(`level.${painPoint.severity}`)}
                             </Badge>
                             <div className="flex-1">
                               <p className="text-sm font-medium">

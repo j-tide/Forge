@@ -1,3 +1,4 @@
+import i18n from '../../../../shared/i18n';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, KeyRound, Loader2, CheckCircle2, AlertCircle, User, Lock, Globe, ChevronDown, GitBranch, Server, Terminal, ExternalLink } from 'lucide-react';
@@ -172,11 +173,11 @@ export function GitLabIntegration({
         }
       } else {
         debugLog('fetchBranches: Failed -', result.error || 'No data returned');
-        setBranchesError(result.error || 'Failed to load branches');
+        setBranchesError(result.error || i18n.t('uiSettings:branchesLoadFailed'));
       }
     } catch (err) {
       debugLog('fetchBranches: Exception:', err);
-      setBranchesError(err instanceof Error ? err.message : 'Failed to load branches');
+      setBranchesError(err instanceof Error ? err.message : i18n.t('uiSettings:branchesLoadFailed'));
     } finally {
       setIsLoadingBranches(false);
     }
@@ -196,11 +197,11 @@ export function GitLabIntegration({
         setProjects(result.data.projects);
         debugLog('Loaded projects:', result.data.projects.length);
       } else {
-        setProjectsError(result.error || 'Failed to load projects');
+        setProjectsError(result.error || i18n.t('uiSettings:projectsLoadFailed'));
       }
     } catch (err) {
       debugLog('Error fetching projects:', err);
-      setProjectsError(err instanceof Error ? err.message : 'Failed to load projects');
+      setProjectsError(err instanceof Error ? err.message : i18n.t('uiSettings:projectsLoadFailed'));
     } finally {
       setIsLoadingProjects(false);
     }

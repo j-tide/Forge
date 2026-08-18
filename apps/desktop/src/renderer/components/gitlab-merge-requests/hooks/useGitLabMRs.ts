@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type {
   GitLabMergeRequest,
@@ -53,6 +54,7 @@ interface UseGitLabMRsResult {
 }
 
 export function useGitLabMRs(projectId?: string, options: UseGitLabMRsOptions = {}): UseGitLabMRsResult {
+  const { t } = useTranslation('uiIntegrations');
   const { stateFilter = 'opened' } = options;
   const [mergeRequests, setMergeRequests] = useState<GitLabMergeRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -137,15 +139,15 @@ export function useGitLabMRs(projectId?: string, options: UseGitLabMRsOptions = 
       } else {
         setIsConnected(false);
         setProjectPath(null);
-        setError(connectionResult.error || 'Failed to check connection');
+        setError(connectionResult.error || t('uiIntegrations:gitlab.errors.connection'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch MRs');
+      setError(err instanceof Error ? err.message : t('uiIntegrations:gitlab.errors.fetchMR'));
       setIsConnected(false);
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, stateFilter, getMRReviewState]);
+  }, [projectId, stateFilter, getMRReviewState, t]);
 
   useEffect(() => {
     fetchMRs();
@@ -194,10 +196,10 @@ export function useGitLabMRs(projectId?: string, options: UseGitLabMRsOptions = 
       useMRReviewStore.getState().setNewCommitsCheck(projectId, mrIid, result);
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to check for new commits');
+      setError(err instanceof Error ? err.message : t('uiIntegrations:gitlab.errors.newCommits'));
       return { hasNewCommits: false };
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   const cancelReview = useCallback(async (mrIid: number): Promise<boolean> => {
     if (!projectId || !window.electronAPI.cancelGitLabMRReview) return false;
@@ -205,14 +207,14 @@ export function useGitLabMRs(projectId?: string, options: UseGitLabMRsOptions = 
     try {
       const success = await window.electronAPI.cancelGitLabMRReview(projectId, mrIid);
       if (success) {
-        useMRReviewStore.getState().setMRReviewError(projectId, mrIid, 'Review cancelled by user');
+        useMRReviewStore.getState().setMRReviewError(projectId, mrIid, t('uiIntegrations:gitlab.reviewCancelled'));
       }
       return success;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel review');
+      setError(err instanceof Error ? err.message : t('uiIntegrations:gitlab.errors.cancelReview'));
       return false;
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   const postReview = useCallback(async (mrIid: number, selectedFindingIds?: string[]): Promise<boolean> => {
     if (!projectId || !window.electronAPI.postGitLabMRReview) return false;
@@ -220,10 +222,10 @@ export function useGitLabMRs(projectId?: string, options: UseGitLabMRsOptions = 
     try {
       return await window.electronAPI.postGitLabMRReview(projectId, mrIid, selectedFindingIds);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to post review');
+      setError(err instanceof Error ? err.message : t('uiIntegrations:gitlab.errors.postReview'));
       return false;
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   const postNote = useCallback(async (mrIid: number, body: string): Promise<boolean> => {
     if (!projectId || !window.electronAPI.postGitLabMRNote) return false;
@@ -231,10 +233,10 @@ export function useGitLabMRs(projectId?: string, options: UseGitLabMRsOptions = 
     try {
       return await window.electronAPI.postGitLabMRNote(projectId, mrIid, body);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to post note');
+      setError(err instanceof Error ? err.message : t('uiIntegrations:gitlab.errors.postNote'));
       return false;
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   const mergeMR = useCallback(async (mrIid: number, mergeMethod: 'merge' | 'squash' | 'rebase' = 'squash'): Promise<boolean> => {
     if (!projectId || !window.electronAPI.mergeGitLabMR) return false;
@@ -247,10 +249,10 @@ export function useGitLabMRs(projectId?: string, options: UseGitLabMRsOptions = 
       }
       return success;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to merge MR');
+      setError(err instanceof Error ? err.message : t('uiIntegrations:gitlab.errors.mergeMR'));
       return false;
     }
-  }, [projectId, fetchMRs]);
+  }, [projectId, fetchMRs, t]);
 
   const assignMR = useCallback(async (mrIid: number, userIds: number[]): Promise<boolean> => {
     if (!projectId || !window.electronAPI.assignGitLabMR) return false;
@@ -263,10 +265,10 @@ export function useGitLabMRs(projectId?: string, options: UseGitLabMRsOptions = 
       }
       return success;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to assign users');
+      setError(err instanceof Error ? err.message : t('uiIntegrations:gitlab.errors.assign'));
       return false;
     }
-  }, [projectId, fetchMRs]);
+  }, [projectId, fetchMRs, t]);
 
   const approveMR = useCallback(async (mrIid: number): Promise<boolean> => {
     if (!projectId || !window.electronAPI.approveGitLabMR) return false;
@@ -274,10 +276,10 @@ export function useGitLabMRs(projectId?: string, options: UseGitLabMRsOptions = 
     try {
       return await window.electronAPI.approveGitLabMR(projectId, mrIid);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to approve MR');
+      setError(err instanceof Error ? err.message : t('uiIntegrations:gitlab.errors.approve'));
       return false;
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   return {
     mergeRequests,

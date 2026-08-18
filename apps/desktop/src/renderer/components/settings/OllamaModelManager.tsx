@@ -1,3 +1,4 @@
+import i18n from '../../../shared/i18n';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, Check, Loader2, RefreshCw, Package } from 'lucide-react';
@@ -114,11 +115,11 @@ export function OllamaModelManager() {
         // Refresh installed list after successful download
         await fetchModels();
       } else {
-        const errorMsg = result?.error || `Failed to download ${modelName}`;
+        const errorMsg = result?.error || i18n.t('uiSettings:downloadFailedModel', { model: modelName });
         failDownload(modelName, errorMsg);
       }
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Download failed';
+      const errorMsg = err instanceof Error ? err.message : i18n.t('uiSettings:downloadFailed');
       failDownload(modelName, errorMsg);
     }
   };
@@ -239,29 +240,21 @@ export function OllamaModelManager() {
 
                       {/* Model quality/speed badge */}
                       {model.badge === 'recommended' && (
-                        <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
-                          Recommended
-                        </span>
+                        <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">{i18n.t('uiSettings:text005')}</span>
                       )}
                       {model.badge === 'fast' && (
-                        <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
-                          Fast
-                        </span>
+                        <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">{i18n.t('uiSettings:text006')}</span>
                       )}
                       {model.badge === 'quality' && (
-                        <span className="inline-flex items-center rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-400">
-                          Quality
-                        </span>
+                        <span className="inline-flex items-center rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-400">{i18n.t('uiSettings:text007')}</span>
                       )}
 
                       {/* Installed indicator */}
                       {installed && (
-                        <span className="inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-xs text-success">
-                          Installed
-                        </span>
+                        <span className="inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-xs text-success">{i18n.t('uiSettings:text008')}</span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{model.description}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{i18n.t(`uiSettings:ollamaModel${RECOMMENDED_CODING_MODELS.indexOf(model)}`, { defaultValue: model.description })}</p>
                   </div>
 
                   {/* Download button for non-installed models */}
@@ -313,7 +306,7 @@ export function OllamaModelManager() {
                       <span className="font-medium text-foreground">
                         {download && download.percentage > 0
                           ? `${Math.round(download.percentage)}%`
-                          : 'Starting download...'}
+                          : i18n.t('uiSettings:text009')}
                       </span>
                       <div className="flex items-center gap-2">
                         {download?.speed && <span>{download.speed}</span>}

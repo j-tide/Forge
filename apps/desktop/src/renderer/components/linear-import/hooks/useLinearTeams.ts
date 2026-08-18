@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 /**
  * Hook for loading Linear teams
  */
@@ -6,6 +7,7 @@ import { useState, useEffect } from 'react';
 import type { LinearTeam } from '../types';
 
 export function useLinearTeams(projectId: string, open: boolean) {
+  const { t } = useTranslation('uiIntegrations');
   const [teams, setTeams] = useState<LinearTeam[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,17 +24,17 @@ export function useLinearTeams(projectId: string, open: boolean) {
         if (result.success && result.data) {
           setTeams(result.data);
         } else {
-          setError(result.error || 'Failed to load teams');
+          setError(result.error || t('uiIntegrations:linear.loadTeamsFailed'));
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(err instanceof Error ? err.message : t('uiIntegrations:linear.unknownError'));
       } finally {
         setIsLoadingTeams(false);
       }
     };
 
     loadTeams();
-  }, [open, projectId]);
+  }, [open, projectId, t]);
 
   return { teams, isLoadingTeams, error, setError };
 }

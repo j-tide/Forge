@@ -49,8 +49,8 @@ interface MRDetailProps {
   onApproveMR: () => Promise<boolean>;
 }
 
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
+function formatDate(dateString: string, language: string): string {
+  return new Date(dateString).toLocaleDateString(language, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -97,7 +97,7 @@ export function MRDetail({
   onMergeMR,
   onApproveMR,
 }: MRDetailProps) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation(['common', 'uiIntegrations']);
   // Selection state for findings
   const [selectedFindingIds, setSelectedFindingIds] = useState<Set<string>>(new Set());
   const [postedFindingIds, setPostedFindingIds] = useState<Set<string>>(new Set());
@@ -164,8 +164,8 @@ export function MRDetail({
     if (!reviewResult || !reviewResult.success) {
       return {
         status: 'not_reviewed',
-        label: 'Not Reviewed',
-        description: 'Run an AI review to analyze this MR',
+        label: t('uiIntegrations:gitlab.reviewStatus.notReviewed'),
+        description: t('uiIntegrations:gitlab.reviewStatus.notReviewedDesc'),
         icon: <Sparkles className="h-5 w-5" />,
         color: 'bg-muted text-muted-foreground border-muted',
       };
@@ -194,8 +194,8 @@ export function MRDetail({
       if (hasNewCommits) {
         return {
           status: 'ready_for_followup',
-          label: 'Ready for Follow-up',
-          description: `${newCommitCount} new commit${newCommitCount !== 1 ? 's' : ''} since follow-up. Run another follow-up review.`,
+          label: t('uiIntegrations:gitlab.reviewStatus.readyFollowup'),
+          description: t('uiIntegrations:gitlab.reviewStatus.newAfterFollowup', { count: newCommitCount }),
           icon: <RefreshCw className="h-5 w-5" />,
           color: 'bg-info/20 text-info border-info/50',
         };
@@ -205,8 +205,8 @@ export function MRDetail({
       if (unresolvedCount === 0 && newIssuesCount === 0) {
         return {
           status: 'ready_to_merge',
-          label: 'Ready to Merge',
-          description: `All ${resolvedCount} issue${resolvedCount !== 1 ? 's' : ''} resolved. This MR can be merged.`,
+          label: t('uiIntegrations:gitlab.reviewStatus.readyMerge'),
+          description: t('uiIntegrations:gitlab.reviewStatus.allResolved', { count: resolvedCount }),
           icon: <CheckCheck className="h-5 w-5" />,
           color: 'bg-success/20 text-success border-success/50',
         };
@@ -217,8 +217,8 @@ export function MRDetail({
         const suggestionsCount = unresolvedCount + newIssuesCount;
         return {
           status: 'ready_to_merge',
-          label: 'Ready to Merge',
-          description: `${resolvedCount} resolved. ${suggestionsCount} non-blocking suggestion${suggestionsCount !== 1 ? 's' : ''} remain.`,
+          label: t('uiIntegrations:gitlab.reviewStatus.readyMerge'),
+          description: t('uiIntegrations:gitlab.reviewStatus.suggestions', { resolved: resolvedCount, count: suggestionsCount }),
           icon: <CheckCheck className="h-5 w-5" />,
           color: 'bg-success/20 text-success border-success/50',
         };
@@ -227,8 +227,8 @@ export function MRDetail({
       // Blocking issues still remain after follow-up
       return {
         status: 'followup_issues_remain',
-        label: 'Blocking Issues',
-        description: `${resolvedCount} resolved, ${unresolvedCount} blocking issue${unresolvedCount !== 1 ? 's' : ''} still open.`,
+        label: t('uiIntegrations:gitlab.reviewStatus.blocking'),
+        description: t('uiIntegrations:gitlab.reviewStatus.blockersRemain', { resolved: resolvedCount, count: unresolvedCount }),
         icon: <AlertTriangle className="h-5 w-5" />,
         color: 'bg-warning/20 text-warning border-warning/50',
       };
@@ -240,8 +240,8 @@ export function MRDetail({
     if (hasPosted && hasNewCommits) {
       return {
         status: 'ready_for_followup',
-        label: 'Ready for Follow-up',
-        description: `${newCommitCount} new commit${newCommitCount !== 1 ? 's' : ''} since review. Run follow-up to check if issues are resolved.`,
+        label: t('uiIntegrations:gitlab.reviewStatus.readyFollowup'),
+        description: t('uiIntegrations:gitlab.reviewStatus.newAfterReview', { count: newCommitCount }),
         icon: <RefreshCw className="h-5 w-5" />,
         color: 'bg-info/20 text-info border-info/50',
       };
@@ -251,8 +251,8 @@ export function MRDetail({
     if (isReadyToMerge && hasPosted) {
       return {
         status: 'ready_to_merge',
-        label: 'Ready to Merge',
-        description: 'No blocking issues found. This MR can be merged.',
+        label: t('uiIntegrations:gitlab.reviewStatus.readyMerge'),
+        description: t('uiIntegrations:gitlab.reviewStatus.noBlockers'),
         icon: <CheckCheck className="h-5 w-5" />,
         color: 'bg-success/20 text-success border-success/50',
       };
@@ -262,8 +262,8 @@ export function MRDetail({
     if (hasPosted && hasBlockers) {
       return {
         status: 'waiting_for_changes',
-        label: 'Waiting for Changes',
-        description: `${totalPosted} finding${totalPosted !== 1 ? 's' : ''} posted. Waiting for contributor to address issues.`,
+        label: t('uiIntegrations:gitlab.reviewStatus.waitingChanges'),
+        description: t('uiIntegrations:gitlab.reviewStatus.postedWaiting', { count: totalPosted }),
         icon: <AlertTriangle className="h-5 w-5" />,
         color: 'bg-warning/20 text-warning border-warning/50',
       };
@@ -273,8 +273,8 @@ export function MRDetail({
     if (hasPosted && !hasBlockers) {
       return {
         status: 'ready_to_merge',
-        label: 'Ready to Merge',
-        description: `${totalPosted} finding${totalPosted !== 1 ? 's' : ''} posted. No blocking issues remain.`,
+        label: t('uiIntegrations:gitlab.reviewStatus.readyMerge'),
+        description: t('uiIntegrations:gitlab.reviewStatus.postedClear', { count: totalPosted }),
         icon: <CheckCheck className="h-5 w-5" />,
         color: 'bg-success/20 text-success border-success/50',
       };
@@ -284,8 +284,8 @@ export function MRDetail({
     if (hasUnpostedBlockers) {
       return {
         status: 'needs_attention',
-        label: 'Needs Attention',
-        description: `${unpostedFindings.length} finding${unpostedFindings.length !== 1 ? 's' : ''} need to be posted to GitLab.`,
+        label: t('uiIntegrations:gitlab.reviewStatus.attention'),
+        description: t('uiIntegrations:gitlab.reviewStatus.needPost', { count: unpostedFindings.length }),
         icon: <AlertCircle className="h-5 w-5" />,
         color: 'bg-destructive/20 text-destructive border-destructive/50',
       };
@@ -294,12 +294,12 @@ export function MRDetail({
     // Default: Review complete, pending post
     return {
       status: 'reviewed_pending_post',
-      label: 'Review Complete',
-      description: `${reviewResult.findings.length} finding${reviewResult.findings.length !== 1 ? 's' : ''} found. Select and post to GitLab.`,
+      label: t('uiIntegrations:gitlab.reviewStatus.complete'),
+      description: t('uiIntegrations:gitlab.reviewStatus.found', { count: reviewResult.findings.length }),
       icon: <MessageSquare className="h-5 w-5" />,
       color: 'bg-primary/20 text-primary border-primary/50',
     };
-  }, [reviewResult, postedFindingIds, isReadyToMerge, newCommitsCheck]);
+  }, [reviewResult, postedFindingIds, isReadyToMerge, newCommitsCheck, t]);
 
   const handlePostReview = async () => {
     const idsToPost = Array.from(selectedFindingIds);
@@ -353,7 +353,7 @@ export function MRDetail({
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-2">
               <Badge variant="outline" className={getMRStateColor(mr.state)}>
-                {mr.state.charAt(0).toUpperCase() + mr.state.slice(1)}
+                {t(`uiIntegrations:gitlab.states.${mr.state}`, { defaultValue: mr.state })}
               </Badge>
               <span className="text-sm text-muted-foreground">!{mr.iid}</span>
             </div>
@@ -374,7 +374,7 @@ export function MRDetail({
           </div>
           <div className="flex items-center gap-1">
             <Clock className="h-4 w-4" />
-            {formatDate(mr.createdAt)}
+            {formatDate(mr.createdAt, i18n.resolvedLanguage || i18n.language)}
           </div>
           <div className="flex items-center gap-1">
             <GitBranch className="h-4 w-4" />
@@ -393,7 +393,7 @@ export function MRDetail({
           <div className="flex items-center gap-4">
             <Badge variant="outline" className="flex items-center gap-1">
               <FileDiff className="h-3 w-3" />
-              {mr.mergeStatus}
+              {t(`uiIntegrations:gitlab.mergeStatus.${mr.mergeStatus}`, { defaultValue: mr.mergeStatus })}
             </Badge>
           </div>
         )}
@@ -410,7 +410,7 @@ export function MRDetail({
                 variant="secondary"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Follow-up Review ({newCommitsCheck.newCommitCount} new commit{newCommitsCheck.newCommitCount !== 1 ? 's' : ''})
+                {t('uiIntegrations:gitlab.followupWithCommits', { count: newCommitsCheck.newCommitCount })}
               </Button>
             ) : (
               <Button
@@ -421,12 +421,12 @@ export function MRDetail({
                 {isReviewing ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Reviewing...
+                    {t('uiIntegrations:gitlab.reviewing')}
                   </>
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4 mr-2" />
-                    Run AI Review
+                    {t('uiIntegrations:gitlab.runReview')}
                   </>
                 )}
               </Button>
@@ -434,7 +434,7 @@ export function MRDetail({
             {isReviewing && (
               <Button onClick={onCancelReview} variant="destructive">
                 <XCircle className="h-4 w-4 mr-2" />
-                Cancel
+                {t('uiIntegrations:gitlab.cancel')}
               </Button>
             )}
             {reviewResult?.success && selectedCount > 0 && !isReviewing && (
@@ -442,12 +442,12 @@ export function MRDetail({
                 {isPostingFindings ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Posting...
+                    {t('uiIntegrations:gitlab.posting')}
                   </>
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
-                    Post {selectedCount} Finding{selectedCount !== 1 ? 's' : ''}
+                    {t('uiIntegrations:gitlab.postFindings', { count: selectedCount })}
                   </>
                 )}
               </Button>
@@ -456,7 +456,7 @@ export function MRDetail({
             {postSuccess && (
               <div className="flex items-center gap-2 text-success text-sm">
                 <CheckCircle className="h-4 w-4" />
-                Posted {postSuccess.count} finding{postSuccess.count !== 1 ? 's' : ''} to GitLab
+                {t('uiIntegrations:gitlab.postSuccess', { count: postSuccess.count })}
               </div>
             )}
           </div>
@@ -473,12 +473,12 @@ export function MRDetail({
                 {isApproving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Approving...
+                    {t('uiIntegrations:gitlab.approving')}
                   </>
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Approve
+                    {t('uiIntegrations:gitlab.approve')}
                   </>
                 )}
               </Button>
@@ -491,12 +491,12 @@ export function MRDetail({
                 {isMerging ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Merging...
+                    {t('uiIntegrations:gitlab.merging')}
                   </>
                 ) : (
                   <>
                     <GitMerge className="h-4 w-4 mr-2" />
-                    Merge MR
+                    {t('uiIntegrations:gitlab.merge')}
                   </>
                 )}
               </Button>
@@ -524,12 +524,12 @@ export function MRDetail({
                   {isReviewing ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Reviewing...
+                      {t('uiIntegrations:gitlab.reviewing')}
                     </>
                   ) : (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2" />
-                      Run Follow-up Review
+                      {t('uiIntegrations:gitlab.runFollowup')}
                     </>
                   )}
                 </Button>
@@ -537,7 +537,7 @@ export function MRDetail({
               {mrStatus.status === 'waiting_for_changes' && newCommitsCheck?.hasNewCommits && (
                 <Badge variant="outline" className="bg-primary/20 text-primary border-primary/50 shrink-0">
                   <RefreshCw className="h-3 w-3 mr-1" />
-                  {newCommitsCheck.newCommitCount} new commit{newCommitsCheck.newCommitCount !== 1 ? 's' : ''}
+                  {t('uiIntegrations:gitlab.newCommits', { count: newCommitsCheck.newCommitCount })}
                 </Badge>
               )}
             </div>
@@ -570,12 +570,12 @@ export function MRDetail({
                   ) : (
                     <Sparkles className="h-4 w-4" />
                   )}
-                  {reviewResult.isFollowupReview ? 'Follow-up Review' : 'AI Review Result'}
+                  {reviewResult.isFollowupReview ? t('uiIntegrations:gitlab.followupTitle') : t('uiIntegrations:gitlab.resultTitle')}
                 </span>
                 <Badge variant="outline" className={getStatusColor(reviewResult.overallStatus)}>
-                  {reviewResult.overallStatus === 'approve' && 'Approve'}
-                  {reviewResult.overallStatus === 'request_changes' && 'Changes Requested'}
-                  {reviewResult.overallStatus === 'comment' && 'Comment'}
+                  {reviewResult.overallStatus === 'approve' && t('uiIntegrations:gitlab.approve')}
+                  {reviewResult.overallStatus === 'request_changes' && t('uiIntegrations:gitlab.changesRequested')}
+                  {reviewResult.overallStatus === 'comment' && t('uiIntegrations:gitlab.comment')}
                 </Badge>
               </CardTitle>
             </CardHeader>
@@ -586,19 +586,19 @@ export function MRDetail({
                   {(reviewResult.resolvedFindings?.length ?? 0) > 0 && (
                     <Badge variant="outline" className="bg-success/20 text-success border-success/50">
                       <CheckCircle className="h-3 w-3 mr-1" />
-                      {reviewResult.resolvedFindings?.length} resolved
+                      {t('uiIntegrations:gitlab.resolved', { count: reviewResult.resolvedFindings?.length })}
                     </Badge>
                   )}
                   {(reviewResult.unresolvedFindings?.length ?? 0) > 0 && (
                     <Badge variant="outline" className="bg-warning/20 text-warning border-warning/50">
                       <AlertCircle className="h-3 w-3 mr-1" />
-                      {reviewResult.unresolvedFindings?.length} still open
+                      {t('uiIntegrations:gitlab.stillOpen', { count: reviewResult.unresolvedFindings?.length })}
                     </Badge>
                   )}
                   {(reviewResult.newFindingsSinceLastReview?.length ?? 0) > 0 && (
                     <Badge variant="outline" className="bg-destructive/20 text-destructive border-destructive/50">
                       <XCircle className="h-3 w-3 mr-1" />
-                      {reviewResult.newFindingsSinceLastReview?.length} new issue{reviewResult.newFindingsSinceLastReview?.length !== 1 ? 's' : ''}
+                      {t('uiIntegrations:gitlab.newIssues', { count: reviewResult.newFindingsSinceLastReview?.length })}
                     </Badge>
                   )}
                 </div>
@@ -616,9 +616,9 @@ export function MRDetail({
 
               {reviewResult.reviewedAt && (
                 <p className="text-xs text-muted-foreground">
-                  Reviewed: {formatDate(reviewResult.reviewedAt)}
+                  {t('uiIntegrations:gitlab.reviewedAt', { date: formatDate(reviewResult.reviewedAt, i18n.resolvedLanguage || i18n.language) })}
                   {reviewResult.reviewedCommitSha && (
-                    <> at commit {reviewResult.reviewedCommitSha.substring(0, 7)}</>
+                    t('uiIntegrations:gitlab.reviewedCommit', { sha: reviewResult.reviewedCommitSha.substring(0, 7) })
                   )}
                 </p>
               )}
@@ -632,7 +632,7 @@ export function MRDetail({
             <CardContent className="pt-4">
               <div className="flex items-center gap-2 text-destructive">
                 <XCircle className="h-4 w-4" />
-                <span className="text-sm">Review failed</span>
+                <span className="text-sm">{t('uiIntegrations:gitlab.reviewFailed')}</span>
               </div>
             </CardContent>
           </Card>
@@ -641,7 +641,7 @@ export function MRDetail({
         {/* Description */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Description</CardTitle>
+            <CardTitle className="text-sm">{t('uiIntegrations:gitlab.description')}</CardTitle>
           </CardHeader>
           <CardContent className="overflow-hidden">
             {mr.description ? (
@@ -650,7 +650,7 @@ export function MRDetail({
               </pre>
             ) : (
               <p className="text-sm text-muted-foreground italic">
-                No description provided.
+                {t('uiIntegrations:gitlab.noDescription')}
               </p>
             )}
           </CardContent>
@@ -660,7 +660,7 @@ export function MRDetail({
         {mr.labels && mr.labels.length > 0 && (
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Labels</CardTitle>
+              <CardTitle className="text-sm">{t('uiIntegrations:gitlab.labels')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">

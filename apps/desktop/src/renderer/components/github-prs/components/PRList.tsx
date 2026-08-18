@@ -185,24 +185,17 @@ interface PRListProps {
   isLoadingMore?: boolean;
 }
 
-function formatDate(dateString: string): string {
+function formatDate(dateString: string, locale: string): string {
   const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) {
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    if (diffHours === 0) {
-      const diffMins = Math.floor(diffMs / (1000 * 60));
-      return `${diffMins}m ago`;
-    }
-    return `${diffHours}h ago`;
-  }
-  if (diffDays === 1) return 'yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-  return date.toLocaleDateString();
+  if (Number.isNaN(date.getTime())) return '';
+  const diffSeconds = (date.getTime() - Date.now()) / 1000;
+  const relative = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  const absolute = Math.abs(diffSeconds);
+  if (absolute < 3600) return relative.format(Math.trunc(diffSeconds / 60), 'minute');
+  if (absolute < 86400) return relative.format(Math.trunc(diffSeconds / 3600), 'hour');
+  if (absolute < 7 * 86400) return relative.format(Math.trunc(diffSeconds / 86400), 'day');
+  if (absolute < 30 * 86400) return relative.format(Math.trunc(diffSeconds / (7 * 86400)), 'week');
+  return date.toLocaleDateString(locale);
 }
 
 export function PRList({
@@ -216,7 +209,7 @@ export function PRList({
   onLoadMore,
   isLoadingMore,
 }: PRListProps) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
 
   if (isLoading && prs.length === 0) {
     return (
@@ -307,7 +300,7 @@ export function PRList({
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {formatDate(pr.updatedAt)}
+                      {formatDate(pr.updatedAt, i18n.resolvedLanguage || i18n.language)}
                     </span>
                     <span className="flex items-center gap-1">
                       <FileDiff className="h-3 w-3" />

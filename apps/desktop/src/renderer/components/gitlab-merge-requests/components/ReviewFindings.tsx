@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 /**
  * ReviewFindings - Interactive findings display with selection and filtering
  *
@@ -39,6 +40,7 @@ export function ReviewFindings({
   postedIds = new Set(),
   onSelectionChange,
 }: ReviewFindingsProps) {
+  const { t } = useTranslation('uiIntegrations');
   // Track which sections are expanded
   const [expandedSections, setExpandedSections] = useState<Set<SeverityGroup>>(
     new Set<SeverityGroup>(['critical', 'high']) // Critical and High expanded by default
@@ -118,7 +120,7 @@ export function ReviewFindings({
           disabled={counts.important === 0}
         >
           <AlertTriangle className="h-3 w-3 mr-1" />
-          Select Critical/High ({counts.important})
+          {t('uiIntegrations:gitlab.selectImportant', { count: counts.important })}
         </Button>
         <Button
           variant="outline"
@@ -127,7 +129,7 @@ export function ReviewFindings({
           className="text-xs"
         >
           <CheckSquare className="h-3 w-3 mr-1" />
-          Select All
+          {t('uiIntegrations:gitlab.selectAll')}
         </Button>
         <Button
           variant="outline"
@@ -137,7 +139,7 @@ export function ReviewFindings({
           disabled={selectedIds.size === 0}
         >
           <Square className="h-3 w-3 mr-1" />
-          Clear
+          {t('uiIntegrations:gitlab.clear')}
         </Button>
       </div>
 
@@ -195,7 +197,7 @@ export function ReviewFindings({
       {findings.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">
           <CheckCircle className="h-8 w-8 mx-auto mb-2 text-success" />
-          <p className="text-sm">No issues found! The code looks good.</p>
+          <p className="text-sm">{t('uiIntegrations:gitlab.empty.findings')}</p>
         </div>
       )}
     </div>

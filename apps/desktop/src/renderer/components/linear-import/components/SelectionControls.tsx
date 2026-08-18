@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 /**
  * Controls for selecting/deselecting all issues and refreshing
  */
@@ -25,6 +26,7 @@ export function SelectionControls({
   onDeselectAll,
   onRefresh
 }: SelectionControlsProps) {
+  const { t } = useTranslation('uiIntegrations');
   return (
     <div className="flex items-center justify-between py-2 border-b border-border shrink-0">
       <div className="flex items-center gap-3">
@@ -39,10 +41,10 @@ export function SelectionControls({
           ) : (
             <Square className="h-4 w-4" />
           )}
-          {isAllSelected ? 'Deselect all' : 'Select all'}
+          {isAllSelected ? t('uiIntegrations:linear.deselectAll') : t('uiIntegrations:linear.selectAll')}
         </button>
         <span className="text-xs text-muted-foreground">
-          {selectedCount} of {filteredCount} selected
+          {t('uiIntegrations:linear.selectedCount', { selected: selectedCount, total: filteredCount })}
         </span>
       </div>
 
@@ -52,7 +54,7 @@ export function SelectionControls({
         disabled={isLoadingIssues}
       >
         <RefreshCw className={`h-3 w-3 ${isLoadingIssues ? 'animate-spin' : ''}`} />
-        Refresh
+        {t('uiIntegrations:linear.refresh')}
       </button>
     </div>
   );

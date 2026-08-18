@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { X, Folder, File, FileCode, FileJson, FileText, FileImage } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '../lib/utils';
@@ -98,6 +99,7 @@ export function ReferencedFilesSection({
   disabled = false,
   className
 }: ReferencedFilesSectionProps) {
+  const { t } = useTranslation('uiTools');
   if (files.length === 0) {
     return null;
   }
@@ -108,7 +110,7 @@ export function ReferencedFilesSection({
         {/* Header with count badge */}
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
-            Referenced Files
+            {t('files.referenced')}
             <span className="ml-2 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
               {files.length}/{maxFiles}
             </span>
@@ -137,7 +139,7 @@ export function ReferencedFilesSection({
                   </span>
                   {file.isDirectory && (
                     <span className="text-[10px] text-muted-foreground bg-muted px-1 py-0.5 rounded">
-                      folder
+                      {t('files.folder')}
                     </span>
                   )}
                 </div>
@@ -162,6 +164,7 @@ export function ReferencedFilesSection({
                     'h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity',
                     'hover:bg-destructive/10 hover:text-destructive'
                   )}
+                  aria-label={t('files.remove', { name: file.name })}
                   onClick={() => onRemove(file.id)}
                 >
                   <X className="h-3 w-3" />

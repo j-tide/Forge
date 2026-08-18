@@ -32,9 +32,9 @@ interface PRLogsProps {
 }
 
 const PHASE_LABELS: Record<PRLogPhase, string> = {
-  context: 'Context Gathering',
-  analysis: 'AI Analysis',
-  synthesis: 'Synthesis'
+  context: 'uiIntegrations:github.prs.phaseContext',
+  analysis: 'uiIntegrations:github.prs.phaseAnalysis',
+  synthesis: 'uiIntegrations:github.prs.phaseSynthesis'
 };
 
 const PHASE_ICONS: Record<PRLogPhase, typeof FolderOpen> = {
@@ -78,6 +78,31 @@ const SOURCE_COLORS: Record<string, string> = {
   // Finding validator (from parallel orchestrator post-analysis)
   'FindingValidator': 'bg-amber-600/20 text-amber-400',
   'default': 'bg-muted text-muted-foreground'
+};
+
+const SOURCE_LABEL_KEYS: Record<string, string> = {
+  'Context': 'uiIntegrations:github.prs.sourceContext',
+  'AI': 'uiIntegrations:github.prs.sourceAI',
+  'Orchestrator': 'uiIntegrations:github.prs.sourceOrchestrator',
+  'ParallelOrchestrator': 'uiIntegrations:github.prs.sourceParallelOrchestrator',
+  'Followup': 'uiIntegrations:github.prs.sourceFollowup',
+  'ParallelFollowup': 'uiIntegrations:github.prs.sourceParallelFollowup',
+  'BotDetector': 'uiIntegrations:github.prs.sourceBotDetector',
+  'Progress': 'uiIntegrations:github.prs.sourceProgress',
+  'PR Review Engine': 'uiIntegrations:github.prs.sourceReviewEngine',
+  'Summary': 'uiIntegrations:github.prs.sourceSummary',
+  'FindingValidator': 'uiIntegrations:github.prs.sourceFindingValidator',
+  'Agent:logic-reviewer': 'uiIntegrations:github.prs.sourceLogicReviewer',
+  'Agent:quality-reviewer': 'uiIntegrations:github.prs.sourceQualityReviewer',
+  'Agent:security-reviewer': 'uiIntegrations:github.prs.sourceSecurityReviewer',
+  'Agent:ai-triage-reviewer': 'uiIntegrations:github.prs.sourceTriageReviewer',
+  'Agent:resolution-verifier': 'uiIntegrations:github.prs.sourceResolutionVerifier',
+  'Agent:new-code-reviewer': 'uiIntegrations:github.prs.sourceNewCodeReviewer',
+  'Agent:comment-analyzer': 'uiIntegrations:github.prs.sourceCommentAnalyzer',
+  'Specialist:security': 'uiIntegrations:github.prs.sourceSecuritySpecialist',
+  'Specialist:quality': 'uiIntegrations:github.prs.sourceQualitySpecialist',
+  'Specialist:logic': 'uiIntegrations:github.prs.sourceLogicSpecialist',
+  'Specialist:codebase-fit': 'uiIntegrations:github.prs.sourceCodebaseSpecialist',
 };
 
 // Helper type for grouped agent entries
@@ -144,6 +169,7 @@ function groupEntriesByAgent(entries: PRLogEntry[]): {
 }
 
 export function PRLogs({ prNumber, logs, isLoading, isStreaming = false }: PRLogsProps) {
+  const { t, i18n } = useTranslation('common');
   const [expandedPhases, setExpandedPhases] = useState<Set<PRLogPhase>>(new Set(['analysis']));
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
 
@@ -183,18 +209,18 @@ export function PRLogs({ prNumber, logs, isLoading, isStreaming = false }: PRLog
             {/* Logs header */}
             <div className="flex items-center justify-between mb-4">
               <div className="text-sm text-muted-foreground flex items-center gap-2">
-                PR #{prNumber}
-                {logs.is_followup && <Badge variant="outline" className="text-xs">Follow-up</Badge>}
+                {t('uiIntegrations:github.prs.pullRequestNumber', { number: prNumber })}
+                {logs.is_followup && <Badge variant="outline" className="text-xs">{t('uiIntegrations:github.prs.followup')}</Badge>}
                 {isStreaming && (
                   <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-500 border-blue-500/30 flex items-center gap-1">
                     <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                    Live
+                    {t('uiIntegrations:github.prs.live')}
                   </Badge>
                 )}
               </div>
               <div className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {new Date(logs.updated_at).toLocaleString()}
+                {new Date(logs.updated_at).toLocaleString(i18n.resolvedLanguage || i18n.language)}
               </div>
             </div>
 
@@ -215,14 +241,14 @@ export function PRLogs({ prNumber, logs, isLoading, isStreaming = false }: PRLog
         ) : isStreaming ? (
           <div className="text-center text-sm text-muted-foreground py-8">
             <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin text-blue-500" />
-            <p>Waiting for logs...</p>
-            <p className="text-xs mt-1">Review is starting</p>
+            <p>{t('uiIntegrations:github.prs.waitingLogs')}</p>
+            <p className="text-xs mt-1">{t('uiIntegrations:github.prs.reviewStarting')}</p>
           </div>
         ) : (
           <div className="text-center text-sm text-muted-foreground py-8">
             <Terminal className="mx-auto mb-2 h-8 w-8 opacity-50" />
-            <p>No logs available</p>
-            <p className="text-xs mt-1">Run a review to generate logs</p>
+            <p>{t('uiIntegrations:github.prs.noLogs')}</p>
+            <p className="text-xs mt-1">{t('uiIntegrations:github.prs.generateLogs')}</p>
           </div>
         )}
       </div>
@@ -242,6 +268,7 @@ interface PhaseLogSectionProps {
 }
 
 function PhaseLogSection({ phase, phaseLog, isExpanded, onToggle, isStreaming = false, expandedAgents, onToggleAgent }: PhaseLogSectionProps) {
+  const { t } = useTranslation('common');
   const Icon = PHASE_ICONS[phase];
   const status = phaseLog?.status || 'pending';
   const hasEntries = (phaseLog?.entries.length || 0) > 0;
@@ -252,7 +279,7 @@ function PhaseLogSection({ phase, phaseLog, isExpanded, onToggle, isStreaming = 
       return (
         <Badge variant="outline" className="text-xs bg-info/10 text-info border-info/30 flex items-center gap-1">
           <Loader2 className="h-3 w-3 animate-spin" />
-          {isStreaming ? 'Streaming' : 'Running'}
+          {t(isStreaming ? 'uiIntegrations:github.prs.streaming' : 'uiIntegrations:github.prs.running')}
         </Badge>
       );
     }
@@ -262,7 +289,7 @@ function PhaseLogSection({ phase, phaseLog, isExpanded, onToggle, isStreaming = 
     if (isStreaming && status === 'completed' && !hasEntries) {
       return (
         <Badge variant="secondary" className="text-xs text-muted-foreground">
-          Pending
+          {t('uiIntegrations:github.prs.pending')}
         </Badge>
       );
     }
@@ -272,20 +299,20 @@ function PhaseLogSection({ phase, phaseLog, isExpanded, onToggle, isStreaming = 
         return (
           <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30 flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3" />
-            Complete
+            {t('uiIntegrations:github.prs.complete')}
           </Badge>
         );
       case 'failed':
         return (
           <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/30 flex items-center gap-1">
             <XCircle className="h-3 w-3" />
-            Failed
+            {t('uiIntegrations:github.prs.failed')}
           </Badge>
         );
       default:
         return (
           <Badge variant="secondary" className="text-xs text-muted-foreground">
-            Pending
+            {t('uiIntegrations:github.prs.pending')}
           </Badge>
         );
     }
@@ -311,10 +338,10 @@ function PhaseLogSection({ phase, phaseLog, isExpanded, onToggle, isStreaming = 
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             )}
             <Icon className={cn('h-4 w-4', status === 'active' ? PHASE_COLORS[phase].split(' ')[0] : 'text-muted-foreground')} />
-            <span className="font-medium text-sm">{PHASE_LABELS[phase]}</span>
+            <span className="font-medium text-sm">{t(PHASE_LABELS[phase])}</span>
             {hasEntries && (
               <span className="text-xs text-muted-foreground">
-                ({phaseLog?.entries.length} entries)
+                {t('uiIntegrations:github.prs.entries', { count: phaseLog?.entries.length || 0 })}
               </span>
             )}
           </div>
@@ -326,7 +353,7 @@ function PhaseLogSection({ phase, phaseLog, isExpanded, onToggle, isStreaming = 
       <CollapsibleContent>
         <div className="mt-1 ml-6 border-l-2 border-border pl-4 py-2 space-y-2">
           {!hasEntries ? (
-            <p className="text-xs text-muted-foreground italic">No logs yet</p>
+            <p className="text-xs text-muted-foreground italic">{t('uiIntegrations:github.prs.noLogsYet')}</p>
           ) : (
             <GroupedLogEntries
               entries={phaseLog?.entries || []}
@@ -396,7 +423,7 @@ interface OrchestratorActivitySectionProps {
 }
 
 function OrchestratorActivitySection({ entries, isExpanded, onToggle }: OrchestratorActivitySectionProps) {
-  const { t } = useTranslation(['common']);
+  const { t, i18n } = useTranslation(['common']);
 
   // Count different types of operations for summary
   const readCount = entries.filter(e => e.content.startsWith('Reading ')).length;
@@ -405,10 +432,10 @@ function OrchestratorActivitySection({ entries, isExpanded, onToggle }: Orchestr
 
   // Build summary text
   const summaryParts: string[] = [];
-  if (readCount > 0) summaryParts.push(`${readCount} file${readCount > 1 ? 's' : ''} read`);
-  if (searchCount > 0) summaryParts.push(`${searchCount} search${searchCount > 1 ? 'es' : ''}`);
-  if (otherCount > 0) summaryParts.push(`${otherCount} other`);
-  const summary = summaryParts.join(', ') || `${entries.length} operations`;
+  if (readCount > 0) summaryParts.push(t('uiIntegrations:github.prs.filesRead', { count: readCount }));
+  if (searchCount > 0) summaryParts.push(t('uiIntegrations:github.prs.searches', { count: searchCount }));
+  if (otherCount > 0) summaryParts.push(t('uiIntegrations:github.prs.otherOperations', { count: otherCount }));
+  const summary = new Intl.ListFormat(i18n.resolvedLanguage || i18n.language, { style: 'short', type: 'conjunction' }).format(summaryParts) || t('uiIntegrations:github.prs.operations', { count: entries.length });
 
   return (
     <div className="rounded-md border border-border/50 bg-secondary/10 overflow-hidden">
@@ -439,7 +466,7 @@ function OrchestratorActivitySection({ entries, isExpanded, onToggle }: Orchestr
           {entries.map((entry, idx) => (
             <div key={`activity-${entry.timestamp}-${idx}`} className="flex items-start gap-2 text-[10px] text-muted-foreground/80 py-0.5">
               <span className="text-muted-foreground/50 tabular-nums shrink-0">
-                {new Date(entry.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                {new Date(entry.timestamp).toLocaleTimeString(i18n.resolvedLanguage || i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </span>
               <span className="break-words">{entry.content}</span>
             </div>
@@ -517,7 +544,9 @@ function AgentLogGroup({ group, isExpanded, onToggle }: AgentLogGroupProps) {
   const hasMoreEntries = otherEntries.length > 0;
 
   // Extract display name from "Agent:logic-reviewer" -> "logic-reviewer" or "Specialist:security" -> "security"
-  const displayName = agentName.replace('Agent:', '').replace('Specialist:', '');
+  const displayName = SOURCE_LABEL_KEYS[agentName]
+    ? t(SOURCE_LABEL_KEYS[agentName])
+    : agentName.replace('Agent:', '').replace('Specialist:', '');
 
   const getSourceColor = (source: string) => {
     return SOURCE_COLORS[source] || SOURCE_COLORS.default;
@@ -583,13 +612,14 @@ interface LogEntryProps {
 }
 
 function LogEntry({ entry }: LogEntryProps) {
+  const { t, i18n } = useTranslation('common');
   const [isExpanded, setIsExpanded] = useState(false);
   const hasDetail = Boolean(entry.detail);
 
   const formatTime = (timestamp: string) => {
     try {
       const date = new Date(timestamp);
-      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      return date.toLocaleTimeString(i18n.resolvedLanguage || i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     } catch {
       return '';
     }
@@ -609,6 +639,7 @@ function LogEntry({ entry }: LogEntryProps) {
           {hasDetail && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
+              aria-label={t(isExpanded ? 'uiIntegrations:github.prs.less' : 'uiIntegrations:github.prs.more')}
               className={cn(
                 'flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded shrink-0',
                 'text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors',
@@ -657,13 +688,14 @@ function LogEntry({ entry }: LogEntryProps) {
         </span>
         {entry.source && (
           <Badge variant="outline" className={cn('text-[9px] px-1 py-0 shrink-0', getSourceColor(entry.source))}>
-            {entry.source}
+            {SOURCE_LABEL_KEYS[entry.source] ? t(SOURCE_LABEL_KEYS[entry.source]) : entry.source}
           </Badge>
         )}
         <span className="break-words whitespace-pre-wrap flex-1">{entry.content}</span>
         {hasDetail && (
           <button
             onClick={() => setIsExpanded(!isExpanded)}
+              aria-label={t(isExpanded ? 'uiIntegrations:github.prs.less' : 'uiIntegrations:github.prs.more')}
             className={cn(
               'flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded shrink-0',
               'text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors',
@@ -673,12 +705,12 @@ function LogEntry({ entry }: LogEntryProps) {
             {isExpanded ? (
               <>
                 <ChevronDown className="h-2.5 w-2.5" />
-                <span>Less</span>
+                <span>{t('uiIntegrations:github.prs.less')}</span>
               </>
             ) : (
               <>
                 <ChevronRight className="h-2.5 w-2.5" />
-                <span>More</span>
+                <span>{t('uiIntegrations:github.prs.more')}</span>
               </>
             )}
           </button>
