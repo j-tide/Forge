@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 /**
  * MCP Server Health Check Handlers
  *
@@ -88,7 +89,7 @@ async function checkHttpHealth(server: CustomMcpServer, startTime: number): Prom
     return {
       serverId: server.id,
       status: 'unhealthy',
-      message: 'No URL configured',
+      message: nativeText('ipc.noUrlConfigured'),
       checkedAt: new Date().toISOString(),
     };
   }
@@ -120,13 +121,13 @@ async function checkHttpHealth(server: CustomMcpServer, startTime: number): Prom
 
     if (response.ok) {
       status = 'healthy';
-      message = 'Server is responding';
+      message = nativeText('mcp.responding');
     } else if (response.status === 401 || response.status === 403) {
       status = 'needs_auth';
-      message = response.status === 401 ? 'Authentication required' : 'Access forbidden';
+      message = response.status === 401 ? nativeText('ipc.authenticationRequired') : nativeText('mcp.accessForbidden');
     } else {
       status = 'unhealthy';
-      message = `HTTP ${response.status}: ${response.statusText}`;
+      message = nativeText('ipcTemplate.httpValue0Value1', { value0: response.status, value1: response.statusText });
     }
 
     return {
@@ -146,11 +147,11 @@ async function checkHttpHealth(server: CustomMcpServer, startTime: number): Prom
     let message = errorMessage;
 
     if (errorMessage.includes('abort') || errorMessage.includes('timeout')) {
-      message = 'Connection timed out';
+      message = nativeText('ipc.connectionTimedOut');
     } else if (errorMessage.includes('ECONNREFUSED')) {
-      message = 'Connection refused - server may be down';
+      message = nativeText('mcp.connectionRefused');
     } else if (errorMessage.includes('ENOTFOUND')) {
-      message = 'Server not found - check URL';
+      message = nativeText('mcp.serverNotFound');
     }
 
     return {
@@ -171,7 +172,7 @@ async function checkCommandHealth(server: CustomMcpServer, startTime: number): P
     return {
       serverId: server.id,
       status: 'unhealthy',
-      message: 'No command configured',
+      message: nativeText('ipc.noCommandConfigured'),
       checkedAt: new Date().toISOString(),
     };
   }
@@ -182,7 +183,7 @@ async function checkCommandHealth(server: CustomMcpServer, startTime: number): P
       return resolve({
         serverId: server.id,
         status: 'unhealthy',
-        message: `Invalid command '${server.command}' - not in allowlist`,
+        message: nativeText('ipcTemplate.invalidCommandValue0NotInAllowlist', { value0: String(server.command) }),
         checkedAt: new Date().toISOString(),
       });
     }
@@ -190,7 +191,7 @@ async function checkCommandHealth(server: CustomMcpServer, startTime: number): P
       return resolve({
         serverId: server.id,
         status: 'unhealthy',
-        message: 'Args contain dangerous flags or shell metacharacters',
+        message: nativeText('ipc.argsContainDangerousFlagsOrShellMetacharacters'),
         checkedAt: new Date().toISOString(),
       });
     }
@@ -210,7 +211,7 @@ async function checkCommandHealth(server: CustomMcpServer, startTime: number): P
         resolve({
           serverId: server.id,
           status: 'healthy',
-          message: `Command '${server.command}' found`,
+          message: nativeText('ipcTemplate.commandValue0Found', { value0: String(server.command) }),
           responseTime,
           checkedAt: new Date().toISOString(),
         });
@@ -218,7 +219,7 @@ async function checkCommandHealth(server: CustomMcpServer, startTime: number): P
         resolve({
           serverId: server.id,
           status: 'unhealthy',
-          message: `Command '${server.command}' not found in PATH`,
+          message: nativeText('ipcTemplate.commandValue0NotFoundInPath', { value0: String(server.command) }),
           responseTime,
           checkedAt: new Date().toISOString(),
         });
@@ -232,15 +233,15 @@ async function checkCommandHealth(server: CustomMcpServer, startTime: number): P
     proc.on('error', (error: Error) => {
       const responseTime = Date.now() - startTime;
       const errCode = (error as NodeJS.ErrnoException).code;
-      let message = `Failed to check command '${server.command}'`;
+      let message = nativeText('mcp.commandCheckFailed', { command: String(server.command) });
 
       // Provide actionable error messages for common failures
       if (errCode === 'ENOENT') {
         message = isWindows()
-          ? `System utility 'where.exe' not found. Check Windows installation.`
-          : `System utility 'which' not found. Check system PATH configuration.`;
+          ? nativeText('mcp.whereMissing')
+          : nativeText('mcp.whichMissing');
       } else if (errCode === 'EACCES') {
-        message = `Permission denied checking command '${server.command}'`;
+        message = nativeText('mcp.commandPermissionDenied', { command: String(server.command) });
       }
 
       resolve({
@@ -276,7 +277,7 @@ async function testHttpConnection(server: CustomMcpServer, startTime: number): P
     return {
       serverId: server.id,
       success: false,
-      message: 'No URL configured',
+      message: nativeText('ipc.noUrlConfigured'),
     };
   }
 
@@ -323,16 +324,16 @@ async function testHttpConnection(server: CustomMcpServer, startTime: number): P
         return {
           serverId: server.id,
           success: false,
-          message: 'Authentication failed',
-          error: `HTTP ${response.status}: ${response.statusText}`,
+          message: nativeText('ipc.authenticationFailed'),
+          error: nativeText('ipcTemplate.httpValue0Value1', { value0: String(response.status), value1: String(response.statusText) }),
           responseTime,
         };
       }
       return {
         serverId: server.id,
         success: false,
-        message: `Server returned error`,
-        error: `HTTP ${response.status}: ${response.statusText}`,
+        message: nativeText('ipcTemplate.serverReturnedError'),
+        error: nativeText('ipcTemplate.httpValue0Value1', { value0: String(response.status), value1: String(response.statusText) }),
         responseTime,
       };
     }
@@ -343,7 +344,7 @@ async function testHttpConnection(server: CustomMcpServer, startTime: number): P
       return {
         serverId: server.id,
         success: false,
-        message: 'MCP error',
+        message: nativeText('ipc.mcpError'),
         error: data.error.message || JSON.stringify(data.error),
         responseTime,
       };
@@ -374,7 +375,7 @@ async function testHttpConnection(server: CustomMcpServer, startTime: number): P
     return {
       serverId: server.id,
       success: true,
-      message: tools.length > 0 ? `Connected successfully, ${tools.length} tools available` : 'Connected successfully',
+      message: tools.length > 0 ? nativeText('ipcTemplate.connectedSuccessfullyValue0ToolsAvailable', { value0: String(tools.length) }) : nativeText('ipc.connectedSuccessfully'),
       tools,
       responseTime,
     };
@@ -382,13 +383,13 @@ async function testHttpConnection(server: CustomMcpServer, startTime: number): P
     const responseTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    let message = 'Connection failed';
+    let message = nativeText('mcp.connectionFailed');
     if (errorMessage.includes('abort') || errorMessage.includes('timeout')) {
-      message = 'Connection timed out';
+      message = nativeText('ipc.connectionTimedOut');
     } else if (errorMessage.includes('ECONNREFUSED')) {
-      message = 'Connection refused - server may be down';
+      message = nativeText('mcp.connectionRefused');
     } else if (errorMessage.includes('ENOTFOUND')) {
-      message = 'Server not found - check URL';
+      message = nativeText('mcp.serverNotFound');
     }
 
     return {
@@ -409,7 +410,7 @@ async function testCommandConnection(server: CustomMcpServer, startTime: number)
     return {
       serverId: server.id,
       success: false,
-      message: 'No command configured',
+      message: nativeText('ipc.noCommandConfigured'),
     };
   }
 
@@ -419,14 +420,14 @@ async function testCommandConnection(server: CustomMcpServer, startTime: number)
       return resolve({
         serverId: server.id,
         success: false,
-        message: `Invalid command '${server.command}' - not in allowlist`,
+        message: nativeText('ipcTemplate.invalidCommandValue0NotInAllowlist', { value0: String(server.command) }),
       });
     }
     if (!areArgsSafe(server.args)) {
       return resolve({
         serverId: server.id,
         success: false,
-        message: 'Args contain dangerous flags or shell metacharacters',
+        message: nativeText('ipc.argsContainDangerousFlagsOrShellMetacharacters'),
       });
     }
 
@@ -451,7 +452,7 @@ async function testCommandConnection(server: CustomMcpServer, startTime: number)
         resolve({
           serverId: server.id,
           success: false,
-          message: 'Connection timed out',
+          message: nativeText('ipc.connectionTimedOut'),
           responseTime,
         });
       }
@@ -491,7 +492,7 @@ async function testCommandConnection(server: CustomMcpServer, startTime: number)
               resolve({
                 serverId: server.id,
                 success: true,
-                message: 'MCP server started successfully',
+                message: nativeText('ipc.mcpServerStartedSuccessfully'),
                 responseTime,
               });
             }
@@ -515,7 +516,7 @@ async function testCommandConnection(server: CustomMcpServer, startTime: number)
         resolve({
           serverId: server.id,
           success: false,
-          message: 'Failed to start server',
+          message: nativeText('ipc.failedToStartServer'),
           error: error.message,
           responseTime,
         });
@@ -531,14 +532,14 @@ async function testCommandConnection(server: CustomMcpServer, startTime: number)
           resolve({
             serverId: server.id,
             success: true,
-            message: 'Server process started',
+            message: nativeText('ipc.serverProcessStarted'),
             responseTime,
           });
         } else {
           resolve({
             serverId: server.id,
             success: false,
-            message: `Server exited with code ${code}`,
+            message: nativeText('ipcTemplate.serverExitedWithCodeValue0', { value0: String(code) }),
             error: stderr || undefined,
             responseTime,
           });
@@ -561,7 +562,7 @@ export function registerMcpHandlers(): void {
       appLog.error('MCP health check error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Health check failed',
+        error: error instanceof Error ? error.message : nativeText('ipc.healthCheckFailed'),
       };
     }
   });
@@ -575,7 +576,7 @@ export function registerMcpHandlers(): void {
       appLog.error('MCP connection test error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Connection test failed',
+        error: error instanceof Error ? error.message : nativeText('ipc.connectionTestFailed'),
       };
     }
   });

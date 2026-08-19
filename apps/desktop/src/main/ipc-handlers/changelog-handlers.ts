@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 import { ipcMain } from 'electron';
 import type { BrowserWindow } from 'electron';
 import path from 'path';
@@ -105,7 +106,7 @@ export function registerChangelogHandlers(
     async (_, projectId: string, rendererTasks?: Task[]): Promise<IPCResult<ChangelogTask[]>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       // Use renderer tasks if provided (they have the correct UI status),
@@ -125,7 +126,7 @@ export function registerChangelogHandlers(
     async (_, projectId: string, taskIds: string[]): Promise<IPCResult<TaskSpecContent[]>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const tasks = projectStore.getTasks(projectId);
@@ -143,7 +144,7 @@ export function registerChangelogHandlers(
     async (_, request: ChangelogGenerationRequest): Promise<IPCResult<void>> => {
       const project = projectStore.getProject(request.projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       // Return immediately to allow renderer to register event listeners
@@ -156,7 +157,7 @@ export function registerChangelogHandlers(
             mainWindow.webContents.send(IPC_CHANNELS.CHANGELOG_GENERATION_PROGRESS, request.projectId, {
               stage: 'loading_specs',
               progress: 10,
-              message: 'Preparing changelog generation...'
+              message: nativeText('ipc.preparingChangelogGeneration')
             });
           }
 
@@ -172,7 +173,7 @@ export function registerChangelogHandlers(
             mainWindow.webContents.send(IPC_CHANNELS.CHANGELOG_GENERATION_PROGRESS, request.projectId, {
               stage: 'generating',
               progress: 30,
-              message: 'Generating changelog with AI...'
+              message: nativeText('ipc.generatingChangelogWithAi')
             });
           }
 
@@ -209,7 +210,7 @@ export function registerChangelogHandlers(
               mainWindow.webContents.send(IPC_CHANNELS.CHANGELOG_GENERATION_PROGRESS, request.projectId, {
                 stage: 'complete',
                 progress: 100,
-                message: 'Changelog generated successfully'
+                message: nativeText('ipc.changelogGeneratedSuccessfully')
               });
               mainWindow.webContents.send(IPC_CHANNELS.CHANGELOG_GENERATION_COMPLETE, request.projectId, {
                 success: true,
@@ -239,7 +240,7 @@ export function registerChangelogHandlers(
     async (_, request: ChangelogSaveRequest): Promise<IPCResult<ChangelogSaveResult>> => {
       const project = projectStore.getProject(request.projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       try {
@@ -248,7 +249,7 @@ export function registerChangelogHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to save changelog'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSaveChangelog')
         };
       }
     }
@@ -259,7 +260,7 @@ export function registerChangelogHandlers(
     async (_, projectId: string): Promise<IPCResult<ExistingChangelog>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const result = changelogService.readExistingChangelog(project.path);
@@ -272,7 +273,7 @@ export function registerChangelogHandlers(
     async (_, projectId: string, taskIds: string[]): Promise<IPCResult<{ version: string; reason: string }>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       try {
@@ -307,7 +308,7 @@ export function registerChangelogHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to suggest version'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSuggestVersion')
         };
       }
     }
@@ -318,7 +319,7 @@ export function registerChangelogHandlers(
     async (_, projectId: string, commits: GitCommit[]): Promise<IPCResult<{ version: string; reason: string }>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       try {
@@ -349,7 +350,7 @@ export function registerChangelogHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to suggest version from commits'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSuggestVersionFromCommits')
         };
       }
     }
@@ -364,7 +365,7 @@ export function registerChangelogHandlers(
     async (_, projectId: string): Promise<IPCResult<GitBranchInfo[]>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       try {
@@ -373,7 +374,7 @@ export function registerChangelogHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get branches'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetBranches')
         };
       }
     }
@@ -384,7 +385,7 @@ export function registerChangelogHandlers(
     async (_, projectId: string): Promise<IPCResult<GitTagInfo[]>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       try {
@@ -393,7 +394,7 @@ export function registerChangelogHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get tags'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetTags')
         };
       }
     }
@@ -409,7 +410,7 @@ export function registerChangelogHandlers(
     ): Promise<IPCResult<GitCommit[]>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       try {
@@ -431,7 +432,7 @@ export function registerChangelogHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get commits preview'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetCommitsPreview')
         };
       }
     }
@@ -446,7 +447,7 @@ export function registerChangelogHandlers(
     async (_, projectId: string, imageData: string, filename: string): Promise<IPCResult<{ relativePath: string; url: string }>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       try {
@@ -474,7 +475,7 @@ export function registerChangelogHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to save image'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSaveImage')
         };
       }
     }
@@ -487,12 +488,12 @@ export function registerChangelogHandlers(
         // Construct full path and validate it stays within project directory
         const fullPath = path.resolve(projectPath, relativePath);
         if (!fullPath.startsWith(path.resolve(projectPath) + path.sep) && fullPath !== path.resolve(projectPath)) {
-          return { success: false, error: 'Invalid path' };
+          return { success: false, error: nativeText('ipc.invalidPath') };
         }
 
         // Verify the file exists
         if (!existsSync(fullPath)) {
-          return { success: false, error: `Image not found: ${relativePath}` };
+          return { success: false, error: nativeText('ipcTemplate.imageNotFoundValue0', { value0: String(relativePath) }) };
         }
 
         // Read the file and convert to base64
@@ -517,7 +518,7 @@ export function registerChangelogHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to read image'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToReadImage')
         };
       }
     }

@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * Individual idea operations (update, dismiss, etc.)
  */
@@ -20,7 +21,7 @@ export async function updateIdeaStatus(
 ): Promise<IPCResult> {
   const project = projectStore.getProject(projectId);
   if (!project) {
-    return { success: false, error: 'Project not found' };
+    return { success: false, error: nativeText('ipc.projectNotFound') };
   }
 
   const ideationPath = path.join(
@@ -31,14 +32,14 @@ export async function updateIdeaStatus(
 
   const ideation = readIdeationFile(ideationPath);
   if (!ideation) {
-    return { success: false, error: 'Ideation not found' };
+    return { success: false, error: nativeText('ipc.ideationNotFound') };
   }
 
   try {
     // Find and update the idea
     const idea = ideation.ideas?.find((i) => i.id === ideaId);
     if (!idea) {
-      return { success: false, error: 'Idea not found' };
+      return { success: false, error: nativeText('ipc.ideaNotFound') };
     }
 
     idea.status = status;
@@ -49,7 +50,7 @@ export async function updateIdeaStatus(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update idea'
+      error: error instanceof Error ? error.message : nativeText('ipc.failedToUpdateIdea')
     };
   }
 }
@@ -64,7 +65,7 @@ export async function dismissIdea(
 ): Promise<IPCResult> {
   const project = projectStore.getProject(projectId);
   if (!project) {
-    return { success: false, error: 'Project not found' };
+    return { success: false, error: nativeText('ipc.projectNotFound') };
   }
 
   const ideationPath = path.join(
@@ -75,14 +76,14 @@ export async function dismissIdea(
 
   const ideation = readIdeationFile(ideationPath);
   if (!ideation) {
-    return { success: false, error: 'Ideation not found' };
+    return { success: false, error: nativeText('ipc.ideationNotFound') };
   }
 
   try {
     // Find and dismiss the idea
     const idea = ideation.ideas?.find((i) => i.id === ideaId);
     if (!idea) {
-      return { success: false, error: 'Idea not found' };
+      return { success: false, error: nativeText('ipc.ideaNotFound') };
     }
 
     idea.status = 'dismissed';
@@ -93,7 +94,7 @@ export async function dismissIdea(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to dismiss idea'
+      error: error instanceof Error ? error.message : nativeText('ipc.failedToDismissIdea')
     };
   }
 }
@@ -107,7 +108,7 @@ export async function dismissAllIdeas(
 ): Promise<IPCResult> {
   const project = projectStore.getProject(projectId);
   if (!project) {
-    return { success: false, error: 'Project not found' };
+    return { success: false, error: nativeText('ipc.projectNotFound') };
   }
 
   const ideationPath = path.join(
@@ -118,7 +119,7 @@ export async function dismissAllIdeas(
 
   const ideation = readIdeationFile(ideationPath);
   if (!ideation) {
-    return { success: false, error: 'Ideation not found' };
+    return { success: false, error: nativeText('ipc.ideationNotFound') };
   }
 
   try {
@@ -138,7 +139,7 @@ export async function dismissAllIdeas(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to dismiss all ideas'
+      error: error instanceof Error ? error.message : nativeText('ipc.failedToDismissAllIdeas')
     };
   }
 }
@@ -153,7 +154,7 @@ export async function archiveIdea(
 ): Promise<IPCResult> {
   const project = projectStore.getProject(projectId);
   if (!project) {
-    return { success: false, error: 'Project not found' };
+    return { success: false, error: nativeText('ipc.projectNotFound') };
   }
 
   const ideationPath = path.join(
@@ -164,13 +165,13 @@ export async function archiveIdea(
 
   const ideation = readIdeationFile(ideationPath);
   if (!ideation) {
-    return { success: false, error: 'Ideation not found' };
+    return { success: false, error: nativeText('ipc.ideationNotFound') };
   }
 
   try {
     const idea = ideation.ideas?.find((i) => i.id === ideaId);
     if (!idea) {
-      return { success: false, error: 'Idea not found' };
+      return { success: false, error: nativeText('ipc.ideaNotFound') };
     }
 
     idea.status = 'archived';
@@ -181,7 +182,7 @@ export async function archiveIdea(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to archive idea'
+      error: error instanceof Error ? error.message : nativeText('ipc.failedToArchiveIdea')
     };
   }
 }
@@ -196,7 +197,7 @@ export async function deleteIdea(
 ): Promise<IPCResult> {
   const project = projectStore.getProject(projectId);
   if (!project) {
-    return { success: false, error: 'Project not found' };
+    return { success: false, error: nativeText('ipc.projectNotFound') };
   }
 
   const ideationPath = path.join(
@@ -207,13 +208,13 @@ export async function deleteIdea(
 
   const ideation = readIdeationFile(ideationPath);
   if (!ideation) {
-    return { success: false, error: 'Ideation not found' };
+    return { success: false, error: nativeText('ipc.ideationNotFound') };
   }
 
   try {
     const ideaIndex = ideation.ideas?.findIndex((i) => i.id === ideaId);
     if (ideaIndex === undefined || ideaIndex === -1) {
-      return { success: false, error: 'Idea not found' };
+      return { success: false, error: nativeText('ipc.ideaNotFound') };
     }
 
     ideation.ideas?.splice(ideaIndex, 1);
@@ -224,7 +225,7 @@ export async function deleteIdea(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete idea'
+      error: error instanceof Error ? error.message : nativeText('ipc.failedToDeleteIdea')
     };
   }
 }
@@ -239,7 +240,7 @@ export async function deleteMultipleIdeas(
 ): Promise<IPCResult> {
   const project = projectStore.getProject(projectId);
   if (!project) {
-    return { success: false, error: 'Project not found' };
+    return { success: false, error: nativeText('ipc.projectNotFound') };
   }
 
   const ideationPath = path.join(
@@ -250,7 +251,7 @@ export async function deleteMultipleIdeas(
 
   const ideation = readIdeationFile(ideationPath);
   if (!ideation) {
-    return { success: false, error: 'Ideation not found' };
+    return { success: false, error: nativeText('ipc.ideationNotFound') };
   }
 
   try {
@@ -267,7 +268,7 @@ export async function deleteMultipleIdeas(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete ideas'
+      error: error instanceof Error ? error.message : nativeText('ipc.failedToDeleteIdeas')
     };
   }
 }

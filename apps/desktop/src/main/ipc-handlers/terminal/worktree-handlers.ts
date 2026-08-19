@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 import { ipcMain } from 'electron';
 import { IPC_CHANNELS } from '../../../shared/constants';
 import type {
@@ -752,7 +753,7 @@ async function createTerminalWorktree(
   if (!isValidProjectPath(projectPath)) {
     return {
       success: false,
-      error: 'Invalid project path',
+      error: nativeText('ipc.invalidProjectPath'),
     };
   }
 
@@ -760,7 +761,7 @@ async function createTerminalWorktree(
   if (!WORKTREE_NAME_REGEX.test(name)) {
     return {
       success: false,
-      error: 'Invalid worktree name. Use lowercase letters, numbers, dashes, and underscores. Must start and end with alphanumeric.',
+      error: nativeText('ipc.invalidWorktreeNameUseLowercaseLettersNumbersDashesAndUnderscores'),
     };
   }
 
@@ -768,7 +769,7 @@ async function createTerminalWorktree(
   if (customBaseBranch && !GIT_BRANCH_REGEX.test(customBaseBranch)) {
     return {
       success: false,
-      error: 'Invalid base branch name',
+      error: nativeText('ipc.invalidBaseBranchName'),
     };
   }
 
@@ -784,7 +785,7 @@ async function createTerminalWorktree(
 
   try {
     if (existsSync(worktreePath)) {
-      return { success: false, error: `Worktree '${name}' already exists.` };
+      return { success: false, error: nativeText('ipcTemplate.worktreeValue0AlreadyExists', { value0: String(name) }) };
     }
 
     mkdirSync(getTerminalWorktreeDir(projectPath), { recursive: true });
@@ -964,10 +965,10 @@ async function createTerminalWorktree(
     return {
       success: false,
       error: isTimeout
-        ? 'Git operation timed out. The repository may be too large or the network connection is slow. Please try again.'
+        ? nativeText('ipc.gitOperationTimedOutTheRepositoryMayBeTooLarge')
         : error instanceof Error
           ? error.message
-          : 'Failed to create worktree',
+          : nativeText('ipc.failedToCreateWorktree'),
     };
   }
 }
@@ -1154,12 +1155,12 @@ async function removeTerminalWorktree(
 
   // Validate projectPath against registered projects
   if (!isValidProjectPath(projectPath)) {
-    return { success: false, error: 'Invalid project path' };
+    return { success: false, error: nativeText('ipc.invalidProjectPath') };
   }
 
   // Validate worktree name to prevent path traversal
   if (!WORKTREE_NAME_REGEX.test(name)) {
-    return { success: false, error: 'Invalid worktree name' };
+    return { success: false, error: nativeText('ipc.invalidWorktreeName') };
   }
 
   // Auto-fix any misconfigured bare repo before worktree operations
@@ -1171,7 +1172,7 @@ async function removeTerminalWorktree(
   const config = loadWorktreeConfig(projectPath, name);
 
   if (!config) {
-    return { success: false, error: 'Worktree not found' };
+    return { success: false, error: nativeText('ipc.worktreeNotFound') };
   }
 
   try {
@@ -1188,7 +1189,7 @@ async function removeTerminalWorktree(
     if (!cleanupResult.success) {
       return {
         success: false,
-        error: cleanupResult.warnings.join('; ') || 'Failed to remove worktree',
+        error: cleanupResult.warnings.join('; ') || nativeText('ipc.failedToRemoveWorktree'),
       };
     }
 
@@ -1218,10 +1219,10 @@ async function removeTerminalWorktree(
     return {
       success: false,
       error: isTimeout
-        ? 'Git operation timed out. The repository may be too large. Please try again.'
+        ? nativeText('ipc.gitOperationTimedOutTheRepositoryMayBeTooLarge2')
         : error instanceof Error
           ? error.message
-          : 'Failed to remove worktree',
+          : nativeText('ipc.failedToRemoveWorktree'),
     };
   }
 }
@@ -1243,7 +1244,7 @@ export function registerTerminalWorktreeHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to list worktrees',
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToListWorktrees'),
         };
       }
     }
@@ -1270,7 +1271,7 @@ export function registerTerminalWorktreeHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to list other worktrees',
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToListOtherWorktrees'),
         };
       }
     }

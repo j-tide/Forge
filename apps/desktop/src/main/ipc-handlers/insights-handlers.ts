@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 import { ipcMain, app } from "electron";
 import type { BrowserWindow } from "electron";
 import path from "path";
@@ -47,7 +48,7 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     async (_, projectId: string): Promise<IPCResult<InsightsSession | null>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const session = insightsService.loadSession(projectId, project.path);
@@ -110,7 +111,7 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     async (_, projectId: string): Promise<IPCResult> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       insightsService.clearSession(projectId, project.path);
@@ -129,11 +130,11 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     ): Promise<IPCResult<Task>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       if (!project.autoBuildPath) {
-        return { success: false, error: "Aperant not initialized for this project" };
+        return { success: false, error: nativeText('ipc.aperantNotInitializedForThisProject') };
       }
 
       try {
@@ -216,7 +217,7 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Failed to create task",
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToCreateTask'),
         };
       }
     }
@@ -228,7 +229,7 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     async (_, projectId: string, includeArchived?: boolean): Promise<IPCResult<InsightsSessionSummary[]>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const sessions = insightsService.listSessions(project.path, includeArchived ?? false);
@@ -241,19 +242,19 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     IPC_CHANNELS.INSIGHTS_DELETE_SESSIONS,
     async (_, projectId: string, sessionIds: string[]): Promise<IPCResult<{ deletedIds: string[]; failedIds: string[] }>> => {
       if (!Array.isArray(sessionIds) || sessionIds.length === 0) {
-        return { success: false, error: "No sessions specified" };
+        return { success: false, error: nativeText('ipc.noSessionsSpecified') };
       }
 
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const result = insightsService.deleteSessions(projectId, project.path, sessionIds);
       return {
         success: result.failedIds.length === 0,
         data: result,
-        ...(result.failedIds.length > 0 && { error: `Failed to delete ${result.failedIds.length} session(s)` })
+        ...(result.failedIds.length > 0 && { error: nativeText('ipcTemplate.failedToDeleteValue0SessionS', { value0: String(result.failedIds.length) }) })
       };
     }
   );
@@ -264,14 +265,14 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     async (_, projectId: string, sessionId: string): Promise<IPCResult> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const success = insightsService.archiveSession(projectId, project.path, sessionId);
       if (success) {
         return { success: true };
       }
-      return { success: false, error: "Failed to archive session" };
+      return { success: false, error: nativeText('ipc.failedToArchiveSession') };
     }
   );
 
@@ -280,19 +281,19 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     IPC_CHANNELS.INSIGHTS_ARCHIVE_SESSIONS,
     async (_, projectId: string, sessionIds: string[]): Promise<IPCResult<{ archivedIds: string[]; failedIds: string[] }>> => {
       if (!Array.isArray(sessionIds) || sessionIds.length === 0) {
-        return { success: false, error: "No sessions specified" };
+        return { success: false, error: nativeText('ipc.noSessionsSpecified') };
       }
 
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const result = insightsService.archiveSessions(projectId, project.path, sessionIds);
       return {
         success: result.failedIds.length === 0,
         data: result,
-        ...(result.failedIds.length > 0 && { error: `Failed to archive ${result.failedIds.length} session(s)` })
+        ...(result.failedIds.length > 0 && { error: nativeText('ipcTemplate.failedToArchiveValue0SessionS', { value0: String(result.failedIds.length) }) })
       };
     }
   );
@@ -303,14 +304,14 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     async (_, projectId: string, sessionId: string): Promise<IPCResult> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const success = insightsService.unarchiveSession(project.path, sessionId);
       if (success) {
         return { success: true };
       }
-      return { success: false, error: "Failed to unarchive session" };
+      return { success: false, error: nativeText('ipc.failedToUnarchiveSession') };
     }
   );
 
@@ -320,7 +321,7 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     async (_, projectId: string): Promise<IPCResult<InsightsSession>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const session = insightsService.createNewSession(projectId, project.path);
@@ -334,7 +335,7 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     async (_, projectId: string, sessionId: string): Promise<IPCResult<InsightsSession | null>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const session = insightsService.switchSession(projectId, project.path, sessionId);
@@ -348,14 +349,14 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     async (_, projectId: string, sessionId: string): Promise<IPCResult> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const success = insightsService.deleteSession(projectId, project.path, sessionId);
       if (success) {
         return { success: true };
       }
-      return { success: false, error: "Failed to delete session" };
+      return { success: false, error: nativeText('ipc.failedToDeleteSession') };
     }
   );
 
@@ -365,14 +366,14 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     async (_, projectId: string, sessionId: string, newTitle: string): Promise<IPCResult> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const success = insightsService.renameSession(project.path, sessionId, newTitle);
       if (success) {
         return { success: true };
       }
-      return { success: false, error: "Failed to rename session" };
+      return { success: false, error: nativeText('ipc.failedToRenameSession') };
     }
   );
 
@@ -387,7 +388,7 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     ): Promise<IPCResult> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const success = insightsService.updateSessionModelConfig(
@@ -398,7 +399,7 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
       if (success) {
         return { success: true };
       }
-      return { success: false, error: "Failed to update model configuration" };
+      return { success: false, error: nativeText('ipc.failedToUpdateModelConfiguration') };
     }
   );
 

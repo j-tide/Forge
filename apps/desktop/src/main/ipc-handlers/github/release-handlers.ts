@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitHub release creation IPC handlers
  */
@@ -24,7 +25,7 @@ function checkGhCli(): { installed: boolean; error?: string } {
   } catch {
     return {
       installed: false,
-      error: 'GitHub CLI (gh) not found. Please install it: https://cli.github.com/'
+      error: nativeText('ipc.githubCliGhNotFoundPleaseInstallItHttpsCli')
     };
   }
 }
@@ -39,7 +40,7 @@ function checkGhAuth(projectPath: string): { authenticated: boolean; error?: str
   } catch {
     return {
       authenticated: false,
-      error: 'Not authenticated with GitHub. Run "gh auth login" in terminal first.'
+      error: nativeText('ipc.notAuthenticatedWithGithubRunGhAuthLoginInTerminal')
     };
   }
 }
@@ -76,7 +77,7 @@ export function registerCreateRelease(): void {
     ): Promise<IPCResult<{ url: string }>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       // Check if gh CLI is available
@@ -191,7 +192,7 @@ export function registerSuggestVersion(): void {
     async (_, projectId: string): Promise<IPCResult<VersionSuggestion>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       try {

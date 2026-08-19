@@ -216,6 +216,8 @@ describe("IPC Handlers", { timeout: 30000 }, () => {
 
     // Need to reset modules to re-register handlers
     vi.resetModules();
+    const { setAppLanguage } = await import("../app-language");
+    setAppLanguage("en");
   });
 
   afterEach(() => {

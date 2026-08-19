@@ -126,6 +126,8 @@ describe('GitHub OAuth Handlers', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     vi.resetModules();
+    const { setAppLanguage } = await import('../../../app-language');
+    setAppLanguage('en');
 
     // Set up default env-utils mocks
     mockGetAugmentedEnv.mockReturnValue(process.env as Record<string, string>);

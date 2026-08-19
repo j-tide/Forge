@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 /**
  * Claude Code CLI Handlers
  *
@@ -1028,7 +1029,7 @@ export function registerClaudeCodeHandlers(): void {
         console.error('[Claude Code] Check failed:', errorMsg, error);
         return {
           success: false,
-          error: `Failed to check Claude Code version: ${errorMsg}`,
+          error: nativeText('ipcTemplate.failedToCheckClaudeCodeVersionValue0', { value0: String(errorMsg) }),
         };
       }
     }
@@ -1065,7 +1066,7 @@ export function registerClaudeCodeHandlers(): void {
         console.error('[Claude Code] Install failed:', errorMsg, error);
         return {
           success: false,
-          error: `Failed to open terminal for installation: ${errorMsg}`,
+          error: nativeText('ipcTemplate.failedToOpenTerminalForInstallationValue0', { value0: String(errorMsg) }),
         };
       }
     }
@@ -1088,7 +1089,7 @@ export function registerClaudeCodeHandlers(): void {
         console.error('[Claude Code] Failed to fetch versions:', errorMsg, error);
         return {
           success: false,
-          error: `Failed to fetch available versions: ${errorMsg}`,
+          error: nativeText('ipcTemplate.failedToFetchAvailableVersionsValue0', { value0: String(errorMsg) }),
         };
       }
     }
@@ -1125,7 +1126,7 @@ export function registerClaudeCodeHandlers(): void {
         console.error('[Claude Code] Install version failed:', errorMsg, error);
         return {
           success: false,
-          error: `Failed to install version: ${errorMsg}`,
+          error: nativeText('ipcTemplate.failedToInstallVersionValue0', { value0: String(errorMsg) }),
         };
       }
     }
@@ -1157,7 +1158,7 @@ export function registerClaudeCodeHandlers(): void {
         console.error('[Claude Code] Failed to scan installations:', errorMsg, error);
         return {
           success: false,
-          error: `Failed to scan Claude CLI installations: ${errorMsg}`,
+          error: nativeText('ipcTemplate.failedToScanClaudeCliInstallationsValue0', { value0: String(errorMsg) }),
         };
       }
     }
@@ -1211,7 +1212,7 @@ export function registerClaudeCodeHandlers(): void {
         console.error('[Claude Code] Failed to set active path:', errorMsg, error);
         return {
           success: false,
-          error: `Failed to set active Claude CLI path: ${errorMsg}`,
+          error: nativeText('ipcTemplate.failedToSetActiveClaudeCliPathValue0', { value0: String(errorMsg) }),
         };
       }
     }
@@ -1232,7 +1233,7 @@ export function registerClaudeCodeHandlers(): void {
         if (!profile) {
           return {
             success: false,
-            error: `Profile not found: ${profileId}`
+            error: nativeText('ipcTemplate.profileNotFoundValue0', { value0: String(profileId) })
           };
         }
 
@@ -1242,7 +1243,7 @@ export function registerClaudeCodeHandlers(): void {
         if (!isManagedPreviewConfigDir(configDir)) {
           return {
             success: false,
-            error: `Invalid preview profile directory: ${configDir}`
+            error: nativeText('ipcTemplate.invalidPreviewProfileDirectoryValue0', { value0: String(configDir) })
           };
         }
 
@@ -1314,7 +1315,7 @@ export function registerClaudeCodeHandlers(): void {
         console.error('[Claude Code] Authentication failed:', errorMsg, error);
         return {
           success: false,
-          error: `Failed to prepare authentication: ${errorMsg}`
+          error: nativeText('ipcTemplate.failedToPrepareAuthenticationValue0', { value0: String(errorMsg) })
         };
       }
     }
@@ -1333,13 +1334,13 @@ export function registerClaudeCodeHandlers(): void {
         if (!profile) {
           return {
             success: false,
-            error: `Profile not found: ${profileId}`
+            error: nativeText('ipcTemplate.profileNotFoundValue0', { value0: String(profileId) })
           };
         }
 
         const configDir = profile.configDir || getPreviewProfileDirectory(profile.name);
         if (!isManagedPreviewConfigDir(configDir)) {
-          return { success: false, error: `Invalid preview profile directory: ${configDir}` };
+          return { success: false, error: nativeText('ipcTemplate.invalidPreviewProfileDirectoryValue0', { value0: String(configDir) }) };
         }
         const result = checkProfileAuthentication(configDir);
 
@@ -1431,7 +1432,7 @@ export function registerClaudeCodeHandlers(): void {
         console.error('[Claude Code] Auth verification failed:', errorMsg, error);
         return {
           success: false,
-          error: `Failed to verify authentication: ${errorMsg}`
+          error: nativeText('ipcTemplate.failedToVerifyAuthenticationValue0', { value0: String(errorMsg) })
         };
       }
     }
@@ -1450,13 +1451,13 @@ export function registerClaudeCodeHandlers(): void {
         const profile = profileManager.getProfile(profileId);
 
         if (!profile) {
-          return { success: false, error: `Profile not found: ${profileId}` };
+          return { success: false, error: nativeText('ipcTemplate.profileNotFoundValue0', { value0: String(profileId) }) };
         }
 
         // Resolve configDir (same logic as CLAUDE_PROFILE_AUTHENTICATE)
         const configDir = profile.configDir || getPreviewProfileDirectory(profile.name);
         if (!isManagedPreviewConfigDir(configDir)) {
-          return { success: false, error: `Invalid preview profile directory: ${configDir}` };
+          return { success: false, error: nativeText('ipcTemplate.invalidPreviewProfileDirectoryValue0', { value0: String(configDir) }) };
         }
 
         const expandedConfigDir = configDir.startsWith('~')
@@ -1488,7 +1489,7 @@ export function registerClaudeCodeHandlers(): void {
         // Resolve the claude binary path
         const claudeInfo = getToolInfo('claude');
         if (!claudeInfo.found || !claudeInfo.path) {
-          return { success: false, error: 'Claude CLI not found. Please install Claude Code first.' };
+          return { success: false, error: nativeText('ipc.claudeCliNotFoundPleaseInstallClaudeCodeFirst') };
         }
 
         const claudePath = claudeInfo.path;
@@ -1497,7 +1498,7 @@ export function registerClaudeCodeHandlers(): void {
         const sender = event.sender;
         sender.send(IPC_CHANNELS.CLAUDE_AUTH_LOGIN_PROGRESS, {
           status: 'authenticating',
-          message: 'Opening browser for authentication...'
+          message: nativeText('ipc.openingBrowserForAuthentication')
         });
 
         // Spawn `claude auth login` subprocess
@@ -1526,7 +1527,7 @@ export function registerClaudeCodeHandlers(): void {
             if (text.toLowerCase().includes('browser') || text.toLowerCase().includes('open')) {
               sender.send(IPC_CHANNELS.CLAUDE_AUTH_LOGIN_PROGRESS, {
                 status: 'waiting',
-                message: 'Waiting for authorization in browser...'
+                message: nativeText('ipc.waitingForAuthorizationInBrowser')
               });
             }
           });
@@ -1542,11 +1543,11 @@ export function registerClaudeCodeHandlers(): void {
             child.kill();
             sender.send(IPC_CHANNELS.CLAUDE_AUTH_LOGIN_PROGRESS, {
               status: 'error',
-              message: 'Authentication timed out'
+              message: nativeText('ipc.authenticationTimedOut')
             });
             resolve({
               success: false,
-              error: 'Authentication timed out after 5 minutes'
+              error: nativeText('ipc.authenticationTimedOutAfter5Minutes')
             });
           }, 5 * 60 * 1000);
 
@@ -1580,7 +1581,7 @@ export function registerClaudeCodeHandlers(): void {
 
                 sender.send(IPC_CHANNELS.CLAUDE_AUTH_LOGIN_PROGRESS, {
                   status: 'success',
-                  message: result.email || 'Authenticated'
+                  message: result.email || nativeText('ipc.authenticated')
                 });
 
                 resolve({
@@ -1591,11 +1592,11 @@ export function registerClaudeCodeHandlers(): void {
                 // Process exited 0 but no credentials found
                 sender.send(IPC_CHANNELS.CLAUDE_AUTH_LOGIN_PROGRESS, {
                   status: 'error',
-                  message: 'Authentication completed but credentials not found'
+                  message: nativeText('ipc.authenticationCompletedButCredentialsNotFound')
                 });
                 resolve({
                   success: false,
-                  error: 'Authentication completed but credentials were not saved'
+                  error: nativeText('ipc.authenticationCompletedButCredentialsWereNotSaved')
                 });
               }
             } else {
@@ -1614,7 +1615,7 @@ export function registerClaudeCodeHandlers(): void {
               });
               resolve({
                 success: false,
-                error: `Authentication failed: ${errorMsg}`
+                error: nativeText('ipcTemplate.authenticationFailedValue0', { value0: String(errorMsg) })
               });
             }
           });
@@ -1627,14 +1628,14 @@ export function registerClaudeCodeHandlers(): void {
             });
             resolve({
               success: false,
-              error: `Failed to start authentication: ${err.message}`
+              error: nativeText('ipcTemplate.failedToStartAuthenticationValue0', { value0: String(err.message) })
             });
           });
         });
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         console.error('[Claude Code] Auth login subprocess failed:', errorMsg, error);
-        return { success: false, error: `Authentication failed: ${errorMsg}` };
+        return { success: false, error: nativeText('ipcTemplate.authenticationFailedValue0', { value0: String(errorMsg) }) };
       }
     }
   );

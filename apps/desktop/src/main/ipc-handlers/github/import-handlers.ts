@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitHub issue import IPC handlers
  */
@@ -19,12 +20,12 @@ export function registerImportIssues(agentManager: AgentManager): void {
     async (_, projectId: string, issueNumbers: number[]): Promise<IPCResult<GitHubImportResult>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = getGitHubConfig(project);
       if (!config) {
-        return { success: false, error: 'No GitHub token or repository configured' };
+        return { success: false, error: nativeText('ipc.noGithubTokenOrRepositoryConfigured') };
       }
 
       let imported = 0;

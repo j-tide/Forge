@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 import { ipcMain } from 'electron';
 import type { BrowserWindow } from 'electron';
 import { IPC_CHANNELS, DEFAULT_APP_SETTINGS } from '../../shared/constants';
@@ -299,11 +300,11 @@ ${existingVars['GRAPHITI_DB_PATH'] ? `GRAPHITI_DB_PATH=${existingVars['GRAPHITI_
     async (_, projectId: string): Promise<IPCResult<ProjectEnvConfig>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       if (!project.autoBuildPath) {
-        return { success: false, error: 'Project not initialized' };
+        return { success: false, error: nativeText('ipc.projectNotInitialized') };
       }
 
       const envPath = path.join(project.path, project.autoBuildPath, '.env');
@@ -491,11 +492,11 @@ ${existingVars['GRAPHITI_DB_PATH'] ? `GRAPHITI_DB_PATH=${existingVars['GRAPHITI_
     async (_, projectId: string, config: Partial<ProjectEnvConfig>): Promise<IPCResult> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       if (!project.autoBuildPath) {
-        return { success: false, error: 'Project not initialized' };
+        return { success: false, error: nativeText('ipc.projectNotInitialized') };
       }
 
       const envPath = path.join(project.path, project.autoBuildPath, '.env');
@@ -520,7 +521,7 @@ ${existingVars['GRAPHITI_DB_PATH'] ? `GRAPHITI_DB_PATH=${existingVars['GRAPHITI_
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to update .env file'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToUpdateEnvFile')
         };
       }
     }

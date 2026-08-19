@@ -59,8 +59,9 @@ import { TerminalManager } from './terminal-manager';
 import { getUsageMonitor } from './claude-profile/usage-monitor';
 import { initializeUsageMonitorForwarding } from './ipc-handlers/terminal-handlers';
 import { stopPeriodicUpdates } from './app-updater';
-import { IPC_CHANNELS, SPELL_CHECK_LANGUAGE_MAP, DEFAULT_SPELL_CHECK_LANGUAGE, ADD_TO_DICTIONARY_LABELS } from '../shared/constants';
+import { IPC_CHANNELS, SPELL_CHECK_LANGUAGE_MAP, DEFAULT_SPELL_CHECK_LANGUAGE } from '../shared/constants';
 import { getAppLanguage, initAppLanguage } from './app-language';
+import { nativeText } from './localized-text';
 import { readSettingsFile } from './settings-utils';
 import { registerSettingsAccessor } from './ai/auth/resolver';
 import { appLog, setupErrorLogging } from './app-logger';
@@ -214,17 +215,17 @@ function createWindow(): void {
 
   // Configure initial spell check languages with proper fallback logic
   // Uses shared constant for consistency with the IPC handler
-  const defaultLanguage = 'en';
+  const defaultLanguage = getAppLanguage();
   const defaultSpellCheckLanguages = SPELL_CHECK_LANGUAGE_MAP[defaultLanguage] || [DEFAULT_SPELL_CHECK_LANGUAGE];
   const availableSpellCheckLanguages = session.defaultSession.availableSpellCheckerLanguages;
   const validSpellCheckLanguages = defaultSpellCheckLanguages.filter(lang =>
     availableSpellCheckLanguages.includes(lang)
   );
-  const initialSpellCheckLanguages = validSpellCheckLanguages.length > 0
+  const initialSpellCheckLanguages = defaultLanguage === 'zh-CN' ? [] : validSpellCheckLanguages.length > 0
     ? validSpellCheckLanguages
     : (availableSpellCheckLanguages.includes(DEFAULT_SPELL_CHECK_LANGUAGE) ? [DEFAULT_SPELL_CHECK_LANGUAGE] : []);
 
-  if (initialSpellCheckLanguages.length > 0) {
+  if (initialSpellCheckLanguages.length > 0 || defaultLanguage === 'zh-CN') {
     session.defaultSession.setSpellCheckerLanguages(initialSpellCheckLanguages);
     console.log(`[SPELLCHECK] Initial languages set to: ${initialSpellCheckLanguages.join(', ')}`);
   } else {
@@ -248,11 +249,8 @@ function createWindow(): void {
         menu.append(new MenuItem({ type: 'separator' }));
       }
 
-      // Use localized label for "Add to Dictionary" based on app language (not OS locale)
-      // getAppLanguage() tracks the user's in-app language setting, updated via SPELLCHECK_SET_LANGUAGES IPC
-      const addToDictionaryLabel = ADD_TO_DICTIONARY_LABELS[getAppLanguage()] || ADD_TO_DICTIONARY_LABELS['en'];
       menu.append(new MenuItem({
-        label: addToDictionaryLabel,
+        label: nativeText('contextMenu.addToDictionary'),
         click: () => mainWindow?.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord)
       }));
 
@@ -260,22 +258,26 @@ function createWindow(): void {
     }
 
     // Standard editing options for editable fields
-    // Using role without explicit label allows Electron to provide localized labels
+    // Explicit labels follow the application's selected language while keeping native edit roles.
     if (params.isEditable) {
       menu.append(new MenuItem({
         role: 'cut',
+        label: nativeText('contextMenu.cut'),
         enabled: params.editFlags.canCut
       }));
       menu.append(new MenuItem({
         role: 'copy',
+        label: nativeText('contextMenu.copy'),
         enabled: params.editFlags.canCopy
       }));
       menu.append(new MenuItem({
         role: 'paste',
+        label: nativeText('contextMenu.paste'),
         enabled: params.editFlags.canPaste
       }));
       menu.append(new MenuItem({
         role: 'selectAll',
+        label: nativeText('contextMenu.selectAll'),
         enabled: params.editFlags.canSelectAll
       }));
     } else if (params.selectionText?.trim()) {
@@ -283,6 +285,7 @@ function createWindow(): void {
       // Use .trim() to avoid showing menu for whitespace-only selections
       menu.append(new MenuItem({
         role: 'copy',
+        label: nativeText('contextMenu.copy'),
         enabled: params.editFlags.canCopy
       }));
     }
@@ -355,7 +358,7 @@ app.whenReady().then(() => {
       .catch((err) => console.warn('[main] Failed to clear cache:', err));
   }
 
-  // Initialize app language from OS locale for main process i18n (context menus)
+  // Initialize saved application language before creating native UI.
   initAppLanguage();
 
   // Set dock icon on macOS
@@ -534,7 +537,7 @@ app.whenReady().then(() => {
                   profileId: activeProfile.id,
                   profileName: activeProfile.name,
                   failureType: 'missing',
-                  message: `Profile "${activeProfile.name}" was migrated to an isolated directory and needs re-authentication.`,
+                  message: nativeText('auth.profileMigrated', { profileName: activeProfile.name }),
                   detectedAt: new Date()
                 };
                 console.warn('[main] Sending auth failure for migrated active profile:', activeProfile.name);

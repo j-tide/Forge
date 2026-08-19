@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitLab Merge Request handlers
  * Handles MR operations (equivalent to GitHub PRs)
@@ -85,14 +86,14 @@ export function registerGetMergeRequests(): void {
 
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = await getGitLabConfig(project);
       if (!config) {
         return {
           success: false,
-          error: 'GitLab not configured'
+          error: nativeText('ipc.gitlabNotConfigured')
         };
       }
 
@@ -101,7 +102,7 @@ export function registerGetMergeRequests(): void {
       if (!isValidMrState(stateParam)) {
         return {
           success: false,
-          error: `Invalid merge request state: '${stateParam}'. Must be one of: ${VALID_MR_STATES.join(', ')}`
+          error: nativeText('ipcTemplate.invalidMergeRequestStateValue0MustBeOneOfValue1', { value0: String(stateParam), value1: String(VALID_MR_STATES.join(', ')) })
         };
       }
 
@@ -126,7 +127,7 @@ export function registerGetMergeRequests(): void {
         debugLog('Failed to get merge requests:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get merge requests'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetMergeRequests')
         };
       }
     }
@@ -144,14 +145,14 @@ export function registerGetMergeRequest(): void {
 
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = await getGitLabConfig(project);
       if (!config) {
         return {
           success: false,
-          error: 'GitLab not configured'
+          error: nativeText('ipc.gitlabNotConfigured')
         };
       }
 
@@ -174,7 +175,7 @@ export function registerGetMergeRequest(): void {
         debugLog('Failed to get merge request:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get merge request'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetMergeRequest')
         };
       }
     }
@@ -192,14 +193,14 @@ export function registerCreateMergeRequest(): void {
 
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = await getGitLabConfig(project);
       if (!config) {
         return {
           success: false,
-          error: 'GitLab not configured'
+          error: nativeText('ipc.gitlabNotConfigured')
         };
       }
 
@@ -254,7 +255,7 @@ export function registerCreateMergeRequest(): void {
         debugLog('Failed to create merge request:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to create merge request'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToCreateMergeRequest')
         };
       }
     }
@@ -277,14 +278,14 @@ export function registerUpdateMergeRequest(): void {
 
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = await getGitLabConfig(project);
       if (!config) {
         return {
           success: false,
-          error: 'GitLab not configured'
+          error: nativeText('ipc.gitlabNotConfigured')
         };
       }
 
@@ -321,7 +322,7 @@ export function registerUpdateMergeRequest(): void {
         debugLog('Failed to update merge request:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to update merge request'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToUpdateMergeRequest')
         };
       }
     }

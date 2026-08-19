@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 import { ipcMain } from 'electron';
 import type { BrowserWindow, IpcMainInvokeEvent } from 'electron';
 import { IPC_CHANNELS } from '../../shared/constants';
@@ -35,7 +36,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to create terminal (exception)'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToCreateTerminalException')
         };
       }
     }
@@ -88,12 +89,12 @@ export function registerTerminalHandlers(
         if (name) {
           return { success: true, data: name };
         } else {
-          return { success: false, error: 'Failed to generate terminal name' };
+          return { success: false, error: nativeText('ipc.failedToGenerateTerminalName') };
         }
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to generate terminal name'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGenerateTerminalName')
         };
       }
     }
@@ -126,7 +127,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get Claude profiles'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetClaudeProfiles')
         };
       }
     }
@@ -154,7 +155,7 @@ export function registerTerminalHandlers(
         if (!isManagedPreviewConfigDir(profile.configDir)) {
           return {
             success: false,
-            error: `Invalid preview profile directory: ${profile.configDir}`
+            error: nativeText('ipcTemplate.invalidPreviewProfileDirectoryValue0', { value0: String(profile.configDir) })
           };
         }
 
@@ -169,7 +170,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to save Claude profile'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSaveClaudeProfile')
         };
       }
     }
@@ -182,13 +183,13 @@ export function registerTerminalHandlers(
         const profileManager = getClaudeProfileManager();
         const success = profileManager.deleteProfile(profileId);
         if (!success) {
-          return { success: false, error: 'Cannot delete default or last profile' };
+          return { success: false, error: nativeText('ipc.cannotDeleteDefaultOrLastProfile') };
         }
         return { success: true };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to delete Claude profile'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToDeleteClaudeProfile')
         };
       }
     }
@@ -201,13 +202,13 @@ export function registerTerminalHandlers(
         const profileManager = getClaudeProfileManager();
         const success = profileManager.renameProfile(profileId, newName);
         if (!success) {
-          return { success: false, error: 'Profile not found or invalid name' };
+          return { success: false, error: nativeText('ipc.profileNotFoundOrInvalidName') };
         }
         return { success: true };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to rename Claude profile'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToRenameClaudeProfile')
         };
       }
     }
@@ -224,7 +225,7 @@ export function registerTerminalHandlers(
         const success = profileManager.setActiveProfile(profileId);
 
         if (!success) {
-          return { success: false, error: 'Profile not found' };
+          return { success: false, error: nativeText('ipc.profileNotFound') };
         }
 
         const newProfile = profileManager.getProfile(profileId);
@@ -317,7 +318,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to set active Claude profile'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSetActiveClaudeProfile')
         };
       }
     }
@@ -332,7 +333,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to switch Claude profile'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSwitchClaudeProfile')
         };
       }
     }
@@ -351,13 +352,13 @@ export function registerTerminalHandlers(
         const profileManager = getClaudeProfileManager();
         const success = profileManager.setProfileToken(profileId, token, email);
         if (!success) {
-          return { success: false, error: 'Profile not found' };
+          return { success: false, error: nativeText('ipc.profileNotFound') };
         }
         return { success: true };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to set OAuth token'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSetOauthToken')
         };
       }
     }
@@ -378,7 +379,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get auto-switch settings'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetAutoSwitchSettings')
         };
       }
     }
@@ -401,7 +402,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to update auto-switch settings'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToUpdateAutoSwitchSettings')
         };
       }
     }
@@ -418,7 +419,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get account priority order'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetAccountPriorityOrder')
         };
       }
     }
@@ -435,7 +436,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to set account priority order'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSetAccountPriorityOrder')
         };
       }
     }
@@ -452,7 +453,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch usage'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToFetchUsage')
         };
       }
     }
@@ -469,7 +470,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get best profile'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetBestProfile')
         };
       }
     }
@@ -488,7 +489,7 @@ export function registerTerminalHandlers(
         // Get the project
         const project = projectStore.getProject(request.projectId);
         if (!project) {
-          return { success: false, error: 'Project not found' };
+          return { success: false, error: nativeText('ipc.projectNotFound') };
         }
 
         // Retry based on the source
@@ -501,7 +502,7 @@ export function registerTerminalHandlers(
           case 'task':
             // For tasks, we would need to restart the task
             // This is complex and would need task state restoration
-            return { success: true, data: { message: 'Please restart the task manually' } };
+            return { success: true, data: { message: nativeText('ipc.pleaseRestartTheTaskManually') } };
 
           case 'roadmap':
             // For roadmap, the UI can trigger a refresh
@@ -517,7 +518,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to retry with profile'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToRetryWithProfile')
         };
       }
     }
@@ -538,7 +539,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get current usage'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetCurrentUsage')
         };
       }
     }
@@ -556,7 +557,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get all profiles usage'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetAllProfilesUsage')
         };
       }
     }
@@ -573,7 +574,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get terminal sessions'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetTerminalSessions')
         };
       }
     }
@@ -596,7 +597,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to restore terminal session'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToRestoreTerminalSession')
         };
       }
     }
@@ -611,7 +612,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to clear terminal sessions'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToClearTerminalSessions')
         };
       }
     }
@@ -648,7 +649,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get session dates'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetSessionDates')
         };
       }
     }
@@ -664,7 +665,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get sessions for date'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetSessionsForDate')
         };
       }
     }
@@ -685,7 +686,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to restore sessions from date'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToRestoreSessionsFromDate')
         };
       }
     }
@@ -701,7 +702,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to check terminal status'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToCheckTerminalStatus')
         };
       }
     }
@@ -721,7 +722,7 @@ export function registerTerminalHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to update display orders'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToUpdateDisplayOrders')
         };
       }
     }

@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitLab import handlers
  * Handles bulk importing issues as tasks
@@ -35,14 +36,14 @@ export function registerImportIssues(): void {
 
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = await getGitLabConfig(project);
       if (!config) {
         return {
           success: false,
-          error: 'GitLab not configured'
+          error: nativeText('ipc.gitlabNotConfigured')
         };
       }
 

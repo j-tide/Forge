@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 /**
  * Queue Routing IPC Handlers
  *
@@ -35,7 +36,7 @@ export function registerQueueRoutingHandlers(
         console.error('[QueueRouting] Failed to get running tasks by profile:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -92,7 +93,7 @@ export function registerQueueRoutingHandlers(
         console.error('[QueueRouting] Failed to get best profile for task:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -147,7 +148,7 @@ export function registerQueueRoutingHandlers(
         console.error('[QueueRouting] Failed to get best unified account for task:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -170,7 +171,7 @@ export function registerQueueRoutingHandlers(
         console.error('[QueueRouting] Failed to assign profile to task:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -191,7 +192,7 @@ export function registerQueueRoutingHandlers(
         console.error('[QueueRouting] Failed to update task session:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -211,7 +212,7 @@ export function registerQueueRoutingHandlers(
         console.error('[QueueRouting] Failed to get task session:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }

@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitLab repository handlers
  * Handles connection status and project management
@@ -34,7 +35,7 @@ export function registerCheckConnection(): void {
 
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = await getGitLabConfig(project);
@@ -44,7 +45,7 @@ export function registerCheckConnection(): void {
           success: true,
           data: {
             connected: false,
-            error: 'GitLab not configured. Please add GITLAB_TOKEN and GITLAB_PROJECT to your .env file.'
+            error: nativeText('ipc.gitlabNotConfiguredPleaseAddGitlabTokenAndGitlabProject')
           }
         };
       }
@@ -105,14 +106,14 @@ export function registerGetProjects(): void {
 
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = await getGitLabConfig(project);
       if (!config) {
         return {
           success: false,
-          error: 'GitLab not configured'
+          error: nativeText('ipc.gitlabNotConfigured')
         };
       }
 
@@ -133,7 +134,7 @@ export function registerGetProjects(): void {
         debugLog('Failed to get projects:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get projects'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetProjects')
         };
       }
     }

@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 /**
  * Profile IPC Handlers
  *
@@ -48,7 +49,7 @@ export function registerProfileHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to load profiles'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToLoadProfiles')
         };
       }
     }
@@ -76,7 +77,7 @@ export function registerProfileHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to save profile'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSaveProfile')
         };
       }
     }
@@ -107,7 +108,7 @@ export function registerProfileHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to update profile'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToUpdateProfile')
         };
       }
     }
@@ -127,7 +128,7 @@ export function registerProfileHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to delete profile'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToDeleteProfile')
         };
       }
     }
@@ -165,7 +166,7 @@ export function registerProfileHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to set active profile'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSetActiveProfile')
         };
       }
     }
@@ -200,7 +201,7 @@ export function registerProfileHandlers(): void {
           activeTestConnections.delete(requestId);
           return {
             success: false,
-            error: 'Base URL is required'
+            error: nativeText('ipc.baseUrlIsRequired')
           };
         }
 
@@ -209,7 +210,7 @@ export function registerProfileHandlers(): void {
           activeTestConnections.delete(requestId);
           return {
             success: false,
-            error: 'API key is required'
+            error: nativeText('ipc.apiKeyIsRequired')
           };
         }
 
@@ -230,13 +231,13 @@ export function registerProfileHandlers(): void {
         if (error instanceof Error && error.name === 'AbortError') {
           return {
             success: false,
-            error: 'Connection timeout. The request took too long to complete.'
+            error: nativeText('ipc.connectionTimeoutTheRequestTookTooLongToComplete')
           };
         }
 
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to test connection'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToTestConnection')
         };
       }
     }
@@ -286,7 +287,7 @@ export function registerProfileHandlers(): void {
           activeDiscoverModelsRequests.delete(requestId);
           return {
             success: false,
-            error: 'Base URL is required'
+            error: nativeText('ipc.baseUrlIsRequired')
           };
         }
 
@@ -295,7 +296,7 @@ export function registerProfileHandlers(): void {
           activeDiscoverModelsRequests.delete(requestId);
           return {
             success: false,
-            error: 'API key is required'
+            error: nativeText('ipc.apiKeyIsRequired')
           };
         }
 
@@ -316,7 +317,7 @@ export function registerProfileHandlers(): void {
         if (error instanceof Error && error.name === 'AbortError') {
           return {
             success: false,
-            error: 'Connection timeout. The request took too long to complete.'
+            error: nativeText('ipc.connectionTimeoutTheRequestTookTooLongToComplete')
           };
         }
 

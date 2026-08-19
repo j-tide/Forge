@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 import { ipcMain, BrowserWindow } from 'electron';
 import { IPC_CHANNELS, getSpecsDir } from '../../../shared/constants';
 import type { IPCResult, TaskLogs, TaskLogStreamChunk } from '../../../shared/types';
@@ -21,13 +22,13 @@ export function registerTaskLogsHandlers(getMainWindow: () => BrowserWindow | nu
     async (_, projectId: string, specId: string): Promise<IPCResult<TaskLogs | null>> => {
       try {
         if (!isValidTaskId(specId)) {
-          return { success: false, error: 'Invalid spec ID' };
+          return { success: false, error: nativeText('ipc.invalidSpecId') };
         }
 
         const project = projectStore.getProject(projectId);
         if (!project) {
           console.error('[TASK_LOGS_GET] Project not found:', projectId);
-          return { success: false, error: 'Project not found' };
+          return { success: false, error: nativeText('ipc.projectNotFound') };
         }
 
         // Defense-in-depth: project.path is normally absolute from ProjectStore,
@@ -63,7 +64,7 @@ export function registerTaskLogsHandlers(getMainWindow: () => BrowserWindow | nu
         console.error('[TASK_LOGS_GET] Failed to get task logs:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get task logs'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetTaskLogs')
         };
       }
     }
@@ -77,13 +78,13 @@ export function registerTaskLogsHandlers(getMainWindow: () => BrowserWindow | nu
     async (_, projectId: string, specId: string): Promise<IPCResult> => {
       try {
         if (!isValidTaskId(specId)) {
-          return { success: false, error: 'Invalid spec ID' };
+          return { success: false, error: nativeText('ipc.invalidSpecId') };
         }
 
         const project = projectStore.getProject(projectId);
         if (!project) {
           console.error('[TASK_LOGS_WATCH] Project not found:', projectId);
-          return { success: false, error: 'Project not found' };
+          return { success: false, error: nativeText('ipc.projectNotFound') };
         }
 
         const absoluteProjectPath = ensureAbsolutePath(project.path);
@@ -106,7 +107,7 @@ export function registerTaskLogsHandlers(getMainWindow: () => BrowserWindow | nu
         console.error('[TASK_LOGS_WATCH] Failed to start watching task logs:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to start watching'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToStartWatching')
         };
       }
     }
@@ -120,7 +121,7 @@ export function registerTaskLogsHandlers(getMainWindow: () => BrowserWindow | nu
     async (_, specId: string): Promise<IPCResult> => {
       try {
         if (!isValidTaskId(specId)) {
-          return { success: false, error: 'Invalid spec ID' };
+          return { success: false, error: nativeText('ipc.invalidSpecId') };
         }
 
         taskLogService.stopWatching(specId);
@@ -129,7 +130,7 @@ export function registerTaskLogsHandlers(getMainWindow: () => BrowserWindow | nu
         console.error('Failed to stop watching task logs:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to stop watching'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToStopWatching')
         };
       }
     }

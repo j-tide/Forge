@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitLab MR Review IPC handlers
  *
@@ -293,11 +294,11 @@ async function runMRReview(
 
   debugLog('Starting TypeScript MR review', { model, thinkingLevel, mrIid });
 
-  sendProgress({ phase: 'fetching', mrIid, progress: 15, message: 'Fetching MR data from GitLab...' });
+  sendProgress({ phase: 'fetching', mrIid, progress: 15, message: nativeText('ipc.fetchingMrDataFromGitlab') });
 
   const context = await fetchMRContext(config, mrIid);
 
-  sendProgress({ phase: 'analyzing', mrIid, progress: 30, message: 'Starting AI review...' });
+  sendProgress({ phase: 'analyzing', mrIid, progress: 30, message: nativeText('ipc.startingAiReview') });
 
   const reviewConfig: MRReviewEngineConfig = {
     model: model as ModelShorthand,
@@ -428,7 +429,7 @@ export function registerMRReviewHandlers(
             phase: 'fetching',
             mrIid,
             progress: 5,
-            message: 'Assigning you to MR...',
+            message: nativeText('ipc.assigningYouToMr'),
           });
 
           // Auto-assign current user to MR
@@ -460,7 +461,7 @@ export function registerMRReviewHandlers(
             phase: 'fetching',
             mrIid,
             progress: 10,
-            message: 'Fetching MR data...',
+            message: nativeText('ipc.fetchingMrData'),
           });
 
           const result = await runMRReview(project, mrIid, mainWindow);
@@ -470,7 +471,7 @@ export function registerMRReviewHandlers(
             phase: 'complete',
             mrIid,
             progress: 100,
-            message: 'Review complete!',
+            message: nativeText('ipc.reviewComplete'),
           });
 
           sendComplete(result);
@@ -487,7 +488,7 @@ export function registerMRReviewHandlers(
           },
           projectId
         );
-        sendError({ mrIid, error: `MR review failed for MR #${mrIid}: ${errorMessage}` });
+        sendError({ mrIid, error: nativeText('ipcTemplate.mrReviewFailedForMrValue0Value1', { value0: String(mrIid), value1: String(errorMessage) }) });
       }
     }
   );
@@ -873,7 +874,7 @@ export function registerMRReviewHandlers(
 
           const config = await getGitLabConfig(project);
           if (!config) {
-            sendError({ mrIid, error: 'No GitLab configuration found for project' });
+            sendError({ mrIid, error: nativeText('ipc.noGitlabConfigurationFoundForProject') });
             return;
           }
 
@@ -889,18 +890,18 @@ export function registerMRReviewHandlers(
             phase: 'fetching',
             mrIid,
             progress: 5,
-            message: 'Starting follow-up review...',
+            message: nativeText('ipc.startingFollowUpReview'),
           });
 
           const { model, thinkingLevel } = getGitLabMRSettings();
 
           debugLog('Running TypeScript follow-up review', { model, thinkingLevel, mrIid });
 
-          sendProgress({ phase: 'fetching', mrIid, progress: 15, message: 'Fetching MR data from GitLab...' });
+          sendProgress({ phase: 'fetching', mrIid, progress: 15, message: nativeText('ipc.fetchingMrDataFromGitlab') });
 
           const context = await fetchMRContext(config, mrIid);
 
-          sendProgress({ phase: 'analyzing', mrIid, progress: 30, message: 'Starting follow-up AI review...' });
+          sendProgress({ phase: 'analyzing', mrIid, progress: 30, message: nativeText('ipc.startingFollowUpAiReview') });
 
           const reviewConfig: MRReviewEngineConfig = {
             model: model as ModelShorthand,
@@ -946,7 +947,7 @@ export function registerMRReviewHandlers(
               phase: 'complete',
               mrIid,
               progress: 100,
-              message: 'Follow-up review complete!',
+              message: nativeText('ipc.followUpReviewComplete'),
             });
 
             sendComplete(result);
@@ -967,7 +968,7 @@ export function registerMRReviewHandlers(
           },
           projectId
         );
-        sendError({ mrIid, error: `Follow-up review failed for MR #${mrIid}: ${errorMessage}` });
+        sendError({ mrIid, error: nativeText('ipcTemplate.followUpReviewFailedForMrValue0Value1', { value0: String(mrIid), value1: String(errorMessage) }) });
       }
     }
   );

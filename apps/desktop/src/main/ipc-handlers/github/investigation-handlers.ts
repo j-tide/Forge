@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitHub issue investigation IPC handlers
  */
@@ -88,7 +89,7 @@ export function registerInvestigateIssue(
           phase: 'fetching',
           issueNumber,
           progress: 10,
-          message: 'Fetching issue details...'
+          message: nativeText('ipc.fetchingIssueDetails')
         });
 
         // Fetch the issue
@@ -131,7 +132,7 @@ export function registerInvestigateIssue(
           phase: 'analyzing',
           issueNumber,
           progress: 30,
-          message: 'AI is analyzing the issue...'
+          message: nativeText('ipc.aiIsAnalyzingTheIssue')
         });
 
         // Build task description
@@ -161,7 +162,7 @@ export function registerInvestigateIssue(
           phase: 'creating_task',
           issueNumber,
           progress: 70,
-          message: 'Creating task from investigation...'
+          message: nativeText('ipc.creatingTaskFromInvestigation')
         });
 
         // Build investigation result
@@ -187,7 +188,7 @@ export function registerInvestigateIssue(
           phase: 'complete',
           issueNumber,
           progress: 100,
-          message: 'Investigation complete!'
+          message: nativeText('ipc.investigationComplete')
         });
 
         sendComplete(mainWindow, projectId, investigationResult);

@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitHub repository-related IPC handlers
  */
@@ -18,7 +19,7 @@ export function registerCheckConnection(): void {
     async (_, projectId: string): Promise<IPCResult<GitHubSyncStatus>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = getGitHubConfig(project);
@@ -27,7 +28,7 @@ export function registerCheckConnection(): void {
           success: true,
           data: {
             connected: false,
-            error: 'No GitHub token or repository configured'
+            error: nativeText('ipc.noGithubTokenOrRepositoryConfigured')
           }
         };
       }
@@ -40,7 +41,7 @@ export function registerCheckConnection(): void {
             success: true,
             data: {
               connected: false,
-              error: 'Invalid repository format. Use owner/repo or GitHub URL.'
+              error: nativeText('ipc.invalidRepositoryFormatUseOwnerRepoOrGithubUrl')
             }
           };
         }
@@ -74,7 +75,7 @@ export function registerCheckConnection(): void {
           success: true,
           data: {
             connected: false,
-            error: error instanceof Error ? error.message : 'Failed to connect to GitHub'
+            error: error instanceof Error ? error.message : nativeText('ipc.failedToConnectToGithub')
           }
         };
       }
@@ -91,12 +92,12 @@ export function registerGetRepositories(): void {
     async (_, projectId: string): Promise<IPCResult<GitHubRepository[]>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = getGitHubConfig(project);
       if (!config) {
-        return { success: false, error: 'No GitHub token configured' };
+        return { success: false, error: nativeText('ipc.noGithubTokenConfigured') };
       }
 
       try {
@@ -125,7 +126,7 @@ export function registerGetRepositories(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch repositories'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToFetchRepositories')
         };
       }
     }

@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitLab OAuth handlers using GitLab CLI (glab)
  * Provides OAuth flow similar to GitHub's gh CLI
@@ -158,7 +159,7 @@ export function registerInstallGlabCli(): void {
         debugLog('Install failed:', errorMsg);
         return {
           success: false,
-          error: `Failed to open terminal for installation: ${errorMsg}`
+          error: nativeText('ipcTemplate.failedToOpenTerminalForInstallationValue0', { value0: String(errorMsg) })
         };
       }
     }
@@ -288,7 +289,7 @@ export function registerStartGlabAuth(): void {
             } else {
               resolve({
                 success: false,
-                error: errorOutput || `Authentication failed with exit code ${code}`,
+                error: errorOutput || nativeText('ipcTemplate.authenticationFailedWithExitCodeValue0', { value0: String(code) }),
                 data: {
                   deviceCode: '',
                   verificationUrl: deviceUrl,
@@ -314,7 +315,7 @@ export function registerStartGlabAuth(): void {
           debugLog('Exception in startGitLabAuth:', error instanceof Error ? error.message : error);
           resolve({
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : nativeText('ipc.unknownError'),
             data: {
               deviceCode: '',
               verificationUrl: deviceUrl,
@@ -352,7 +353,7 @@ export function registerGetGlabToken(): void {
         if (!token) {
           return {
             success: false,
-            error: 'No token found. Please authenticate first.'
+            error: nativeText('ipc.noTokenFoundPleaseAuthenticateFirst')
           };
         }
 
@@ -364,7 +365,7 @@ export function registerGetGlabToken(): void {
         debugLog('Failed to get token:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get token'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetToken')
         };
       }
     }
@@ -407,7 +408,7 @@ export function registerGetGlabUser(): void {
         debugLog('Failed to get user info:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get user info'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetUserInfo')
         };
       }
     }
@@ -453,7 +454,7 @@ export function registerListUserProjects(): void {
         debugLog('Failed to list projects:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to list projects'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToListProjects')
         };
       }
     }
@@ -506,13 +507,13 @@ export function registerDetectGitLabProject(): void {
 
         return {
           success: false,
-          error: 'Could not parse GitLab project from remote URL'
+          error: nativeText('ipc.couldNotParseGitlabProjectFromRemoteUrl')
         };
       } catch (error) {
         debugLog('Failed to detect project:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to detect GitLab project'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToDetectGitlabProject')
         };
       }
     }
@@ -531,7 +532,7 @@ export function registerGetGitLabBranches(): void {
       if (!isValidGitLabProject(project)) {
         return {
           success: false,
-          error: 'Invalid project format'
+          error: nativeText('ipc.invalidProjectFormat')
         };
       }
 
@@ -561,7 +562,7 @@ export function registerGetGitLabBranches(): void {
         debugLog('Failed to get branches:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get branches'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetBranches')
         };
       }
     }
@@ -584,7 +585,7 @@ export function registerCreateGitLabProject(): void {
       if (!/^[A-Za-z0-9_.-]+$/.test(projectName)) {
         return {
           success: false,
-          error: 'Invalid project name'
+          error: nativeText('ipc.invalidProjectName')
         };
       }
 
@@ -634,7 +635,7 @@ export function registerCreateGitLabProject(): void {
         debugLog('Failed to create project:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to create project'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToCreateProject')
         };
       }
     }
@@ -658,7 +659,7 @@ export function registerAddGitLabRemote(): void {
       if (!isValidGitLabProject(projectFullPath)) {
         return {
           success: false,
-          error: 'Invalid project format'
+          error: nativeText('ipc.invalidProjectFormat')
         };
       }
 
@@ -700,7 +701,7 @@ export function registerAddGitLabRemote(): void {
         debugLog('Failed to add remote:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to add remote'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToAddRemote')
         };
       }
     }
@@ -754,7 +755,7 @@ export function registerListGitLabGroups(): void {
         debugLog('Failed to list groups:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to list groups'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToListGroups')
         };
       }
     }

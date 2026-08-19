@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 import { ipcMain } from 'electron';
 import { startCodexOAuthFlow, getCodexAuthState, clearCodexAuth } from '../ai/auth/codex-oauth';
 
@@ -7,7 +8,7 @@ export function registerCodexAuthHandlers(): void {
       const result = await startCodexOAuthFlow();
       return { success: true, data: result };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: error instanceof Error ? error.message : nativeText('ipc.unknownError') };
     }
   });
 
@@ -16,7 +17,7 @@ export function registerCodexAuthHandlers(): void {
       const state = await getCodexAuthState();
       return { success: true, data: state };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: error instanceof Error ? error.message : nativeText('ipc.unknownError') };
     }
   });
 
@@ -25,7 +26,7 @@ export function registerCodexAuthHandlers(): void {
       await clearCodexAuth();
       return { success: true };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: error instanceof Error ? error.message : nativeText('ipc.unknownError') };
     }
   });
 }

@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 /**
  * App Update IPC Handlers
  *
@@ -42,7 +43,7 @@ export function registerAppUpdateHandlers(): void {
         console.error('[app-update-handlers] Check for updates failed:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to check for updates'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToCheckForUpdates')
         };
       }
     }
@@ -62,7 +63,7 @@ export function registerAppUpdateHandlers(): void {
         console.error('[app-update-handlers] Download update failed:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to download update'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToDownloadUpdate')
         };
       }
     }
@@ -82,7 +83,7 @@ export function registerAppUpdateHandlers(): void {
         console.error('[app-update-handlers] Download stable version failed:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to download stable version'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToDownloadStableVersion')
         };
       }
     }
@@ -104,7 +105,7 @@ export function registerAppUpdateHandlers(): void {
         console.error('[app-update-handlers] Install update failed:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to install update'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToInstallUpdate')
         };
       }
     }
@@ -144,7 +145,7 @@ export function registerAppUpdateHandlers(): void {
         console.error('[app-update-handlers] Get downloaded update info failed:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get downloaded update info'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetDownloadedUpdateInfo')
         };
       }
     }

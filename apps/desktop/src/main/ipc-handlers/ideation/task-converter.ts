@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * Convert ideation ideas to tasks
  */
@@ -186,7 +187,7 @@ export async function convertIdeaToTask(
 ): Promise<IPCResult<Task>> {
   const project = projectStore.getProject(projectId);
   if (!project) {
-    return { success: false, error: 'Project not found' };
+    return { success: false, error: nativeText('ipc.projectNotFound') };
   }
 
   const ideationPath = path.join(
@@ -197,7 +198,7 @@ export async function convertIdeaToTask(
 
   // Quick check that ideation file exists (actual read happens inside lock)
   if (!existsSync(ideationPath)) {
-    return { success: false, error: 'Ideation not found' };
+    return { success: false, error: nativeText('ipc.ideationNotFound') };
   }
 
   // Get specs directory path
@@ -216,13 +217,13 @@ export async function convertIdeaToTask(
       // Re-read ideation file INSIDE the lock to get fresh state
       const ideation = readIdeationFile(ideationPath);
       if (!ideation) {
-        return { success: false, error: 'Ideation not found' };
+        return { success: false, error: nativeText('ipc.ideationNotFound') };
       }
 
       // Find the idea (inside lock for fresh state)
       const idea = ideation.ideas?.find((i) => i.id === ideaId);
       if (!idea) {
-        return { success: false, error: 'Idea not found' };
+        return { success: false, error: nativeText('ipc.ideaNotFound') };
       }
 
       // Idempotency check INSIDE lock - prevents TOCTOU race condition
@@ -231,7 +232,7 @@ export async function convertIdeaToTask(
       if (idea.linked_task_id) {
         return {
           success: false,
-          error: `Idea has already been converted to task: ${idea.linked_task_id}`
+          error: nativeText('ipcTemplate.ideaHasAlreadyBeenConvertedToTaskValue0', { value0: String(idea.linked_task_id) })
         };
       }
 
@@ -278,7 +279,7 @@ export async function convertIdeaToTask(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to convert idea to task'
+      error: error instanceof Error ? error.message : nativeText('ipc.failedToConvertIdeaToTask')
     };
   }
 }

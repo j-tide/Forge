@@ -1,6 +1,7 @@
 import { Notification, shell } from 'electron';
 import type { BrowserWindow } from 'electron';
 import { projectStore } from './project-store';
+import { nativeText } from './localized-text';
 
 export type NotificationType = 'task-complete' | 'task-failed' | 'review-needed';
 
@@ -29,8 +30,8 @@ class NotificationService {
    */
   notifyTaskComplete(taskTitle: string, projectId: string, taskId: string): void {
     this.sendNotification('task-complete', {
-      title: 'Task Complete',
-      body: `"${taskTitle}" has completed and is ready for review`,
+      title: nativeText('notification.taskComplete.title'),
+      body: nativeText('notification.taskComplete.body', { taskTitle }),
       projectId,
       taskId
     });
@@ -41,8 +42,8 @@ class NotificationService {
    */
   notifyTaskFailed(taskTitle: string, projectId: string, taskId: string): void {
     this.sendNotification('task-failed', {
-      title: 'Task Failed',
-      body: `"${taskTitle}" encountered an error`,
+      title: nativeText('notification.taskFailed.title'),
+      body: nativeText('notification.taskFailed.body', { taskTitle }),
       projectId,
       taskId
     });
@@ -53,8 +54,8 @@ class NotificationService {
    */
   notifyReviewNeeded(taskTitle: string, projectId: string, taskId: string): void {
     this.sendNotification('review-needed', {
-      title: 'Review Needed',
-      body: `"${taskTitle}" is ready for your review`,
+      title: nativeText('notification.reviewNeeded.title'),
+      body: nativeText('notification.reviewNeeded.body', { taskTitle }),
       projectId,
       taskId
     });

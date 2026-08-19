@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 import { ipcMain } from 'electron';
 import { IPC_CHANNELS } from '../../../shared/constants';
 import type { IPCResult } from '../../../shared/types';
@@ -27,7 +28,7 @@ export function registerTaskArchiveHandlers(): void {
         return { success: true, data: true };
       } else {
         console.error('[IPC] TASK_ARCHIVE failed');
-        return { success: false, error: 'Failed to archive tasks' };
+        return { success: false, error: nativeText('ipc.failedToArchiveTasks') };
       }
     }
   );
@@ -47,7 +48,7 @@ export function registerTaskArchiveHandlers(): void {
         return { success: true, data: true };
       } else {
         console.error('[IPC] TASK_UNARCHIVE failed');
-        return { success: false, error: 'Failed to unarchive tasks' };
+        return { success: false, error: nativeText('ipc.failedToUnarchiveTasks') };
       }
     }
   );

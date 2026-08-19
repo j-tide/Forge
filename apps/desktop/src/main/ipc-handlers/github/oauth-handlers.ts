@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitHub OAuth handlers using GitHub CLI (gh)
  * Provides a simpler OAuth flow than manual PAT creation
@@ -400,8 +401,8 @@ export function registerStartGhAuth(): void {
                 data: {
                   success: true,
                   message: browserOpenedSuccessfully
-                    ? 'Successfully authenticated with GitHub'
-                    : 'Authentication successful. Browser could not be opened automatically.',
+                    ? nativeText('ipc.successfullyAuthenticatedWithGithub')
+                    : nativeText('ipc.authenticationSuccessfulBrowserCouldNotBeOpenedAutomatically'),
                   deviceCode: extractedDeviceCode || undefined,
                   authUrl: extractedAuthUrl,
                   browserOpened: browserOpenedSuccessfully,
@@ -416,7 +417,7 @@ export function registerStartGhAuth(): void {
 
               resolve({
                 success: false,
-                error: errorOutput || `Authentication failed with exit code ${code}`,
+                error: errorOutput || nativeText('ipcTemplate.authenticationFailedWithExitCodeValue0', { value0: String(code) }),
                 data: {
                   success: false,
                   deviceCode: extractedDeviceCode || undefined,
@@ -424,7 +425,7 @@ export function registerStartGhAuth(): void {
                   browserOpened: browserOpenedSuccessfully,
                   // Always provide fallback URL on failure for manual recovery
                   fallbackUrl: fallbackUrlForManualAuth,
-                  message: 'Authentication failed. Please visit the URL manually to complete authentication.'
+                  message: nativeText('ipc.authenticationFailedPleaseVisitTheUrlManuallyToCompleteAuthentication')
                 }
               });
             }
@@ -440,7 +441,7 @@ export function registerStartGhAuth(): void {
                 browserOpened: false,
                 // Provide fallback URL so user can attempt manual auth
                 fallbackUrl: GITHUB_DEVICE_URL,
-                message: 'Failed to start GitHub CLI. Please visit the URL manually to authenticate.'
+                message: nativeText('ipc.failedToStartGithubCliPleaseVisitTheUrlManually')
               }
             });
           });
@@ -448,13 +449,13 @@ export function registerStartGhAuth(): void {
           debugLog('Exception in startGitHubAuth:', error instanceof Error ? error.message : error);
           resolve({
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : nativeText('ipc.unknownError'),
             data: {
               success: false,
               browserOpened: false,
               // Provide fallback URL for manual authentication recovery
               fallbackUrl: GITHUB_DEVICE_URL,
-              message: 'An unexpected error occurred. Please visit the URL manually to authenticate.'
+              message: nativeText('ipc.anUnexpectedErrorOccurredPleaseVisitTheUrlManuallyTo')
             }
           });
         }
@@ -483,7 +484,7 @@ export function registerGetGhToken(): void {
           debugLog('No token returned (empty string)');
           return {
             success: false,
-            error: 'No token found. Please authenticate first.'
+            error: nativeText('ipc.noTokenFoundPleaseAuthenticateFirst')
           };
         }
 
@@ -496,7 +497,7 @@ export function registerGetGhToken(): void {
         debugLog('Failed to get token:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get token'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetToken')
         };
       }
     }
@@ -534,7 +535,7 @@ export function registerGetGhUser(): void {
         debugLog('Failed to get user info:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get user info'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetUserInfo')
         };
       }
     }
@@ -579,7 +580,7 @@ export function registerListUserRepos(): void {
         debugLog('Failed to list repos:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to list repositories'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToListRepositories')
         };
       }
     }
@@ -623,13 +624,13 @@ export function registerDetectGitHubRepo(): void {
         debugLog('Could not parse GitHub repo from URL');
         return {
           success: false,
-          error: 'Remote URL is not a GitHub repository'
+          error: nativeText('ipc.remoteUrlIsNotAGithubRepository')
         };
       } catch (error) {
         debugLog('Failed to detect repo:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to detect GitHub repository'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToDetectGithubRepository')
         };
       }
     }
@@ -650,7 +651,7 @@ export function registerGetGitHubBranches(): void {
         debugLog('Invalid repo format rejected:', repo);
         return {
           success: false,
-          error: 'Invalid repository format. Expected: owner/repo'
+          error: nativeText('ipc.invalidRepositoryFormatExpectedOwnerRepo')
         };
       }
 
@@ -680,7 +681,7 @@ export function registerGetGitHubBranches(): void {
         debugLog('Failed to get branches:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get branches'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetBranches')
         };
       }
     }
@@ -704,7 +705,7 @@ export function registerCreateGitHubRepo(): void {
       if (!/^[A-Za-z0-9_.-]+$/.test(repoName)) {
         return {
           success: false,
-          error: 'Invalid repository name. Use only letters, numbers, hyphens, underscores, and periods.'
+          error: nativeText('ipc.invalidRepositoryNameUseOnlyLettersNumbersHyphensUnderscoresAnd')
         };
       }
 
@@ -787,7 +788,7 @@ export function registerAddGitRemote(): void {
       if (!isValidGitHubRepo(repoFullName)) {
         return {
           success: false,
-          error: 'Invalid repository format. Expected: owner/repo'
+          error: nativeText('ipc.invalidRepositoryFormatExpectedOwnerRepo')
         };
       }
 

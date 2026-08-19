@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 import { ipcMain, nativeImage } from 'electron';
 import { IPC_CHANNELS, AUTO_BUILD_PATHS, PROJECT_DATA_DIR, getSpecsDir, VALID_THINKING_LEVELS, sanitizeThinkingLevel } from '../../../shared/constants';
 import type { IPCResult, Task, TaskMetadata, TaskOutcome } from '../../../shared/types';
@@ -55,7 +56,7 @@ async function generateTitleWithFallback(
 
   safeBreadcrumb({
     category: 'task-crud',
-    message: 'Title generation invoked (empty title detected)',
+    message: "Title generation invoked (empty title detected)",
     level: 'info',
     data: { ...breadcrumbData, descriptionLength: description.length },
   });
@@ -66,7 +67,7 @@ async function generateTitleWithFallback(
       console.warn(`[${handler}] Generated title:`, generatedTitle);
       safeBreadcrumb({
         category: 'task-crud',
-        message: 'Title generation succeeded',
+        message: "Title generation succeeded",
         level: 'info',
         data: { ...breadcrumbData, generatedTitleLength: generatedTitle.length },
       });
@@ -78,7 +79,7 @@ async function generateTitleWithFallback(
     console.warn(`[${handler}] AI generation failed, using fallback:`, fallback);
     safeBreadcrumb({
       category: 'task-crud',
-      message: 'Title generation returned null, using description truncation fallback',
+      message: "Title generation returned null, using description truncation fallback",
       level: 'warning',
       data: { ...breadcrumbData, fallbackTitle: fallback },
     });
@@ -88,7 +89,7 @@ async function generateTitleWithFallback(
     const fallback = truncateToTitle(description);
     safeBreadcrumb({
       category: 'task-crud',
-      message: 'Title generation error, using description truncation fallback',
+      message: "Title generation error, using description truncation fallback",
       level: 'error',
       data: { ...breadcrumbData, error: err instanceof Error ? err.message : String(err) },
     });
@@ -162,10 +163,10 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
     ): Promise<IPCResult<Task>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
       if (project.autoBuildPath !== PROJECT_DATA_DIR || !isInitialized(project.path)) {
-        return { success: false, error: `Initialize ${PROJECT_DATA_DIR} before creating preview tasks. Aperant data is untouched.` };
+        return { success: false, error: nativeText('ipcTemplate.initializeValue0BeforeCreatingPreviewTasksAperantDataIsUntouched', { value0: String(PROJECT_DATA_DIR) }) };
       }
 
       // Auto-generate title if empty using Claude AI
@@ -359,13 +360,13 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
       const { task, project } = findTaskAndProject(taskId);
 
       if (!task || !project) {
-        return { success: false, error: 'Task or project not found' };
+        return { success: false, error: nativeText('ipc.taskOrProjectNotFound') };
       }
 
       // Check if task is currently running
       const isRunning = agentManager.isRunning(taskId);
       if (isRunning) {
-        return { success: false, error: 'Cannot delete a running task. Stop the task first.' };
+        return { success: false, error: nativeText('ipc.cannotDeleteARunningTaskStopTheTaskFirst') };
       }
 
       let hasErrors = false;
@@ -433,7 +434,7 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
       if (hasErrors) {
         return {
           success: false,
-          error: `Failed to delete some task files: ${errors.join('; ')}`
+          error: nativeText('ipcTemplate.failedToDeleteSomeTaskFilesValue0', { value0: String(errors.join('; ')) })
         };
       }
 
@@ -463,14 +464,14 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
         const { task, project } = findTaskAndProject(taskId);
 
         if (!task || !project) {
-          return { success: false, error: 'Task not found' };
+          return { success: false, error: nativeText('ipc.taskNotFound') };
         }
 
         const autoBuildDir = project.autoBuildPath || '.forge-glass-preview';
         const specDir = path.join(project.path, autoBuildDir, 'specs', task.specId);
 
         if (!existsSync(specDir)) {
-          return { success: false, error: 'Spec directory not found' };
+          return { success: false, error: nativeText('ipc.specDirectoryNotFound') };
         }
 
         // Auto-generate title if empty
@@ -642,7 +643,7 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -668,7 +669,7 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
         // Validate specId to prevent path traversal attacks
         if (!isValidTaskId(specId)) {
           console.error(`[IPC] TASK_LOAD_IMAGE_THUMBNAIL: Invalid specId rejected: "${specId}"`);
-          return { success: false, error: 'Invalid spec ID' };
+          return { success: false, error: nativeText('ipc.invalidSpecId') };
         }
 
         // Get project to determine auto-build path - validate projectPath exists
@@ -676,7 +677,7 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
         const project = projects.find((p) => p.path === projectPath);
         if (!project) {
           console.error(`[IPC] TASK_LOAD_IMAGE_THUMBNAIL: Unknown project: "${projectPath}"`);
-          return { success: false, error: 'Unknown project' };
+          return { success: false, error: nativeText('ipc.unknownProject') };
         }
         const autoBuildPath = project.autoBuildPath || '.forge-glass-preview';
 
@@ -689,17 +690,17 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
         const resolvedPath = path.resolve(fullImagePath);
         if (!isPathWithinBase(resolvedPath, expectedBase)) {
           console.error(`[IPC] Path traversal detected: imagePath "${imagePath}" resolves outside spec directory`);
-          return { success: false, error: 'Invalid image path' };
+          return { success: false, error: nativeText('ipc.invalidImagePath') };
         }
 
         if (!existsSync(fullImagePath)) {
-          return { success: false, error: `Image not found: ${imagePath}` };
+          return { success: false, error: nativeText('ipcTemplate.imageNotFoundValue0', { value0: String(imagePath) }) };
         }
 
         // Load image using nativeImage
         const image = nativeImage.createFromPath(fullImagePath);
         if (image.isEmpty()) {
-          return { success: false, error: 'Failed to load image' };
+          return { success: false, error: nativeText('ipc.failedToLoadImage') };
         }
 
         // Get original size
@@ -733,7 +734,7 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error loading thumbnail'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownErrorLoadingThumbnail')
         };
       }
     }

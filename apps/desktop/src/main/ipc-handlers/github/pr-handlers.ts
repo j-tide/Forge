@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitHub PR Review IPC handlers
  *
@@ -680,7 +681,7 @@ async function waitForCIChecks(
         phase: "fetching",
         prNumber,
         progress: 5, // Keep progress low during wait
-        message: `Waiting for CI checks to complete (${checkNames})... ${remainingMinutes}m remaining`,
+        message: nativeText('ipcTemplate.waitingForCiChecksToCompleteValue0Value1MRemaining', { value0: String(checkNames), value1: String(remainingMinutes) }),
       });
 
       debugLog("Waiting for CI checks", {
@@ -772,7 +773,7 @@ async function performCIWaitCheck(
       phase: "fetching",
       prNumber,
       progress: 5,
-      message: "Checking CI status...",
+      message: nativeText('ipc.checkingCiStatus'),
     });
 
     // Get PR head SHA for CI status check
@@ -1679,7 +1680,7 @@ async function runPRReview(
 
   safeBreadcrumb({
     category: 'pr-review',
-    message: 'Starting TypeScript PR review',
+    message: "Starting TypeScript PR review",
     level: 'info',
     data: { model, thinkingLevel, prNumber, repo },
   });
@@ -1694,12 +1695,12 @@ async function runPRReview(
 
   try {
     logCollector.processLine(`[fetching] Fetching PR #${prNumber} from GitHub...`);
-    sendProgress({ phase: "fetching", prNumber, progress: 15, message: "Fetching PR data from GitHub..." });
+    sendProgress({ phase: "fetching", prNumber, progress: 15, message: nativeText('ipc.fetchingPrDataFromGithub') });
 
     const context = await fetchPRContext(config, prNumber);
     logCollector.processLine(`[Context] Fetched ${context.changedFiles.length} changed files, ${context.commits.length} commits`);
 
-    sendProgress({ phase: "analyzing", prNumber, progress: 30, message: "Starting parallel orchestrator review..." });
+    sendProgress({ phase: "analyzing", prNumber, progress: 30, message: nativeText('ipc.startingParallelOrchestratorReview') });
 
     const orchestratorConfig: ParallelOrchestratorConfig = {
       repo,
@@ -1764,7 +1765,7 @@ async function runPRReview(
 
     safeBreadcrumb({
       category: 'pr-review',
-      message: 'PR review completed',
+      message: "PR review completed",
       level: 'info',
       data: { prNumber, findingsCount: result.findings.length, overallStatus },
     });
@@ -2095,7 +2096,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
             phase: "analyzing",
             prNumber,
             progress: 50,
-            message: "Review is already in progress. Reconnecting to ongoing review...",
+            message: nativeText('ipc.reviewIsAlreadyInProgressReconnectingToOngoingReview'),
           });
           return;
         }
@@ -2116,7 +2117,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
             phase: "fetching",
             prNumber,
             progress: 5,
-            message: "Assigning you to PR...",
+            message: nativeText('ipc.assigningYouToPr'),
           };
           sendProgress(startProgress);
           stateManager.handleProgress(projectId, prNumber, startProgress);
@@ -2166,7 +2167,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
             phase: "fetching",
             prNumber,
             progress: 10,
-            message: "Fetching PR data...",
+            message: nativeText('ipc.fetchingPrData'),
           };
           sendProgress(fetchProgress);
           stateManager.handleProgress(projectId, prNumber, fetchProgress);
@@ -2181,7 +2182,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
               phase: "complete",
               prNumber,
               progress: 100,
-              message: "Review already in progress",
+              message: nativeText('ipc.reviewAlreadyInProgress'),
             });
             stateManager.handleComplete(projectId, prNumber, result as unknown as PreloadPRReviewResult);
             sendComplete(result);
@@ -2193,7 +2194,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
             phase: "complete",
             prNumber,
             progress: 100,
-            message: "Review complete!",
+            message: nativeText('ipc.reviewComplete'),
           });
 
           stateManager.handleComplete(projectId, prNumber, result as unknown as PreloadPRReviewResult);
@@ -3093,7 +3094,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
         }
       });
 
-      return updateResult ?? { success: false, error: "Project not found" };
+      return updateResult ?? { success: false, error: nativeText('ipc.projectNotFound') };
     }
   );
 
@@ -3125,7 +3126,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
 
           const config = getGitHubConfig(project);
           if (!config) {
-            sendError({ prNumber, error: "No GitHub configuration found for project" });
+            sendError({ prNumber, error: nativeText('ipc.noGithubConfigurationFoundForProject') });
             return;
           }
 
@@ -3154,7 +3155,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
               phase: "fetching",
               prNumber,
               progress: 5,
-              message: "Starting follow-up review...",
+              message: nativeText('ipc.startingFollowUpReview'),
             };
             sendProgress(followupStartProgress);
             stateManager.handleProgress(projectId, prNumber, followupStartProgress);
@@ -3180,7 +3181,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
 
             safeBreadcrumb({
               category: 'pr-review',
-              message: 'Starting TypeScript follow-up PR review',
+              message: "Starting TypeScript follow-up PR review",
               level: 'info',
               data: { model, thinkingLevel, prNumber, repo },
             });
@@ -3194,7 +3195,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
             debugLog("Registered follow-up review abort controller", { reviewKey });
 
             // Fetch incremental PR data for follow-up
-            const fetchChangesProgress: PRReviewProgress = { phase: "fetching", prNumber, progress: 20, message: "Fetching PR changes since last review..." };
+            const fetchChangesProgress: PRReviewProgress = { phase: "fetching", prNumber, progress: 20, message: nativeText('ipc.fetchingPrChangesSinceLastReview') };
             sendProgress(fetchChangesProgress);
             stateManager.handleProgress(projectId, prNumber, fetchChangesProgress);
 
@@ -3269,7 +3270,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
               prReviewsSinceReview: [],
             };
 
-            const analyzeProgress: PRReviewProgress = { phase: "analyzing", prNumber, progress: 35, message: "Running follow-up analysis..." };
+            const analyzeProgress: PRReviewProgress = { phase: "analyzing", prNumber, progress: 35, message: nativeText('ipc.runningFollowUpAnalysis') };
             sendProgress(analyzeProgress);
             stateManager.handleProgress(projectId, prNumber, analyzeProgress);
 
@@ -3328,7 +3329,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
 
             safeBreadcrumb({
               category: 'pr-review',
-              message: 'Follow-up PR review completed',
+              message: "Follow-up PR review completed",
               level: 'info',
               data: { prNumber, findingsCount: result.findings.length },
             });
@@ -3346,7 +3347,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
               phase: "complete",
               prNumber,
               progress: 100,
-              message: "Follow-up review complete!",
+              message: nativeText('ipc.followUpReviewComplete'),
             });
 
             stateManager.handleComplete(projectId, prNumber, result as unknown as PreloadPRReviewResult);
@@ -3400,7 +3401,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
             awaiting_approval: 0,
             workflow_runs: [],
             can_approve: false,
-            error: "No GitHub config",
+            error: nativeText('ipc.noGithubConfig'),
           };
         }
 
@@ -3458,7 +3459,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
             awaiting_approval: 0,
             workflow_runs: [],
             can_approve: false,
-            error: error instanceof Error ? error.message : "Unknown error",
+            error: error instanceof Error ? error.message : nativeText('ipc.unknownError'),
           };
         }
       });
@@ -3655,7 +3656,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
         const config = getGitHubConfig(project);
         if (!config) {
           debugLog("No GitHub config found for project, cannot start polling");
-          return { success: false, error: "No GitHub configuration found" };
+          return { success: false, error: nativeText('ipc.noGithubConfigurationFound') };
         }
 
         try {
@@ -3677,7 +3678,7 @@ export function registerPRHandlers(getMainWindow: () => BrowserWindow | null): v
           return { success: false, error: message };
         }
       });
-      return result ?? { success: false, error: "Project not found" };
+      return result ?? { success: false, error: nativeText('ipc.projectNotFound') };
     }
   );
 

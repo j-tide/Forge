@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 import { ipcMain, BrowserWindow } from 'electron';
 import { IPC_CHANNELS, AUTO_BUILD_PATHS, getSpecsDir } from '../../../shared/constants';
 import type { IPCResult, TaskStartOptions, TaskStatus, ImageAttachment } from '../../../shared/types';
@@ -90,7 +91,7 @@ async function ensureProfileManagerInitialized(): Promise<
     const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      error: `Failed to initialize profile manager. Please check file permissions and disk space. (${errorMessage})`
+      error: nativeText('ipcTemplate.failedToInitializeProfileManagerPleaseCheckFilePermissionsAnd', { value0: String(errorMessage) })
     };
   }
 }
@@ -405,7 +406,7 @@ export function registerTaskExecutionHandlers(
       const { task, project } = findTaskAndProject(taskId);
 
       if (!task || !project) {
-        return { success: false, error: 'Task not found' };
+        return { success: false, error: nativeText('ipc.taskNotFound') };
       }
 
       // Check if dev mode is enabled for this project
@@ -432,7 +433,7 @@ export function registerTaskExecutionHandlers(
           );
         } catch (error) {
           console.error('[TASK_REVIEW] Failed to write QA report:', error);
-          return { success: false, error: 'Failed to write QA report file' };
+          return { success: false, error: nativeText('ipc.failedToWriteQaReportFile') };
         }
 
         taskStateManager.handleUiEvent(
@@ -553,7 +554,7 @@ export function registerTaskExecutionHandlers(
           );
         } catch (error) {
           console.error('[TASK_REVIEW] Failed to write QA fix request:', error);
-          return { success: false, error: 'Failed to write QA fix request file' };
+          return { success: false, error: nativeText('ipc.failedToWriteQaFixRequestFile') };
         }
 
         // Clear stale tracking state before starting new QA process
@@ -594,7 +595,7 @@ export function registerTaskExecutionHandlers(
       const { task, project } = findTaskAndProject(taskId);
 
       if (!task || !project) {
-        return { success: false, error: 'Task not found' };
+        return { success: false, error: nativeText('ipc.taskNotFound') };
       }
 
       // Validate status transition - 'done' can only be set through merge handler
@@ -659,7 +660,7 @@ export function registerTaskExecutionHandlers(
               console.error(`[TASK_UPDATE_STATUS] Failed to cleanup worktree:`, cleanupError);
               return {
                 success: false,
-                error: `Failed to cleanup worktree: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`
+                error: nativeText('ipcTemplate.failedToCleanupWorktreeValue0', { value0: String(cleanupError instanceof Error ? cleanupError.message : String(cleanupError)) })
               };
             }
           } else {
@@ -669,7 +670,7 @@ export function registerTaskExecutionHandlers(
               success: false,
               worktreeExists: true,
               worktreePath: worktreePath,
-              error: "A worktree still exists for this task. Would you like to delete it and mark the task as complete?"
+              error: nativeText('ipc.aWorktreeStillExistsForThisTaskWouldYouLike')
             };
           }
         } else {
@@ -704,7 +705,7 @@ export function registerTaskExecutionHandlers(
           console.warn(`[TASK_UPDATE_STATUS] Blocked attempt to set status 'human_review' for task ${taskId}. No spec has been created yet.`);
           return {
             success: false,
-            error: "Cannot move to human review - no spec has been created yet. The task must complete processing before review."
+            error: nativeText('ipc.cannotMoveToHumanReviewNoSpecHasBeenCreated')
           };
         }
       }
@@ -752,7 +753,7 @@ export function registerTaskExecutionHandlers(
                 gitStatusCheck.error || 'Git repository with commits required to run tasks.'
               );
             }
-            return { success: false, error: gitStatusCheck.error || 'Git repository required' };
+            return { success: false, error: gitStatusCheck.error || nativeText('ipc.gitRepositoryRequired') };
           }
 
           // Check authentication before auto-starting
@@ -778,7 +779,7 @@ export function registerTaskExecutionHandlers(
                 'Authentication required. Please add an account in Settings > Accounts before starting tasks.'
               );
             }
-            return { success: false, error: 'Authentication required' };
+            return { success: false, error: nativeText('ipc.authenticationRequired') };
           }
 
           console.warn('[TASK_UPDATE_STATUS] Auto-starting task:', taskId);
@@ -882,7 +883,7 @@ export function registerTaskExecutionHandlers(
         console.error('Failed to update task status:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to update task status'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToUpdateTaskStatus')
         };
       }
     }
@@ -910,7 +911,7 @@ export function registerTaskExecutionHandlers(
       const { task, project } = findTaskAndProject(taskId);
 
       if (!task || !project) {
-        return { success: false, error: 'Task not found' };
+        return { success: false, error: nativeText('ipc.taskNotFound') };
       }
 
       // Get the spec directory - use task.specsPath if available (handles worktree vs main)
@@ -960,7 +961,7 @@ export function registerTaskExecutionHandlers(
         console.error('[TASK_RESUME_PAUSED] Failed to write RESUME file:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to signal resume'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSignalResume')
         };
       }
     }
@@ -984,12 +985,12 @@ export function registerTaskExecutionHandlers(
       if (isActuallyRunning) {
         return {
           success: false,
-          error: 'Task is still running. Stop it first before recovering.',
+          error: nativeText('ipc.taskIsStillRunningStopItFirstBeforeRecovering'),
           data: {
             taskId,
             recovered: false,
             newStatus: 'in_progress' as TaskStatus,
-            message: 'Task is still running'
+            message: nativeText('ipc.taskIsStillRunning')
           }
         };
       }
@@ -998,7 +999,7 @@ export function registerTaskExecutionHandlers(
       const { task, project } = findTaskAndProject(taskId);
 
       if (!task || !project) {
-        return { success: false, error: 'Task not found' };
+        return { success: false, error: nativeText('ipc.taskNotFound') };
       }
 
       // Get the spec directory - use task.specsPath if available (handles worktree vs main)
@@ -1043,7 +1044,7 @@ export function registerTaskExecutionHandlers(
             console.error('[Recovery] Failed to parse plan file as JSON:', parseError);
             return {
               success: false,
-              error: 'Plan file contains invalid JSON. The file may be corrupted.'
+              error: nativeText('ipc.planFileContainsInvalidJsonTheFileMayBeCorrupted')
             };
           }
         }
@@ -1124,7 +1125,7 @@ export function registerTaskExecutionHandlers(
             if (!writeSucceededForComplete) {
               return {
                 success: false,
-                error: 'Failed to write plan file during recovery (all locations failed)'
+                error: nativeText('ipc.failedToWritePlanFileDuringRecoveryAllLocationsFailed')
               };
             }
 
@@ -1138,7 +1139,7 @@ export function registerTaskExecutionHandlers(
                 taskId,
                 recovered: true,
                 newStatus: 'human_review',
-                message: 'Task is complete and ready for review',
+                message: nativeText('ipc.taskIsCompleteAndReadyForReview'),
                 autoRestarted: false
               }
             };
@@ -1171,7 +1172,7 @@ export function registerTaskExecutionHandlers(
           if (!resetSucceeded) {
             return {
               success: false,
-              error: 'Failed to reset stuck subtasks during recovery'
+              error: nativeText('ipc.failedToResetStuckSubtasksDuringRecovery')
             };
           }
 
@@ -1249,7 +1250,7 @@ export function registerTaskExecutionHandlers(
                 taskId,
                 recovered: true,
                 newStatus,
-                message: `Task recovered but cannot restart: ${gitStatusForRestart.error || 'Git repository with commits required.'}`,
+                message: nativeText('ipcTemplate.taskRecoveredButCannotRestartValue0', { value0: String(gitStatusForRestart.error || 'Git repository with commits required.') }),
                 autoRestarted: false
               }
             };
@@ -1266,7 +1267,7 @@ export function registerTaskExecutionHandlers(
                 taskId,
                 recovered: true,
                 newStatus,
-                message: `Task recovered but cannot restart: ${initResult.error}`,
+                message: nativeText('ipcTemplate.taskRecoveredButCannotRestartValue0', { value0: String(initResult.error) }),
                 autoRestarted: false
               }
             };
@@ -1281,7 +1282,7 @@ export function registerTaskExecutionHandlers(
                 taskId,
                 recovered: true,
                 newStatus,
-                message: 'Task recovered but cannot restart: authentication required. Please add an account in Settings > Accounts.',
+                message: nativeText('ipc.taskRecoveredButCannotRestartAuthenticationRequiredPleaseAddAn'),
                 autoRestarted: false
               }
             };
@@ -1384,8 +1385,8 @@ export function registerTaskExecutionHandlers(
             recovered: true,
             newStatus,
             message: autoRestarted
-              ? 'Task recovered and restarted successfully'
-              : `Task recovered successfully and moved to ${newStatus}`,
+              ? nativeText('ipc.taskRecoveredAndRestartedSuccessfully')
+              : nativeText('ipcTemplate.taskRecoveredSuccessfullyAndMovedToValue0', { value0: String(newStatus) }),
             autoRestarted
           }
         };
@@ -1393,7 +1394,7 @@ export function registerTaskExecutionHandlers(
         console.error('Failed to recover stuck task:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to recover task'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToRecoverTask')
         };
       }
     }

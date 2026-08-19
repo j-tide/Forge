@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitLab release handlers
  * Handles creating releases
@@ -40,14 +41,14 @@ export function registerCreateRelease(): void {
 
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = await getGitLabConfig(project);
       if (!config) {
         return {
           success: false,
-          error: 'GitLab not configured'
+          error: nativeText('ipc.gitlabNotConfigured')
         };
       }
 
@@ -91,7 +92,7 @@ export function registerCreateRelease(): void {
         if (!releaseUrl) {
           return {
             success: false,
-            error: 'Unexpected response format from GitLab API'
+            error: nativeText('ipc.unexpectedResponseFormatFromGitlabApi')
           };
         }
 
@@ -105,7 +106,7 @@ export function registerCreateRelease(): void {
         debugLog('Failed to create release:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to create release'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToCreateRelease')
         };
       }
     }

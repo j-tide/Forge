@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitHub Issue Triage IPC handlers
  *
@@ -303,7 +304,7 @@ async function runTriage(
   sendProgress({
     phase: 'fetching',
     progress: 10,
-    message: 'Fetching issues from GitHub...',
+    message: nativeText('ipc.fetchingIssuesFromGithub'),
     totalIssues: 0,
     processedIssues: 0,
   });
@@ -374,7 +375,7 @@ async function runTriage(
   sendProgress({
     phase: 'analyzing',
     progress: 20,
-    message: `Triaging ${totalIssues} issues...`,
+    message: nativeText('ipcTemplate.triagingValue0Issues', { value0: String(totalIssues) }),
     totalIssues,
     processedIssues: 0,
   });
@@ -481,7 +482,7 @@ export function registerTriageHandlers(getMainWindow: () => BrowserWindow | null
           sendProgress({
             phase: 'fetching',
             progress: 5,
-            message: 'Starting triage...',
+            message: nativeText('ipc.startingTriage'),
             totalIssues: 0,
             processedIssues: 0,
           });
@@ -492,7 +493,7 @@ export function registerTriageHandlers(getMainWindow: () => BrowserWindow | null
           sendProgress({
             phase: 'complete',
             progress: 100,
-            message: `Triaged ${results.length} issues`,
+            message: nativeText('ipcTemplate.triagedValue0Issues', { value0: String(results.length) }),
             totalIssues: results.length,
             processedIssues: results.length,
           });

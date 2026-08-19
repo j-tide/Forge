@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * Ideation generation handlers (start/stop generation)
  */
@@ -73,7 +74,7 @@ export function startIdeationGeneration(
   safeSendToRenderer(getMainWindow, IPC_CHANNELS.IDEATION_PROGRESS, projectId, {
     phase: "analyzing",
     progress: 10,
-    message: "Analyzing project structure...",
+    message: nativeText('ipc.analyzingProjectStructure'),
   } as IdeationGenerationStatus);
 }
 
@@ -116,7 +117,7 @@ export function refreshIdeationSession(
   safeSendToRenderer(getMainWindow, IPC_CHANNELS.IDEATION_PROGRESS, projectId, {
     phase: "analyzing",
     progress: 10,
-    message: "Refreshing ideation...",
+    message: nativeText('ipc.refreshingIdeation'),
   } as IdeationGenerationStatus);
 }
 

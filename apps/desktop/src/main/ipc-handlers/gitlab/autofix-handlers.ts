@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitLab Auto-Fix IPC handlers
  *
@@ -337,7 +338,7 @@ async function startAutoFix(
     phase: 'fetching',
     issueIid,
     progress: 10,
-    message: `Fetching issue #${issueIid}...`,
+    message: nativeText('ipcTemplate.fetchingIssueValue0', { value0: String(issueIid) }),
   });
 
   const encodedProject = encodeProjectPath(glConfig.project);
@@ -359,14 +360,14 @@ async function startAutoFix(
     phase: 'analyzing',
     issueIid,
     progress: 30,
-    message: 'Analyzing issue...',
+    message: nativeText('ipc.analyzingIssue'),
   });
 
   sendProgress(mainWindow, project.id, {
     phase: 'creating_spec',
     issueIid,
     progress: 50,
-    message: 'Creating spec from issue...',
+    message: nativeText('ipc.creatingSpecFromIssue'),
   });
 
   // Validate issueIid
@@ -407,7 +408,7 @@ async function startAutoFix(
     phase: 'complete',
     issueIid,
     progress: 100,
-    message: 'Auto-fix spec created! Start the build to continue.',
+    message: nativeText('ipc.autoFixSpecCreatedStartTheBuildToContinue'),
   });
 
   sendComplete(mainWindow, project.id, state);
@@ -536,7 +537,7 @@ export function registerAutoFixHandlers(
           mainWindow.webContents.send(
             IPC_CHANNELS.GITLAB_AUTOFIX_ANALYZE_PREVIEW_PROGRESS,
             projectId,
-            { phase: 'analyzing', progress: 10, message: 'Fetching issues for analysis...' }
+            { phase: 'analyzing', progress: 10, message: nativeText('ipc.fetchingIssuesForAnalysis') }
           );
 
           const encodedProject = encodeProjectPath(glConfig.project);
@@ -561,7 +562,7 @@ export function registerAutoFixHandlers(
           mainWindow.webContents.send(
             IPC_CHANNELS.GITLAB_AUTOFIX_ANALYZE_PREVIEW_PROGRESS,
             projectId,
-            { phase: 'analyzing', progress: 50, message: `Analyzing ${filteredIssues.length} issues...` }
+            { phase: 'analyzing', progress: 50, message: nativeText('ipcTemplate.analyzingValue0Issues', { value0: String(filteredIssues.length) }) }
           );
 
           // Simple grouping for now - in production this would use AI to group similar issues
@@ -576,7 +577,7 @@ export function registerAutoFixHandlers(
               title: i.title,
               labels: i.labels,
             })),
-            message: `Found ${filteredIssues.length} issues to analyze`,
+            message: nativeText('ipcTemplate.foundValue0IssuesToAnalyze', { value0: String(filteredIssues.length) }),
           };
 
           mainWindow.webContents.send(
@@ -628,10 +629,10 @@ export function registerAutoFixHandlers(
           return { success: true, batches };
         } catch (error) {
           debugLog('Approve batches failed', { error: error instanceof Error ? error.message : error });
-          return { success: false, error: error instanceof Error ? error.message : 'Failed to approve batches' };
+          return { success: false, error: error instanceof Error ? error.message : nativeText('ipc.failedToApproveBatches') };
         }
       });
-      return result ?? { success: false, error: 'Project not found' };
+      return result ?? { success: false, error: nativeText('ipc.projectNotFound') };
     }
   );
 

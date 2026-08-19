@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitHub issue-related IPC handlers
  */
@@ -70,13 +71,13 @@ export function registerGetIssues(): void {
       const project = projectStore.getProject(projectId);
       if (!project) {
         debugLog('[GitHub Issues] Project not found:', projectId);
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = getGitHubConfig(project);
       if (!config) {
         debugLog('[GitHub Issues] No GitHub config found for project');
-        return { success: false, error: 'No GitHub token or repository configured' };
+        return { success: false, error: nativeText('ipc.noGithubTokenOrRepositoryConfigured') };
       }
 
       try {
@@ -84,7 +85,7 @@ export function registerGetIssues(): void {
         if (!normalizedRepo) {
           return {
             success: false,
-            error: 'Invalid repository format. Use owner/repo or GitHub URL.'
+            error: nativeText('ipc.invalidRepositoryFormatUseOwnerRepoOrGithubUrl')
           };
         }
 
@@ -197,7 +198,7 @@ export function registerGetIssues(): void {
         debugLog('[GitHub Issues] Error fetching issues:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch issues'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToFetchIssues')
         };
       }
     }
@@ -213,12 +214,12 @@ export function registerGetIssue(): void {
     async (_, projectId: string, issueNumber: number): Promise<IPCResult<GitHubIssue>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = getGitHubConfig(project);
       if (!config) {
-        return { success: false, error: 'No GitHub token or repository configured' };
+        return { success: false, error: nativeText('ipc.noGithubTokenOrRepositoryConfigured') };
       }
 
       try {
@@ -226,7 +227,7 @@ export function registerGetIssue(): void {
         if (!normalizedRepo) {
           return {
             success: false,
-            error: 'Invalid repository format. Use owner/repo or GitHub URL.'
+            error: nativeText('ipc.invalidRepositoryFormatUseOwnerRepoOrGithubUrl')
           };
         }
 
@@ -241,7 +242,7 @@ export function registerGetIssue(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch issue'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToFetchIssue')
         };
       }
     }
@@ -257,12 +258,12 @@ export function registerGetIssueComments(): void {
     async (_, projectId: string, issueNumber: number): Promise<IPCResult<GitHubAPIComment[]>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = getGitHubConfig(project);
       if (!config) {
-        return { success: false, error: 'No GitHub token or repository configured' };
+        return { success: false, error: nativeText('ipc.noGithubTokenOrRepositoryConfigured') };
       }
 
       try {
@@ -270,7 +271,7 @@ export function registerGetIssueComments(): void {
         if (!normalizedRepo) {
           return {
             success: false,
-            error: 'Invalid repository format. Use owner/repo or GitHub URL.'
+            error: nativeText('ipc.invalidRepositoryFormatUseOwnerRepoOrGithubUrl')
           };
         }
 
@@ -283,7 +284,7 @@ export function registerGetIssueComments(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch issue comments'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToFetchIssueComments')
         };
       }
     }

@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 import { ipcMain } from 'electron';
 import type { BrowserWindow } from 'electron';
 import path from 'path';
@@ -95,7 +96,7 @@ export function registerProjectContextHandlers(
     async (_, projectId: string): Promise<IPCResult<ProjectContextData>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       try {
@@ -121,7 +122,7 @@ export function registerProjectContextHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to load project context'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToLoadProjectContext')
         };
       }
     }
@@ -133,7 +134,7 @@ export function registerProjectContextHandlers(
     async (_, projectId: string): Promise<IPCResult<ProjectIndex>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       try {
@@ -146,7 +147,7 @@ export function registerProjectContextHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to refresh project index'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToRefreshProjectIndex')
         };
       }
     }

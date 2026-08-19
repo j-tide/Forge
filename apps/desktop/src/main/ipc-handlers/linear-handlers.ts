@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 import { ipcMain } from 'electron';
 import type { BrowserWindow } from 'electron';
 import { IPC_CHANNELS, getSpecsDir, AUTO_BUILD_PATHS } from '../../shared/constants';
@@ -85,7 +86,7 @@ export function registerLinearHandlers(
     async (_, projectId: string): Promise<IPCResult<LinearSyncStatus>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const apiKey = getLinearApiKey(project);
@@ -94,7 +95,7 @@ export function registerLinearHandlers(
           success: true,
           data: {
             connected: false,
-            error: 'No Linear API key configured'
+            error: nativeText('ipc.noLinearApiKeyConfigured')
           }
         };
       }
@@ -177,7 +178,7 @@ export function registerLinearHandlers(
           success: true,
           data: {
             connected: false,
-            error: error instanceof Error ? error.message : 'Failed to connect to Linear'
+            error: error instanceof Error ? error.message : nativeText('ipc.failedToConnectToLinear')
           }
         };
       }
@@ -189,12 +190,12 @@ export function registerLinearHandlers(
     async (_, projectId: string): Promise<IPCResult<LinearTeam[]>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const apiKey = getLinearApiKey(project);
       if (!apiKey) {
-        return { success: false, error: 'No Linear API key configured' };
+        return { success: false, error: nativeText('ipc.noLinearApiKeyConfigured') };
       }
 
       try {
@@ -218,7 +219,7 @@ export function registerLinearHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch teams'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToFetchTeams')
         };
       }
     }
@@ -229,12 +230,12 @@ export function registerLinearHandlers(
     async (_, projectId: string, teamId: string): Promise<IPCResult<LinearProject[]>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const apiKey = getLinearApiKey(project);
       if (!apiKey) {
-        return { success: false, error: 'No Linear API key configured' };
+        return { success: false, error: nativeText('ipc.noLinearApiKeyConfigured') };
       }
 
       try {
@@ -260,7 +261,7 @@ export function registerLinearHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch projects'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToFetchProjects')
         };
       }
     }
@@ -271,12 +272,12 @@ export function registerLinearHandlers(
     async (_, projectId: string, teamId?: string, linearProjectId?: string): Promise<IPCResult<LinearIssue[]>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const apiKey = getLinearApiKey(project);
       if (!apiKey) {
-        return { success: false, error: 'No Linear API key configured' };
+        return { success: false, error: nativeText('ipc.noLinearApiKeyConfigured') };
       }
 
       try {
@@ -368,7 +369,7 @@ export function registerLinearHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch issues'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToFetchIssues')
         };
       }
     }
@@ -379,12 +380,12 @@ export function registerLinearHandlers(
     async (_, projectId: string, issueIds: string[]): Promise<IPCResult<LinearImportResult>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const apiKey = getLinearApiKey(project);
       if (!apiKey) {
-        return { success: false, error: 'No Linear API key configured' };
+        return { success: false, error: nativeText('ipc.noLinearApiKeyConfigured') };
       }
 
       try {
@@ -551,7 +552,7 @@ ${safeDescription || 'No description provided.'}
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to import issues'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToImportIssues')
         };
       }
     }

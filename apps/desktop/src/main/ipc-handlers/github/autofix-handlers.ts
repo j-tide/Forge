@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitHub Auto-Fix IPC handlers
  *
@@ -312,7 +313,7 @@ async function startAutoFix(
     throw new Error('No GitHub configuration found');
   }
 
-  sendProgress({ phase: 'fetching', issueNumber, progress: 10, message: `Fetching issue #${issueNumber}...` });
+  sendProgress({ phase: 'fetching', issueNumber, progress: 10, message: nativeText('ipcTemplate.fetchingIssueValue0', { value0: String(issueNumber) }) });
 
   // Fetch the issue
   const issue = await githubFetch(ghConfig.token, `/repos/${ghConfig.repo}/issues/${issueNumber}`) as {
@@ -330,7 +331,7 @@ async function startAutoFix(
     user: { login: string };
   }>;
 
-  sendProgress({ phase: 'analyzing', issueNumber, progress: 30, message: 'Analyzing issue...' });
+  sendProgress({ phase: 'analyzing', issueNumber, progress: 30, message: nativeText('ipc.analyzingIssue') });
 
   // Build context
   const labels = issue.labels.map(l => l.name);
@@ -349,7 +350,7 @@ async function startAutoFix(
     }))
   );
 
-  sendProgress({ phase: 'creating_spec', issueNumber, progress: 50, message: 'Creating spec from issue...' });
+  sendProgress({ phase: 'creating_spec', issueNumber, progress: 50, message: nativeText('ipc.creatingSpecFromIssue') });
 
   // Create spec
   const taskDescription = buildInvestigationTask(issue.number, issue.title, issueContext);
@@ -395,7 +396,7 @@ async function startAutoFix(
     'utf-8'
   );
 
-  sendProgress({ phase: 'creating_spec', issueNumber, progress: 70, message: 'Starting spec creation...' });
+  sendProgress({ phase: 'creating_spec', issueNumber, progress: 70, message: nativeText('ipc.startingSpecCreation') });
 
   // Automatically start spec creation using the TypeScript agent system
   try {
@@ -410,11 +411,11 @@ async function startAutoFix(
     // Immediately update the plan status to 'planning' so the frontend shows the task as "In Progress"
     updateImplementationPlanStatus(specData.specDir, 'planning');
 
-    sendProgress({ phase: 'complete', issueNumber, progress: 100, message: 'Auto-fix spec creation started!' });
+    sendProgress({ phase: 'complete', issueNumber, progress: 100, message: nativeText('ipc.autoFixSpecCreationStarted') });
     sendComplete(state);
   } catch (error) {
     debugLog('Failed to start spec creation', { error });
-    sendProgress({ phase: 'complete', issueNumber, progress: 100, message: 'Spec directory created. Click Start to begin.' });
+    sendProgress({ phase: 'complete', issueNumber, progress: 100, message: nativeText('ipc.specDirectoryCreatedClickStartToBegin') });
     sendComplete(state);
   }
 }
@@ -557,7 +558,7 @@ export function registerAutoFixHandlers(
           sendProgress({
             phase: 'analyzing',
             progress: 10,
-            message: 'Analyzing issues for similarity...',
+            message: nativeText('ipc.analyzingIssuesForSimilarity'),
             totalIssues: issueNumbers?.length ?? 0,
             batchCount: 0,
           });
@@ -589,7 +590,7 @@ export function registerAutoFixHandlers(
           sendProgress({
             phase: 'batching',
             progress: 30,
-            message: `Grouping ${issuesToBatch.length} issues into batches...`,
+            message: nativeText('ipcTemplate.groupingValue0IssuesIntoBatches', { value0: String(issuesToBatch.length) }),
             totalIssues: issuesToBatch.length,
             batchCount: 0,
           });
@@ -648,7 +649,7 @@ export function registerAutoFixHandlers(
           sendProgress({
             phase: 'complete',
             progress: 100,
-            message: `Created ${savedBatches.length} batches`,
+            message: nativeText('ipcTemplate.createdValue0Batches', { value0: String(savedBatches.length) }),
             totalIssues: issuesToBatch.length,
             batchCount: savedBatches.length,
           });
@@ -718,7 +719,7 @@ export function registerAutoFixHandlers(
           );
 
           debugLog('Starting analyze-preview');
-          sendProgress({ phase: 'analyzing', progress: 10, message: 'Fetching issues for analysis...' });
+          sendProgress({ phase: 'analyzing', progress: 10, message: nativeText('ipc.fetchingIssuesForAnalysis') });
 
           const ghConfig = getGitHubConfig(project);
           if (!ghConfig) {
@@ -756,7 +757,7 @@ export function registerAutoFixHandlers(
           const alreadyBatched = issuesForAnalysis.filter(i => batchedIssueNumbers.has(i.number)).length;
           const newIssues = issuesForAnalysis.filter(i => !batchedIssueNumbers.has(i.number));
 
-          sendProgress({ phase: 'analyzing', progress: 40, message: `Analyzing ${newIssues.length} issues...` });
+          sendProgress({ phase: 'analyzing', progress: 40, message: nativeText('ipcTemplate.analyzingValue0Issues', { value0: String(newIssues.length) }) });
 
           // Use TypeScript BatchProcessor for AI-powered grouping analysis
           const batchProcessor = new BatchProcessor({
@@ -795,7 +796,7 @@ export function registerAutoFixHandlers(
               title: issueMap.get(s.issueNumbers[0] ?? 0)?.title ?? '',
               labels: (issueMap.get(s.issueNumbers[0] ?? 0)?.labels ?? []).map(l => l.name),
             })),
-            message: `Analyzed ${newIssues.length} issues, proposed ${batchSuggestions.length} batches`,
+            message: nativeText('ipcTemplate.analyzedValue0IssuesProposedValue1Batches', { value0: String(newIssues.length), value1: String(batchSuggestions.length) }),
           };
 
           debugLog('Analyze preview completed', { batchCount: analyzeResult.proposedBatches.length });
@@ -874,10 +875,10 @@ export function registerAutoFixHandlers(
           return { success: true, batches };
         } catch (error) {
           debugLog('Approve batches failed', { error: error instanceof Error ? error.message : error });
-          return { success: false, error: error instanceof Error ? error.message : 'Failed to approve batches' };
+          return { success: false, error: error instanceof Error ? error.message : nativeText('ipc.failedToApproveBatches') };
         }
       });
-      return result ?? { success: false, error: 'Project not found' };
+      return result ?? { success: false, error: nativeText('ipc.projectNotFound') };
     }
   );
 

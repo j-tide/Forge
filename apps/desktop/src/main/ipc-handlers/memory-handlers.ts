@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 /**
  * Memory Infrastructure IPC Handlers
  *
@@ -257,9 +258,9 @@ async function checkOllamaRunning(baseUrl?: string): Promise<OllamaStatus> {
       const data = await res.json();
       return { running: true, url, version: data.version };
     }
-    return { running: false, url, message: `HTTP ${res.status}` };
+    return { running: false, url, message: nativeText('ipcTemplate.httpValue0', { value0: String(res.status) }) };
   } catch {
-    return { running: false, url, message: 'Cannot connect to Ollama' };
+    return { running: false, url, message: nativeText('ipc.cannotConnectToOllama') };
   }
 }
 
@@ -325,7 +326,7 @@ export function registerMemoryHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to check Ollama status',
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToCheckOllamaStatus'),
         };
       }
     }
@@ -344,7 +345,7 @@ export function registerMemoryHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to check Ollama installation',
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToCheckOllamaInstallation'),
         };
       }
     }
@@ -367,7 +368,7 @@ export function registerMemoryHandlers(): void {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         return {
           success: false,
-          error: `Failed to open terminal for installation: ${errorMsg}`,
+          error: nativeText('ipcTemplate.failedToOpenTerminalForInstallationValue0', { value0: String(errorMsg) }),
         };
       }
     }
@@ -397,14 +398,14 @@ export function registerMemoryHandlers(): void {
           }
         );
         if (!result.success) {
-          return { success: false, error: result.error || 'Failed to list Ollama models' };
+          return { success: false, error: result.error || nativeText('ipc.failedToListOllamaModels') };
         }
         const data = result.data as { models: OllamaModel[]; count: number };
         return { success: true, data };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to list Ollama models',
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToListOllamaModels'),
         };
       }
     }
@@ -443,14 +444,14 @@ export function registerMemoryHandlers(): void {
           }
         );
         if (!result.success) {
-          return { success: false, error: result.error || 'Failed to list embedding models' };
+          return { success: false, error: result.error || nativeText('ipc.failedToListEmbeddingModels') };
         }
         const data = result.data as { embedding_models: OllamaEmbeddingModel[]; count: number };
         return { success: true, data };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to list embedding models',
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToListEmbeddingModels'),
         };
       }
     }
@@ -490,12 +491,12 @@ export function registerMemoryHandlers(): void {
         });
 
         if (!res.ok) {
-          return { success: false, error: `Ollama API returned ${res.status}` };
+          return { success: false, error: nativeText('ipcTemplate.ollamaApiReturnedValue0', { value0: String(res.status) }) };
         }
 
         const reader = res.body?.getReader();
         if (!reader) {
-          return { success: false, error: 'No response body from Ollama' };
+          return { success: false, error: nativeText('ipc.noResponseBodyFromOllama') };
         }
 
         const decoder = new TextDecoder();
@@ -541,7 +542,7 @@ export function registerMemoryHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to pull model',
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToPullModel'),
         };
       }
     }
@@ -568,7 +569,7 @@ export function registerMemoryHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to search memories',
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSearchMemories'),
         };
       }
     },
@@ -587,7 +588,7 @@ export function registerMemoryHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to insert memory',
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToInsertMemory'),
         };
       }
     },

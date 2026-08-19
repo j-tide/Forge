@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitLab Triage IPC handlers
  *
@@ -339,7 +340,7 @@ export function registerTriageHandlers(
           sendProgress(mainWindow, projectId, {
             phase: 'fetching',
             progress: 10,
-            message: 'Fetching issues for triage...',
+            message: nativeText('ipc.fetchingIssuesForTriage'),
           });
 
           const encodedProject = encodeProjectPath(glConfig.project);
@@ -364,7 +365,7 @@ export function registerTriageHandlers(
           sendProgress(mainWindow, projectId, {
             phase: 'analyzing',
             progress: 30,
-            message: `Analyzing ${filteredIssues.length} issues...`,
+            message: nativeText('ipcTemplate.analyzingValue0Issues', { value0: String(filteredIssues.length) }),
           });
 
           // Simple triage logic (in production, this would use AI)
@@ -380,7 +381,7 @@ export function registerTriageHandlers(
             sendProgress(mainWindow, projectId, {
               phase: 'analyzing',
               progress,
-              message: `Triaging issue #${issue.iid}...`,
+              message: nativeText('ipcTemplate.triagingIssueValue0', { value0: String(issue.iid) }),
               issueIid: issue.iid,
             });
 
@@ -433,7 +434,7 @@ export function registerTriageHandlers(
           sendProgress(mainWindow, projectId, {
             phase: 'complete',
             progress: 100,
-            message: `Triaged ${results.length} issues`,
+            message: nativeText('ipcTemplate.triagedValue0Issues', { value0: String(results.length) }),
           });
 
           sendComplete(mainWindow, projectId, results);

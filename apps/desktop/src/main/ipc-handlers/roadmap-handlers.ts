@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 import { ipcMain } from "electron";
 import type { BrowserWindow } from "electron";
 import {
@@ -49,7 +50,7 @@ export function registerRoadmapHandlers(
     async (_, projectId: string): Promise<IPCResult<Roadmap | null>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const roadmapPath = path.join(
@@ -188,7 +189,7 @@ export function registerRoadmapHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Failed to read roadmap",
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToReadRoadmap'),
         };
       }
     }
@@ -261,7 +262,7 @@ export function registerRoadmapHandlers(
       safeSendToRenderer(getMainWindow, IPC_CHANNELS.ROADMAP_PROGRESS, projectId, {
         phase: "analyzing",
         progress: 10,
-        message: "Analyzing project structure...",
+        message: nativeText('ipc.analyzingProjectStructure'),
       } as RoadmapGenerationStatus);
     }
   );
@@ -316,7 +317,7 @@ export function registerRoadmapHandlers(
       safeSendToRenderer(getMainWindow, IPC_CHANNELS.ROADMAP_PROGRESS, projectId, {
         phase: "analyzing",
         progress: 10,
-        message: "Refreshing roadmap...",
+        message: nativeText('ipc.refreshingRoadmap'),
       } as RoadmapGenerationStatus);
     }
   );
@@ -346,7 +347,7 @@ export function registerRoadmapHandlers(
     async (_, projectId: string, roadmapData: Roadmap): Promise<IPCResult> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const roadmapPath = path.join(
@@ -362,7 +363,7 @@ export function registerRoadmapHandlers(
             content = await readFileWithRetry(roadmapPath, { encoding: "utf-8" }) as string;
           } catch (readErr: unknown) {
             if ((readErr as NodeJS.ErrnoException).code === 'ENOENT') {
-              return { success: false, error: "Roadmap not found" };
+              return { success: false, error: nativeText('ipc.roadmapNotFound') };
             }
             throw readErr;
           }
@@ -399,7 +400,7 @@ export function registerRoadmapHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Failed to save roadmap",
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSaveRoadmap'),
         };
       }
     }
@@ -415,7 +416,7 @@ export function registerRoadmapHandlers(
     ): Promise<IPCResult> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const roadmapPath = path.join(
@@ -431,7 +432,7 @@ export function registerRoadmapHandlers(
             content = await readFileWithRetry(roadmapPath, { encoding: "utf-8" }) as string;
           } catch (readErr: unknown) {
             if ((readErr as NodeJS.ErrnoException).code === 'ENOENT') {
-              return { success: false, error: "Roadmap not found" };
+              return { success: false, error: nativeText('ipc.roadmapNotFound') };
             }
             throw readErr;
           }
@@ -440,7 +441,7 @@ export function registerRoadmapHandlers(
           // Find and update the feature
           const feature = roadmap.features?.find((f: { id: string }) => f.id === featureId);
           if (!feature) {
-            return { success: false, error: "Feature not found" };
+            return { success: false, error: nativeText('ipc.featureNotFound') };
           }
 
           feature.status = status;
@@ -458,7 +459,7 @@ export function registerRoadmapHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Failed to update feature",
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToUpdateFeature'),
         };
       }
     }
@@ -469,7 +470,7 @@ export function registerRoadmapHandlers(
     async (_, projectId: string, featureId: string): Promise<IPCResult<Task>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const roadmapPath = path.join(
@@ -485,7 +486,7 @@ export function registerRoadmapHandlers(
           content = await readFileWithRetry(roadmapPath, { encoding: "utf-8" }) as string;
         } catch (readErr: unknown) {
           if ((readErr as NodeJS.ErrnoException).code === 'ENOENT') {
-            return { success: false, error: "Roadmap not found" };
+            return { success: false, error: nativeText('ipc.roadmapNotFound') };
           }
           throw readErr;
         }
@@ -494,7 +495,7 @@ export function registerRoadmapHandlers(
         // Find the feature
         const feature = roadmap.features?.find((f: { id: string }) => f.id === featureId);
         if (!feature) {
-          return { success: false, error: "Feature not found" };
+          return { success: false, error: nativeText('ipc.featureNotFound') };
         }
 
         // Build task description from feature
@@ -618,7 +619,7 @@ ${(feature.acceptance_criteria || []).map((c: string) => `- [ ] ${c}`).join("\n"
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Failed to convert feature to spec",
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToConvertFeatureToSpec'),
         };
       }
     }
@@ -641,7 +642,7 @@ ${(feature.acceptance_criteria || []).map((c: string) => `- [ ] ${c}`).join("\n"
     ): Promise<IPCResult> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const roadmapDir = path.join(project.path, AUTO_BUILD_PATHS.ROADMAP_DIR);
@@ -674,7 +675,7 @@ ${(feature.acceptance_criteria || []).map((c: string) => `- [ ] ${c}`).join("\n"
         debugError("[Roadmap Handler] Failed to save progress:", error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Failed to save progress",
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToSaveProgress'),
         };
       }
     }
@@ -688,7 +689,7 @@ ${(feature.acceptance_criteria || []).map((c: string) => `- [ ] ${c}`).join("\n"
     ): Promise<IPCResult<PersistedRoadmapProgress | null>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const progressPath = path.join(
@@ -730,7 +731,7 @@ ${(feature.acceptance_criteria || []).map((c: string) => `- [ ] ${c}`).join("\n"
         debugError("[Roadmap Handler] Failed to load progress:", error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Failed to load progress",
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToLoadProgress'),
         };
       }
     }
@@ -741,7 +742,7 @@ ${(feature.acceptance_criteria || []).map((c: string) => `- [ ] ${c}`).join("\n"
     async (_, projectId: string): Promise<IPCResult> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const progressPath = path.join(
@@ -760,7 +761,7 @@ ${(feature.acceptance_criteria || []).map((c: string) => `- [ ] ${c}`).join("\n"
         debugError("[Roadmap Handler] Failed to clear progress:", error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Failed to clear progress",
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToClearProgress'),
         };
       }
     }
@@ -779,7 +780,7 @@ ${(feature.acceptance_criteria || []).map((c: string) => `- [ ] ${c}`).join("\n"
     ): Promise<IPCResult> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const roadmapDir = path.join(project.path, AUTO_BUILD_PATHS.ROADMAP_DIR);
@@ -902,7 +903,7 @@ ${(feature.acceptance_criteria || []).map((c: string) => `- [ ] ${c}`).join("\n"
           error:
             error instanceof Error
               ? error.message
-              : "Failed to save competitor analysis",
+              : nativeText('ipc.failedToSaveCompetitorAnalysis'),
         };
       }
     }

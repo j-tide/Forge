@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * Ideation session CRUD operations
  */
@@ -19,7 +20,7 @@ export async function getIdeationSession(
 ): Promise<IPCResult<IdeationSession | null>> {
   const project = projectStore.getProject(projectId);
   if (!project) {
-    return { success: false, error: 'Project not found' };
+    return { success: false, error: nativeText('ipc.projectNotFound') };
   }
 
   const ideationPath = path.join(
@@ -61,7 +62,7 @@ export async function getIdeationSession(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to read ideation'
+      error: error instanceof Error ? error.message : nativeText('ipc.failedToReadIdeation')
     };
   }
 }

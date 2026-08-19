@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 import { ipcMain } from 'electron';
 import type { BrowserWindow } from 'electron';
 import { IPC_CHANNELS } from '../../../shared/constants';
@@ -54,7 +55,7 @@ export function registerMemoryDataHandlers(
     async (_, projectId: string, limit: number = 20): Promise<IPCResult<RendererMemory[]>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       try {
@@ -82,7 +83,7 @@ export function registerMemoryDataHandlers(
         await service.verifyMemory(memoryId);
         return { success: true };
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : 'Failed to verify memory' };
+        return { success: false, error: error instanceof Error ? error.message : nativeText('ipc.failedToVerifyMemory') };
       }
     }
   );
@@ -96,7 +97,7 @@ export function registerMemoryDataHandlers(
         await service.pinMemory(memoryId, pinned);
         return { success: true };
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : 'Failed to pin memory' };
+        return { success: false, error: error instanceof Error ? error.message : nativeText('ipc.failedToPinMemory') };
       }
     }
   );
@@ -110,7 +111,7 @@ export function registerMemoryDataHandlers(
         await service.deprecateMemory(memoryId);
         return { success: true };
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : 'Failed to deprecate memory' };
+        return { success: false, error: error instanceof Error ? error.message : nativeText('ipc.failedToDeprecateMemory') };
       }
     }
   );
@@ -124,7 +125,7 @@ export function registerMemoryDataHandlers(
         await service.deleteMemory(memoryId);
         return { success: true };
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : 'Failed to delete memory' };
+        return { success: false, error: error instanceof Error ? error.message : nativeText('ipc.failedToDeleteMemory') };
       }
     }
   );
@@ -135,7 +136,7 @@ export function registerMemoryDataHandlers(
     async (_, projectId: string, query: string): Promise<IPCResult<ContextSearchResult[]>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       try {

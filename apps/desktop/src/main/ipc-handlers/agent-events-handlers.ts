@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 import type { BrowserWindow } from "electron";
 import path from "path";
 import { existsSync, readFileSync } from "fs";
@@ -87,7 +88,7 @@ export function registerAgenteventsHandlers(
       profileId: authFailure.profileId || profile?.id || 'unknown',
       profileName: profile?.name,
       failureType: authFailure.failureType || 'unknown',
-      message: authFailure.message || 'Authentication failed. Please re-authenticate.',
+      message: authFailure.message || nativeText('ipc.authenticationFailedPleaseReAuthenticate'),
       originalError: authFailure.originalError,
       taskId,
       detectedAt: new Date(),

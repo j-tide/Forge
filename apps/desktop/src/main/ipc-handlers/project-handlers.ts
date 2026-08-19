@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 import { ipcMain } from 'electron';
 import { existsSync } from 'fs';
 import { execFileSync } from 'child_process';
@@ -249,7 +250,7 @@ export function registerProjectHandlers(
       try {
         // Validate path exists
         if (!existsSync(projectPath)) {
-          return { success: false, error: 'Directory does not exist' };
+          return { success: false, error: nativeText('ipc.directoryDoesNotExist') };
         }
 
         const project = projectStore.addProject(projectPath);
@@ -257,7 +258,7 @@ export function registerProjectHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -298,7 +299,7 @@ export function registerProjectHandlers(
       if (project) {
         return { success: true };
       }
-      return { success: false, error: 'Project not found' };
+      return { success: false, error: nativeText('ipc.projectNotFound') };
     }
   );
 
@@ -340,7 +341,7 @@ export function registerProjectHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -359,7 +360,7 @@ export function registerProjectHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -375,7 +376,7 @@ export function registerProjectHandlers(
       try {
         const project = projectStore.getProject(projectId);
         if (!project) {
-          return { success: false, error: 'Project not found' };
+          return { success: false, error: nativeText('ipc.projectNotFound') };
         }
 
         const result = initializeProject(project.path);
@@ -389,7 +390,7 @@ export function registerProjectHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -403,7 +404,7 @@ export function registerProjectHandlers(
       try {
         const project = projectStore.getProject(projectId);
         if (!project) {
-          return { success: false, error: 'Project not found' };
+          return { success: false, error: nativeText('ipc.projectNotFound') };
         }
 
         return {
@@ -416,7 +417,7 @@ export function registerProjectHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -429,13 +430,13 @@ export function registerProjectHandlers(
       try {
         const project = projectStore.getProject(projectId);
         if (!project) {
-          return { success: false, error: 'Project not found' };
+          return { success: false, error: nativeText('ipc.projectNotFound') };
         }
         return { success: true, data: hasLocalSource(project.path) };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -451,14 +452,14 @@ export function registerProjectHandlers(
     async (_, projectPath: string): Promise<IPCResult<string[]>> => {
       try {
         if (!existsSync(projectPath)) {
-          return { success: false, error: 'Directory does not exist' };
+          return { success: false, error: nativeText('ipc.directoryDoesNotExist') };
         }
         const branches = getGitBranches(projectPath);
         return { success: true, data: branches };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -470,14 +471,14 @@ export function registerProjectHandlers(
     async (_, projectPath: string): Promise<IPCResult<GitBranchDetail[]>> => {
       try {
         if (!existsSync(projectPath)) {
-          return { success: false, error: 'Directory does not exist' };
+          return { success: false, error: nativeText('ipc.directoryDoesNotExist') };
         }
         const branches = getGitBranchesWithInfo(projectPath);
         return { success: true, data: branches };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -489,14 +490,14 @@ export function registerProjectHandlers(
     async (_, projectPath: string): Promise<IPCResult<string | null>> => {
       try {
         if (!existsSync(projectPath)) {
-          return { success: false, error: 'Directory does not exist' };
+          return { success: false, error: nativeText('ipc.directoryDoesNotExist') };
         }
         const branch = getCurrentGitBranch(projectPath);
         return { success: true, data: branch };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -508,14 +509,14 @@ export function registerProjectHandlers(
     async (_, projectPath: string): Promise<IPCResult<string | null>> => {
       try {
         if (!existsSync(projectPath)) {
-          return { success: false, error: 'Directory does not exist' };
+          return { success: false, error: nativeText('ipc.directoryDoesNotExist') };
         }
         const mainBranch = detectMainBranch(projectPath);
         return { success: true, data: mainBranch };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -527,14 +528,14 @@ export function registerProjectHandlers(
     async (_, projectPath: string): Promise<IPCResult<GitStatus>> => {
       try {
         if (!existsSync(projectPath)) {
-          return { success: false, error: 'Directory does not exist' };
+          return { success: false, error: nativeText('ipc.directoryDoesNotExist') };
         }
         const gitStatus = checkGitStatus(projectPath);
         return { success: true, data: gitStatus };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }
@@ -546,14 +547,14 @@ export function registerProjectHandlers(
     async (_, projectPath: string): Promise<IPCResult<InitializationResult>> => {
       try {
         if (!existsSync(projectPath)) {
-          return { success: false, error: 'Directory does not exist' };
+          return { success: false, error: nativeText('ipc.directoryDoesNotExist') };
         }
         const result = initializeGit(projectPath);
         return { success: result.success, data: result, error: result.error };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : nativeText('ipc.unknownError')
         };
       }
     }

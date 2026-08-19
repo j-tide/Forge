@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 /**
  * Screenshot IPC Handlers
  *
@@ -55,7 +56,7 @@ export function registerScreenshotHandlers(): void {
       console.error('Failed to get screenshot sources:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to get screenshot sources'
+        error: error instanceof Error ? error.message : nativeText('ipc.failedToGetScreenshotSources')
       };
     }
   });
@@ -69,7 +70,7 @@ export function registerScreenshotHandlers(): void {
     if (!options?.sourceId || typeof options.sourceId !== 'string') {
       return {
         success: false,
-        error: 'Invalid sourceId parameter'
+        error: nativeText('ipc.invalidSourceidParameter')
       };
     }
 
@@ -87,7 +88,7 @@ export function registerScreenshotHandlers(): void {
       if (!selectedSource) {
         return {
           success: false,
-          error: 'Source not found'
+          error: nativeText('ipc.sourceNotFound')
         };
       }
 
@@ -102,7 +103,7 @@ export function registerScreenshotHandlers(): void {
       console.error('Failed to capture screenshot:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to capture screenshot'
+        error: error instanceof Error ? error.message : nativeText('ipc.failedToCaptureScreenshot')
       };
     }
   });

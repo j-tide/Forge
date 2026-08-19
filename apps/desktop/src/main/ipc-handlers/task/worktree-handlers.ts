@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 import { ipcMain, BrowserWindow, shell, app } from 'electron';
 import { IPC_CHANNELS, AUTO_BUILD_PATHS, DEFAULT_APP_SETTINGS, DEFAULT_FEATURE_MODELS, DEFAULT_FEATURE_THINKING, MODEL_ID_MAP, THINKING_BUDGET_MAP, getSpecsDir } from '../../../shared/constants';
 import type { IPCResult, WorktreeStatus, WorktreeDiff, WorktreeDiffFile, WorktreeMergeResult, WorktreeDiscardResult, WorktreeListResult, WorktreeListItem, WorktreeCreatePROptions, WorktreeCreatePRResult, SupportedIDE, SupportedTerminal, SupportedCLI, AppSettings } from '../../../shared/types';
@@ -1287,7 +1288,7 @@ async function openInIDE(dirPath: string, ide: SupportedIDE, customPath?: string
       // Use custom IDE path with execFileAsync to prevent shell injection
       // Validate the custom path is a valid executable path
       if (!isPathSafe(customPath)) {
-        return { success: false, error: 'Invalid custom IDE path' };
+        return { success: false, error: nativeText('ipc.invalidCustomIdePath') };
       }
       await execFileAsync(customPath, [dirPath]);
       return { success: true };
@@ -1295,12 +1296,12 @@ async function openInIDE(dirPath: string, ide: SupportedIDE, customPath?: string
 
     const config = IDE_DETECTION[ide];
     if (!config) {
-      return { success: false, error: `Unknown IDE: ${ide}` };
+      return { success: false, error: nativeText('ipcTemplate.unknownIdeValue0', { value0: String(ide) }) };
     }
 
     const command = config.commands[platform];
     if (!command) {
-      return { success: false, error: `IDE ${ide} is not supported on ${platform}` };
+      return { success: false, error: nativeText('ipcTemplate.ideValue0IsNotSupportedOnValue1', { value0: String(ide), value1: String(platform) }) };
     }
 
     // Special handling for macOS .app bundles
@@ -1332,7 +1333,7 @@ async function openInIDE(dirPath: string, ide: SupportedIDE, customPath?: string
     return { success: true };
   } catch (error) {
     console.error(`Failed to open in IDE ${ide}:`, error);
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to open IDE' };
+    return { success: false, error: error instanceof Error ? error.message : nativeText('ipc.failedToOpenIde') };
   }
 }
 
@@ -1346,7 +1347,7 @@ async function openInTerminal(dirPath: string, terminal: SupportedTerminal, cust
     if (terminal === 'custom' && customPath) {
       // Use custom terminal path with execFileAsync to prevent shell injection
       if (!isPathSafe(customPath)) {
-        return { success: false, error: 'Invalid custom terminal path' };
+        return { success: false, error: nativeText('ipc.invalidCustomTerminalPath') };
       }
       await execFileAsync(customPath, [dirPath]);
       return { success: true };
@@ -1354,7 +1355,7 @@ async function openInTerminal(dirPath: string, terminal: SupportedTerminal, cust
 
     const config = TERMINAL_DETECTION[terminal];
     if (!config) {
-      return { success: false, error: `Unknown terminal: ${terminal}` };
+      return { success: false, error: nativeText('ipcTemplate.unknownTerminalValue0', { value0: String(terminal) }) };
     }
 
     const commands = config.commands[platform];
@@ -1422,7 +1423,7 @@ async function openInTerminal(dirPath: string, terminal: SupportedTerminal, cust
     return { success: true };
   } catch (error) {
     console.error(`Failed to open in terminal ${terminal}:`, error);
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to open terminal' };
+    return { success: false, error: error instanceof Error ? error.message : nativeText('ipc.failedToOpenTerminal') };
   }
 }
 
@@ -1763,7 +1764,7 @@ export function registerWorktreeHandlers(
       try {
         const { task, project } = findTaskAndProject(taskId);
         if (!task || !project) {
-          return { success: false, error: 'Task not found' };
+          return { success: false, error: nativeText('ipc.taskNotFound') };
         }
 
         // Find worktree at .forge-glass-preview/worktrees/tasks/{spec-name}/
@@ -1863,7 +1864,7 @@ export function registerWorktreeHandlers(
         console.error('Failed to get worktree status:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get worktree status'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetWorktreeStatus')
         };
       }
     }
@@ -1879,14 +1880,14 @@ export function registerWorktreeHandlers(
       try {
         const { task, project } = findTaskAndProject(taskId);
         if (!task || !project) {
-          return { success: false, error: 'Task not found' };
+          return { success: false, error: nativeText('ipc.taskNotFound') };
         }
 
         // Find worktree at .forge-glass-preview/worktrees/tasks/{spec-name}/
         const worktreePath = findTaskWorktree(project.path, task.specId);
 
         if (!worktreePath) {
-          return { success: false, error: 'No worktree found for this task' };
+          return { success: false, error: nativeText('ipc.noWorktreeFoundForThisTask') };
         }
 
         // Get base branch using proper fallback chain:
@@ -1957,7 +1958,7 @@ export function registerWorktreeHandlers(
         console.error('Failed to get worktree diff:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get worktree diff'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetWorktreeDiff')
         };
       }
     }
@@ -1982,7 +1983,7 @@ export function registerWorktreeHandlers(
         const { task, project } = findTaskAndProject(taskId);
         if (!task || !project) {
           debug('Task or project not found');
-          return { success: false, error: 'Task not found' };
+          return { success: false, error: nativeText('ipc.taskNotFound') };
         }
 
         debug('Found task:', task.specId, 'project:', project.path);
@@ -2368,7 +2369,7 @@ export function registerWorktreeHandlers(
                 success: true,
                 data: {
                   success: false,
-                  message: mergeError ?? 'Merge failed',
+                  message: mergeError ?? nativeText('ipc.mergeFailed'),
                   conflictFiles: undefined
                 }
               };
@@ -2377,7 +2378,7 @@ export function registerWorktreeHandlers(
         console.error('[MERGE] Exception in merge handler:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to merge worktree'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToMergeWorktree')
         };
       }
     }
@@ -2395,7 +2396,7 @@ export function registerWorktreeHandlers(
         const { task, project } = findTaskAndProject(taskId);
         if (!task || !project) {
           console.error('[IPC] Task not found:', taskId);
-          return { success: false, error: 'Task not found' };
+          return { success: false, error: nativeText('ipc.taskNotFound') };
         }
         console.warn('[IPC] Found task:', task.specId, 'project:', project.name);
 
@@ -2483,7 +2484,7 @@ export function registerWorktreeHandlers(
           success: true,
           data: {
             success: true,
-            message: 'Preview completed',
+            message: nativeText('ipc.previewCompleted'),
             preview: {
               files: filesToMerge || [],
               conflicts: mergeConflicts,
@@ -2507,7 +2508,7 @@ export function registerWorktreeHandlers(
         console.error('[IPC] TASK_WORKTREE_MERGE_PREVIEW error:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to preview merge'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToPreviewMerge')
         };
       }
     }
@@ -2527,7 +2528,7 @@ export function registerWorktreeHandlers(
       try {
         const { task, project } = findTaskAndProject(taskId);
         if (!task || !project) {
-          return { success: false, error: 'Task not found' };
+          return { success: false, error: nativeText('ipc.taskNotFound') };
         }
 
         // Find worktree at .forge-glass-preview/worktrees/tasks/{spec-name}/
@@ -2538,7 +2539,7 @@ export function registerWorktreeHandlers(
             success: true,
             data: {
               success: true,
-              message: 'No worktree to discard'
+              message: nativeText('ipc.noWorktreeToDiscard')
             }
           };
         }
@@ -2556,7 +2557,7 @@ export function registerWorktreeHandlers(
           console.error('[TASK_WORKTREE_DISCARD] Cleanup failed:', cleanupResult.warnings);
           return {
             success: false,
-            error: `Failed to discard worktree: ${cleanupResult.warnings.join('; ')}`
+            error: nativeText('ipcTemplate.failedToDiscardWorktreeValue0', { value0: String(cleanupResult.warnings.join('; ')) })
           };
         }
 
@@ -2577,14 +2578,14 @@ export function registerWorktreeHandlers(
           success: true,
           data: {
             success: true,
-            message: 'Worktree discarded successfully'
+            message: nativeText('ipc.worktreeDiscardedSuccessfully')
           }
         };
       } catch (error) {
         console.error('Failed to discard worktree:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to discard worktree'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToDiscardWorktree')
         };
       }
     }
@@ -2604,22 +2605,22 @@ export function registerWorktreeHandlers(
         // Validate inputs
         if (!projectId || typeof projectId !== 'string') {
           console.error('discardOrphanedWorktree: Invalid projectId:', projectId);
-          return { success: false, error: 'Invalid projectId' };
+          return { success: false, error: nativeText('ipc.invalidProjectid') };
         }
         if (!specName || typeof specName !== 'string') {
           console.error('discardOrphanedWorktree: Invalid specName:', specName);
-          return { success: false, error: 'Invalid specName' };
+          return { success: false, error: nativeText('ipc.invalidSpecname') };
         }
 
         const project = projectStore.getProject(projectId);
         if (!project) {
-          return { success: false, error: 'Project not found' };
+          return { success: false, error: nativeText('ipc.projectNotFound') };
         }
 
         // Validate project.path
         if (!project.path || typeof project.path !== 'string') {
           console.error('discardOrphanedWorktree: Project path is invalid:', project.path);
-          return { success: false, error: 'Project path is invalid' };
+          return { success: false, error: nativeText('ipc.projectPathIsInvalid') };
         }
 
         // Find worktree at .forge-glass-preview/worktrees/tasks/{spec-name}/
@@ -2630,7 +2631,7 @@ export function registerWorktreeHandlers(
             success: true,
             data: {
               success: true,
-              message: 'No worktree to discard'
+              message: nativeText('ipc.noWorktreeToDiscard')
             }
           };
         }
@@ -2647,7 +2648,7 @@ export function registerWorktreeHandlers(
         if (!cleanupResult.success) {
           return {
             success: false,
-            error: cleanupResult.warnings.join(', ') || 'Failed to cleanup orphaned worktree'
+            error: cleanupResult.warnings.join(', ') || nativeText('ipc.failedToCleanupOrphanedWorktree')
           };
         }
 
@@ -2655,14 +2656,14 @@ export function registerWorktreeHandlers(
           success: true,
           data: {
             success: true,
-            message: 'Orphaned worktree deleted successfully'
+            message: nativeText('ipc.orphanedWorktreeDeletedSuccessfully')
           }
         };
       } catch (error) {
         console.error('Failed to discard orphaned worktree:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to discard orphaned worktree'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToDiscardOrphanedWorktree')
         };
       }
     }
@@ -2679,18 +2680,18 @@ export function registerWorktreeHandlers(
         // Validate projectId
         if (!projectId || typeof projectId !== 'string') {
           console.error('listWorktrees: Invalid projectId:', projectId);
-          return { success: false, error: 'Invalid projectId' };
+          return { success: false, error: nativeText('ipc.invalidProjectid') };
         }
 
         const project = projectStore.getProject(projectId);
         if (!project) {
-          return { success: false, error: 'Project not found' };
+          return { success: false, error: nativeText('ipc.projectNotFound') };
         }
 
 // Validate project.path
         if (!project.path || typeof project.path !== 'string') {
           console.error('listWorktrees: Project path is invalid:', project.path);
-          return { success: false, error: 'Project path is invalid' };
+          return { success: false, error: nativeText('ipc.projectPathIsInvalid') };
         }
 
         const worktreesDir = getTaskWorktreeDir(project.path);
@@ -2817,7 +2818,7 @@ export function registerWorktreeHandlers(
         console.error('Failed to list worktrees:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to list worktrees'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToListWorktrees')
         };
       }
     }
@@ -2836,7 +2837,7 @@ export function registerWorktreeHandlers(
         console.error('Failed to detect tools:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to detect installed tools'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToDetectInstalledTools')
         };
       }
     }
@@ -2850,7 +2851,7 @@ export function registerWorktreeHandlers(
     async (_, worktreePath: string, ide: SupportedIDE, customPath?: string): Promise<IPCResult<{ opened: boolean }>> => {
       try {
         if (!existsSync(worktreePath)) {
-          return { success: false, error: 'Worktree path does not exist' };
+          return { success: false, error: nativeText('ipc.worktreePathDoesNotExist') };
         }
 
         const result = await openInIDE(worktreePath, ide, customPath);
@@ -2863,7 +2864,7 @@ export function registerWorktreeHandlers(
         console.error('Failed to open in IDE:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to open in IDE'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToOpenInIde')
         };
       }
     }
@@ -2877,7 +2878,7 @@ export function registerWorktreeHandlers(
     async (_, worktreePath: string, terminal: SupportedTerminal, customPath?: string): Promise<IPCResult<{ opened: boolean }>> => {
       try {
         if (!existsSync(worktreePath)) {
-          return { success: false, error: 'Worktree path does not exist' };
+          return { success: false, error: nativeText('ipc.worktreePathDoesNotExist') };
         }
 
         const result = await openInTerminal(worktreePath, terminal, customPath);
@@ -2890,7 +2891,7 @@ export function registerWorktreeHandlers(
         console.error('Failed to open in terminal:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to open in terminal'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToOpenInTerminal')
         };
       }
     }
@@ -2906,7 +2907,7 @@ export function registerWorktreeHandlers(
       try {
         const { task, project } = findTaskAndProject(taskId);
         if (!task || !project) {
-          return { success: false, error: 'Task not found' };
+          return { success: false, error: nativeText('ipc.taskNotFound') };
         }
 
         const specsBaseDir = getSpecsDir(project.autoBuildPath);
@@ -2924,7 +2925,7 @@ export function registerWorktreeHandlers(
           planContent = await fsPromises.readFile(planPath, 'utf-8');
         } catch (readErr) {
           if (isFileNotFound(readErr)) {
-            return { success: false, error: 'Implementation plan not found' };
+            return { success: false, error: nativeText('ipc.implementationPlanNotFound') };
           }
           throw readErr;
         }
@@ -2966,7 +2967,7 @@ export function registerWorktreeHandlers(
         console.error('Failed to clear staged state:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to clear staged state'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToClearStagedState')
         };
       }
     }
@@ -2992,7 +2993,7 @@ export function registerWorktreeHandlers(
         const { task, project } = findTaskAndProject(taskId);
         if (!task || !project) {
           debug('Task or project not found');
-          return { success: false, error: 'Task not found' };
+          return { success: false, error: nativeText('ipc.taskNotFound') };
         }
 
         debug('Found task:', task.specId, 'project:', project.path);
@@ -3005,7 +3006,7 @@ export function registerWorktreeHandlers(
         } catch (err) {
           if (err && typeof err === 'object' && 'code' in err && err.code === 'ENOENT') {
             debug('Spec directory not found:', specDir);
-            return { success: false, error: 'Spec directory not found' };
+            return { success: false, error: nativeText('ipc.specDirectoryNotFound') };
           }
           throw err; // Re-throw unexpected errors
         }
@@ -3014,20 +3015,20 @@ export function registerWorktreeHandlers(
         const worktreePath = findTaskWorktree(project.path, task.specId);
         if (!worktreePath) {
           debug('No worktree found for spec:', task.specId);
-          return { success: false, error: 'No worktree found for this task' };
+          return { success: false, error: nativeText('ipc.noWorktreeFoundForThisTask') };
         }
         debug('Worktree path:', worktreePath);
 
         // Validate options
         if (options?.targetBranch && !GIT_BRANCH_REGEX.test(options.targetBranch)) {
-          return { success: false, error: 'Invalid target branch name' };
+          return { success: false, error: nativeText('ipc.invalidTargetBranchName') };
         }
         if (options?.title) {
           if (options.title.length > MAX_PR_TITLE_LENGTH) {
-            return { success: false, error: `PR title exceeds maximum length of ${MAX_PR_TITLE_LENGTH} characters` };
+            return { success: false, error: nativeText('ipcTemplate.prTitleExceedsMaximumLengthOfValue0Characters', { value0: String(MAX_PR_TITLE_LENGTH) }) };
           }
           if (!PRINTABLE_CHARS_REGEX.test(options.title)) {
-            return { success: false, error: 'PR title contains invalid characters' };
+            return { success: false, error: nativeText('ipc.prTitleContainsInvalidCharacters') };
           }
         }
 
@@ -3097,13 +3098,13 @@ export function registerWorktreeHandlers(
 
         return {
           success: false,
-          error: result.error || 'Failed to create PR'
+          error: result.error || nativeText('ipc.failedToCreatePr')
         };
       } catch (error) {
         console.error('[CREATE_PR] Exception in handler:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to create PR'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToCreatePr')
         };
       }
     }

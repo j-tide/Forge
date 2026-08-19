@@ -1,3 +1,4 @@
+import { nativeText } from '../localized-text';
 import { ipcMain } from 'electron';
 import { readdirSync } from 'fs';
 import { readFile } from 'fs/promises';
@@ -18,14 +19,14 @@ function validatePath(filePath: string): { valid: true; path: string } | { valid
 
   // Must be absolute after resolution
   if (!path.isAbsolute(resolvedPath)) {
-    return { valid: false, error: 'Path must be absolute' };
+    return { valid: false, error: nativeText('ipc.pathMustBeAbsolute') };
   }
 
   // After resolution, path should not contain .. segments
   // This catches edge cases where resolve might not fully normalize
   const segments = resolvedPath.split(path.sep);
   if (segments.includes('..')) {
-    return { valid: false, error: 'Invalid path: contains parent directory references' };
+    return { valid: false, error: nativeText('ipc.invalidPathContainsParentDirectoryReferences') };
   }
 
   return { valid: true, path: resolvedPath };
@@ -87,7 +88,7 @@ export function registerFileHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to list directory'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToListDirectory')
         };
       }
     }
@@ -107,13 +108,13 @@ export function registerFileHandlers(): void {
         // Use async file read to avoid blocking; check size after reading to avoid TOCTOU
         const content = await readFile(safePath, 'utf-8');
         if (Buffer.byteLength(content, 'utf-8') > MAX_FILE_SIZE) {
-          return { success: false, error: 'File too large (max 1MB)' };
+          return { success: false, error: nativeText('ipc.fileTooLargeMax1mb') };
         }
         return { success: true, data: content };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to read file'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToReadFile')
         };
       }
     }

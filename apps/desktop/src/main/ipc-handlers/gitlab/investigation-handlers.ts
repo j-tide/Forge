@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitLab investigation handlers
  * Handles AI-powered issue investigation
@@ -97,7 +98,7 @@ export function registerInvestigateIssue(
           phase: 'fetching',
           issueIid,
           progress: 10,
-          message: 'Fetching issue details...'
+          message: nativeText('ipc.fetchingIssueDetails')
         });
 
         const encodedProject = encodeProjectPath(config.project);
@@ -123,7 +124,7 @@ export function registerInvestigateIssue(
           phase: 'creating_task',
           issueIid,
           progress: 50,
-          message: 'Creating task from issue...'
+          message: nativeText('ipc.creatingTaskFromIssue')
         });
 
         // Create spec for the issue with notes
@@ -145,7 +146,7 @@ export function registerInvestigateIssue(
           phase: 'complete',
           issueIid,
           progress: 100,
-          message: 'Investigation complete'
+          message: nativeText('ipc.investigationComplete2')
         });
 
         // Send result

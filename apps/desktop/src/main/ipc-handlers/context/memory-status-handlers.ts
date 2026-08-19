@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 import { ipcMain } from 'electron';
 import type { BrowserWindow } from 'electron';
 import { IPC_CHANNELS } from '../../../shared/constants';
@@ -44,7 +45,7 @@ export function registerMemoryStatusHandlers(
     async (_event, _projectId: string): Promise<IPCResult<MemorySystemStatus>> => {
       const project = _projectId ? projectStore.getProject(_projectId) : null;
       if (_projectId && !project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       try {
@@ -53,7 +54,7 @@ export function registerMemoryStatusHandlers(
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to check memory status',
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToCheckMemoryStatus'),
         };
       }
     }

@@ -1,3 +1,4 @@
+import { nativeText } from '../../localized-text';
 /**
  * GitLab issue handlers
  * Handles fetching issues and notes (comments)
@@ -98,14 +99,14 @@ export function registerGetIssues(): void {
 
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = await getGitLabConfig(project);
       if (!config) {
         return {
           success: false,
-          error: 'GitLab not configured'
+          error: nativeText('ipc.gitlabNotConfigured')
         };
       }
 
@@ -131,7 +132,7 @@ export function registerGetIssues(): void {
         debugLog('Failed to get issues:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get issues'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetIssues')
         };
       }
     }
@@ -149,14 +150,14 @@ export function registerGetIssue(): void {
 
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = await getGitLabConfig(project);
       if (!config) {
         return {
           success: false,
-          error: 'GitLab not configured'
+          error: nativeText('ipc.gitlabNotConfigured')
         };
       }
 
@@ -179,7 +180,7 @@ export function registerGetIssue(): void {
         debugLog('Failed to get issue:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get issue'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetIssue')
         };
       }
     }
@@ -197,14 +198,14 @@ export function registerGetIssueNotes(): void {
 
       const project = projectStore.getProject(projectId);
       if (!project) {
-        return { success: false, error: 'Project not found' };
+        return { success: false, error: nativeText('ipc.projectNotFound') };
       }
 
       const config = await getGitLabConfig(project);
       if (!config) {
         return {
           success: false,
-          error: 'GitLab not configured'
+          error: nativeText('ipc.gitlabNotConfigured')
         };
       }
 
@@ -231,7 +232,7 @@ export function registerGetIssueNotes(): void {
         debugLog('Failed to get notes:', error instanceof Error ? error.message : error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get notes'
+          error: error instanceof Error ? error.message : nativeText('ipc.failedToGetNotes')
         };
       }
     }
