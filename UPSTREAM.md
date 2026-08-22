@@ -8,7 +8,7 @@ Forge Glass Preview is a derivative of the Aperant desktop application. Renaming
 | Upstream Git URL | `https://github.com/AndyMik90/Aperant.git` |
 | Imported tag | `v2.8.0-beta.6` |
 | Imported commit | `cba7a0270ec794a14ac71615bc6c48085807ede6` |
-| Modification date | 2026-09-27 |
+| Modification dates | 2026-09-27 and 2026-09-28 |
 | License | GNU Affero General Public License v3.0; see [LICENSE](LICENSE) |
 
 The upstream tag resolves to the imported commit in this repository's Git history. The original source and history remain available; the preview does not claim to be an original implementation of Aperant's code. Existing copyright and license notices remain in place, and `LICENSE` is preserved unchanged.
@@ -23,3 +23,9 @@ Changes initiated on 2026-09-27 for this derivative:
 - Removed automatic Google Fonts requests on the renderer's initial load and removed the now-unused `electron-updater` runtime dependency.
 
 This preview is not maintained or released by the Aperant maintainers. Upstream documentation, screenshots, download links, and release channels describe Aperant itself, not this derivative.
+
+Changes on 2026-09-28 for `0.1.0-preview.2`:
+
+- Added Simplified Chinese translations across the desktop interface, native dialogs, notifications and application-owned error feedback. Provider output, source code, commands, paths, model identifiers and user-authored text retain their original form.
+- Added immediately persisted Chinese / English language buttons in Settings. New profiles default to Chinese; explicit existing language preferences remain intact, including legacy French settings. No provider authentication or runtime architecture was changed.
+- Added locale completeness, interpolation and actual Electron switch/restart checks. Release timestamps record the real modification date; Git commit dates follow the user's requested synthetic schedule.

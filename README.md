@@ -1,37 +1,61 @@
 # Forge Glass Preview
 
-Forge Glass Preview is a separate desktop preview derived from [Aperant](https://github.com/AndyMik90/Aperant) `v2.8.0-beta.6`. It explores a glass-style interface while retaining the Aperant application code as its starting point. It is not an official Aperant release, and it is separate from the Python Host–based Forge application in the sibling `Forge` repository.
+Forge Glass Preview 是以 [Aperant](https://github.com/AndyMik90/Aperant) `v2.8.0-beta.6` 为基座的独立桌面衍生预览，保留上游工作流，采用 Forge 亮色／暗色磨砂玻璃界面。本仓库不是 Aperant 官方版本，也尚未连接兄弟仓库 Forge 的 Python Host；不能将预览版的界面检查等同于 Forge 完整产品验收。
 
-This preview uses its own application ID, product name, user-data directory, project data directory (`.forge-glass-preview/`), and Claude profile directory (`~/.forge-glass-preview/claude-profiles/`). It does not import existing Aperant `.auto-claude/` task data or `~/.claude-profiles/` accounts. The provider CLI's own `~/.claude` login may still be read when you explicitly use that provider. Its updater is disabled and its package scripts do not publish releases. Error reporting is off by default and requires both user opt-in and a preview-specific DSN. These safeguards let the preview coexist with installed Forge and Aperant apps; use a disposable repository for your first task run.
+## 下载、打开与语言切换
 
-The UI in this repository starts from Aperant's existing workflows. It is **not** connected to the sibling Forge Python Host, and it does not migrate Forge's SQLite projects, tasks, approvals, or runs. The current package is an internal UI preview, not a completed Forge product or an official Aperant build.
+当前版本：**0.1.0-preview.2**。在本仓库 [Releases](https://github.com/j-tide/Forge-Aperant/releases) 下载 macOS arm64 的 INTERNAL DMG 或 ZIP，校验同页的 SHA256SUMS。DMG 内的 `Forge Glass Preview.app` 可复制至自己的 Applications 文件夹后正常打开，应用不会像自动化测试那样立即退出。
 
-## Build locally
+安装包使用 **ADHOC 签名，UNNOTARIZED**，不是 Developer ID 签名的正式发行版。若 macOS 提示无法验证开发者，使用系统“隐私与安全性”中的用户确认流程；不要全局关闭 Gatekeeper。Windows、macOS Intel 和签名／公证仍未验证。
 
-The repository declares Node.js 24 or newer and npm 10 or newer. From the repository root:
+**设置 → 语言 → 中文 / English**：即时切换、自动保存，重启后保留。新建用户数据默认中文；已有显式语言和主题选择保持不变。任务、设置、上下文、知识／记忆、集成、终端、首次使用向导、原生弹窗与应用自己的错误提示均使用统一语言资源。模型输出、用户文本、代码、命令、路径、模型 ID 和品牌名保持原文；语言切换不会翻译或重写已有项目数据。
+
+## 前置条件与数据隔离
+
+预览版有独立应用 ID、用户数据目录、项目数据目录 `.forge-glass-preview/` 和 Claude profile 目录 `~/.forge-glass-preview/claude-profiles/`。不导入或迁移原 Forge SQLite、Aperant `.auto-claude/` 或 `~/.claude-profiles/` 数据。显式配置某 provider 后，它自己的合法 CLI 登录态可能被读取；实际运行仍需 Git 及所选 provider 的可用配置／认证。翻译与窗口检查没有调用付费模型。
+
+首次任务请使用可丢弃仓库。上游自动更新与发布渠道已经关闭，错误上报默认关闭且需要用户选择及衍生版专用 DSN。此预览不是完全自包含的 Coding Agent，也未验证完整任务运行或第二执行器替换。
+
+## 从源码运行
+
+需要 Node.js 24+、npm 10+，使用仓库独立 npm lockfile，不改原 Forge 的 pnpm workspace。
 
 ```sh
 npm ci
 npm run dev
 ```
 
-For checks and a local package:
+正常构建后运行：
 
 ```sh
+npm run build
+npm --workspace apps/desktop run start
+```
+
+检查入口：
+
+```sh
+npm run check:i18n
+npm run typecheck
 npm run lint
 npm run test
 npm run build
-npm run package:mac
+npm run test:i18n:desktop
 ```
 
-Use `package:win` or `package:linux` on the corresponding platform. A successful local package is a preview artifact, not a published release. On the verified macOS arm64 machine, `package:mac` stalled while fetching the DMG helper. The internal package was built with `electron-builder --mac dir --publish never --config.mac.identity=-` and `CSC_IDENTITY_AUTO_DISCOVERY=false`, then wrapped using macOS `ditto` and `hdiutil`; it is ad-hoc signed and unnotarized.
+`check:i18n` 检查中文／英文 namespace、key、插值、标签及静态源码引用，支持 `--reporter=json`。Electron 语言测试用独立临时 profile，验证亮色和暗色中的切换、保存与重启；不会修改日常预览项目数据，不会调用模型。
 
-## Verified preview scope
+## 内部打包与验证边界
 
-On macOS arm64 (2026-09-27), the Electron window loaded the Forge Glass Preview welcome view in both light and dark themes from isolated test profiles. See the [light](docs/screenshots/forge-glass-preview-light.png) and [dark](docs/screenshots/forge-glass-preview-dark.png) screenshots. `npm run lint`, Desktop typecheck, 4,632 unit tests, and `npm run build` passed. The local `.app` opened with its own user-data identity, and the internal ZIP and ad-hoc DMG were verified. The DMG is **not notarized**. These checks do not prove a full agent task, Windows operation, Python Host integration, or a production release.
+macOS arm64 本地检查与截图见 [0.1.0-preview.2 验证记录](docs/releases/0.1.0-preview.2.md)。`package:mac` 的上游 DMG helper 下载曾阻塞，当前内部包通过以下方式生成应用，再用 macOS `ditto` / `hdiutil` 包装 ZIP / DMG：
 
-The upstream dependency tree still has **33 production npm audit findings (10 high, 9 moderate, 14 low)** as of 2026-09-27. Review and remediation are required before a public release. The preview also keeps the upstream optional provider-usage polling behavior once an account is explicitly configured; it does not make paid model calls during the empty-shell checks above.
+```sh
+cd apps/desktop
+CSC_IDENTITY_AUTO_DISCOVERY=false ../../node_modules/.bin/electron-builder --mac dir --publish never --config.mac.identity=-
+```
 
-## Origin and license
+保留上游依赖的 **33 项 production npm audit 风险（10 high、9 moderate、14 low；基线检查 2026-09-27）**。本轮没有新增依赖，也未声称风险已修复。公开正式发行、Windows / Intel、Python Host 迁移与完整业务验收仍需独立完成。界面截图来自当前 Electron 实现：[中文亮色](docs/screenshots/0.1.0-preview.2/home-zh-light-1440.png)、[中文暗色](docs/screenshots/0.1.0-preview.2/home-zh-dark-1440.png)、[语言设置](docs/screenshots/0.1.0-preview.2/settings-language-zh-light-1440.png)。
 
-The exact upstream source revision, modification date, and derivative changes are recorded in [UPSTREAM.md](UPSTREAM.md). The original [GNU Affero General Public License v3.0](LICENSE) and existing copyright notices are retained. The upstream project and its maintainers are credited; this preview is independently modified.
+## 来源与许可证
+
+完整来源、上游 revision 和修改日期见 [UPSTREAM.md](UPSTREAM.md)。保留原 [GNU AGPL v3.0](LICENSE)、copyright 和上游署名。发布资产附带对应源码；更换品牌不会改变来源或许可证义务。本预览由 Forge 独立修改，与 ProofRun 无关。

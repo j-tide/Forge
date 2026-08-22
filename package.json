@@ -1,7 +1,7 @@
 {
   "name": "forge-aperant-base",
   "private": true,
-  "version": "0.1.0-preview.1",
+  "version": "0.1.0-preview.2",
   "description": "Forge Glass Preview derivative of Aperant; see UPSTREAM.md",
   "license": "AGPL-3.0",
   "author": "Forge Glass Preview contributors",
@@ -17,11 +17,16 @@
     "dev:mcp": "cd apps/desktop && npm run dev:mcp",
     "build": "cd apps/desktop && npm run build",
     "lint": "cd apps/desktop && npm run lint",
-    "test": "cd apps/desktop && npm test",
+    "test": "npm run test:i18n:references && npm --workspace apps/desktop test",
     "package": "cd apps/desktop && npm run package",
     "package:mac": "cd apps/desktop && npm run package:mac",
     "package:win": "cd apps/desktop && npm run package:win",
-    "package:linux": "cd apps/desktop && npm run package:linux"
+    "package:linux": "cd apps/desktop && npm run package:linux",
+    "check:i18n": "node scripts/check-localization.mjs",
+    "test:i18n:desktop": "node scripts/test-forge-languages.mjs",
+    "typecheck": "npm --workspace apps/desktop run typecheck",
+    "test:i18n:references": "node --test scripts/localization-references.test.mjs",
+    "preview:open": "open 'apps/desktop/dist/0.1.0-preview.2/mac-arm64/Forge Glass Preview.app'"
   },
   "engines": {
     "node": ">=24.0.0",

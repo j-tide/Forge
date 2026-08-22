@@ -1,7 +1,7 @@
 {
   "name": "forge-glass-preview",
   "private": true,
-  "version": "0.1.0-preview.1",
+  "version": "0.1.0-preview.2",
   "type": "module",
   "description": "Independent Forge Glass Preview desktop app derived from Aperant",
   "main": "./out/main/index.js",
