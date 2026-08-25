@@ -3,9 +3,9 @@
  * =====================
  *
  * Records a codebase discovery to session memory (codebase_map.json).
- * See apps/desktop/src/main/ai/tools/auto-claude/record-discovery.ts for the TypeScript implementation.
+ * See apps/desktop/src/main/ai/tools/forge/record-discovery.ts for the TypeScript implementation.
  *
- * Tool name: mcp__auto-claude__record_discovery
+ * Tool name: mcp__forge__record_discovery
  */
 
 import * as fs from 'node:fs';
@@ -44,7 +44,7 @@ interface CodebaseMap {
 
 export const recordDiscoveryTool = Tool.define({
   metadata: {
-    name: 'mcp__auto-claude__record_discovery',
+    name: 'mcp__forge__record_discovery',
     description:
       'Record a codebase discovery to session memory. Use this when you learn something important about the codebase structure or behavior.',
     permission: ToolPermission.Auto,

@@ -32,7 +32,7 @@ export const DEFAULT_APP_SETTINGS = {
   theme: 'light' as const,
   colorTheme: 'forge-glass' as const,
   defaultModel: 'opus',
-  agentFramework: 'auto-claude',
+  agentFramework: 'forge',
   pythonPath: undefined as string | undefined,
   gitPath: undefined as string | undefined,
   githubCLIPath: undefined as string | undefined,
@@ -95,7 +95,7 @@ export const DEFAULT_PROJECT_SETTINGS = {
 // Auto Build File Paths
 // ============================================
 
-// Project data is deliberately separate from upstream Aperant's .auto-claude/.
+// Project data is deliberately separate from legacy application data.
 export const PROJECT_DATA_DIR = '.forge-glass-preview';
 
 // File paths relative to project

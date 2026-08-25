@@ -7,9 +7,9 @@
  *   - memory/gotchas.md         → gotchas & pitfalls
  *   - memory/patterns.md        → code patterns
  *
- * See apps/desktop/src/main/ai/tools/auto-claude/get-session-context.ts for the TypeScript implementation.
+ * See apps/desktop/src/main/ai/tools/forge/get-session-context.ts for the TypeScript implementation.
  *
- * Tool name: mcp__auto-claude__get_session_context
+ * Tool name: mcp__forge__get_session_context
  */
 
 import * as fs from 'node:fs';
@@ -40,7 +40,7 @@ interface CodebaseMap {
 
 export const getSessionContextTool = Tool.define({
   metadata: {
-    name: 'mcp__auto-claude__get_session_context',
+    name: 'mcp__forge__get_session_context',
     description:
       'Get context from previous sessions including codebase discoveries, gotchas, and patterns. Call this at the start of a session to pick up where the last session left off.',
     permission: ToolPermission.ReadOnly,

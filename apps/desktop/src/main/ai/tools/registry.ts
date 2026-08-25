@@ -45,12 +45,12 @@ export {
 export const BASE_READ_TOOLS = ['Read', 'Glob', 'Grep'] as const;
 export const BASE_WRITE_TOOLS = ['Write', 'Edit', 'Bash'] as const;
 export const WEB_TOOLS = ['WebFetch', 'WebSearch'] as const;
-export const TOOL_UPDATE_SUBTASK_STATUS = 'mcp__auto-claude__update_subtask_status';
-export const TOOL_GET_BUILD_PROGRESS = 'mcp__auto-claude__get_build_progress';
-export const TOOL_RECORD_DISCOVERY = 'mcp__auto-claude__record_discovery';
-export const TOOL_RECORD_GOTCHA = 'mcp__auto-claude__record_gotcha';
-export const TOOL_GET_SESSION_CONTEXT = 'mcp__auto-claude__get_session_context';
-export const TOOL_UPDATE_QA_STATUS = 'mcp__auto-claude__update_qa_status';
+export const TOOL_UPDATE_SUBTASK_STATUS = 'mcp__forge__update_subtask_status';
+export const TOOL_GET_BUILD_PROGRESS = 'mcp__forge__get_build_progress';
+export const TOOL_RECORD_DISCOVERY = 'mcp__forge__record_discovery';
+export const TOOL_RECORD_GOTCHA = 'mcp__forge__record_gotcha';
+export const TOOL_GET_SESSION_CONTEXT = 'mcp__forge__get_session_context';
+export const TOOL_UPDATE_QA_STATUS = 'mcp__forge__update_qa_status';
 
 // =============================================================================
 // MCP Config for dynamic server resolution
@@ -221,7 +221,7 @@ export function getRequiredMcpServers(
     const removals = removeValue.split(',').map((s) => s.trim()).filter(Boolean);
     for (const server of removals) {
       const mapped = mapMcpServerName(server, customServerIds);
-      if (mapped && mapped !== 'auto-claude') {
+      if (mapped && mapped !== 'forge') {
         servers = servers.filter((s) => s !== mapped);
       }
     }

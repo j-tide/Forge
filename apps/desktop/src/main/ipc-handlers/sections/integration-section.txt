@@ -91,8 +91,8 @@
     }
 
     // Generate content with sections
-    let content = `# Auto Claude Framework Environment Variables
-# Managed by Auto Claude UI
+    let content = `# Forge Framework Environment Variables
+# Managed by Forge UI
 
 # Claude Code OAuth Token (REQUIRED)
 CLAUDE_CODE_OAUTH_TOKEN=${existingVars['CLAUDE_CODE_OAUTH_TOKEN'] || ''}
@@ -973,7 +973,7 @@ ${issue.description || 'No description provided.'}
       headers: {
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': `Bearer ${token}`,
-        'User-Agent': 'Auto-Claude-UI',
+        'User-Agent': 'Forge-UI',
         ...options.headers
       }
     });

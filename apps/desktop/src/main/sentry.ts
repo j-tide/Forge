@@ -157,7 +157,7 @@ export function initSentryMain(): void {
   const hasDsn = cachedDsn.length > 0;
 
   if (!hasDsn) {
-    console.log('[Sentry] No Forge Glass Preview DSN configured - error reporting disabled');
+    console.log('[Sentry] No Forge DSN configured - error reporting disabled');
   }
 
   startSentryMain();

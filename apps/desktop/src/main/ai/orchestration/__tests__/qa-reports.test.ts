@@ -207,7 +207,7 @@ describe('generateEscalationReport', () => {
 // ---------------------------------------------------------------------------
 
 describe('generateManualTestPlan', () => {
-  const SPEC_DIR = '/project/.auto-claude/specs/001-feature';
+  const SPEC_DIR = '/project/.forge-glass-preview/specs/001-feature';
   const PROJECT_DIR = '/project';
 
   beforeEach(() => {

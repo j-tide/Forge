@@ -97,7 +97,7 @@ export class ClaudeProfileManager {
     const loadedData = await loadProfileStoreAsync(this.storePath);
     let ignoredExternalStore = false;
     if (loadedData) {
-      // Keep the saved file intact, but do not activate profiles pointing at Aperant,
+      // Keep the saved file intact, but do not activate profiles pointing at an external application,
       // the provider's default directory, or any other external location.
       const hasExternalProfile = loadedData.profiles.some(
         profile => profile.configDir && !isManagedPreviewConfigDir(profile.configDir)
@@ -228,7 +228,7 @@ export class ClaudeProfileManager {
   /**
    * Create default profile data
    *
-   * New profiles use directories owned by Forge Glass Preview to prevent
+   * New profiles use directories owned by Forge to prevent
    * interference with external Claude Code CLI usage.
    * The profile name is used as the directory name (sanitized to lowercase).
    */

@@ -1,6 +1,6 @@
 # IPC Handlers - Modular Architecture
 
-This directory contains the refactored IPC (Inter-Process Communication) handlers for Auto Claude UI, organized into domain-specific modules for better maintainability and code organization.
+This directory contains the refactored IPC (Inter-Process Communication) handlers for Forge UI, organized into domain-specific modules for better maintainability and code organization.
 
 ## Overview
 
@@ -18,7 +18,7 @@ Handles project lifecycle and Python environment management:
 - `PROJECT_UPDATE_SETTINGS` - Update project settings
 - `PROJECT_INITIALIZE` - Initialize .forge-glass-preview directory
 - `PROJECT_CHECK_VERSION` - Check initialization status
-- `project:has-local-source` - Check if project has local auto-claude source
+- `project:has-local-source` - Check if project has local Forge source
 - Python environment initialization and status events
 
 #### `task-handlers.ts` (52KB) - Largest module

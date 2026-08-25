@@ -423,7 +423,7 @@ export function registerProjectHandlers(
     }
   );
 
-  // Check if project has local auto-claude source (is dev project)
+  // Check if project has local Forge source (is dev project)
   ipcMain.handle(
     'project:has-local-source',
     async (_, projectId: string): Promise<IPCResult<boolean>> => {

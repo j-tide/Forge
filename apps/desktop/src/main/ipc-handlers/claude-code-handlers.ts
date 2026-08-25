@@ -1376,7 +1376,7 @@ export function registerClaudeCodeHandlers(): void {
 
         // If authenticated, update the profile with metadata from credentials
         // NOTE: We intentionally do NOT store the OAuth token in the profile.
-        // Storing the token causes AutoClaude to use a stale cached token instead of
+        // Storing the token causes Forge to use a stale cached token instead of
         // letting Claude CLI read fresh tokens from Keychain (which auto-refreshes).
         // By only storing metadata, we ensure getProfileEnv() uses CLAUDE_CONFIG_DIR,
         // which allows Claude CLI's working token refresh mechanism to be used.

@@ -12,7 +12,7 @@
  * 2. Prunes git's internal worktree references
  * 3. Optionally deletes the associated branch
  *
- * Related issue: https://github.com/AndyMik90/Auto-Claude/issues/1539
+  * Tracked files may also match ignore rules; retain safe cleanup behavior.
  */
 
 import { execFileSync } from 'child_process';

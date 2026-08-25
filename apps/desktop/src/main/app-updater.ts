@@ -1,7 +1,7 @@
 /**
- * App updates are unavailable in the Forge Glass Preview build.
+ * App updates are unavailable in the Forge build.
  *
- * The inherited updater targets upstream Aperant releases. Keep its public
+ * The inherited updater targets upstream releases. Keep its public
  * entry points inert until this derivative has its own signed release feed.
  * This also prevents an old renderer or saved beta preference from reaching
  * upstream through the manual update IPC handlers.
@@ -13,7 +13,7 @@ import type { AppUpdateInfo } from '../shared/types';
 
 type UpdateChannel = 'latest' | 'beta';
 
-export const APP_UPDATES_DISABLED_MESSAGE = 'App updates are unavailable in Forge Glass Preview.';
+export const APP_UPDATES_DISABLED_MESSAGE = 'App updates are unavailable in Forge.';
 
 export function setUpdateChannel(_channel: UpdateChannel): void {
   // No update feed is configured for this derivative build.

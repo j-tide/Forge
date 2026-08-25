@@ -330,7 +330,7 @@ export async function generateSubtaskPrompt(config: SubtaskPromptConfig): Promis
     `5. **Commit your changes:**\n` +
     `   \`\`\`bash\n` +
     `   git add . ':!.auto-claude' ':!.forge-glass-preview'\n` +
-    `   git commit -m "auto-claude: ${subtask.id} - ${subtask.description.slice(0, 50)}"\n` +
+    `   git commit -m "forge: ${subtask.id} - ${subtask.description.slice(0, 50)}"\n` +
     `   \`\`\`\n` +
     `6. **Update the plan** - set this subtask's status to "completed" in implementation_plan.json\n\n` +
     `## Quality Checklist\n\n` +

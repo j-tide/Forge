@@ -451,7 +451,7 @@ export interface McpTestConnectionResult {
   responseTime?: number;
 }
 
-// Auto Claude Initialization Types
+// Forge Initialization Types
 export interface AutoBuildVersionInfo {
   isInitialized: boolean;
   updateAvailable: boolean; // Always false - .forge-glass-preview only contains data, no code to update

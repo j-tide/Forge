@@ -3,9 +3,9 @@
  * =====================
  *
  * Updates the QA sign-off status in implementation_plan.json.
- * See apps/desktop/src/main/ai/tools/auto-claude/update-qa-status.ts for the TypeScript implementation.
+ * See apps/desktop/src/main/ai/tools/forge/update-qa-status.ts for the TypeScript implementation.
  *
- * Tool name: mcp__auto-claude__update_qa_status
+ * Tool name: mcp__forge__update_qa_status
  *
  * IMPORTANT: Do NOT write plan["status"] or plan["planStatus"] here.
  * The frontend XState task state machine owns status transitions.
@@ -68,7 +68,7 @@ interface ImplementationPlan {
 
 export const updateQaStatusTool = Tool.define({
   metadata: {
-    name: 'mcp__auto-claude__update_qa_status',
+    name: 'mcp__forge__update_qa_status',
     description:
       'Update the QA sign-off status in implementation_plan.json. Use this after completing a QA review to record the outcome.',
     permission: ToolPermission.Auto,

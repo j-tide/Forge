@@ -207,14 +207,14 @@ function ensureGitignoreEntries(projectPath: string, entries: string[]): void {
       appendContent += '\n';
     }
 
-    appendContent += '\n# Forge Glass Preview data directory\n';
+    appendContent += '\n# Forge data directory\n';
     for (const entry of entriesToAdd) {
       appendContent += entry + '\n';
     }
 
     appendFileSync(gitignorePath, appendContent);
   } else {
-    writeFileSync(gitignorePath, '# Forge Glass Preview data directory\n' + entriesToAdd.join('\n') + '\n', 'utf-8');
+    writeFileSync(gitignorePath, '# Forge data directory\n' + entriesToAdd.join('\n') + '\n', 'utf-8');
   }
 
   debug('Added entries to .gitignore', { entries: entriesToAdd });
@@ -268,7 +268,7 @@ export function isInitialized(projectPath: string): boolean {
   try {
     const stats = lstatSync(dataPath);
     // A link at the data root (or one of its top-level children) could point to
-    // an existing Aperant data directory. Treat it as uninitialized instead.
+    // an external data directory. Treat it as uninitialized instead.
     return stats.isDirectory() && !stats.isSymbolicLink() &&
       !readdirSync(dataPath, { withFileTypes: true }).some(entry => entry.isSymbolicLink());
   } catch {
@@ -277,7 +277,7 @@ export function isInitialized(projectPath: string): boolean {
 }
 
 /**
- * Initialize auto-claude data directory in a project.
+ * Initialize Forge data directory in a project.
  *
  * Creates .forge-glass-preview/ with data directories (specs, ideation, insights, roadmap).
  * The framework code runs from the source repo - only data is stored here.
@@ -298,13 +298,13 @@ export function initializeProject(projectPath: string): InitializationResult {
     };
   }
 
-  // Check git status - Aperant requires git for worktree-based builds
+  // Check git status - Forge requires git for worktree-based builds
   const gitStatus = checkGitStatus(projectPath);
   if (!gitStatus.isGitRepo || !gitStatus.hasCommits) {
     debug('Git check failed', { gitStatus });
     return {
       success: false,
-      error: gitStatus.error || 'Git repository required. Aperant uses git worktrees for isolated builds.'
+      error: gitStatus.error || 'Git repository required. Forge uses git worktrees for isolated builds.'
     };
   }
 
@@ -381,11 +381,10 @@ export function ensureDataDirectories(projectPath: string): InitializationResult
 }
 
 /**
- * Get the auto-claude folder path for a project.
+ * Get the managed project data folder.
  *
- * IMPORTANT: Only .forge-glass-preview/ is considered a valid "installed" auto-claude.
- * The auto-claude/ folder (if it exists) is the SOURCE CODE being developed,
- * not an installation. This allows Aperant to be used to develop itself.
+ * Only .forge-glass-preview/ is a valid data installation. Source-code
+ * folders are never treated as installed project data.
  */
 export function getAutoBuildPath(projectPath: string): string | null {
   const dotAutoBuildPath = path.join(projectPath, PROJECT_DATA_DIR);

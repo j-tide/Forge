@@ -23,7 +23,7 @@ let PLAN_PATH: string;
 // Setup test directories
 function setupTestDirs(): void {
   TEST_DIR = mkdtempSync(path.join(tmpdir(), 'rate-limit-recovery-test-'));
-  TEST_SPEC_DIR = path.join(TEST_DIR, '.auto-claude/specs/001-test-feature');
+  TEST_SPEC_DIR = path.join(TEST_DIR, '.forge-glass-preview/specs/001-test-feature');
   PLAN_PATH = path.join(TEST_SPEC_DIR, 'implementation_plan.json');
   mkdirSync(TEST_SPEC_DIR, { recursive: true });
 }

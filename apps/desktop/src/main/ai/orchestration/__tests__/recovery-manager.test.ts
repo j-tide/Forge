@@ -33,7 +33,7 @@ import type { BuildCheckpoint, FailureType } from '../recovery-manager';
 // ---------------------------------------------------------------------------
 
 const PROJECT_DIR = path.join(path.sep, 'project');
-const SPEC_DIR = path.join(PROJECT_DIR, '.auto-claude', 'specs', '001-feature');
+const SPEC_DIR = path.join(PROJECT_DIR, '.forge-glass-preview', 'specs', '001-feature');
 const MEMORY_DIR = path.join(SPEC_DIR, 'memory');
 const ATTEMPT_HISTORY_PATH = path.join(MEMORY_DIR, 'attempt_history.json');
 

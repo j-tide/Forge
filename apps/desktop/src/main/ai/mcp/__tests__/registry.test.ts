@@ -104,23 +104,29 @@ describe('getMcpServerConfig', () => {
     });
   });
 
-  describe('auto-claude', () => {
-    it('returns auto-claude config with empty specDir as default', () => {
-      const config = getMcpServerConfig('auto-claude', {});
+  describe('forge', () => {
+    it('resolves a stored legacy server ID to Forge', () => {
+      const config = getMcpServerConfig('auto-claude', { specDir: '/project/.forge-glass-preview/specs/001' });
+      expect(config?.id).toBe('forge');
+      expect(config?.name).toBe('Forge');
+    });
+
+    it('returns forge config with empty specDir as default', () => {
+      const config = getMcpServerConfig('forge', {});
       expect(config).not.toBeNull();
-      expect(config?.id).toBe('auto-claude');
+      expect(config?.id).toBe('forge');
     });
 
     it('injects SPEC_DIR into transport env', () => {
-      const config = getMcpServerConfig('auto-claude', { specDir: '/project/.auto-claude/specs/001-feature' });
+      const config = getMcpServerConfig('forge', { specDir: '/project/.forge-glass-preview/specs/001-feature' });
       expect(config?.transport.type).toBe('stdio');
       if (config?.transport.type === 'stdio') {
-        expect(config.transport.env?.SPEC_DIR).toBe('/project/.auto-claude/specs/001-feature');
+        expect(config.transport.env?.SPEC_DIR).toBe('/project/.forge-glass-preview/specs/001-feature');
       }
     });
 
     it('uses node command', () => {
-      const config = getMcpServerConfig('auto-claude', {});
+      const config = getMcpServerConfig('forge', {});
       if (config?.transport.type === 'stdio') {
         expect(config.transport.command).toBe('node');
       }
@@ -174,9 +180,9 @@ describe('resolveMcpServers', () => {
     expect(configs[0].id).toBe('memory');
   });
 
-  it('passes specDir through to auto-claude config', () => {
-    const specDir = '/my-project/.auto-claude/specs/042-auth';
-    const configs = resolveMcpServers(['auto-claude'], { specDir });
+  it('passes specDir through to forge config', () => {
+    const specDir = '/my-project/.forge-glass-preview/specs/042-auth';
+    const configs = resolveMcpServers(['forge'], { specDir });
     expect(configs).toHaveLength(1);
     if (configs[0].transport.type === 'stdio') {
       expect(configs[0].transport.env?.SPEC_DIR).toBe(specDir);

@@ -160,7 +160,7 @@ export async function validateAndNormalizeJsonFile<T>(
   if (result.valid && result.data) {
     // Write back the coerced data so downstream consumers get canonical field names.
     // Use a secure temp file + atomic rename to avoid TOCTOU races on the target path.
-    const tempDir = await mkdtemp(join(tmpdir(), 'auto-claude-normalize-'));
+    const tempDir = await mkdtemp(join(tmpdir(), 'forge-normalize-'));
     const tempFile = join(tempDir, 'output.json');
     try {
       await writeFile(tempFile, JSON.stringify(result.data, null, 2));
@@ -338,7 +338,7 @@ export async function repairJsonWithLLM<T>(
         const coerced = schema.safeParse(result.output);
         if (coerced.success) {
           // Use a secure temp file + atomic rename to avoid TOCTOU races
-          const tempDir = await mkdtemp(join(tmpdir(), 'auto-claude-repair-'));
+          const tempDir = await mkdtemp(join(tmpdir(), 'forge-repair-'));
           const tempFile = join(tempDir, 'output.json');
           try {
             await writeFile(tempFile, JSON.stringify(coerced.data, null, 2));

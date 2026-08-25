@@ -26,7 +26,7 @@ export function isManagedPreviewConfigDir(configDir: string): boolean {
     return false;
   }
 
-  // An existing symlink or junction could redirect a new profile into Aperant data.
+  // An existing symlink or junction could redirect a new profile into Forge data.
   for (const candidate of [previewRoot, profilesRoot, profileDir]) {
     try {
       if (lstatSync(candidate).isSymbolicLink()) return false;

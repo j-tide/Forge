@@ -18,7 +18,7 @@ import {
   stopPeriodicUpdates
 } from '../app-updater';
 
-describe('Forge Glass Preview app update boundary', () => {
+describe('Forge app update boundary', () => {
   afterEach(() => vi.useRealTimers());
 
   it('does not schedule update checks or expose an installable update', async () => {

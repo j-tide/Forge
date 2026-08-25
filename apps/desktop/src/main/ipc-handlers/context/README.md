@@ -1,6 +1,6 @@
 # Context Handlers Module
 
-This directory contains the refactored context-related IPC handlers for the Auto Claude UI application. The handlers manage project context, memory systems (both file-based and Graphiti/LadybugDB), and project index operations.
+This directory contains the refactored context-related IPC handlers for the Forge UI application. The handlers manage project context, memory systems (both file-based and Graphiti/LadybugDB), and project index operations.
 
 ## Architecture
 
@@ -135,8 +135,8 @@ test('parseEnvFile handles quotes correctly', () => {
 // Example: Testing memory status
 import { buildMemoryStatus } from './memory-status-handlers';
 
-test('buildMemoryStatus returns correct status', () => {
-  const status = buildMemoryStatus('/path/to/project', 'auto-claude');
+test('buildMemoryStatus returns correct status', async () => {
+  const status = await buildMemoryStatus();
   expect(status).toHaveProperty('enabled');
   expect(status).toHaveProperty('available');
 });
@@ -152,7 +152,7 @@ test('buildMemoryStatus returns correct status', () => {
 
 ## Related Documentation
 
-- [Project Memory System](../../../../auto-claude/memory.py)
-- [Graphiti Memory Integration](../../../../auto-claude/graphiti_memory.py)
+- [Project Memory System](../../ai/memory/index.ts)
+- [Memory Service](../../ai/memory/memory-service.ts)
 - [LadybugDB Integration](../../ladybug-service.ts)
 - [IPC Channels](../../../shared/constants.ts)

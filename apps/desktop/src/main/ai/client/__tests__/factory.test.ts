@@ -82,7 +82,7 @@ const FAKE_MODEL = { type: 'language-model', modelId: 'mock-model-id' };
 const baseToolContext = {
   cwd: '/project',
   projectDir: '/project',
-  specDir: '/project/.auto-claude/specs/001',
+  specDir: '/project/.forge-glass-preview/specs/001',
   securityProfile: 'standard' as const,
 } as unknown as ToolContext;
 

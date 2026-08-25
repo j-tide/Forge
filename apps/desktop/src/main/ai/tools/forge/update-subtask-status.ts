@@ -3,9 +3,9 @@
  * ==========================
  *
  * Updates the status of a subtask in implementation_plan.json.
- * See apps/desktop/src/main/ai/tools/auto-claude/update-subtask-status.ts for the TypeScript implementation.
+ * See apps/desktop/src/main/ai/tools/forge/update-subtask-status.ts for the TypeScript implementation.
  *
- * Tool name: mcp__auto-claude__update_subtask_status
+ * Tool name: mcp__forge__update_subtask_status
  */
 
 import * as fs from 'node:fs';
@@ -82,7 +82,7 @@ function updateSubtaskInPlan(
 
 export const updateSubtaskStatusTool = Tool.define({
   metadata: {
-    name: 'mcp__auto-claude__update_subtask_status',
+    name: 'mcp__forge__update_subtask_status',
     description:
       'Update the status of a subtask in implementation_plan.json. Use this when completing or starting a subtask.',
     permission: ToolPermission.Auto,

@@ -100,19 +100,19 @@ const PUPPETEER_SERVER: McpServerConfig = {
 };
 
 /**
- * Auto-Claude MCP server - custom build management tools.
+ * Forge MCP server - custom build management tools.
  * Used by planner, coder, and QA agents for build progress tracking.
  */
-function createAutoClaudeServer(specDir: string): McpServerConfig {
+function createForgeServer(specDir: string): McpServerConfig {
   return {
-    id: 'auto-claude',
-    name: 'Aperant',
+    id: 'forge',
+    name: 'Forge',
     description: 'Build management tools (progress tracking, session context)',
     enabledByDefault: true,
     transport: {
       type: 'stdio',
       command: 'node',
-      args: ['auto-claude-mcp-server.js'],
+      args: ['forge-mcp-server.js'],
       env: { SPEC_DIR: specDir },
     },
   };
@@ -124,7 +124,7 @@ function createAutoClaudeServer(specDir: string): McpServerConfig {
 
 /** Options for resolving MCP server configurations */
 export interface McpRegistryOptions {
-  /** Spec directory for auto-claude MCP server */
+  /** Spec directory for Forge MCP server */
   specDir?: string;
   /** Memory MCP server URL (if enabled) */
   memoryMcpUrl?: string;
@@ -175,9 +175,11 @@ export function getMcpServerConfig(
     case 'puppeteer':
       return PUPPETEER_SERVER;
 
-    case 'auto-claude': {
+    // Resolve stored configurations to the current identity without rewriting user data.
+    case 'auto-claude':
+    case 'forge': {
       const specDir = options.specDir ?? '';
-      return createAutoClaudeServer(specDir);
+      return createForgeServer(specDir);
     }
 
     default:

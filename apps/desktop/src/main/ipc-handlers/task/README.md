@@ -59,7 +59,7 @@ Manages git worktree operations:
 - **TASK_LIST_WORKTREES** - List all project worktrees
 
 Features:
-- Per-spec worktree architecture (`.worktrees/{spec-name}/`)
+- Per-spec worktree architecture (`.forge-glass-preview/worktrees/tasks/{spec-name}/`)
 - Smart merge with AI-powered conflict resolution
 - Merge preview with conflict analysis
 - Stage-only merge option (--no-commit)
@@ -131,15 +131,15 @@ registerTaskHandlers(agentManager, pythonEnvManager, getMainWindow);
 - `../../task-log-service` - Log service
 - `../../title-generator` - AI title generation
 - `../../python-env-manager` - Python environment
-- `../../auto-claude-updater` - Source paths
+- `../../updater/path-resolver` - Source paths
 - `../../rate-limit-detector` - Profile environment
 
 ## Architecture Notes
 
 ### Worktree Architecture
-Each task spec has its own isolated worktree at `.worktrees/{spec-name}/`:
+Each task spec has its own isolated worktree at `.forge-glass-preview/worktrees/tasks/{spec-name}/`:
 - Enables safe parallel development
-- Each spec has dedicated branch: `auto-claude/{spec-name}`
+- Each spec has dedicated branch: `forge-glass-preview/{spec-name}`
 - Branches stay local until user explicitly pushes
 - User reviews in worktree before merging to main
 

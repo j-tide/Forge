@@ -37,10 +37,10 @@ function getDataDirectoryWarning(projectPath: string, storedDataPath?: string): 
     return `${PROJECT_DATA_DIR} exists but is unsafe (for example, a symbolic link). Preview project data was not opened.`;
   }
   if (storedDataPath && storedDataPath !== PROJECT_DATA_DIR) {
-    return `This project was previously linked to ${storedDataPath}. Forge Glass Preview does not import that data. Initialize ${PROJECT_DATA_DIR} to use this project.`;
+    return `This project was previously linked to ${storedDataPath}. Forge does not import that data. Initialize ${PROJECT_DATA_DIR} to use this project.`;
   }
   if (existsSync(path.join(projectPath, '.auto-claude'))) {
-    return `Aperant data exists in .auto-claude. Forge Glass Preview does not read or change it; initialize ${PROJECT_DATA_DIR} separately.`;
+    return `Other application data exists in .auto-claude. Forge does not read or change it; initialize ${PROJECT_DATA_DIR} separately.`;
   }
   return undefined;
 }
@@ -81,7 +81,7 @@ export class ProjectStore {
           const projectPath = ensureAbsolutePath(p.path);
           return {
             ...p,
-            // A saved preview record may still name Aperant's directory. Resolve
+            // A saved preview record may still name a legacy data directory. Resolve
             // only the preview namespace; never import or migrate the old data.
             path: projectPath,
             autoBuildPath: getAutoBuildPath(projectPath) || '',

@@ -492,15 +492,15 @@ Adapt verification steps based on project type (from `project_index.json`):
 
 ### Security Scanning (High+ Risk)
 
-For high or critical risk, add security steps:
+For high or critical risk, add security steps using tools that actually exist in the project. Forge performs its own built-in secret scanning; this remains required and must not be replaced by the diff-integrity check below. Do not invent a Python CLI path. The following example combines a diff-integrity check with an installed Python security scanner:
 
 ```json
 {
   "verification_steps": [
     {
-      "name": "Secrets Scan",
-      "command": "python auto-claude/scan_secrets.py --all-files --json",
-      "expected_outcome": "No secrets detected",
+      "name": "Diff Integrity",
+      "command": "git diff --check",
+      "expected_outcome": "No whitespace errors or conflict markers",
       "type": "security",
       "required": true,
       "blocking": true
@@ -570,8 +570,7 @@ Include parallelism analysis, verification strategy, and QA configuration in the
       ],
       "recommended_workers": 2,
       "speedup_estimate": "1.5x faster than sequential"
-    },
-    "startup_command": "source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 001 --parallel 2"
+    }
   },
   "verification_strategy": {
     "risk_level": "medium",
@@ -785,12 +784,8 @@ Parallelism Analysis:
 
 === STARTUP COMMAND ===
 
-To continue building this spec, run:
-
-  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec [SPEC_NUMBER] --parallel [RECOMMENDED_WORKERS]
-
-Example:
-  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 001 --parallel 2
+To continue building this spec, resume the task from the Forge desktop task controls.
+The orchestration layer selects workers from the saved task configuration; there is no bundled Python run.py CLI.
 
 === END SESSION 1 ===
 ```

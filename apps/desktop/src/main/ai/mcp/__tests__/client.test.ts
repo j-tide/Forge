@@ -195,10 +195,10 @@ describe('createMcpClientsForAgent', () => {
   });
 
   it('creates clients for each resolved server config', async () => {
-    mockGetRequiredMcpServers.mockReturnValueOnce(['context7', 'auto-claude']);
+    mockGetRequiredMcpServers.mockReturnValueOnce(['context7', 'forge']);
     mockResolveMcpServers.mockReturnValueOnce([
       { ...stdioConfig, id: 'context7' },
-      { ...stdioConfig, id: 'auto-claude' },
+      { ...stdioConfig, id: 'forge' },
     ]);
     // Two separate mock instances for the two servers
     mockCreateMCPClient
@@ -209,7 +209,7 @@ describe('createMcpClientsForAgent', () => {
 
     expect(clients).toHaveLength(2);
     expect(clients[0].serverId).toBe('context7');
-    expect(clients[1].serverId).toBe('auto-claude');
+    expect(clients[1].serverId).toBe('forge');
   });
 
   it('skips failed connections without throwing', async () => {

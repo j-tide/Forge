@@ -3,9 +3,9 @@
  * =======================
  *
  * Reports current build progress from implementation_plan.json.
- * See apps/desktop/src/main/ai/tools/auto-claude/get-build-progress.ts for the TypeScript implementation.
+ * See apps/desktop/src/main/ai/tools/forge/get-build-progress.ts for the TypeScript implementation.
  *
- * Tool name: mcp__auto-claude__get_build_progress
+ * Tool name: mcp__forge__get_build_progress
  */
 
 import * as fs from 'node:fs';
@@ -50,7 +50,7 @@ interface ImplementationPlan {
 
 export const getBuildProgressTool = Tool.define({
   metadata: {
-    name: 'mcp__auto-claude__get_build_progress',
+    name: 'mcp__forge__get_build_progress',
     description:
       'Get the current build progress including completed subtasks, pending subtasks, and next subtask to work on.',
     permission: ToolPermission.ReadOnly,

@@ -9,7 +9,7 @@ afterEach(() => {
   process.env = { ...originalEnv };
 });
 
-describe('Forge Glass Preview global paths', () => {
+describe('Forge global paths', () => {
   it('uses a separate XDG namespace for app config, data, and cache', () => {
     process.env.XDG_CONFIG_HOME = '/tmp/preview-config-test';
     process.env.XDG_DATA_HOME = '/tmp/preview-data-test';
@@ -20,7 +20,7 @@ describe('Forge Glass Preview global paths', () => {
     expect(getAppCacheDir()).toBe(join(process.env.XDG_CACHE_HOME, 'forge-glass-preview'));
   });
 
-  it('does not use Aperant memories when no XDG sandbox is active', () => {
+  it('does not share external application memories when no XDG sandbox is active', () => {
     delete process.env.XDG_DATA_HOME;
     delete process.env.APPIMAGE;
     delete process.env.SNAP;

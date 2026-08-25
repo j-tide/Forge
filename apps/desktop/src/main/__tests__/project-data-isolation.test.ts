@@ -23,8 +23,8 @@ afterEach(() => {
   rmSync(fixtureRoot, { recursive: true, force: true });
 });
 
-describe('Forge Glass Preview project data isolation', () => {
-  it('opens a real Git project alongside Aperant without reading or changing its tasks', async () => {
+describe('Forge project data isolation', () => {
+  it('opens a real Git project alongside Forge without reading or changing its tasks', async () => {
     const projectPath = path.join(fixtureRoot, 'shared-project');
     mkdirSync(projectPath);
     execFileSync('git', ['init'], { cwd: projectPath });
@@ -79,7 +79,7 @@ describe('Forge Glass Preview project data isolation', () => {
     expect(readFileSync(upstreamPlan, 'utf8')).toBe(upstreamBytes);
   });
 
-  it('rejects a preview data directory linked to Aperant data', async () => {
+  it('rejects a preview data directory linked to Forge data', async () => {
     const projectPath = path.join(fixtureRoot, 'linked-project');
     const upstreamPath = path.join(projectPath, '.auto-claude');
     mkdirSync(upstreamPath, { recursive: true });
@@ -98,7 +98,7 @@ describe('Forge Glass Preview project data isolation', () => {
     const upstreamSpec = path.join(projectPath, '.auto-claude', 'specs', '001-existing');
     mkdirSync(upstreamSpec, { recursive: true });
     const upstreamPlan = path.join(upstreamSpec, 'implementation_plan.json');
-    writeFileSync(upstreamPlan, JSON.stringify({ feature: 'Existing Aperant task', status: 'pending', phases: [] }));
+    writeFileSync(upstreamPlan, JSON.stringify({ feature: 'Existing Forge task', status: 'pending', phases: [] }));
     const upstreamBytes = readFileSync(upstreamPlan);
 
     const storeDir = path.join(previewUserData, 'store');

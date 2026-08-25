@@ -3,9 +3,9 @@
  * ==================
  *
  * Records a gotcha or pitfall to specDir/memory/gotchas.md.
- * See apps/desktop/src/main/ai/tools/auto-claude/record-gotcha.ts for the TypeScript implementation.
+ * See apps/desktop/src/main/ai/tools/forge/record-gotcha.ts for the TypeScript implementation.
  *
- * Tool name: mcp__auto-claude__record_gotcha
+ * Tool name: mcp__forge__record_gotcha
  */
 
 import * as fs from 'node:fs';
@@ -33,7 +33,7 @@ const inputSchema = z.object({
 
 export const recordGotchaTool = Tool.define({
   metadata: {
-    name: 'mcp__auto-claude__record_gotcha',
+    name: 'mcp__forge__record_gotcha',
     description:
       'Record a gotcha or pitfall to avoid. Use this when you encounter something that future sessions should know about to avoid repeating mistakes.',
     permission: ToolPermission.Auto,

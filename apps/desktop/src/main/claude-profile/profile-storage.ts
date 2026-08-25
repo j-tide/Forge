@@ -32,7 +32,7 @@ export interface ProfileStoreData {
   autoSwitch?: ClaudeAutoSwitchSettings;
   /** Unified priority order for both OAuth and API profiles */
   accountPriorityOrder?: string[];
-  /** Historical metadata retained for stores created before the preview fork. */
+  /** Historical metadata retained for stores created before this preview version. */
   migratedProfileIds?: string[];
 }
 

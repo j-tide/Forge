@@ -510,7 +510,7 @@ export class AgentProcessManager {
   }
 
   /**
-   * Load environment variables from auto-claude .env file
+   * Load environment variables from Forge .env file
    */
   loadAutoBuildEnv(): Record<string, string> {
     if (!this.autoBuildSourcePath) {

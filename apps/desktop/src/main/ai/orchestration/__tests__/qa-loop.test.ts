@@ -49,7 +49,7 @@ import type { SessionResult } from '../../session/types';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const SPEC_DIR = '/project/.auto-claude/specs/001-feature';
+const SPEC_DIR = '/project/.forge-glass-preview/specs/001-feature';
 const PROJECT_DIR = '/project';
 
 function completedPlan(qaStatus?: 'approved' | 'rejected' | 'unknown') {

@@ -48,7 +48,7 @@ export const GIT_ENV_VARS_TO_CLEAR = [
  * variables that can interfere with worktree operations.
  *
  * Also sets HUSKY=0 to disable the user's pre-commit hooks when
- * Auto-Claude manages commits, preventing double-hook execution
+ * Forge manages commits, preventing double-hook execution
  * and potential conflicts.
  *
  * @param baseEnv - Optional base environment to start from. Defaults to process.env
@@ -164,7 +164,7 @@ export function detectWorktreeBranch(
     }).trim();
 
     // SECURITY: Use strict exact-match validation (not prefix matching) to prevent
-    // accidentally deleting a different task's auto-claude branch. When git rev-parse
+    // accidentally deleting a different task's Forge branch. When git rev-parse
     // returns an unexpected branch, we MUST fall back to the expected pattern rather
     // than risking deletion of the wrong branch. This is critical for data safety.
     if (detectedBranch === expectedBranch) {

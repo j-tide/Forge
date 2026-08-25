@@ -166,7 +166,7 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
         return { success: false, error: nativeText('ipc.projectNotFound') };
       }
       if (project.autoBuildPath !== PROJECT_DATA_DIR || !isInitialized(project.path)) {
-        return { success: false, error: nativeText('ipcTemplate.initializeValue0BeforeCreatingPreviewTasksAperantDataIsUntouched', { value0: String(PROJECT_DATA_DIR) }) };
+        return { success: false, error: nativeText('ipcTemplate.initializeValue0BeforeCreatingTasksExistingDataIsUntouched', { value0: String(PROJECT_DATA_DIR) }) };
       }
 
       // Auto-generate title if empty using Claude AI
@@ -349,7 +349,7 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
    *
    * Note: Worktree cleanup uses manual deletion instead of `git worktree remove --force`
    * because the latter fails on Windows when the directory contains untracked files
-   * (node_modules, build artifacts, etc.). See: https://github.com/AndyMik90/Auto-Claude/issues/1539
+    * Tracked files may also match ignore rules; retain safe cleanup behavior.
    */
   ipcMain.handle(
     IPC_CHANNELS.TASK_DELETE,

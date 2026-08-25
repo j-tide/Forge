@@ -74,7 +74,7 @@ describe('validateWorktreeBranch', () => {
   });
 
   describe('security: corrupted worktree scenarios (issue #1479)', () => {
-    it('does not accept an upstream Aperant task branch', () => {
+    it('does not accept an upstream Forge task branch', () => {
       const result = validateWorktreeBranch('auto-claude/001-upstream-task', expectedBranch);
       expect(result.branchToDelete).toBe(expectedBranch);
       expect(result.usedFallback).toBe(true);
@@ -149,7 +149,7 @@ describe('validateWorktreeBranch', () => {
     });
 
     it('should handle branch that starts with auto-claude but is malformed', () => {
-      // "auto-claude" without a slash should still be rejected
+      // "Forge" without a slash should still be rejected
       const result = validateWorktreeBranch('auto-claude', expectedBranch);
       expect(result.branchToDelete).toBe(expectedBranch);
       expect(result.usedFallback).toBe(true);

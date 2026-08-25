@@ -1,12 +1,12 @@
 /**
- * Auto-Claude Custom Tools
+ * Forge Custom Tools
  * ========================
  *
- * Barrel export for all auto-claude builtin tools.
+ * Barrel export for all Forge builtin tools.
  * These replace the Python tools_pkg/tools/* implementations.
  *
- * Tool names follow the mcp__auto-claude__* convention to match the
- * TOOL_* constants in registry.ts and AGENT_CONFIGS autoClaudeTools arrays.
+ * Tool names follow the mcp__forge__* convention to match the
+ * TOOL_* constants in registry.ts and AGENT_CONFIGS forgeTools arrays.
  */
 
 export { updateSubtaskStatusTool } from './update-subtask-status';

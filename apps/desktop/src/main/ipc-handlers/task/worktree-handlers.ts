@@ -36,7 +36,7 @@ export const GIT_BRANCH_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9._/-]*[a-zA-Z0-9]$|^[a-zA
  *
  * Why `forge-glass-preview/` prefix is considered safe:
  * - All task worktrees use branches named `forge-glass-preview/{specId}`
- * - This pattern is controlled by Auto-Claude, not user input
+ * - This pattern is controlled by Forge, not user input
  * - If detected branch matches this pattern, it's a valid task branch
  * - If it doesn't match (e.g., `main`, `develop`, `feature/xxx`), it's likely
  *   the main project's branch being incorrectly detected from a corrupted worktree
@@ -67,7 +67,7 @@ export function validateWorktreeBranch(
     };
   }
 
-  // Matches auto-claude pattern with valid specId (not just "auto-claude/")
+  // Matches Forge pattern with valid specId (not just "Forge/")
   // The specId must be non-empty for this to be a valid task branch
   if (detectedBranch.startsWith('forge-glass-preview/') && detectedBranch.length > 'forge-glass-preview/'.length) {
     return {
@@ -2520,7 +2520,7 @@ export function registerWorktreeHandlers(
    *
    * Note: Uses the shared cleanupWorktree utility which handles Windows-specific issues
    * where `git worktree remove --force` fails when the directory contains untracked files.
-   * See: https://github.com/AndyMik90/Auto-Claude/issues/1539
+    * Tracked files may also match ignore rules; retain safe cleanup behavior.
    */
   ipcMain.handle(
     IPC_CHANNELS.TASK_WORKTREE_DISCARD,
@@ -3036,7 +3036,7 @@ export function registerWorktreeHandlers(
         const taskBaseBranch = getTaskBaseBranch(specDir);
         const baseBranch = options?.targetBranch || taskBaseBranch || 'main';
         const branchName = `forge-glass-preview/${task.specId}`;
-        const prTitle = options?.title || `auto-claude: ${task.specId}`;
+        const prTitle = options?.title || `forge: ${task.specId}`;
 
         if (taskBaseBranch) {
           debug('Using stored base branch:', taskBaseBranch);

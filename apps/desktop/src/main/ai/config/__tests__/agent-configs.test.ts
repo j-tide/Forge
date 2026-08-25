@@ -70,7 +70,7 @@ describe('AGENT_CONFIGS', () => {
     for (const config of Object.values(AGENT_CONFIGS)) {
       expect(Array.isArray(config.tools)).toBe(true);
       expect(Array.isArray(config.mcpServers)).toBe(true);
-      expect(Array.isArray(config.autoClaudeTools)).toBe(true);
+      expect(Array.isArray(config.forgeTools)).toBe(true);
     }
   });
 
@@ -87,11 +87,11 @@ describe('AGENT_CONFIGS', () => {
     expect(config.thinkingDefault).toBe('low');
   });
 
-  it('should configure planner with memory and auto-claude MCP', () => {
+  it('should configure planner with memory and forge MCP', () => {
     const config = AGENT_CONFIGS.planner;
     expect(config.mcpServers).toContain('context7');
     expect(config.mcpServers).toContain('memory');
-    expect(config.mcpServers).toContain('auto-claude');
+    expect(config.mcpServers).toContain('forge');
     expect(config.mcpServersOptional).toContain('linear');
     expect(config.thinkingDefault).toBe('high');
   });
@@ -197,7 +197,8 @@ describe('mapMcpServerName', () => {
     expect(mapMcpServerName('graphiti')).toBe('memory');
     expect(mapMcpServerName('graphiti-memory')).toBe('memory');
     expect(mapMcpServerName('linear')).toBe('linear');
-    expect(mapMcpServerName('auto-claude')).toBe('auto-claude');
+    expect(mapMcpServerName('forge')).toBe('forge');
+    expect(mapMcpServerName('auto-claude')).toBe('forge');
   });
 
   it('should return null for unknown names', () => {
@@ -291,12 +292,12 @@ describe('getRequiredMcpServers', () => {
     expect(servers).toContain('context7');
   });
 
-  it('should support per-agent MCP removals but never remove auto-claude', () => {
+  it('should support per-agent MCP removals but never remove forge', () => {
     const servers = getRequiredMcpServers('coder', {
       memoryEnabled: true,
-      agentMcpRemove: 'auto-claude,memory',
+      agentMcpRemove: 'forge,memory',
     });
-    expect(servers).toContain('auto-claude');
+    expect(servers).toContain('forge');
     expect(servers).not.toContain('memory');
   });
 });

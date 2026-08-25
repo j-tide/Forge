@@ -19,7 +19,7 @@ vi.mock('../settings-utils', () => ({ readSettingsFile: () => ({}) }));
 
 import { getSentryEnvForSubprocess, initSentryMain, setSentryEnabled } from '../sentry';
 
-describe('Forge Glass Preview error reporting', () => {
+describe('Forge error reporting', () => {
   beforeEach(() => {
     sentryInit.mockClear();
     sentryClose.mockClear();

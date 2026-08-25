@@ -161,7 +161,7 @@ describe('generateCommitMessage', () => {
   // ---------------------------------------------------------------------------
 
   it('reads spec.md for title when spec directory exists', async () => {
-    // Spec directory at .auto-claude/specs/001-add-feature
+    // Spec directory at .forge-glass-preview/specs/001-add-feature
     mockExistsSync.mockImplementation((p: string) => {
       const normalized = p.replace(/\\/g, '/');
       if (normalized.includes('specs/001-add-feature')) return true;

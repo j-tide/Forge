@@ -71,7 +71,7 @@ export function getAppCacheDir(): string {
 
 /**
  * Get the memories storage directory
- * This is where graph databases created by Forge Glass Preview are stored.
+ * This is where graph databases created by Forge are stored.
  */
 export function getMemoriesDir(): string {
   const defaultPath = path.join(os.homedir(), PREVIEW_HOME_DIRECTORY_NAME, 'memories');

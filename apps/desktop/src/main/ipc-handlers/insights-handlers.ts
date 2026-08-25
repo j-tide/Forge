@@ -134,7 +134,7 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
       }
 
       if (!project.autoBuildPath) {
-        return { success: false, error: nativeText('ipc.aperantNotInitializedForThisProject') };
+        return { success: false, error: nativeText('ipc.forgeNotInitializedForThisProject') };
       }
 
       try {

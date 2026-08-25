@@ -17,7 +17,7 @@ import { isManagedPreviewConfigDir } from '../utils/config-path-validator';
 export const DEFAULT_CLAUDE_CONFIG_DIR = join(homedir(), '.claude');
 
 /**
- * Forge Glass Preview's own Claude profiles directory.
+ * Forge's own Claude profiles directory.
  */
 export const CLAUDE_PROFILES_DIR = join(homedir(), PREVIEW_CLAUDE_PROFILES_RELATIVE_DIR);
 

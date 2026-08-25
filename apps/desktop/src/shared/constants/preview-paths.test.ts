@@ -5,8 +5,8 @@ import {
   PREVIEW_CLAUDE_PROFILES_TILDE_DIR
 } from './preview-paths';
 
-describe('Forge Glass Preview profile paths', () => {
-  it('keeps generated profiles outside Aperant and provider CLI directories', () => {
+describe('Forge profile paths', () => {
+  it('keeps generated profiles outside Forge and provider CLI directories', () => {
     expect(PREVIEW_CLAUDE_PROFILES_TILDE_DIR).toBe('~/.forge-glass-preview/claude-profiles');
     expect(getPreviewClaudeProfileConfigDir('Work Account')).toBe('~/.forge-glass-preview/claude-profiles/work-account');
     expect(getPreviewClaudeProfileConfigDir('Work / Account')).toBe('~/.forge-glass-preview/claude-profiles/work-account');

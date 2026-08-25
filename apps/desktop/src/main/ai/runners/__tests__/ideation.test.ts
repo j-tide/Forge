@@ -71,7 +71,7 @@ function makeStream(parts: Array<Record<string, unknown>>) {
 function baseConfig(overrides: Partial<IdeationConfig> = {}): IdeationConfig {
   return {
     projectDir: '/project',
-    outputDir: '/project/.auto-claude/ideation',
+    outputDir: '/project/.forge-glass-preview/ideation',
     promptsDir: '/app/prompts',
     ideationType: 'code_improvements',
     ...overrides,
@@ -285,7 +285,7 @@ describe('runIdeation', () => {
     mockStreamText.mockReturnValue(makeStream([]));
 
     await runIdeation(
-      baseConfig({ projectDir: '/my/project', outputDir: '/my/project/.auto-claude/ideation' }),
+      baseConfig({ projectDir: '/my/project', outputDir: '/my/project/.forge-glass-preview/ideation' }),
     );
 
     // The system prompt passed to streamText should contain the project dir

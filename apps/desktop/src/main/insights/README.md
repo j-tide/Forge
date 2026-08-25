@@ -12,15 +12,15 @@ insights-service.ts (186 lines)
 ├── paths.ts (46 lines) - Path Resolution Utilities
 ├── session-storage.ts (212 lines) - Filesystem Persistence
 ├── session-manager.ts (151 lines) - Session Lifecycle Management
-└── insights-executor.ts (267 lines) - Python Process Execution
+└── insights-executor.ts - TypeScript Runner Execution
 ```
 
 ## Module Responsibilities
 
 ### InsightsConfig (`config.ts`)
-- Manages Python and auto-claude source path configuration
-- Detects auto-claude installation automatically
-- Loads environment variables from auto-claude .env file
+- Manages Forge source path configuration
+- Detects Forge installation automatically
+- Loads environment variables from Forge .env file
 - Provides complete process environment with profile support
 
 ### InsightsPaths (`paths.ts`)
@@ -42,7 +42,7 @@ insights-service.ts (186 lines)
 - Manages current session pointer
 
 ### InsightsExecutor (`insights-executor.ts`)
-- Spawns and manages Python insights_runner.py process
+- Runs the TypeScript insights query through the Vercel AI SDK with cancellable sessions
 - Handles streaming output parsing
 - Detects and emits tool usage events
 - Detects and handles rate limiting

@@ -19,10 +19,10 @@ let TEST_PROJECT_DIR: string;
 
 // Setup test environment
 function setupTestEnvironment(): void {
-  TEST_DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'auto-claude-ui-e2e-'));
+  TEST_DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'forge-ui-e2e-'));
   TEST_PROJECT_DIR = path.join(TEST_DATA_DIR, 'test-project');
   mkdirSync(TEST_PROJECT_DIR, { recursive: true });
-  mkdirSync(path.join(TEST_PROJECT_DIR, 'auto-claude', 'specs'), { recursive: true });
+  mkdirSync(path.join(TEST_PROJECT_DIR, '.forge-glass-preview', 'specs'), { recursive: true });
 }
 
 // Cleanup test environment
@@ -34,7 +34,7 @@ function cleanupTestEnvironment(): void {
 
 // Helper to create a test spec
 function createTestSpec(specId: string, status: 'pending' | 'in_progress' | 'completed' = 'pending'): void {
-  const specDir = path.join(TEST_PROJECT_DIR, 'auto-claude', 'specs', specId);
+  const specDir = path.join(TEST_PROJECT_DIR, '.forge-glass-preview', 'specs', specId);
   mkdirSync(specDir, { recursive: true });
 
   const chunkStatus = status === 'completed' ? 'completed' : status === 'in_progress' ? 'in_progress' : 'pending';
@@ -198,7 +198,7 @@ test.describe('E2E Test Infrastructure', () => {
     setupTestEnvironment();
     createTestSpec('001-test-spec');
 
-    const specDir = path.join(TEST_PROJECT_DIR, 'auto-claude', 'specs', '001-test-spec');
+    const specDir = path.join(TEST_PROJECT_DIR, '.forge-glass-preview', 'specs', '001-test-spec');
     expect(existsSync(specDir)).toBe(true);
     expect(existsSync(path.join(specDir, 'implementation_plan.json'))).toBe(true);
     expect(existsSync(path.join(specDir, 'spec.md'))).toBe(true);
@@ -213,7 +213,7 @@ test.describe('E2E Test Infrastructure', () => {
     createTestSpec('002-in-progress', 'in_progress');
     createTestSpec('003-completed', 'completed');
 
-    const specsDir = path.join(TEST_PROJECT_DIR, 'auto-claude', 'specs');
+    const specsDir = path.join(TEST_PROJECT_DIR, '.forge-glass-preview', 'specs');
     expect(existsSync(path.join(specsDir, '001-pending'))).toBe(true);
     expect(existsSync(path.join(specsDir, '002-in-progress'))).toBe(true);
     expect(existsSync(path.join(specsDir, '003-completed'))).toBe(true);
@@ -231,8 +231,8 @@ test.describe('E2E Flow Verification (Mock-based)', () => {
     const projectPath = TEST_PROJECT_DIR;
     expect(existsSync(projectPath)).toBe(true);
 
-    // Check for auto-claude directory detection
-    const autoBuildPath = path.join(projectPath, 'auto-claude');
+    // Check for Forge project directory detection
+    const autoBuildPath = path.join(projectPath, '.forge-glass-preview');
     expect(existsSync(autoBuildPath)).toBe(true);
 
     cleanupTestEnvironment();
@@ -243,7 +243,7 @@ test.describe('E2E Flow Verification (Mock-based)', () => {
 
     // Simulate what would happen when creating a task
     const specId = '001-new-task';
-    const specDir = path.join(TEST_PROJECT_DIR, 'auto-claude', 'specs', specId);
+    const specDir = path.join(TEST_PROJECT_DIR, '.forge-glass-preview', 'specs', specId);
     mkdirSync(specDir, { recursive: true });
 
     // Write spec file
@@ -262,7 +262,7 @@ test.describe('E2E Flow Verification (Mock-based)', () => {
     // Simulate status update when task starts
     const planPath = path.join(
       TEST_PROJECT_DIR,
-      'auto-claude',
+      '.forge-glass-preview',
       'specs',
       '001-task',
       'implementation_plan.json'
@@ -287,7 +287,7 @@ test.describe('E2E Flow Verification (Mock-based)', () => {
     // Simulate approval
     const qaReportPath = path.join(
       TEST_PROJECT_DIR,
-      'auto-claude',
+      '.forge-glass-preview',
       'specs',
       '001-review',
       'qa_report.md'
@@ -310,7 +310,7 @@ test.describe('E2E Flow Verification (Mock-based)', () => {
     // Simulate rejection
     const fixRequestPath = path.join(
       TEST_PROJECT_DIR,
-      'auto-claude',
+      '.forge-glass-preview',
       'specs',
       '001-reject',
       'QA_FIX_REQUEST.md'
