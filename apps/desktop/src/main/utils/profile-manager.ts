@@ -1,32 +1,24 @@
 /**
  * Profile Manager - File I/O for API profiles
  *
- * Handles loading and saving profiles.json from the auto-claude directory.
+ * Handles loading and saving profiles.json from the Forge directory.
  * Provides graceful handling for missing or corrupted files.
  */
 
 import { promises as fs } from 'fs';
 import path from 'path';
-import { app } from 'electron';
 import type { ProfilesFile } from '../../shared/types/profile';
+import { readProfilesFile, getProfilesFilePath } from '../services/profile/profile-paths';
 
-/**
- * Get the path to profiles.json in the auto-claude directory
- */
-export function getProfilesFilePath(): string {
-  const userDataPath = app.getPath('userData');
-  return path.join(userDataPath, 'auto-claude', 'profiles.json');
-}
+export { getProfilesFilePath } from '../services/profile/profile-paths';
 
 /**
  * Load profiles.json from disk
  * Returns default empty profiles file if file doesn't exist or is corrupted
  */
 export async function loadProfilesFile(): Promise<ProfilesFile> {
-  const filePath = getProfilesFilePath();
-
   try {
-    const content = await fs.readFile(filePath, 'utf-8');
+    const content = await readProfilesFile();
     const data = JSON.parse(content) as ProfilesFile;
     return data;
   } catch (_error) {
@@ -41,7 +33,7 @@ export async function loadProfilesFile(): Promise<ProfilesFile> {
 
 /**
  * Save profiles.json to disk
- * Creates the auto-claude directory if it doesn't exist
+ * Creates the Forge directory if it doesn't exist
  */
 export async function saveProfilesFile(data: ProfilesFile): Promise<void> {
   const filePath = getProfilesFilePath();
@@ -60,7 +52,8 @@ export async function saveProfilesFile(data: ProfilesFile): Promise<void> {
 
   // Write file with formatted JSON
   const content = JSON.stringify(data, null, 2);
-  await fs.writeFile(filePath, content, 'utf-8');
+  await fs.writeFile(filePath, content, { encoding: 'utf-8', mode: 0o600 });
+  await fs.chmod(filePath, 0o600);
 }
 
 /**

@@ -1,25 +1,19 @@
 /**
  * Profile Manager - File I/O for API profiles
  *
- * Handles loading and saving profiles.json from the auto-claude directory.
+ * Handles loading and saving profiles.json from the Forge directory.
  * Provides graceful handling for missing or corrupted files.
  * Uses file locking to prevent race conditions in concurrent operations.
  */
 
 import { promises as fs } from 'fs';
 import path from 'path';
-import { app } from 'electron';
 // @ts-expect-error - no types available for proper-lockfile
 import * as lockfile from 'proper-lockfile';
 import type { APIProfile, ProfilesFile } from '@shared/types/profile';
+import { getProfilesFilePath, readProfilesFile } from './profile-paths';
 
-/**
- * Get the path to profiles.json in the auto-claude directory
- */
-export function getProfilesFilePath(): string {
-  const userDataPath = app.getPath('userData');
-  return path.join(userDataPath, 'auto-claude', 'profiles.json');
-}
+export { getProfilesFilePath } from './profile-paths';
 
 /**
  * Check if a value is a valid profile object with required fields
@@ -89,10 +83,8 @@ function getDefaultProfilesFile(): ProfilesFile {
  * Returns default empty profiles file if file doesn't exist or is corrupted
  */
 export async function loadProfilesFile(): Promise<ProfilesFile> {
-  const filePath = getProfilesFilePath();
-
   try {
-    const content = await fs.readFile(filePath, 'utf-8');
+    const content = await readProfilesFile();
     const data = JSON.parse(content);
 
     // Validate parsed data structure
@@ -110,7 +102,7 @@ export async function loadProfilesFile(): Promise<ProfilesFile> {
 
 /**
  * Save profiles.json to disk
- * Creates the auto-claude directory if it doesn't exist
+ * Creates the Forge directory if it doesn't exist
  * Ensures secure file permissions (user read/write only)
  */
 export async function saveProfilesFile(data: ProfilesFile): Promise<void> {
@@ -123,7 +115,7 @@ export async function saveProfilesFile(data: ProfilesFile): Promise<void> {
 
   // Write file with formatted JSON
   const content = JSON.stringify(data, null, 2);
-  await fs.writeFile(filePath, content, 'utf-8');
+  await fs.writeFile(filePath, content, { encoding: 'utf-8', mode: 0o600 });
 
   // Set secure file permissions (user read/write only - 0600)
   const permissionsValid = await validateFilePermissions(filePath);
@@ -183,9 +175,11 @@ export async function withProfilesLock<T>(fn: () => Promise<T>): Promise<T> {
     await fs.access(filePath);
   } catch {
     // File doesn't exist, create it atomically with exclusive flag
-    const defaultData = getDefaultProfilesFile();
+    // Preserve validated legacy profiles before acquiring a lock at the new path.
+    // The previous file remains intact; concurrent creators use exclusive writes.
+    const initialData = await loadProfilesFile();
     try {
-      await fs.writeFile(filePath, JSON.stringify(defaultData, null, 2), { encoding: 'utf-8', flag: 'wx' });
+      await fs.writeFile(filePath, JSON.stringify(initialData, null, 2), { encoding: 'utf-8', flag: 'wx', mode: 0o600 });
     } catch (err: unknown) {
       // If file was created by another process (race condition), that's fine
       if ((err as NodeJS.ErrnoException).code !== 'EEXIST') {
