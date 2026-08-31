@@ -1,0 +1,24 @@
+{
+  "mode": "built-in imagegen",
+  "createdAt": "2026-09-28",
+  "transparentBackground": true,
+  "prompts": [
+    {
+      "asset": "forge-mark.png",
+      "kind": "generation",
+      "prompt": "Create one final original logo mark for Forge, a serious AI software development workbench. Asset: transparent-background symbol to use at 24 px in a desktop sidebar and as the basis of an app icon. Only the symbol, no text, no letters written separately, no mockup or presentation board. Design a distinctive geometric capital F constructed from two precisely interlocking, broad, angled forged-metal strokes; a small deliberate diagonal negative-space cut suggests a spark/join, while the silhouette clearly reads as F at tiny sizes. Compact, balanced, unmistakable silhouette, slightly forward-leaning, smooth clean vector-like edges, broad uninterrupted strokes, no tiny lines or decorative dots. Premium restrained industrial software identity. Main symbol deep graphite/navy with subtle cool steel-blue tonal accents, matte flat finish, absolutely no neon, rainbow, 3D bevels, glow, drop shadow, or glass background. Symbol centered and generously fills the canvas, equal safe margins. Truly transparent background. Do not imitate existing brands or use Aperant/Anthropic logos. This is a production brand asset, not a concept sheet."
+    },
+    {
+      "asset": "forge-app-icon.png",
+      "kind": "edit",
+      "reference": "forge-mark.png",
+      "prompt": "Use the referenced transparent Forge F mark as an exact, immutable logo shape. Create its final macOS desktop application icon. Preserve the F geometry and diagonal cut exactly; no redesign of the symbol, no text or extra symbols. Place this same graphite/navy mark centered, optically balanced and roughly 62 percent of the tile height, on a silver-white / pale icy-blue frosted-glass rounded square. Keep the mark dark, matte and very readable. The tile has softly rounded macOS-like corners, subtle inner highlight and soft silver-blue ambient light, restrained depth; crisp and premium, no excessive bevels, no neon, no rainbow refraction, no intense shine, no exaggerated glow or drop shadow. Straight-on icon only, no perspective, no mockup, no multiple panels. True transparent background outside the rounded square with generous equal safe margins, no shadow extending outside the icon. Small-size silhouette must remain clear. This icon will be used as a real application bundle icon."
+    },
+    {
+      "asset": "forge-app-icon.png",
+      "kind": "edge-refinement",
+      "selected": true,
+      "prompt": "Clean this application icon for production. Keep the existing F logo, its exact silhouette and diagonal cut, placement, scale and interior colors unchanged. Keep the silver-white and pale blue frosted rounded-square tile. Change ONLY the tile's outer edge and transparent exterior: a perfectly smooth crisp rounded-square boundary with gentle antialiasing; no white fringing, fuzz, speckles, stray pixels, dots, glow, shadow, or paint marks anywhere outside the tile. All pixels outside the tile must be fully transparent. Equal generous transparent safe margins. Keep a restrained, clean vector-like perimeter rather than a photographic glass rim. Single icon only. No text, no mockup."
+    }
+  ]
+}

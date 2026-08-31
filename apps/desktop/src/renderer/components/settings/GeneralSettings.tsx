@@ -132,7 +132,7 @@ export function GeneralSettings({ settings, onSettingsChange, section }: General
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="auto-claude">{t('general.agentFrameworkAutoClaude')}</SelectItem>
+                  <SelectItem value={settings.agentFramework === 'auto-claude' ? 'auto-claude' : 'forge'}>{t('general.agentFrameworkForge')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -257,11 +257,11 @@ export function GeneralSettings({ settings, onSettingsChange, section }: General
           )}
         </div>
         <div className="space-y-3">
-          <Label htmlFor="autoBuildPath" className="text-sm font-medium text-foreground">{t('general.autoClaudePath')}</Label>
-          <p className="text-sm text-muted-foreground">{t('general.autoClaudePathDescription')}</p>
+          <Label htmlFor="autoBuildPath" className="text-sm font-medium text-foreground">{t('general.forgePath')}</Label>
+          <p className="text-sm text-muted-foreground">{t('general.forgePathDescription')}</p>
           <Input
             id="autoBuildPath"
-            placeholder={t('general.autoClaudePathPlaceholder')}
+            placeholder={t('general.forgePathPlaceholder')}
             className="w-full max-w-lg"
             value={settings.autoBuildPath || ''}
             onChange={(e) => onSettingsChange({ ...settings, autoBuildPath: e.target.value })}

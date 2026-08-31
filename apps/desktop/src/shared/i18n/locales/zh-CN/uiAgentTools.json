@@ -127,10 +127,6 @@
       "name": "记忆",
       "description": "用于跨会话上下文的知识图谱。需要 GRAPHITI_MCP_URL 环境变量。"
     },
-    "auto-claude": {
-      "name": "Aperant 工具",
-      "description": "跟踪开发进度、会话上下文，并记录发现和注意事项"
-    },
     "linear": {
       "name": "Linear",
       "description": "通过 Linear API 管理项目。需要 LINEAR_API_KEY 环境变量。"
@@ -142,6 +138,10 @@
     "puppeteer": {
       "name": "Puppeteer MCP",
       "description": "为非 Electron 的网页前端提供浏览器自动化"
+    },
+    "forge": {
+      "name": "Forge 工具",
+      "description": "跟踪开发进度、会话上下文，并记录发现和注意事项"
     }
   }
 }

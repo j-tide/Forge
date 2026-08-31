@@ -1,0 +1,40 @@
+{
+  "brand": "Forge",
+  "createdAt": "2026-09-28",
+  "generation": "built-in imagegen",
+  "sourceAssets": {
+    "forge-mark.png": {
+      "sha256": "4ab0001d0571051e87888aa50d7d458eb5d369f88cccc9192b768d169ef8a1fa",
+      "size": [
+        1254,
+        1254
+      ]
+    },
+    "forge-app-icon.png": {
+      "sha256": "8afef56b29b7294a76be5354286819a5e4fef5207038b3ddb76cc8a0eea3217e",
+      "size": [
+        1254,
+        1254
+      ]
+    }
+  },
+  "conversion": "Pillow resize/format conversion; iconutil ICNS; template tray preserves mark alpha",
+  "outputs": [
+    "icon.png",
+    "icon-256.png",
+    "icons/16x16.png",
+    "icons/32x32.png",
+    "icons/48x48.png",
+    "icons/64x64.png",
+    "icons/128x128.png",
+    "icons/256x256.png",
+    "icons/512x512.png",
+    "branding/exports/forge-192.png",
+    "branding/exports/forge-512.png",
+    "branding/exports/tray.png",
+    "branding/exports/trayTemplate.png",
+    "branding/exports/trayTemplate@2x.png",
+    "icon.ico",
+    "icon.icns"
+  ]
+}

@@ -407,7 +407,7 @@ export async function updateProjectSettings(
 }
 
 /**
- * Check auto-claude version status for a project
+ * Check Forge version status for a project
  */
 export async function checkProjectVersion(
   projectId: string
@@ -424,7 +424,7 @@ export async function checkProjectVersion(
 }
 
 /**
- * Initialize auto-claude in a project
+ * Initialize Forge in a project
  */
 export async function initializeProject(
   projectId: string

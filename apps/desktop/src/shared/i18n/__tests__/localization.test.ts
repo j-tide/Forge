@@ -158,7 +158,7 @@ describe('localization CLI failure behavior', () => {
   it('warns about unchanged English sentences without treating brands or commands as missing translations', () => {
     const content = {
       title: 'This sentence still needs translation.',
-      brand: 'Forge Glass Preview',
+      brand: 'Forge',
       command: 'npm run build',
       provider: 'Azure OpenAI',
       path: './example project/README.md'

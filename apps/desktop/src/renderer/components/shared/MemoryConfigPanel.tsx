@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Database, Info, ExternalLink } from 'lucide-react';
+import { Database, Info } from 'lucide-react';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { Separator } from '../ui/separator';
@@ -301,15 +301,6 @@ export function MemoryConfigPanel({ config, onChange, disabled = false }: Memory
                 <p className="text-sm text-muted-foreground">
                   {t('memory.memoryInfo')}
                 </p>
-                <a
-                  href="https://docs.auto-claude.dev/memory"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 mt-2"
-                >
-                  {t('memory.learnMore')}
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
               </div>
             </div>
           </div>

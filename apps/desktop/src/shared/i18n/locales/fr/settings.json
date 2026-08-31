@@ -7,7 +7,7 @@
   "sections": {
     "appearance": {
       "title": "Apparence",
-      "description": "Personnalisez l'interface de Forge Glass Preview"
+      "description": "Personnalisez l'interface de Forge"
     },
     "display": {
       "title": "Affichage",
@@ -209,7 +209,7 @@
     "otherAgentSettingsDescription": "Options de configuration supplémentaires de l'agent",
     "agentFramework": "Framework de l'agent",
     "agentFrameworkDescription": "Le framework de codage utilisé pour les tâches autonomes",
-    "agentFrameworkAutoClaude": "Aperant",
+    "agentFrameworkForge": "Forge",
     "aiTerminalNaming": "Nommage IA des terminaux",
     "aiTerminalNamingDescription": "Nommer automatiquement les terminaux en fonction des commandes (utilise le modèle de nommage IA)",
     "featureModelSettings": "Paramètres du modèle de fonctionnalité",
@@ -244,15 +244,15 @@
     "sourceBundled": "Intégré",
     "sourceFallback": "Valeur par défaut",
     "notDetected": "Non détecté",
-    "autoClaudePath": "Chemin Aperant",
-    "autoClaudePathDescription": "Chemin relatif vers le répertoire auto-claude dans les projets",
-    "autoClaudePathPlaceholder": "auto-claude (par défaut)",
+    "forgePath": "Chemin Forge",
+    "forgePathDescription": "Chemin relatif vers le répertoire de données Forge dans les projets",
+    "forgePathPlaceholder": ".forge-glass-preview (par défaut)",
     "autoNameTerminals": "Nommer automatiquement les terminaux",
     "autoNameTerminalsDescription": "Utiliser l'IA pour générer des noms descriptifs pour les onglets de terminal en fonction de leur activité"
   },
   "theme": {
     "title": "Apparence",
-    "description": "Personnalisez l'interface de Forge Glass Preview",
+    "description": "Personnalisez l'interface de Forge",
     "mode": "Mode",
     "modeDescription": "Choisir entre les thèmes clair et sombre",
     "light": "Clair",
@@ -304,10 +304,10 @@
     }
   },
   "updates": {
-    "title": "À propos de Forge Glass Preview",
+    "title": "À propos de Forge",
     "description": "Identité et version de la préversion",
     "previewDescription": "Version de la préversion installée",
-    "previewUnavailable": "Les mises à jour automatiques ne sont pas disponibles dans Forge Glass Preview. Installez les prochaines versions manuellement.",
+    "previewUnavailable": "Les mises à jour automatiques ne sont pas disponibles dans Forge. Installez les prochaines versions manuellement.",
     "previewOrigin": "Version dérivée indépendante d'Aperant v2.8.0-beta.6, sous licence AGPL-3.0.",
     "appUpdateReady": "Mise à jour de l'app prête",
     "newVersion": "Nouvelle version",
@@ -325,7 +325,7 @@
     "unableToCheck": "Impossible de vérifier les mises à jour",
     "checkForUpdates": "Vérifier les mises à jour",
     "autoUpdateProjects": "Mise à jour automatique des projets",
-    "autoUpdateProjectsDescription": "Mettre à jour automatiquement Aperant dans les projets quand une nouvelle version est disponible",
+    "autoUpdateProjectsDescription": "Mettre à jour automatiquement Forge dans les projets quand une nouvelle version est disponible",
     "betaUpdates": "Mises à jour bêta",
     "betaUpdatesDescription": "Recevoir les versions bêta pré-release avec de nouvelles fonctionnalités (peut être moins stable)",
     "stableDowngradeAvailable": "Version stable disponible",
@@ -333,8 +333,9 @@
     "stableVersion": "Version stable",
     "downloadStableVersion": "Télécharger la version stable",
     "readOnlyVolumeTitle": "Impossible d'installer depuis l'image disque",
-    "readOnlyVolumeDescription": "Aperant s'exécute depuis une image disque en lecture seule (DMG). Veuillez glisser l'application dans votre dossier Applications et la relancer depuis cet emplacement pour installer les mises à jour.",
-    "downloadError": "Échec du téléchargement de la mise à jour"
+    "readOnlyVolumeDescription": "Forge s'exécute depuis une image disque en lecture seule (DMG). Veuillez glisser l'application dans votre dossier Applications et la relancer depuis cet emplacement pour installer les mises à jour.",
+    "downloadError": "Échec du téléchargement de la mise à jour",
+    "sourceAndLicense": "Source et licence"
   },
   "notifications": {
     "title": "Notifications",
@@ -691,8 +692,8 @@
       "typeAPI": "API",
       "payPerUse": "Paiement à l'usage",
       "needsAuth": "Non authentifié",
-      "duplicateUsage": "Doublon d\u2019utilisation",
-      "duplicateUsageHint": "Ces profils OAuth partagent des valeurs d\u2019utilisation identiques. Vérifiez qu\u2019ils correspondent bien à des comptes différents si ce n\u2019est pas attendu.",
+      "duplicateUsage": "Doublon d’utilisation",
+      "duplicateUsageHint": "Ces profils OAuth partagent des valeurs d’utilisation identiques. Vérifiez qu’ils correspondent bien à des comptes différents si ce n’est pas attendu.",
       "needsReauth": "Réauth requise",
       "needsReauthHint": "Le token de rafraîchissement de ce profil est invalide. Cliquez pour vous réauthentifier.",
       "sessionUsage": "Utilisation de session (fenêtre de 5 heures)",
@@ -858,8 +859,8 @@
     "description": "Accédez aux logs et informations de débogage pour le dépannage",
     "errorReporting": {
       "label": "Rapports d'erreurs anonymes",
-      "description": "Rapports de crash facultatifs pour Forge Glass Preview, si cette version dispose d'un service de collecte configuré.",
-      "previewDescription": "Rapports de crash facultatifs pour Forge Glass Preview, si cette version dispose d'un service de collecte configuré."
+      "description": "Rapports de crash facultatifs pour Forge, si cette version dispose d'un service de collecte configuré.",
+      "previewDescription": "Rapports de crash facultatifs pour Forge, si cette version dispose d'un service de collecte configuré."
     },
     "openLogsFolder": "Ouvrir le dossier des logs",
     "copyDebugInfo": "Copier les infos de débogage",
@@ -889,7 +890,7 @@
     "noProjectSelected": "Aucun projet sélectionné",
     "noProjectSelectedDescription": "Sélectionnez un projet dans le menu déroulant pour voir et configurer les serveurs MCP.",
     "projectNotInitialized": "Projet non initialisé",
-    "projectNotInitializedDescription": "Initialisez Aperant pour ce projet pour configurer les serveurs MCP.",
+    "projectNotInitializedDescription": "Initialisez Forge pour ce projet pour configurer les serveurs MCP.",
     "browserAutomation": "Automatisation du navigateur (agents QA uniquement)",
     "alwaysEnabled": "toujours activé",
     "addServer": "Ajouter un serveur",
@@ -925,8 +926,8 @@
         "name": "Puppeteer",
         "description": "Automatisation du navigateur web pour les tests"
       },
-      "autoClaude": {
-        "name": "Outils Aperant",
+      "forge": {
+        "name": "Outils Forge",
         "description": "Suivi de la progression du build"
       }
     },

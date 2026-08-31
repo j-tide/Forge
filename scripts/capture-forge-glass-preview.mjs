@@ -71,7 +71,7 @@ for (const theme of ['light', 'dark']) {
       dark: document.documentElement.classList.contains('dark'),
       projectCount: document.querySelectorAll('.forge-glass-welcome-project').length
     }));
-    if (state.title !== 'Forge Glass Preview' || state.theme !== 'forge-glass' || state.dark !== (theme === 'dark') || state.projectCount !== 0) {
+    if (state.title !== 'Forge' || state.theme !== 'forge-glass' || state.dark !== (theme === 'dark') || state.projectCount !== 0) {
       throw new Error(`Unexpected Electron UI state for ${theme}: ${JSON.stringify(state)}`);
     }
     process.stdout.write(`${theme}: ${JSON.stringify(state)}\n`);

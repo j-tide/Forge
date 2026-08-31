@@ -1729,7 +1729,7 @@ body {
 [data-ui-scale="200"] { font-size: 32px; }
 
 /* Forge Glass: silver-blue surfaces from forge_glass_v1.1/design/tokens.json.
-   Scoped to this palette so existing Aperant themes keep their own appearance. */
+   Scoped to this palette so existing Forge themes keep their own appearance. */
 :root[data-theme="forge-glass"] {
   color-scheme: light;
   --background: #e7edf7;

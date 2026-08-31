@@ -7,7 +7,7 @@
     "authFailed": "认证失败。",
     "title": "需要登录",
     "profileLabel": "账户",
-    "description": "请重新登录 Claude 账户，以继续使用 Forge Glass Preview。",
+    "description": "请重新登录 Claude 账户，以继续使用 Forge。",
     "taskAffected": "受影响的任务",
     "technicalDetails": "技术详情",
     "goToSettings": "打开设置"

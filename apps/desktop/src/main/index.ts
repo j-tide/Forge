@@ -114,8 +114,9 @@ function getIconPath(): string {
 
   let iconName: string;
   if (isMacOS()) {
-    // Use PNG in dev mode (works better), ICNS in production
-    iconName = is.dev ? 'icon-256.png' : 'icon.icns';
+    // Runtime nativeImage reads the same PNG in dev and packaged mode.
+    // The bundle separately embeds icon.icns for Finder and system notifications.
+    iconName = 'icon-256.png';
   } else if (isWindows()) {
     iconName = 'icon.ico';
   } else {
@@ -383,7 +384,7 @@ app.whenReady().then(() => {
   // Initialize agent manager
   agentManager = new AgentManager();
 
-  // Load settings and configure agent manager with Python and auto-claude paths
+  // Load settings and configure agent manager with Python and Forge paths
   // Uses EAFP pattern (try/catch) instead of LBYL (existsSync) to avoid TOCTOU race conditions
   const settingsPath = join(app.getPath('userData'), 'settings.json');
   try {
@@ -404,7 +405,7 @@ app.whenReady().then(() => {
 
       if (!plannerExists) {
         // Migration: Try to fix stale paths from old project structure
-        // Old structure: /path/to/project/auto-claude or apps/backend
+        // Legacy backend source directories need mapping to bundled prompts
         // New structure: /path/to/project/apps/desktop/prompts
         let migrated = false;
         const possibleCorrections = [
@@ -567,7 +568,7 @@ app.whenReady().then(() => {
       console.warn('[main] ========================================');
     }
 
-    console.warn('[main] App auto-updater disabled for Forge Glass Preview');
+    console.warn('[main] App auto-updater disabled for Forge');
   }
 
   // macOS: re-create window when dock icon is clicked

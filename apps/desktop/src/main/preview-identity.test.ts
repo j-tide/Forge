@@ -29,11 +29,11 @@ describe('preview app identity', () => {
     vi.unstubAllEnvs();
   });
 
-  it('uses a separate default app-data directory', async () => {
+  it('brands the app as Forge while preserving its separate default app-data directory', async () => {
     await import('./preview-identity');
 
     const expected = join('/isolated-app-data', 'Forge Glass Preview');
-    expect(mockApp.setName).toHaveBeenCalledWith('Forge Glass Preview');
+    expect(mockApp.setName).toHaveBeenCalledWith('Forge');
     expect(mockMkdirSync).toHaveBeenCalledWith(expected, { recursive: true });
     expect(mockApp.setPath).toHaveBeenCalledWith('userData', expected);
   });

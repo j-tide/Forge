@@ -30,7 +30,7 @@
     }
   },
   "app": {
-    "initializeFailed": "Failed to initialize Forge Glass Preview. Please try again.",
+    "initializeFailed": "Failed to initialize Forge. Please try again.",
     "unexpectedError": "An unexpected error occurred"
   },
   "ipc": {

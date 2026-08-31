@@ -19,7 +19,6 @@ import {
   Sparkles,
   GitBranch,
   HelpCircle,
-  Heart,
   Wrench,
   PanelLeft,
   PanelLeftClose
@@ -56,6 +55,7 @@ import {
 import { AddProjectModal } from './AddProjectModal';
 import { GitSetupModal } from './GitSetupModal';
 import { RateLimitIndicator } from './RateLimitIndicator';
+import { ForgeBrand } from './ForgeBrand';
 
 import { UpdateBanner } from './UpdateBanner';
 import type { Project, GitStatus } from '../../shared/types';
@@ -357,9 +357,11 @@ export function Sidebar({
           "forge-glass-sidebar-header electron-drag flex h-14 items-center pt-6 transition-all duration-300",
           isCollapsed ? "justify-center px-2" : "px-4"
         )}>
-          {!isCollapsed && (
-            <span className="forge-glass-sidebar-brand electron-no-drag text-lg font-bold text-primary">Forge</span>
-          )}
+          <ForgeBrand
+            showName={!isCollapsed}
+            size={24}
+            className="forge-glass-sidebar-brand electron-no-drag text-lg"
+          />
         </div>
 
         <Separator className="mt-2" />
@@ -455,27 +457,6 @@ export function Sidebar({
             </Tooltip>
           </div>
 
-          {/* Sponsor link */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => window.open('https://github.com/sponsors/AndyMik90', '_blank')}
-                className={cn(
-                  'flex w-full items-center text-xs transition-colors',
-                  'text-muted-foreground hover:text-foreground',
-                  isCollapsed ? 'justify-center' : 'gap-1.5 px-3'
-                )}
-              >
-                <Heart className="h-3.5 w-3.5" />
-                {!isCollapsed && <span>{t('actions.sponsor')}</span>}
-              </button>
-            </TooltipTrigger>
-            {isCollapsed && (
-              <TooltipContent side="right">{t('actions.sponsor')}</TooltipContent>
-            )}
-          </Tooltip>
-
           {/* New Task button */}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -502,11 +483,11 @@ export function Sidebar({
         </div>
       </div>
 
-      {/* Local information for this independently modified preview. */}
+      {/* Application information and license notice. */}
       <Dialog open={showHelpDialog} onOpenChange={setShowHelpDialog}>
         <DialogContent className="forge-glass-about-dialog">
           <DialogHeader>
-            <DialogTitle>Forge Glass Preview</DialogTitle>
+            <DialogTitle><ForgeBrand /></DialogTitle>
             <DialogDescription>{t('welcome:hero.subtitle')}</DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
@@ -520,7 +501,7 @@ export function Sidebar({
         </DialogContent>
       </Dialog>
 
-      {/* Initialize Auto Claude Dialog */}
+      {/* Initialize Forge Dialog */}
       <Dialog open={showInitDialog} onOpenChange={(open) => {
         // Only allow closing if user manually closes (not during initialization)
         if (!open && !isInitializing) {

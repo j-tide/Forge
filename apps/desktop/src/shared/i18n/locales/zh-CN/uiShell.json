@@ -1,6 +1,6 @@
 {
   "about": {
-    "provenance": "Forge Glass Preview 基于 Aperant v2.8.0-beta.6 独立修改，遵循 AGPL-3.0 许可证。"
+    "provenance": "Forge 基于 Aperant v2.8.0-beta.6 独立修改，遵循 AGPL-3.0 许可证。"
   },
   "project": {
     "createFolderFailed": "无法创建项目文件夹"

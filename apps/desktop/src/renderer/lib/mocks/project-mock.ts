@@ -12,7 +12,7 @@ export const projectMock = {
       id: `mock-${Date.now()}`,
       name: projectPath.split('/').pop() || 'new-project',
       path: projectPath,
-      autoBuildPath: `${projectPath}/auto-claude`,
+      autoBuildPath: `${projectPath}/.forge-glass-preview`,
       settings: DEFAULT_PROJECT_SETTINGS,
       createdAt: new Date(),
       updatedAt: new Date()

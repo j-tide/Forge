@@ -23,15 +23,14 @@
     "help": "关于 Forge",
     "newTask": "新建任务",
     "collapseSidebar": "收起侧栏",
-    "expandSidebar": "展开侧栏",
-    "sponsor": "支持 Aperant 上游项目"
+    "expandSidebar": "展开侧栏"
   },
   "tooltips": {
     "settings": "应用设置",
     "help": "关于 Forge"
   },
   "messages": {
-    "initializeToCreateTasks": "请先初始化 Aperant，再创建任务"
+    "initializeToCreateTasks": "请先初始化 Forge，再创建任务"
   },
   "updateBanner": {
     "title": "有可用更新",

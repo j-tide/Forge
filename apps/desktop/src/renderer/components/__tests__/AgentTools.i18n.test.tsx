@@ -41,7 +41,7 @@ describe('AgentTools language presentation', () => {
     fireEvent.click(screen.getByRole('button', { name: /规划者/ }));
     expect(screen.getByText('可用工具')).toBeDefined();
     expect(screen.getByText('读取文件').getAttribute('title')).toBe('Read');
-    expect(screen.getByText('Aperant 工具')).toBeDefined();
+    expect(screen.getByText('Forge 工具')).toBeDefined();
     expect(screen.getByText('Context7')).toBeDefined();
   });
 
@@ -52,7 +52,7 @@ describe('AgentTools language presentation', () => {
     expect(screen.getByText('MCP Server Overview')).toBeDefined();
     expect(screen.getByRole('heading', { name: 'Planner' })).toBeDefined();
     expect(screen.getByText('Available Tools')).toBeDefined();
-    expect(screen.getByText('Aperant Tools')).toBeDefined();
+    expect(screen.getByText('Forge Tools')).toBeDefined();
     expect(screen.getByText('Read').getAttribute('title')).toBe('Read');
     expect(screen.queryByText('规划者')).toBeNull();
   });

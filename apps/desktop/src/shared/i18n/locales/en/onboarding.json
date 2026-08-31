@@ -1,11 +1,11 @@
 {
   "wizard": {
     "title": "Setup Wizard",
-    "description": "Configure Forge Glass Preview in a few simple steps",
+    "description": "Configure Forge in a few simple steps",
     "helpText": "This wizard will help you set up your environment in just a few steps. You can configure your Claude OAuth token, set up memory features, and create your first task."
   },
   "welcome": {
-    "title": "Welcome to Forge Glass Preview",
+    "title": "Welcome to Forge",
     "subtitle": "Explore the desktop task workflow in this preview",
     "getStarted": "Get Started",
     "skip": "Skip Setup",
@@ -134,7 +134,7 @@
     "whatsNext": "What's Next?",
     "createTask": {
       "title": "Create a Task",
-      "description": "Start by creating your first task in Forge Glass Preview.",
+      "description": "Start by creating your first task in Forge.",
       "action": "Open Task Creator"
     },
     "customizeSettings": {
@@ -207,19 +207,19 @@
   },
   "devtools": {
     "title": "Developer Tools",
-    "description": "Choose your preferred IDE, terminal, and CLI for working with Forge Glass Preview worktrees",
+    "description": "Choose your preferred IDE, terminal, and CLI for working with Forge worktrees",
     "detecting": "Detecting installed tools...",
     "detectAgain": "Detect Again",
     "whyConfigure": "Why configure these?",
     "whyConfigureDescription": "You can open task worktrees directly in your preferred IDE or terminal to test and review changes.",
     "ide": {
       "label": "Preferred IDE",
-      "description": "Forge Glass Preview will open worktrees in this editor",
+      "description": "Forge will open worktrees in this editor",
       "customPath": "Custom IDE Path"
     },
     "terminal": {
       "label": "Preferred Terminal",
-      "description": "Forge Glass Preview will open terminal sessions here",
+      "description": "Forge will open terminal sessions here",
       "customPath": "Custom Terminal Path"
     },
     "cli": {

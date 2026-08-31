@@ -45,7 +45,7 @@
   "mainBranchDescription": "创建任务工作区的基准分支。所有新任务都将从此分支创建。",
   "loadingBranches": "正在加载分支…",
   "selectBranch": "选择主分支",
-  "branchPreview": "任务分支（例如 <branch>auto-claude/task-name</branch>）将基于 <base>{{name}}</base> 创建。",
+  "branchPreview": "任务分支（例如 <branch>forge/task-name</branch>）将基于 <base>{{name}}</base> 创建。",
   "projectConfig": "项目专属配置",
   "projectConfigDescription": "此 GitHub 仓库仅为 <project>{{name}}</project> 配置。每个项目都可以使用独立的 GitHub 仓库。",
   "githubAuthentication": "GitHub 身份验证",

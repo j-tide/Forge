@@ -127,10 +127,6 @@
       "name": "Memory",
       "description": "Knowledge graph for cross-session context. Requires GRAPHITI_MCP_URL env var."
     },
-    "auto-claude": {
-      "name": "Aperant Tools",
-      "description": "Build progress tracking, session context, discoveries & gotchas recording"
-    },
     "linear": {
       "name": "Linear",
       "description": "Project management via Linear API. Requires LINEAR_API_KEY env var."
@@ -142,6 +138,10 @@
     "puppeteer": {
       "name": "Puppeteer MCP",
       "description": "Web browser automation for non-Electron web frontends."
+    },
+    "forge": {
+      "name": "Forge Tools",
+      "description": "Build progress tracking, session context, discoveries & gotchas recording"
     }
   }
 }

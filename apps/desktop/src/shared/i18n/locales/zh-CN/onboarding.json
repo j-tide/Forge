@@ -1,11 +1,11 @@
 {
   "wizard": {
     "title": "设置向导",
-    "description": "通过几个简单步骤配置 Forge Glass Preview",
+    "description": "通过几个简单步骤配置 Forge",
     "helpText": "本向导会帮助你配置环境。你可以设置 Claude OAuth 令牌、启用记忆功能，并创建第一个任务。"
   },
   "welcome": {
-    "title": "欢迎使用 Forge Glass Preview",
+    "title": "欢迎使用 Forge",
     "subtitle": "在此预览版中体验桌面任务工作流",
     "getStarted": "开始设置",
     "skip": "跳过设置",
@@ -134,7 +134,7 @@
     "whatsNext": "接下来",
     "createTask": {
       "title": "创建任务",
-      "description": "在 Forge Glass Preview 中创建第一个任务。",
+      "description": "在 Forge 中创建第一个任务。",
       "action": "打开任务编辑器"
     },
     "customizeSettings": {
@@ -207,19 +207,19 @@
   },
   "devtools": {
     "title": "开发工具",
-    "description": "选择用于 Forge Glass Preview 工作树的编辑器、终端和命令行工具",
+    "description": "选择用于 Forge 工作树的编辑器、终端和命令行工具",
     "detecting": "正在检测已安装的工具…",
     "detectAgain": "重新检测",
     "whyConfigure": "为什么需要配置？",
     "whyConfigureDescription": "你可以直接在常用编辑器或终端中打开任务工作树，测试和审查修改。",
     "ide": {
       "label": "首选编辑器",
-      "description": "Forge Glass Preview 将使用此编辑器打开工作树",
+      "description": "Forge 将使用此编辑器打开工作树",
       "customPath": "自定义编辑器路径"
     },
     "terminal": {
       "label": "首选终端",
-      "description": "Forge Glass Preview 将在此终端中打开会话",
+      "description": "Forge 将在此终端中打开会话",
       "customPath": "自定义终端路径"
     },
     "cli": {

@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
+import { ForgeMark } from './ForgeBrand';
 import type { Project } from '../../shared/types';
 
 interface WelcomeScreenProps {
@@ -58,6 +59,7 @@ export function WelcomeScreen({
       <div className="w-full max-w-3xl">
         {/* Hero Section */}
         <div className="mb-8 text-center">
+          <div className="mb-4 flex justify-center"><ForgeMark size={48} decorative /></div>
           <h1 className="text-3xl font-bold text-foreground tracking-tight">
             {t('welcome:hero.title')}
           </h1>

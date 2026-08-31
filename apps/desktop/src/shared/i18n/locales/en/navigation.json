@@ -23,15 +23,14 @@
     "help": "About Forge",
     "newTask": "New Task",
     "collapseSidebar": "Collapse Sidebar",
-    "expandSidebar": "Expand Sidebar",
-    "sponsor": "Support Aperant upstream"
+    "expandSidebar": "Expand Sidebar"
   },
   "tooltips": {
     "settings": "Application Settings",
     "help": "About Forge"
   },
   "messages": {
-    "initializeToCreateTasks": "Initialize Aperant to create tasks"
+    "initializeToCreateTasks": "Initialize Forge to create tasks"
   },
   "updateBanner": {
     "title": "Update Available",

@@ -23,15 +23,14 @@
     "help": "À propos de Forge",
     "newTask": "Nouvelle tâche",
     "collapseSidebar": "Réduire la barre latérale",
-    "expandSidebar": "Développer la barre latérale",
-    "sponsor": "Soutenir Aperant d’origine"
+    "expandSidebar": "Développer la barre latérale"
   },
   "tooltips": {
     "settings": "Paramètres de l'application",
     "help": "À propos de Forge"
   },
   "messages": {
-    "initializeToCreateTasks": "Initialisez Aperant pour créer des tâches"
+    "initializeToCreateTasks": "Initialisez Forge pour créer des tâches"
   },
   "updateBanner": {
     "title": "Mise à jour disponible",

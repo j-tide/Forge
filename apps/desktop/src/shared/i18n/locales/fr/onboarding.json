@@ -1,11 +1,11 @@
 {
   "wizard": {
     "title": "Assistant de configuration",
-    "description": "Configurez Forge Glass Preview en quelques étapes simples",
+    "description": "Configurez Forge en quelques étapes simples",
     "helpText": "Cet assistant vous aidera à configurer votre environnement en quelques étapes. Vous pouvez configurer votre token OAuth Claude, activer les fonctionnalités de mémoire et créer votre première tâche."
   },
   "welcome": {
-    "title": "Bienvenue dans Forge Glass Preview",
+    "title": "Bienvenue dans Forge",
     "subtitle": "Explorez le parcours des tâches dans cette préversion",
     "getStarted": "Commencer",
     "skip": "Passer la configuration",
@@ -134,7 +134,7 @@
     "whatsNext": "Et maintenant ?",
     "createTask": {
       "title": "Créer une tâche",
-      "description": "Commencez par créer votre première tâche dans Forge Glass Preview.",
+      "description": "Commencez par créer votre première tâche dans Forge.",
       "action": "Ouvrir le créateur de tâches"
     },
     "customizeSettings": {
@@ -207,19 +207,19 @@
   },
   "devtools": {
     "title": "Outils de développement",
-    "description": "Choisissez votre IDE, terminal et CLI préférés pour travailler avec les worktrees de Forge Glass Preview",
+    "description": "Choisissez votre IDE, terminal et CLI préférés pour travailler avec les worktrees de Forge",
     "detecting": "Détection des outils installés...",
     "detectAgain": "Détecter à nouveau",
     "whyConfigure": "Pourquoi configurer ceci ?",
     "whyConfigureDescription": "Vous pouvez ouvrir les worktrees des tâches directement dans votre IDE ou terminal préféré pour tester et réviser les changements.",
     "ide": {
       "label": "IDE préféré",
-      "description": "Forge Glass Preview ouvrira les worktrees dans cet éditeur",
+      "description": "Forge ouvrira les worktrees dans cet éditeur",
       "customPath": "Chemin IDE personnalisé"
     },
     "terminal": {
       "label": "Terminal préféré",
-      "description": "Forge Glass Preview ouvrira les sessions terminal ici",
+      "description": "Forge ouvrira les sessions terminal ici",
       "customPath": "Chemin terminal personnalisé"
     },
     "cli": {

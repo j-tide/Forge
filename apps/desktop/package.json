@@ -1,11 +1,11 @@
 {
-  "name": "forge-glass-preview",
+  "name": "forge-desktop",
   "private": true,
-  "version": "0.1.0-preview.2",
+  "version": "0.1.0-preview.3",
   "type": "module",
-  "description": "Independent Forge Glass Preview desktop app derived from Aperant",
+  "description": "Forge desktop application",
   "main": "./out/main/index.js",
-  "author": "Forge Glass Preview contributors",
+  "author": "Forge contributors",
   "license": "AGPL-3.0",
   "engines": {
     "node": ">=24.0.0",
@@ -28,9 +28,9 @@
     "package:flatpak": "electron-builder --linux flatpak --publish never",
     "verify:linux": "node scripts/verify-linux-packages.cjs dist",
     "test:verify-linux": "node --test scripts/verify-linux-packages.test.mjs",
-    "start:packaged:mac": "open 'dist/mac-arm64/Forge Glass Preview.app' || open 'dist/mac/Forge Glass Preview.app'",
-    "start:packaged:win": "start \"\" \"dist\\win-unpacked\\Forge Glass Preview.exe\"",
-    "start:packaged:linux": "./dist/linux-unpacked/forge-glass-preview",
+    "start:packaged:mac": "node ../../scripts/open-forge.mjs",
+    "start:packaged:win": "start \"\" \"dist\\win-unpacked\\Forge.exe\"",
+    "start:packaged:linux": "./dist/linux-unpacked/forge-desktop",
     "test": "vitest run",
     "test:unit": "vitest run --exclude src/__tests__/integration/ --exclude src/__tests__/e2e/",
     "test:integration": "vitest run src/__tests__/integration/",
@@ -151,7 +151,7 @@
   },
   "build": {
     "appId": "dev.iamzjt.forgeglasspreview",
-    "productName": "Forge Glass Preview",
+    "productName": "Forge",
     "npmRebuild": false,
     "artifactName": "${productName}-${version}-${platform}-${arch}.${ext}",
     "publish": null,
@@ -178,6 +178,14 @@
       {
         "from": "resources/icon.ico",
         "to": "icon.ico"
+      },
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "resources/icon-256.png",
+        "to": "icon-256.png"
       },
       {
         "from": "prompts",

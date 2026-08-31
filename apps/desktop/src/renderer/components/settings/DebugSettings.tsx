@@ -97,7 +97,7 @@ export function DebugSettings() {
                   {t('debug.errorReporting.label', 'Anonymous Error Reporting')}
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {t('debug.errorReporting.previewDescription', 'Optional crash reporting for Forge Glass Preview, when this build has a configured reporting endpoint.')}
+                  {t('debug.errorReporting.previewDescription', 'Optional crash reporting for Forge, when this build has a configured reporting endpoint.')}
                 </p>
               </div>
             </div>

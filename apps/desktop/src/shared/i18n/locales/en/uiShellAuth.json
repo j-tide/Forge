@@ -7,7 +7,7 @@
     "authFailed": "Authentication failed.",
     "title": "Authentication required",
     "profileLabel": "Account",
-    "description": "Sign in to your Claude account again to continue using Forge Glass Preview.",
+    "description": "Sign in to your Claude account again to continue using Forge.",
     "taskAffected": "Affected task",
     "technicalDetails": "Technical details",
     "goToSettings": "Open settings"

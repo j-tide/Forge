@@ -1,0 +1,19 @@
+.forge-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--foreground);
+}
+
+.forge-brand-mark {
+  display: inline-block;
+  flex: 0 0 auto;
+  background: linear-gradient(150deg, var(--foreground), var(--accent-foreground));
+  -webkit-mask: var(--forge-mark-image) center / contain no-repeat;
+  mask: var(--forge-mark-image) center / contain no-repeat;
+}
+
+.forge-brand-name {
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}

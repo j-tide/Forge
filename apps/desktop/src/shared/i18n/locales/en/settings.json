@@ -7,7 +7,7 @@
   "sections": {
     "appearance": {
       "title": "Appearance",
-      "description": "Customize the Forge Glass Preview interface"
+      "description": "Customize the Forge interface"
     },
     "display": {
       "title": "Display",
@@ -209,7 +209,7 @@
     "otherAgentSettingsDescription": "Additional agent configuration options",
     "agentFramework": "Agent Framework",
     "agentFrameworkDescription": "The coding framework used for autonomous tasks",
-    "agentFrameworkAutoClaude": "Aperant",
+    "agentFrameworkForge": "Forge",
     "aiTerminalNaming": "AI Terminal Naming",
     "aiTerminalNamingDescription": "Automatically name terminals based on commands (uses AI Naming model)",
     "featureModelSettings": "Feature Model Settings",
@@ -244,15 +244,15 @@
     "sourceBundled": "Bundled",
     "sourceFallback": "Fallback",
     "notDetected": "Not detected",
-    "autoClaudePath": "Aperant Path",
-    "autoClaudePathDescription": "Relative path to auto-claude directory in projects",
-    "autoClaudePathPlaceholder": "auto-claude (default)",
+    "forgePath": "Forge Path",
+    "forgePathDescription": "Relative path to the Forge data directory in projects",
+    "forgePathPlaceholder": ".forge-glass-preview (default)",
     "autoNameTerminals": "Automatically name terminals",
     "autoNameTerminalsDescription": "Use AI to generate descriptive names for terminal tabs based on their activity"
   },
   "theme": {
     "title": "Appearance",
-    "description": "Customize the Forge Glass Preview interface",
+    "description": "Customize the Forge interface",
     "mode": "Mode",
     "modeDescription": "Choose between light and dark themes",
     "light": "Light",
@@ -304,10 +304,10 @@
     }
   },
   "updates": {
-    "title": "About Forge Glass Preview",
+    "title": "About Forge",
     "description": "Preview identity and version",
     "previewDescription": "Installed preview version",
-    "previewUnavailable": "App updates are unavailable in Forge Glass Preview. Install future releases manually.",
+    "previewUnavailable": "App updates are unavailable in Forge. Install future releases manually.",
     "previewOrigin": "Independent derivative of Aperant v2.8.0-beta.6, licensed under AGPL-3.0.",
     "appUpdateReady": "App Update Ready",
     "newVersion": "New Version",
@@ -325,7 +325,7 @@
     "unableToCheck": "Unable to check for updates",
     "checkForUpdates": "Check for Updates",
     "autoUpdateProjects": "Auto-Update Projects",
-    "autoUpdateProjectsDescription": "Automatically update Aperant in projects when a new version is available",
+    "autoUpdateProjectsDescription": "Automatically update Forge in projects when a new version is available",
     "betaUpdates": "Beta Updates",
     "betaUpdatesDescription": "Receive pre-release beta versions with new features (may be less stable)",
     "stableDowngradeAvailable": "Stable Version Available",
@@ -333,8 +333,9 @@
     "stableVersion": "Stable Version",
     "downloadStableVersion": "Download Stable Version",
     "readOnlyVolumeTitle": "Cannot Install from Disk Image",
-    "readOnlyVolumeDescription": "Aperant is running from a read-only disk image (DMG). Please drag the app to your Applications folder and relaunch it from there to install updates.",
-    "downloadError": "Failed to download update"
+    "readOnlyVolumeDescription": "Forge is running from a read-only disk image (DMG). Please drag the app to your Applications folder and relaunch it from there to install updates.",
+    "downloadError": "Failed to download update",
+    "sourceAndLicense": "Source and license"
   },
   "notifications": {
     "title": "Notifications",
@@ -858,8 +859,8 @@
     "description": "Access logs and debug information for troubleshooting",
     "errorReporting": {
       "label": "Anonymous Error Reporting",
-      "description": "Optional crash reporting for Forge Glass Preview, when this build has a configured reporting endpoint.",
-      "previewDescription": "Optional crash reporting for Forge Glass Preview, when this build has a configured reporting endpoint."
+      "description": "Optional crash reporting for Forge, when this build has a configured reporting endpoint.",
+      "previewDescription": "Optional crash reporting for Forge, when this build has a configured reporting endpoint."
     },
     "openLogsFolder": "Open Logs Folder",
     "copyDebugInfo": "Copy Debug Info",
@@ -889,7 +890,7 @@
     "noProjectSelected": "No Project Selected",
     "noProjectSelectedDescription": "Select a project from the dropdown to view and configure MCP servers.",
     "projectNotInitialized": "Project Not Initialized",
-    "projectNotInitializedDescription": "Initialize Aperant for this project to configure MCP servers.",
+    "projectNotInitializedDescription": "Initialize Forge for this project to configure MCP servers.",
     "browserAutomation": "Browser Automation (QA agents only)",
     "alwaysEnabled": "always enabled",
     "addServer": "Add Server",
@@ -925,8 +926,8 @@
         "name": "Puppeteer",
         "description": "Web browser automation for testing"
       },
-      "autoClaude": {
-        "name": "Aperant Tools",
+      "forge": {
+        "name": "Forge Tools",
         "description": "Build progress tracking"
       }
     },

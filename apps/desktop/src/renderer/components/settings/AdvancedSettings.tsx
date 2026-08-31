@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
+import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { SettingsSection } from './SettingsSection';
+import { ForgeBrand } from '../ForgeBrand';
 import type { AppSettings, NotificationSettings } from '../../../shared/types';
 
 interface AdvancedSettingsProps {
@@ -23,7 +25,7 @@ export function AdvancedSettings({ settings, onSettingsChange, section, version 
       >
         <div className="rounded-lg border border-border bg-muted/50 p-5 space-y-3">
           <div>
-            <p className="text-base font-medium text-foreground">Forge Glass Preview</p>
+            <p className="mb-3 text-base text-foreground"><ForgeBrand /></p>
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
               {t('updates.version')}
             </p>
@@ -34,7 +36,7 @@ export function AdvancedSettings({ settings, onSettingsChange, section, version 
           <p className="text-sm text-muted-foreground">
             {t(
               'updates.previewUnavailable',
-              'App updates are unavailable in Forge Glass Preview. Install future releases manually.'
+              'App updates are unavailable in Forge. Install future releases manually.'
             )}
           </p>
           <p className="text-xs text-muted-foreground">
@@ -43,6 +45,13 @@ export function AdvancedSettings({ settings, onSettingsChange, section, version 
               'Independent derivative of Aperant v2.8.0-beta.6, licensed under AGPL-3.0.'
             )}
           </p>
+          <Button
+            variant="link"
+            className="h-auto p-0 text-xs"
+            onClick={() => window.electronAPI.openExternal('https://github.com/j-tide/Forge/tree/main/desktop')}
+          >
+            {t('updates.sourceAndLicense')}
+          </Button>
         </div>
       </SettingsSection>
     );

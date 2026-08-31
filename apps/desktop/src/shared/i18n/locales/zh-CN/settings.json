@@ -7,7 +7,7 @@
   "sections": {
     "appearance": {
       "title": "外观",
-      "description": "自定义 Forge Glass Preview 界面"
+      "description": "自定义 Forge 界面"
     },
     "display": {
       "title": "显示",
@@ -209,7 +209,7 @@
     "otherAgentSettingsDescription": "更多智能体配置选项",
     "agentFramework": "智能体框架",
     "agentFrameworkDescription": "自主任务使用的开发框架",
-    "agentFrameworkAutoClaude": "Aperant",
+    "agentFrameworkForge": "Forge",
     "aiTerminalNaming": "AI 终端命名",
     "aiTerminalNamingDescription": "根据命令自动命名终端（使用 AI 命名模型）",
     "featureModelSettings": "功能模型设置",
@@ -244,15 +244,15 @@
     "sourceBundled": "应用内置",
     "sourceFallback": "备用",
     "notDetected": "未检测到",
-    "autoClaudePath": "Aperant 路径",
-    "autoClaudePathDescription": "项目中 auto-claude 目录的相对路径",
-    "autoClaudePathPlaceholder": "auto-claude（默认）",
+    "forgePath": "Forge 路径",
+    "forgePathDescription": "项目中 Forge 数据目录的相对路径",
+    "forgePathPlaceholder": ".forge-glass-preview（默认）",
     "autoNameTerminals": "自动命名终端",
     "autoNameTerminalsDescription": "根据终端活动，用 AI 生成易于识别的标签页名称"
   },
   "theme": {
     "title": "外观",
-    "description": "自定义 Forge Glass Preview 界面",
+    "description": "自定义 Forge 界面",
     "mode": "模式",
     "modeDescription": "选择亮色或暗色主题",
     "light": "亮色",
@@ -304,10 +304,10 @@
     }
   },
   "updates": {
-    "title": "关于 Forge Glass Preview",
+    "title": "关于 Forge",
     "description": "预览版信息与版本",
     "previewDescription": "已安装的预览版本",
-    "previewUnavailable": "Forge Glass Preview 暂不支持应用内更新，请手动安装后续版本。",
+    "previewUnavailable": "Forge 暂不支持应用内更新，请手动安装后续版本。",
     "previewOrigin": "基于 Aperant v2.8.0-beta.6 的独立衍生版本，采用 AGPL-3.0 许可证。",
     "appUpdateReady": "应用更新已就绪",
     "newVersion": "新版本",
@@ -325,7 +325,7 @@
     "unableToCheck": "无法检查更新",
     "checkForUpdates": "检查更新",
     "autoUpdateProjects": "自动更新项目",
-    "autoUpdateProjectsDescription": "有新版本时，自动更新项目中的 Aperant",
+    "autoUpdateProjectsDescription": "有新版本时，自动更新项目中的 Forge",
     "betaUpdates": "测试版更新",
     "betaUpdatesDescription": "接收包含新功能的预发布测试版（稳定性可能较低）",
     "stableDowngradeAvailable": "有可用的稳定版本",
@@ -333,8 +333,9 @@
     "stableVersion": "稳定版本",
     "downloadStableVersion": "下载稳定版本",
     "readOnlyVolumeTitle": "无法从磁盘映像安装更新",
-    "readOnlyVolumeDescription": "Aperant 正从只读磁盘映像（DMG）运行。请将应用拖入“应用程序”文件夹，再从那里重新打开以安装更新。",
-    "downloadError": "下载更新失败"
+    "readOnlyVolumeDescription": "Forge 正从只读磁盘映像（DMG）运行。请将应用拖入“应用程序”文件夹，再从那里重新打开以安装更新。",
+    "downloadError": "下载更新失败",
+    "sourceAndLicense": "源码与许可证"
   },
   "notifications": {
     "title": "通知",
@@ -858,8 +859,8 @@
     "description": "查看日志和调试信息以排查问题",
     "errorReporting": {
       "label": "匿名错误报告",
-      "description": "当此构建已配置报告端点时，可选择为 Forge Glass Preview 发送崩溃报告。",
-      "previewDescription": "当此构建已配置报告端点时，可选择为 Forge Glass Preview 发送崩溃报告。"
+      "description": "当此构建已配置报告端点时，可选择为 Forge 发送崩溃报告。",
+      "previewDescription": "当此构建已配置报告端点时，可选择为 Forge 发送崩溃报告。"
     },
     "openLogsFolder": "打开日志文件夹",
     "copyDebugInfo": "复制调试信息",
@@ -889,7 +890,7 @@
     "noProjectSelected": "尚未选择项目",
     "noProjectSelectedDescription": "请从下拉列表中选择项目，以查看和配置 MCP 服务。",
     "projectNotInitialized": "项目尚未初始化",
-    "projectNotInitializedDescription": "请先为此项目初始化 Aperant，再配置 MCP 服务。",
+    "projectNotInitializedDescription": "请先为此项目初始化 Forge，再配置 MCP 服务。",
     "browserAutomation": "浏览器自动化（仅用于质量审查智能体）",
     "alwaysEnabled": "始终启用",
     "addServer": "添加服务",
@@ -925,8 +926,8 @@
         "name": "Puppeteer",
         "description": "用于测试的浏览器自动化"
       },
-      "autoClaude": {
-        "name": "Aperant 工具",
+      "forge": {
+        "name": "Forge 工具",
         "description": "跟踪构建进度"
       }
     },

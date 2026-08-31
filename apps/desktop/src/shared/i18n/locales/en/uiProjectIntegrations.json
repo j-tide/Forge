@@ -45,7 +45,7 @@
   "mainBranchDescription": "The base branch for creating task worktrees. All new tasks will branch from here.",
   "loadingBranches": "Loading branches...",
   "selectBranch": "Select main branch",
-  "branchPreview": "Task branches such as <branch>auto-claude/task-name</branch> will be created from <base>{{name}}</base>.",
+  "branchPreview": "Task branches such as <branch>forge/task-name</branch> will be created from <base>{{name}}</base>.",
   "projectConfig": "Project-Specific Configuration",
   "projectConfigDescription": "This GitHub repository is configured only for <project>{{name}}</project>. Each project can have its own GitHub repository.",
   "githubAuthentication": "GitHub Authentication",

@@ -1,23 +1,23 @@
 {
   "initialize": {
-    "title": "初始化 Aperant",
-    "description": "此项目尚未初始化 Aperant。现在设置吗？",
+    "title": "初始化 Forge",
+    "description": "此项目尚未初始化 Forge。现在设置吗？",
     "willDo": "此操作将：",
     "createFolder": "在项目中创建 .forge-glass-preview 文件夹",
-    "copyFramework": "复制 Aperant 框架文件",
+    "copyFramework": "复制 Forge 框架文件",
     "setupSpecs": "为任务建立规格目录",
     "sourcePathNotConfigured": "尚未配置源代码路径",
-    "sourcePathNotConfiguredDescription": "请先在应用设置中指定 Aperant 源代码路径，再进行初始化。",
+    "sourcePathNotConfiguredDescription": "请先在应用设置中指定 Forge 源代码路径，再进行初始化。",
     "initFailed": "初始化失败",
-    "initFailedDescription": "无法初始化 Aperant，请重试。"
+    "initFailedDescription": "无法初始化 Forge，请重试。"
   },
   "gitSetup": {
     "title": "需要 Git 仓库",
-    "description": "Aperant 使用 Git 在隔离工作区中安全地开发功能",
+    "description": "Forge 使用 Git 在隔离工作区中安全地开发功能",
     "notGitRepo": "此文件夹不是 Git 仓库",
     "noCommits": "Git 仓库尚无提交",
-    "needsInit": "需要先初始化 Git，Aperant 才能管理代码。",
-    "needsCommit": "至少需要一个提交，Aperant 才能创建工作树。",
+    "needsInit": "需要先初始化 Git，Forge 才能管理代码。",
+    "needsCommit": "至少需要一个提交，Forge 才能创建工作树。",
     "willSetup": "我们将为你设置 Git：",
     "initRepo": "初始化新的 Git 仓库",
     "createCommit": "用当前文件创建首次提交",
@@ -25,25 +25,25 @@
     "settingUp": "正在设置 Git",
     "initializingRepo": "正在初始化 Git 仓库并创建首次提交…",
     "success": "Git 已初始化",
-    "readyToUse": "项目已准备好，可以使用 Aperant 了！"
+    "readyToUse": "项目已准备好，可以使用 Forge 了！"
   },
   "githubSetup": {
     "connectTitle": "连接 GitHub",
-    "connectDescription": "Aperant 需要通过 GitHub 管理代码分支并保持任务同步。",
+    "connectDescription": "Forge 需要通过 GitHub 管理代码分支并保持任务同步。",
     "claudeTitle": "连接 Claude AI",
-    "claudeDescription": "Aperant 使用 Claude AI 提供路线图生成、任务自动化和创意探索等智能功能。",
+    "claudeDescription": "Forge 使用 Claude AI 提供路线图生成、任务自动化和创意探索等智能功能。",
     "aiProviderTitle": "连接 AI 服务",
     "aiProviderDescription": "添加 AI 服务账户，以使用路线图生成、任务自动化和创意探索等功能。",
     "aiProviderReady": "你已配置至少一个 AI 服务，可以继续下一步。",
     "skipForNow": "暂时跳过",
     "continue": "继续",
     "selectRepo": "选择仓库",
-    "repoDescription": "Aperant 将使用此仓库管理任务分支，并保持代码更新。",
+    "repoDescription": "Forge 将使用此仓库管理任务分支，并保持代码更新。",
     "selectBranch": "选择基线分支",
-    "branchDescription": "选择 Aperant 创建任务分支时使用的基线分支。",
+    "branchDescription": "选择 Forge 创建任务分支时使用的基线分支。",
     "whyBranch": "为什么要选择分支？",
-    "branchExplanation": "Aperant 会为每个任务创建隔离工作区。选择正确的基线分支，可确保任务从主开发分支的最新代码开始。",
-    "ready": "Aperant 已准备就绪！现在创建的任务将以 {{branchName}} 分支为基线。",
+    "branchExplanation": "Forge 会为每个任务创建隔离工作区。选择正确的基线分支，可确保任务从主开发分支的最新代码开始。",
+    "ready": "Forge 已准备就绪！现在创建的任务将以 {{branchName}} 分支为基线。",
     "createRepoAriaLabel": "在 GitHub 上创建新仓库",
     "linkRepoAriaLabel": "关联已有仓库",
     "goBackAriaLabel": "返回仓库选择",
@@ -53,9 +53,9 @@
   },
   "worktrees": {
     "title": "工作树",
-    "description": "管理 Aperant 任务的隔离工作区",
+    "description": "管理 Forge 任务的隔离工作区",
     "empty": "还没有工作树",
-    "emptyDescription": "Aperant 开发功能时会自动创建工作树，为每个任务提供独立工作区。",
+    "emptyDescription": "Forge 开发功能时会自动创建工作树，为每个任务提供独立工作区。",
     "merge": "合并工作树",
     "mergeDescription": "将此工作树的修改合并到基线分支。",
     "delete": "删除工作树？",
@@ -77,7 +77,7 @@
     "errorDescription": "工作树清理失败，请重试。"
   },
   "update": {
-    "title": "Aperant",
+    "title": "Forge",
     "projectInitialized": "项目已初始化。"
   },
   "addFeature": {
@@ -156,7 +156,7 @@
   },
   "appUpdate": {
     "title": "应用有可用更新",
-    "description": "Aperant 新版本已可下载",
+    "description": "Forge 新版本已可下载",
     "newVersion": "新版本",
     "released": "发布时间",
     "downloading": "正在下载…",
@@ -169,7 +169,7 @@
     "claudeCodeChangelog": "查看 Claude Code 更新日志",
     "claudeCodeChangelogAriaLabel": "查看 Claude Code 更新日志（在新窗口中打开）",
     "readOnlyVolumeTitle": "无法从磁盘映像安装",
-    "readOnlyVolumeDescription": "请将 Aperant 移到“应用程序”文件夹后再更新。"
+    "readOnlyVolumeDescription": "请将 Forge 移到“应用程序”文件夹后再更新。"
   },
   "addCompetitor": {
     "title": "添加竞品",

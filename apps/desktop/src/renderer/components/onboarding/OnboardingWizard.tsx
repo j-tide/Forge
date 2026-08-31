@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Wand2 } from 'lucide-react';
+import { ForgeMark } from '../ForgeBrand';
 import {
   FullScreenDialog,
   FullScreenDialogContent,
@@ -42,7 +42,7 @@ const WIZARD_STEPS: { id: WizardStepId; labelKey: string }[] = [
 /**
  * Main onboarding wizard component.
  * Provides a full-screen, multi-step wizard experience for new users
- * to configure their Auto Claude environment.
+ * to configure their Forge environment.
  *
  * Features:
  * - Step progress indicator
@@ -193,7 +193,7 @@ export function OnboardingWizard({
       <FullScreenDialogContent>
         <FullScreenDialogHeader>
           <FullScreenDialogTitle className="flex items-center gap-3">
-            <Wand2 className="h-6 w-6" />
+            <ForgeMark size={24} decorative />
             {t('wizard.title')}
           </FullScreenDialogTitle>
           <FullScreenDialogDescription>
