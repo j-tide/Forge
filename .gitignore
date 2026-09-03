@@ -136,6 +136,15 @@ _bmad/
 _bmad-output/
 .claude/
 /docs
+!/docs/
+/docs/*
+!/docs/screenshots/
+/docs/screenshots/*
+!/docs/screenshots/logo-unreleased/
+!/docs/screenshots/0.1.0-preview.3/
+!/docs/releases/
+/docs/releases/*
+!/docs/releases/0.1.0-preview.3.md
 OPUS_ANALYSIS_AND_IDEAS.md
 /.github/agents
 

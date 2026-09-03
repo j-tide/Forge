@@ -1,0 +1,19 @@
+{
+  "version": "0.1.0-preview.3",
+  "actualVerifiedAt": "2026-09-28",
+  "platform": "darwin",
+  "arch": "arm64",
+  "appAsarSha256": "74d49170981acedc7d118caf653e6fe7e28ecf8b9b2475aaec07478867f94257",
+  "userDataUnchanged": true,
+  "packagedStartupPassed": true,
+  "pythonHostConnected": false,
+  "signing": "ADHOC",
+  "notarized": false,
+  "productionAudit": {
+    "total": 33,
+    "high": 10,
+    "moderate": 9,
+    "low": 14,
+    "critical": 0
+  }
+}

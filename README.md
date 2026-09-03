@@ -1,61 +1,69 @@
-# Forge Glass Preview
+# Forge
 
-Forge Glass Preview 是以 [Aperant](https://github.com/AndyMik90/Aperant) `v2.8.0-beta.6` 为基座的独立桌面衍生预览，保留上游工作流，采用 Forge 亮色／暗色磨砂玻璃界面。本仓库不是 Aperant 官方版本，也尚未连接兄弟仓库 Forge 的 Python Host；不能将预览版的界面检查等同于 Forge 完整产品验收。
+<img src="apps/desktop/resources/icon-256.png" alt="Forge" width="80" />
 
-## 下载、打开与语言切换
+Forge 是亮色／暗色磨砂玻璃桌面 AI 研发工作台。此 npm 工程作为独立 `desktop/` 目录归入 [Forge 仓库](https://github.com/j-tide/Forge/tree/main/desktop)。原 Forge 的 Python Host、规格及 Vue 历史实现保留在仓库根；**当前衍生 Desktop 尚未连接该 Python Host，不代表完整 Forge 产品已验收**。代码来源、AGPL 许可证及修改记录见 [UPSTREAM.md](UPSTREAM.md) / [LICENSE](LICENSE)。
 
-当前版本：**0.1.0-preview.2**。在本仓库 [Releases](https://github.com/j-tide/Forge-Aperant/releases) 下载 macOS arm64 的 INTERNAL DMG 或 ZIP，校验同页的 SHA256SUMS。DMG 内的 `Forge Glass Preview.app` 可复制至自己的 Applications 文件夹后正常打开，应用不会像自动化测试那样立即退出。
+## 当前版本：0.1.0-preview.3
 
-安装包使用 **ADHOC 签名，UNNOTARIZED**，不是 Developer ID 签名的正式发行版。若 macOS 提示无法验证开发者，使用系统“隐私与安全性”中的用户确认流程；不要全局关闭 Gatekeeper。Windows、macOS Intel 和签名／公证仍未验证。
+[Forge Releases](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.3) 提供 macOS arm64 内部 DMG、ZIP、完整对应源码及 SHA256SUMS。该版本包括：
 
-**设置 → 语言 → 中文 / English**：即时切换、自动保存，重启后保留。新建用户数据默认中文；已有显式语言和主题选择保持不变。任务、设置、上下文、知识／记忆、集成、终端、首次使用向导、原生弹窗与应用自己的错误提示均使用统一语言资源。模型输出、用户文本、代码、命令、路径、模型 ID 和品牌名保持原文；语言切换不会翻译或重写已有项目数据。
+- 普通界面、原生窗口、工具与诊断统一使用 Forge 品牌，保留来源／许可证入口。
+- 原创斜切 F 标识接入侧栏展开／收起、欢迎、向导、关于、设置、favicon、Dock / Finder 及平台图标。亮暗主题共用同一透明轮廓与主题色。
+- API Profile 写入既有隔离数据目录中的 `forge/profiles.json`，新文件不存在时兼容读取旧配置；旧文件不删除，凭据文件保持私有权限。
+- 内置工具使用 `mcp__forge__` 命名空间，已存配置保留明确兼容别名；数据所有权和安全排除规则保持。
+- 中文／English 设置即时切换并持久保存；不改写用户内容、模型输出、路径、代码及模型 ID。
 
-## 前置条件与数据隔离
+**INTERNAL / ADHOC / UNNOTARIZED，预发布。**不是 Developer ID 签名或正式产品发行；Windows、macOS Intel、Python Host 集成、完整任务闭环和第二执行器验收尚未在此基座完成。
 
-预览版有独立应用 ID、用户数据目录、项目数据目录 `.forge-glass-preview/` 和 Claude profile 目录 `~/.forge-glass-preview/claude-profiles/`。不导入或迁移原 Forge SQLite、Aperant `.auto-claude/` 或 `~/.claude-profiles/` 数据。显式配置某 provider 后，它自己的合法 CLI 登录态可能被读取；实际运行仍需 Git 及所选 provider 的可用配置／认证。翻译与窗口检查没有调用付费模型。
+## 安装和正常打开
 
-首次任务请使用可丢弃仓库。上游自动更新与发布渠道已经关闭，错误上报默认关闭且需要用户选择及衍生版专用 DSN。此预览不是完全自包含的 Coding Agent，也未验证完整任务运行或第二执行器替换。
+1. 从 Release 下载 `Forge-0.1.0-preview.3-darwin-arm64-INTERNAL.dmg` 或 `.zip`，核对同页 SHA256SUMS。
+2. 打开 DMG，将 `Forge.app` 拖到自己的 Applications 文件夹，或解压 ZIP。
+3. 用 Finder 正常打开应用。应用常驻，不使用测试／Smoke 入口。
+4. 若系统提示无法验证开发者，按 macOS“隐私与安全性”中的用户确认流程操作；不要全局关闭 Gatekeeper。
+5. **设置 → 语言 → 中文 / English**；主题与语言均保留用户已有显式选择。
+
+本机源码构建位于 `apps/desktop/dist/0.1.0-preview.3/mac-arm64/Forge.app`。此 npm 工程中 `npm run preview:open` 优先打开当前版本；也接受一个明确 `.app` 路径。Forge 仓库根的 `pnpm desktop:open` 使用同一正常打开入口。旧 `.2` 发布资产和历史包保留，不覆盖。
+
+## 前置条件、数据和能力边界
+
+- 实际项目操作需要 Git，以及所选 provider 自己合法配置的认证／可执行程序／网络。此包不是完全自包含的 Coding Agent。
+- 使用稳定应用 ID `dev.iamzjt.forgeglasspreview`、用户数据目录 `Forge Glass Preview`、项目数据目录 `.forge-glass-preview/` 与独立 Claude profiles。品牌改名和仓库归拢不迁移或重置原 Forge SQLite，也不导入其他产品的项目和账号。
+- 当前界面和图标验收没有调用付费模型；不能把单元 fixture 或 Logo 截图当成真实 Agent / Review / Verify 验收。
+- 自动上游更新／发布关闭；错误上报默认关闭，仅可显式选择及使用衍生版专用配置。
+- 第一次执行任务请使用可丢弃项目。工具注册不等于操作授权，项目和凭据不能来自其他产品的未授权登录。
 
 ## 从源码运行
 
-需要 Node.js 24+、npm 10+，使用仓库独立 npm lockfile，不改原 Forge 的 pnpm workspace。
+在仓库 `desktop/` 目录使用 **Node.js24+ / npm10+** 和该目录独立 npm lockfile；原 Python/pnpm 项目不并入这个 npm workspace。
 
 ```sh
-npm ci
+cd desktop
+npm ci --ignore-scripts
+node node_modules/electron/install.js
+npm --workspace apps/desktop run postinstall
 npm run dev
 ```
 
-正常构建后运行：
-
-```sh
-npm run build
-npm --workspace apps/desktop run start
-```
-
-检查入口：
+Electron 安装脚本仅下载其官方固定版本运行时；Desktop postinstall 本地构建所需原生依赖，不下载上游预编译包、不更改全局工具。Windows 源码原生构建可能需要 Visual Studio C++ Build Tools；本版本没有 Windows 运行通过证据。
 
 ```sh
 npm run check:i18n
-npm run typecheck
 npm run lint
+npm run typecheck
 npm run test
 npm run build
+npm run test:logo:desktop
 npm run test:i18n:desktop
 ```
 
-`check:i18n` 检查中文／英文 namespace、key、插值、标签及静态源码引用，支持 `--reporter=json`。Electron 语言测试用独立临时 profile，验证亮色和暗色中的切换、保存与重启；不会修改日常预览项目数据，不会调用模型。
+Logo／语言实际 Electron 检查当前支持 macOS，本机使用独立临时 profile，不修改日常数据、不调用模型。Linux CI 运行静态／单元／构建检查，不声称桌面视觉实机通过。
 
-## 内部打包与验证边界
+## 验证与资产
 
-macOS arm64 本地检查与截图见 [0.1.0-preview.2 验证记录](docs/releases/0.1.0-preview.2.md)。`package:mac` 的上游 DMG helper 下载曾阻塞，当前内部包通过以下方式生成应用，再用 macOS `ditto` / `hdiutil` 包装 ZIP / DMG：
+[版本验证记录](docs/releases/0.1.0-preview.3.md)记录最终版本、真实命令、包摘要及未验项。原创资产／完整 imagegen 提示词／格式转换说明位于 [resources/branding](apps/desktop/resources/branding/README.md)。
 
-```sh
-cd apps/desktop
-CSC_IDENTITY_AUTO_DISCOVERY=false ../../node_modules/.bin/electron-builder --mac dir --publish never --config.mac.identity=-
-```
+[亮色](docs/screenshots/0.1.0-preview.3/home-light-1440.png)、[暗色](docs/screenshots/0.1.0-preview.3/home-dark-1440.png)、[收起侧栏](docs/screenshots/0.1.0-preview.3/home-collapsed-dark-1440.png)均来自实际 Electron 实现。旧[0.1.0-preview.2](https://github.com/j-tide/Forge-Aperant/releases/tag/v0.1.0-preview.2)和未发布 Logo 构建的记录保留为对应版本的历史证据。
 
-保留上游依赖的 **33 项 production npm audit 风险（10 high、9 moderate、14 low；基线检查 2026-09-27）**。本轮没有新增依赖，也未声称风险已修复。公开正式发行、Windows / Intel、Python Host 迁移与完整业务验收仍需独立完成。界面截图来自当前 Electron 实现：[中文亮色](docs/screenshots/0.1.0-preview.2/home-zh-light-1440.png)、[中文暗色](docs/screenshots/0.1.0-preview.2/home-zh-dark-1440.png)、[语言设置](docs/screenshots/0.1.0-preview.2/settings-language-zh-light-1440.png)。
-
-## 来源与许可证
-
-完整来源、上游 revision 和修改日期见 [UPSTREAM.md](UPSTREAM.md)。保留原 [GNU AGPL v3.0](LICENSE)、copyright 和上游署名。发布资产附带对应源码；更换品牌不会改变来源或许可证义务。本预览由 Forge 独立修改，与 ProofRun 无关。
+已知 production npm audit 基线33项风险（10 high／9 moderate／14 low）；新版本没有增加依赖或擅自更新依赖，本次实际复核结果见版本验证记录。完整业务、Windows/Intel、签名公证、正式更新、Claude及Python Host集成等验收不因预览发布而通过。手机和远程开发继续后置。

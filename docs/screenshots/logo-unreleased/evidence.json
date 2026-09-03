@@ -1,0 +1,226 @@
+{
+  "recordedAt": "2026-09-28T01:10:54.766Z",
+  "platform": "darwin",
+  "architecture": "arm64",
+  "modelCalls": 0,
+  "mode": "built-source-electron",
+  "build": {
+    "apps/desktop/out/main/index.js": "db914211f601b1da5867ca81802c14658402a0b9f613410d0271f4ce295227c4",
+    "apps/desktop/out/renderer/index.html": "6a8237d2d736b34e7ec509ad5338487562cc146d18884ffb82bc70cc68006e08",
+    "apps/desktop/resources/branding/forge-mark.png": "4ab0001d0571051e87888aa50d7d458eb5d369f88cccc9192b768d169ef8a1fa",
+    "apps/desktop/resources/branding/forge-app-icon.png": "8afef56b29b7294a76be5354286819a5e4fef5207038b3ddb76cc8a0eea3217e"
+  },
+  "cases": [
+    {
+      "theme": "light",
+      "case": "home",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "sidebarExpanded": {
+        "mask": "url(\"file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-mark-CdXFaf5k.png\")",
+        "imageWidth": 1254,
+        "imageHeight": 1254,
+        "width": 24,
+        "height": 24,
+        "cssWidth": "24px",
+        "cssHeight": "24px",
+        "backgroundImage": "linear-gradient(150deg, rgb(36, 44, 62), rgb(49, 91, 176))",
+        "opacity": "1",
+        "transparentPixels": 1200365,
+        "visiblePixels": 372151
+      },
+      "welcome": {
+        "mask": "url(\"file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-mark-CdXFaf5k.png\")",
+        "imageWidth": 1254,
+        "imageHeight": 1254,
+        "width": 48,
+        "height": 48,
+        "cssWidth": "48px",
+        "cssHeight": "48px",
+        "backgroundImage": "linear-gradient(150deg, rgb(36, 44, 62), rgb(49, 91, 176))",
+        "opacity": "1",
+        "transparentPixels": 1200365,
+        "visiblePixels": 372151
+      },
+      "themeColors": {
+        "colors": {
+          "foreground": "rgb(36, 44, 62)",
+          "accent-foreground": "rgb(49, 91, 176)",
+          "background": "rgb(231, 237, 247)"
+        },
+        "foregroundContrast": 11.864691245101097,
+        "accentContrast": 5.487043057824041
+      },
+      "favicon": {
+        "src": "file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-app-icon-DekoRQej.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "sidebarCollapsed": {
+        "mask": "url(\"file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-mark-CdXFaf5k.png\")",
+        "imageWidth": 1254,
+        "imageHeight": 1254,
+        "width": 24,
+        "height": 24,
+        "cssWidth": "24px",
+        "cssHeight": "24px",
+        "backgroundImage": "linear-gradient(150deg, rgb(36, 44, 62), rgb(49, 91, 176))",
+        "opacity": "1",
+        "transparentPixels": 1200365,
+        "visiblePixels": 372151
+      },
+      "about": {
+        "mask": "url(\"file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-mark-CdXFaf5k.png\")",
+        "imageWidth": 1254,
+        "imageHeight": 1254,
+        "width": 28,
+        "height": 28,
+        "cssWidth": "28px",
+        "cssHeight": "28px",
+        "backgroundImage": "linear-gradient(150deg, rgb(36, 44, 62), rgb(49, 91, 176))",
+        "opacity": "1",
+        "transparentPixels": 1200365,
+        "visiblePixels": 372151
+      }
+    },
+    {
+      "theme": "light",
+      "case": "onboarding",
+      "entry": "settings-rerun",
+      "header": {
+        "mask": "url(\"file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-mark-CdXFaf5k.png\")",
+        "imageWidth": 1254,
+        "imageHeight": 1254,
+        "width": 24,
+        "height": 24,
+        "cssWidth": "24px",
+        "cssHeight": "24px",
+        "backgroundImage": "linear-gradient(150deg, rgb(36, 44, 62), rgb(49, 91, 176))",
+        "opacity": "1",
+        "transparentPixels": 1200365,
+        "visiblePixels": 372151
+      },
+      "welcome": {
+        "mask": "url(\"file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-mark-CdXFaf5k.png\")",
+        "imageWidth": 1254,
+        "imageHeight": 1254,
+        "width": 48,
+        "height": 48,
+        "cssWidth": "48px",
+        "cssHeight": "48px",
+        "backgroundImage": "linear-gradient(150deg, rgb(36, 44, 62), rgb(49, 91, 176))",
+        "opacity": "1",
+        "transparentPixels": 1200365,
+        "visiblePixels": 372151
+      }
+    },
+    {
+      "theme": "dark",
+      "case": "home",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "sidebarExpanded": {
+        "mask": "url(\"file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-mark-CdXFaf5k.png\")",
+        "imageWidth": 1254,
+        "imageHeight": 1254,
+        "width": 24,
+        "height": 24,
+        "cssWidth": "24px",
+        "cssHeight": "24px",
+        "backgroundImage": "linear-gradient(150deg, rgb(237, 243, 252), rgb(228, 239, 255))",
+        "opacity": "1",
+        "transparentPixels": 1200365,
+        "visiblePixels": 372151
+      },
+      "welcome": {
+        "mask": "url(\"file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-mark-CdXFaf5k.png\")",
+        "imageWidth": 1254,
+        "imageHeight": 1254,
+        "width": 48,
+        "height": 48,
+        "cssWidth": "48px",
+        "cssHeight": "48px",
+        "backgroundImage": "linear-gradient(150deg, rgb(237, 243, 252), rgb(228, 239, 255))",
+        "opacity": "1",
+        "transparentPixels": 1200365,
+        "visiblePixels": 372151
+      },
+      "themeColors": {
+        "colors": {
+          "foreground": "rgb(237, 243, 252)",
+          "accent-foreground": "rgb(228, 239, 255)",
+          "background": "rgb(23, 35, 55)"
+        },
+        "foregroundContrast": 14.134109964961791,
+        "accentContrast": 13.580511167289803
+      },
+      "favicon": {
+        "src": "file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-app-icon-DekoRQej.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "sidebarCollapsed": {
+        "mask": "url(\"file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-mark-CdXFaf5k.png\")",
+        "imageWidth": 1254,
+        "imageHeight": 1254,
+        "width": 24,
+        "height": 24,
+        "cssWidth": "24px",
+        "cssHeight": "24px",
+        "backgroundImage": "linear-gradient(150deg, rgb(237, 243, 252), rgb(228, 239, 255))",
+        "opacity": "1",
+        "transparentPixels": 1200365,
+        "visiblePixels": 372151
+      },
+      "about": {
+        "mask": "url(\"file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-mark-CdXFaf5k.png\")",
+        "imageWidth": 1254,
+        "imageHeight": 1254,
+        "width": 28,
+        "height": 28,
+        "cssWidth": "28px",
+        "cssHeight": "28px",
+        "backgroundImage": "linear-gradient(150deg, rgb(237, 243, 252), rgb(228, 239, 255))",
+        "opacity": "1",
+        "transparentPixels": 1200365,
+        "visiblePixels": 372151
+      }
+    },
+    {
+      "theme": "dark",
+      "case": "onboarding",
+      "entry": "settings-rerun",
+      "header": {
+        "mask": "url(\"file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-mark-CdXFaf5k.png\")",
+        "imageWidth": 1254,
+        "imageHeight": 1254,
+        "width": 24,
+        "height": 24,
+        "cssWidth": "24px",
+        "cssHeight": "24px",
+        "backgroundImage": "linear-gradient(150deg, rgb(237, 243, 252), rgb(228, 239, 255))",
+        "opacity": "1",
+        "transparentPixels": 1200365,
+        "visiblePixels": 372151
+      },
+      "welcome": {
+        "mask": "url(\"file:///Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/out/renderer/assets/forge-mark-CdXFaf5k.png\")",
+        "imageWidth": 1254,
+        "imageHeight": 1254,
+        "width": 48,
+        "height": 48,
+        "cssWidth": "48px",
+        "cssHeight": "48px",
+        "backgroundImage": "linear-gradient(150deg, rgb(237, 243, 252), rgb(228, 239, 255))",
+        "opacity": "1",
+        "transparentPixels": 1200365,
+        "visiblePixels": 372151
+      }
+    }
+  ],
+  "valid": true
+}

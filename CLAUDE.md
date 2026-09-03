@@ -2,13 +2,13 @@
 
 This file provides guidance to Claude Code when working with this repository.
 
-Auto Claude is an autonomous multi-agent coding framework that plans, builds, and validates software for you. It's a TypeScript-first Electron desktop application with a self-contained AI agent layer (Vercel AI SDK v6). A lightweight Python sidecar provides the optional Graphiti memory system.
+Forge is an autonomous multi-agent coding framework that plans, builds, and validates software for you. It's a TypeScript-first Electron desktop application with a self-contained AI agent layer (Vercel AI SDK v6). This repository is a preview base, not the production Python Host integration; see the root README and UPSTREAM.md for boundaries.
 
 > **Deep-dive reference:** [ARCHITECTURE.md](shared_docs/ARCHITECTURE.md) | **Frontend contributing:** [apps/desktop/CONTRIBUTING.md](apps/desktop/CONTRIBUTING.md)
 
 ## Product Overview
 
-Auto Claude is a desktop application (+ CLI) where users describe a goal and AI agents autonomously handle planning, implementation, and QA validation. All work happens in isolated git worktrees so the main branch stays safe.
+Forge is a desktop application where users describe a goal and AI agents autonomously handle planning, implementation, and QA validation. All work happens in isolated git worktrees so the main branch stays safe.
 
 **Core workflow:** User creates a task → Spec creation pipeline assesses complexity and writes a specification → Planner agent breaks it into subtasks → Coder agent implements (can spawn parallel subagents) → QA reviewer validates → QA fixer resolves issues → User reviews and merges.
 
@@ -25,20 +25,20 @@ Auto Claude is a desktop application (+ CLI) where users describe a goal and AI 
 - **Memory System** — Graphiti-based knowledge graph retains insights across sessions
 - **Isolated Workspaces** — Git worktree isolation for every build; AI-powered semantic merge
 - **Flexible Authentication** — Use a Claude Code subscription (OAuth) or API profiles with any Anthropic-compatible endpoint (e.g., Anthropic API, z.ai for GLM models)
-- **Multi-Account Swapping** — Register multiple Claude accounts; when one hits a rate limit, Auto Claude automatically switches to an available account
-- **Cross-Platform** — Native desktop app for Windows, macOS, and Linux with auto-updates
+- **Multi-Account Swapping** — Register multiple Claude accounts; when one hits a rate limit, Forge automatically switches to an available account
+- **Cross-Platform** — Native desktop app for Windows, macOS, and Linux with platform-specific packaging; automatic updates are disabled in this preview
 
 ## Critical Rules
 
 **Vercel AI SDK only** — All AI interactions use the Vercel AI SDK v6 (`ai` package) via the TypeScript agent layer in `apps/desktop/src/main/ai/`. NEVER use `@anthropic-ai/sdk` or `anthropic.Anthropic()` directly. Use `createProvider()` from `ai/providers/factory.ts` and `streamText()`/`generateText()` from the `ai` package. Provider-specific adapters (e.g., `@ai-sdk/anthropic`, `@ai-sdk/openai`) are managed through the provider registry.
 
-**i18n required** — All frontend user-facing text uses `react-i18next` translation keys. Hardcoded strings in JSX/TSX break localization for non-English users. Add keys to both `en/*.json` and `fr/*.json`.
+**i18n required** — All frontend user-facing text uses `react-i18next` translation keys. Hardcoded strings in JSX/TSX break localization for non-English users. Add and validate keys in both `en/*.json` and `zh-CN/*.json`; preserve existing French compatibility resources.
 
-**Platform abstraction** — Never use `process.platform` directly. Import from `apps/desktop/src/main/platform/`. CI tests all three platforms.
+**Platform abstraction** — Never use `process.platform` directly. Import from `apps/desktop/src/main/platform/`. Use the platform abstraction; verified platforms are listed in the current release records.
 
 **No time estimates** — Provide priority-based ordering instead of duration predictions.
 
-**PR target** — Always target the `develop` branch for PRs, not `main`. Main is reserved for releases.
+**PR target** — The current integration branch is `main`. Work on an isolated change branch; commits, pushes, and publication require explicit authorization.
 
 **No console.log in production code** — `console.log` output is invisible in bundled Electron apps. Use Sentry for error tracking in production; reserve `console.log` for development only.
 
@@ -82,17 +82,17 @@ Your context window will be automatically compacted as it approaches its limit, 
 
 ### Resetting PR Review State
 
-To fully clear all PR review data so reviews run fresh, delete/reset these three things in `.auto-claude/github/`:
+To fully clear all PR review data so reviews run fresh, delete/reset these three things in `.forge-glass-preview/github/`:
 
-1. `rm .auto-claude/github/pr/logs_*.json` — review log files
-2. `rm .auto-claude/github/pr/review_*.json` — review result files
+1. `rm .forge-glass-preview/github/pr/logs_*.json` — review log files
+2. `rm .forge-glass-preview/github/pr/review_*.json` — review result files
 3. Reset `pr/index.json` to `{"reviews": [], "last_updated": null}`
 4. Reset `bot_detection_state.json` to `{"reviewed_commits": {}}` — this is the gatekeeper; without clearing it, the bot detector skips already-seen commits
 
 ## Project Structure
 
 ```
-autonomous-coding/
+Forge/
 ├── apps/
 │   └── desktop/                 # Electron desktop application (sole app)
 │       ├── prompts/             # Agent system prompts (.md)
@@ -152,10 +152,8 @@ cd apps/desktop && npm install
 | Frontend E2E | `cd apps/desktop && npm run test:e2e` | Playwright |
 
 ### Releases
-```bash
-node scripts/bump-version.js patch|minor|major  # Bump version
-git push && gh pr create --base main             # PR to main triggers release
-```
+
+Version changes, commits, pushes, and publication require explicit user authorization. The imported automatic release workflow is disabled.
 
 See [RELEASE.md](RELEASE.md) for full release process.
 
@@ -217,7 +215,7 @@ const readTool = tool({
 
 ### Spec Directory Structure
 
-Each spec in `.auto-claude/specs/XXX-name/` contains: `spec.md`, `requirements.json`, `context.json`, `implementation_plan.json`, `qa_report.md`, `QA_FIX_REQUEST.md`
+Each spec in `.forge-glass-preview/specs/XXX-name/` contains: `spec.md`, `requirements.json`, `context.json`, `implementation_plan.json`, `qa_report.md`, `QA_FIX_REQUEST.md`
 
 ### Memory System (Graphiti)
 
@@ -323,7 +321,7 @@ When adding new UI text: add keys to ALL language files, use `namespace:section.
 
 ## Cross-Platform
 
-Supports Windows, macOS, Linux. CI tests all three.
+Platform code targets Windows, macOS, and Linux; current published verification covers macOS arm64 only.
 
 **Platform modules:** `apps/desktop/src/main/platform/`
 
@@ -355,5 +353,5 @@ npm run dev        # Development mode with HMR
 npm run dev:debug  # Debug mode with verbose output
 npm run dev:mcp    # Electron MCP server for AI debugging
 
-# Project data: .auto-claude/specs/ (gitignored)
+# Project data: .forge-glass-preview/specs/ (gitignored)
 ```

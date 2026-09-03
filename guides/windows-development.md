@@ -1,10 +1,10 @@
 # Windows Development Guide
 
-This guide covers Windows-specific considerations when developing Auto Claude.
+This guide covers Windows-specific considerations when developing Forge.
 
 ## Setup
 
-Auto Claude downloads prebuilt native binaries for `node-pty` on Windows automatically. If prebuilts are not available for your Electron version, you will need Visual Studio Build Tools:
+Forge downloads prebuilt native binaries for `node-pty` on Windows automatically. If prebuilts are not available for your Electron version, you will need Visual Studio Build Tools:
 
 1. Download [Visual Studio Build Tools 2022](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
 2. Select the "Desktop development with C++" workload

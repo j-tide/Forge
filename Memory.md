@@ -1,7 +1,7 @@
 # Memory System V5 — Definitive Architecture
 
 > Built on: V4 Draft + Hackathon Teams 1–5 + Infrastructure Research (Turso/Convex/Retrieval Pipeline)
-> Status: Pre-implementation design document
+> Status: Historical pre-implementation design document; not a claim of current Forge functionality
 > Date: 2026-02-22
 > Key change from V4: Turso/libSQL replaces better-sqlite3, Convex for auth/team/UI, OpenAI embedding fallback, Graphiti replaced by TS Knowledge Graph, complete retrieval pipeline from day one
 
@@ -37,7 +37,7 @@
 
 ### Why Memory Is the Technical Moat
 
-Auto Claude positions as "more control than Lovable, more automatic than Cursor or Claude Code." Memory is the primary mechanism that delivers on this promise. Every session without memory forces agents to rediscover the codebase from scratch — re-reading the same files, retrying the same failed approaches, hitting the same gotchas. With a well-designed memory system, agents navigate the codebase like senior developers who built it.
+Forge positions as "more control than Lovable, more automatic than Cursor or Claude Code." Memory is the primary mechanism that delivers on this promise. Every session without memory forces agents to rediscover the codebase from scratch — re-reading the same files, retrying the same failed approaches, hitting the same gotchas. With a well-designed memory system, agents navigate the codebase like senior developers who built it.
 
 The accumulated value compounds over time:
 
@@ -72,7 +72,7 @@ The most valuable memories are never explicitly requested. They emerge from watc
 
 ### Competitive Gap Matrix
 
-| Capability | Cursor | Windsurf | Copilot | Augment | Devin | Auto Claude V5 |
+| Capability | Cursor | Windsurf | Copilot | Augment | Devin | Forge V5 |
 |---|---|---|---|---|---|---|
 | Behavioral observation | No | Partial | No | No | No | Yes (17 signals) |
 | Co-access graph | No | No | No | No | No | Yes |
@@ -86,7 +86,7 @@ The most valuable memories are never explicitly requested. They emerge from watc
 | Knowledge graph (3 layers) | No | No | No | No | No | Yes |
 | Same code path local + cloud | N/A | N/A | N/A | N/A | N/A | Yes (libSQL) |
 
-**Where Auto Claude uniquely wins:**
+**Where Forge uniquely wins:**
 1. **Graph neighborhood boost** — 3-path hybrid retrieval that boosts results co-located in the knowledge graph. No competitor does this because none have a closure-table knowledge graph.
 2. **Behavioral observation** — watching what agents *do*, not what they say.
 3. **Active prepareStep injection** — the third tier that fires between every agent step.
@@ -373,7 +373,7 @@ interface MemoryMethodologyPlugin {
 
 const nativePlugin: MemoryMethodologyPlugin = {
   id: 'native',
-  displayName: 'Auto Claude (Subtasks)',
+  displayName: 'Forge (Subtasks)',
   mapPhase: (p) => ({
     planning: 'define', spec: 'define',
     coding: 'implement',
@@ -864,7 +864,7 @@ RRF scoring is done application-side after fetching both result sets.
 
 ### Graph Neighborhood Boost (The Unique Advantage)
 
-This is Auto Claude's primary competitive differentiator in retrieval. Zero competitor does this.
+This is Forge's primary competitive differentiator in retrieval. Zero competitor does this.
 
 ```typescript
 async function applyGraphNeighborhoodBoost(
@@ -1497,7 +1497,7 @@ Electron App (all users)
 
 Web App (Next.js SaaS, same repo/OSS)
 ├── Self-hosted: users run their own stack (no cloud features)
-└── Cloud hosted (auto-claude.app): Turso Cloud + Convex
+└── Cloud-hosted deployment (future design, no service is provisioned): Turso Cloud + Convex
     ├── Pure cloud libSQL (no local file)
     ├── OpenAI embeddings (no Ollama)
     └── Cohere Rerank API

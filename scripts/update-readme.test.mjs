@@ -66,17 +66,17 @@ test('updateSection - replaces content between markers', () => {
 test('updateSection - applies multiple replacements in order', () => {
   const content = [
     '<!-- S -->',
-    'Auto-Claude-2.7.0-mac.dmg download/v2.7.0/file',
+    'Forge-2.7.0-mac.dmg download/v2.7.0/file',
     '<!-- E -->',
   ].join('\n');
 
   const semver = String.raw`\d+\.\d+\.\d+(?:-[a-zA-Z]+\.[a-zA-Z0-9.]+)?`;
   const result = updateSection(content, '<!-- S -->', '<!-- E -->', [
-    [`Auto-Claude-${semver}`, 'Auto-Claude-2.8.0'],
+    [`Forge-${semver}`, 'Forge-2.8.0'],
     [`download/v${semver}/`, 'download/v2.8.0/'],
   ]);
 
-  assert.ok(result.includes('Auto-Claude-2.8.0'), 'should replace filename');
+  assert.ok(result.includes('Forge-2.8.0'), 'should replace filename');
   assert.ok(result.includes('download/v2.8.0/'), 'should replace download path');
 });
 
@@ -126,7 +126,7 @@ function buildSampleReadme(stableVersion, betaVersion) {
     `<!-- STABLE_VERSION_BADGE_END -->`,
     ``,
     `<!-- STABLE_DOWNLOADS -->`,
-    `https://example.com/download/v${sv}/Auto-Claude-${sv}-win`,
+    `https://example.com/download/v${sv}/Forge-${sv}-win`,
     `<!-- STABLE_DOWNLOADS_END -->`,
     ``,
     `[![beta](https://img.shields.io/badge/beta-${bvBadge}-orange)](https://example.com)`,
@@ -136,7 +136,7 @@ function buildSampleReadme(stableVersion, betaVersion) {
     `<!-- BETA_VERSION_BADGE_END -->`,
     ``,
     `<!-- BETA_DOWNLOADS -->`,
-    `https://example.com/download/v${bv}/Auto-Claude-${bv}-win`,
+    `https://example.com/download/v${bv}/Forge-${bv}-win`,
     `<!-- BETA_DOWNLOADS_END -->`,
   ].join('\n');
 }
@@ -176,7 +176,7 @@ test('updateReadme - stable release updates TOP_VERSION_BADGE, STABLE_VERSION_BA
 
     // STABLE_DOWNLOADS section updated
     assert.ok(result.includes('download/v2.8.0/'), 'stable download path updated');
-    assert.ok(result.includes('Auto-Claude-2.8.0'), 'stable download filename updated');
+    assert.ok(result.includes('Forge-2.8.0'), 'stable download filename updated');
 
     // Beta section NOT modified
     assert.ok(result.includes('beta-2.8.0--beta.1-orange'), 'beta badge unchanged');
@@ -214,7 +214,7 @@ test('updateReadme - prerelease updates BETA_VERSION_BADGE and BETA_DOWNLOADS', 
 
     // BETA_DOWNLOADS section updated
     assert.ok(result.includes('download/v2.8.0-beta.1/'), 'beta download path updated');
-    assert.ok(result.includes('Auto-Claude-2.8.0-beta.1'), 'beta download filename updated');
+    assert.ok(result.includes('Forge-2.8.0-beta.1'), 'beta download filename updated');
 
     // Stable section NOT modified
     assert.ok(result.includes('stable-2.7.0-blue'), 'stable badge unchanged');

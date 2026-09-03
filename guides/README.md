@@ -1,12 +1,12 @@
-# Auto Claude Guides
+# Forge Guides
 
-Detailed documentation for Auto Claude setup and usage.
+Detailed documentation for Forge setup and usage.
 
 ## Available Guides
 
 | Guide | Description |
 |-------|-------------|
-| **[CLI-USAGE.md](CLI-USAGE.md)** | Terminal-only usage for power users, headless servers, and CI/CD |
+| **[CLI-USAGE.md](CLI-USAGE.md)** | Desktop launch and configuration; no bundled headless task CLI |
 | **[windows-development.md](windows-development.md)** | Windows-specific development guide (file encoding, paths, line endings) |
 | **[linux.md](linux.md)** | Linux-specific installation and build guide (Flatpak, AppImage) |
 

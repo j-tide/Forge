@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Legacy command retained for callers of the upstream installer.
- * Forge Glass Preview has no trusted prebuild release feed, so this command
+ * Forge has no trusted prebuild release feed, so this command
  * never downloads binaries. Use the local electron-rebuild path instead.
  */
 

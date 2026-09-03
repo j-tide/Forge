@@ -1,49 +1,12 @@
-# Auto Claude UI - Frontend
+# Forge UI - Frontend
 
-A modern Electron + React desktop application for the Auto Claude autonomous coding framework.
+A modern Electron + React desktop application for the Forge autonomous coding framework.
 
 ## Prerequisites
 
-### Node.js v24.12.0 LTS (Required)
+### Node.js 24+ and npm 10+
 
-This project requires **Node.js v24.12.0 LTS** (Latest LTS version as of December 2024).
-
-**Download:** https://nodejs.org/en/download/
-
-**Or install via command line:**
-
-**Windows:**
-```bash
-winget install OpenJS.NodeJS.LTS
-```
-
-**macOS:**
-```bash
-brew install node@24
-```
-
-**Linux (Ubuntu/Debian):**
-```bash
-curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
-sudo apt install -y nodejs
-```
-
-**Linux (Fedora):**
-```bash
-sudo dnf install nodejs npm
-```
-
-> **IMPORTANT:** When installing Node.js on Windows, make sure to check:
-> - "Add to PATH"
-> - "npm package manager"
-
-**Verify installation:**
-```bash
-node --version  # Should output: v24.12.0
-npm --version   # Should output: 11.x.x or higher
-```
-
-> **Note:** npm is included with Node.js. If `npm` is not found after installing Node.js, you need to reinstall Node.js properly.
+Use versions satisfying the exact `engines` declarations and the repository lockfile. The current macOS arm64 verification used Node.js 24.19.0 and npm 10.8.2. See [the root README](../../README.md) for installation and platform verification boundaries. Do not change global tools as a side effect of building this project.
 
 ## Quick Start
 
@@ -60,11 +23,11 @@ npm run dev
 
 ## Security
 
-This project maintains **0 vulnerabilities**. Run `npm audit` to verify.
+The current production dependency baseline has **33 audit findings** (10 high, 9 moderate, 14 low; recorded 2026-09-27). Run `npm audit --omit=dev` to check the current lockfile; do not treat branding or localization checks as dependency remediation.
 
 ```bash
-npm audit
-# Expected output: found 0 vulnerabilities
+npm audit --omit=dev
+# Nonzero exit reports unresolved findings; retain them in the verification record.
 ```
 
 ## Architecture

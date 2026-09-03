@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Post-install script for Forge Glass Preview
+ * Post-install script for Forge
  *
  * Build native modules locally when platform packages are not already present.
  * The derivative never downloads binaries from upstream app releases.

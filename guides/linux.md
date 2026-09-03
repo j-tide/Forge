@@ -1,14 +1,14 @@
 # Linux Installation & Building Guide
 
-This guide covers Linux-specific installation options and building from source.
+This guide covers potential Linux packaging commands. Linux packages and installation are **UNVERIFIED** for the current Forge preview; the current published artifact is macOS arm64. Check the actual package configuration and output before using any example below.
 
 ## Flatpak Installation
 
-Flatpak packages are available for Linux users who prefer sandboxed applications.
+The imported build supports preparing Flatpak packages; this does not mean a tested Forge Flatpak has been published.
 
 ### Download Flatpak
 
-See the [main README](../README.md#beta-release) for Flatpak download links in the Beta Release section.
+Check the [main README](../README.md) and repository Releases for actual available artifacts. Do not download a different project’s package to substitute for Forge.
 
 ### Building Flatpak from Source
 
@@ -34,16 +34,16 @@ The Flatpak will be created in `apps/desktop/dist/`.
 
 ### Installing the Built Flatpak
 
-After building, install the Flatpak locally:
+After verifying the actual output filename and application ID in the package metadata, install the Flatpak locally:
 
 ```bash
-flatpak install --user apps/desktop/dist/Auto-Claude-*.flatpak
+flatpak install --user apps/desktop/dist/Forge-*.flatpak
 ```
 
 ### Running from Flatpak
 
 ```bash
-flatpak run com.autoclaude.AutoClaude
+flatpak run dev.iamzjt.forgeglasspreview
 ```
 
 ## Other Linux Packages
@@ -54,10 +54,10 @@ AppImage files are portable and don't require installation:
 
 ```bash
 # Make executable
-chmod +x Auto-Claude-*-linux-x86_64.AppImage
+chmod +x Forge-*-linux-x86_64.AppImage
 
 # Run
-./Auto-Claude-*-linux-x86_64.AppImage
+./Forge-*-linux-x86_64.AppImage
 ```
 
 ### Debian Package (.deb)
@@ -65,7 +65,7 @@ chmod +x Auto-Claude-*-linux-x86_64.AppImage
 For Ubuntu/Debian systems:
 
 ```bash
-sudo dpkg -i Auto-Claude-*-linux-amd64.deb
+sudo dpkg -i Forge-*-linux-amd64.deb
 ```
 
 ## Troubleshooting
@@ -88,8 +88,8 @@ If the AppImage doesn't start:
 
 ```bash
 # Check for missing libraries
-ldd ./Auto-Claude-*-linux-x86_64.AppImage
+ldd ./Forge-*-linux-x86_64.AppImage
 
 # Try running with debug output
-./Auto-Claude-*-linux-x86_64.AppImage --verbose
+./Forge-*-linux-x86_64.AppImage --verbose
 ```

@@ -21,13 +21,13 @@ jobs:
 
             A maintainer will triage this soon. In the meantime:
             - Make sure you've provided all the requested info
-            - Join our [Discord](https://discord.gg/QhRnz9m5HE) for faster help
+            - Check the repository README and existing issues for setup information
           pr-message: |
             🎉 Thanks for your first PR!
 
             A maintainer will review it soon. Please make sure:
-            - Your branch is synced with `develop`
+            - Your branch is synced with `main`
             - CI checks pass
-            - You've followed our [contribution guide](https://github.com/AndyMik90/Auto-Claude/blob/develop/CONTRIBUTING.md)
+            - You've followed our [contribution guide](https://github.com/j-tide/Forge/blob/main/CONTRIBUTING.md)
 
-            Welcome to the Auto Claude community!
+            Welcome to the Forge community!

@@ -1,14 +1,14 @@
-# Contributing to Auto Claude
+# Contributing to Forge
 
-Thank you for your interest in contributing to Auto Claude! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to Forge! This document provides guidelines and instructions for contributing to the project.
 
 ## How to Contribute
 
 | What you want to do | Where to start |
 |----------------------|----------------|
 | Bug fixes & small improvements | Open a PR directly |
-| New features / architecture changes | Start a [GitHub Discussion](https://github.com/AndyMik90/Auto-Claude/discussions) or ask in [Discord](https://discord.com/channels/1448614759996854284/1451298184612548779) first |
-| Questions & setup help | [Discord #setup-help](https://discord.com/channels/1448614759996854284/1451298184612548779) |
+| New features / architecture changes | Describe the proposal in this repository’s issue or pull request before changing architecture |
+| Questions & setup help | Use this repository’s issue tracker, with credentials and local paths redacted |
 
 ## AI-Assisted Contributions
 
@@ -27,7 +27,7 @@ AI-assisted PRs go through the same review process as any other contribution. Tr
 
 - [How to Contribute](#how-to-contribute)
 - [AI-Assisted Contributions](#ai-assisted-contributions)
-- [Contributor License Agreement (CLA)](#contributor-license-agreement-cla)
+- [License and source notices](#license-and-source-notices)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [Development Setup](#development-setup)
@@ -36,38 +36,19 @@ AI-assisted PRs go through the same review process as any other contribution. Tr
 - [Testing](#testing)
 - [Continuous Integration](#continuous-integration)
 - [Git Workflow](#git-workflow)
-  - [Working with Forks](#working-with-forks)
-  - [Branch Overview](#branch-overview)
-  - [Main Branches](#main-branches)
-  - [Supporting Branches](#supporting-branches)
-  - [Branch Naming](#branch-naming)
-  - [Where to Branch From](#where-to-branch-from)
-  - [Pull Request Targets](#pull-request-targets)
-  - [Release Process](#release-process-maintainers)
+  - [Repository remotes](#repository-remotes)
+  - [Current development workflow](#current-development-workflow)
   - [Commit Messages](#commit-messages)
   - [PR Hygiene](#pr-hygiene)
 - [Pull Request Process](#pull-request-process)
 - [Issue Reporting](#issue-reporting)
 - [Architecture Overview](#architecture-overview)
 
-## Contributor License Agreement (CLA)
+## License and source notices
 
-All contributors must sign our Contributor License Agreement (CLA) before contributions can be accepted.
+Contributions to Forge are distributed under the repository’s [AGPL-3.0 license](LICENSE). Preserve applicable copyright, attribution, and source notices. Source provenance is recorded in [UPSTREAM.md](UPSTREAM.md).
 
-### Why We Require a CLA
-
-Auto Claude is currently licensed under AGPL-3.0. The CLA ensures the project has proper licensing flexibility should we introduce additional licensing options (such as commercial/enterprise licenses) in the future.
-
-You retain full copyright ownership of your contributions.
-
-### How to Sign
-
-1. Open a Pull Request
-2. The CLA bot will automatically comment with instructions
-3. Comment on the PR with: `I have read the CLA Document and I hereby sign the CLA`
-4. Done - you only need to sign once, and it applies to all future contributions
-
-Read the full CLA here: [CLA.md](CLA.md)
+[CLA.md](CLA.md) is an unchanged historical upstream agreement. It is retained for provenance and does **not** apply as a required agreement for new Forge contributions. Do not claim that its original owner or automated signing process belongs to Forge.
 
 ## Prerequisites
 
@@ -129,8 +110,8 @@ The fastest way to get started:
 
 ```bash
 # Clone the repository
-git clone https://github.com/AndyMik90/Auto-Claude.git
-cd Auto-Claude
+git clone https://github.com/j-tide/Forge.git
+cd Forge-Aperant
 
 # Install all dependencies (cross-platform)
 npm run install:all
@@ -170,7 +151,7 @@ npm test               # Run frontend tests
 <details>
 <summary><b>Windows users:</b> If installation fails with node-gyp errors, click here</summary>
 
-Auto Claude automatically downloads prebuilt binaries for Windows. If prebuilts aren't available for your Electron version yet, you'll need Visual Studio Build Tools:
+Forge does not download upstream native prebuilts. Source builds rebuild native dependencies locally; Windows may require Visual Studio Build Tools:
 
 1. Download [Visual Studio Build Tools 2022](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
 2. Select "Desktop development with C++" workload
@@ -179,7 +160,7 @@ Auto Claude automatically downloads prebuilt binaries for Windows. If prebuilts 
 
 </details>
 
-> **Note:** For regular usage, we recommend downloading the pre-built releases from [GitHub Releases](https://github.com/AndyMik90/Auto-Claude/releases). Running from source is primarily for contributors and those testing unreleased features.
+> **Note:** For regular usage, we recommend downloading the pre-built releases from [GitHub Releases](https://github.com/j-tide/Forge/releases). Running from source is primarily for contributors and those testing unreleased features.
 
 ## Pre-commit Hooks
 
@@ -319,251 +300,30 @@ npm run typecheck
 
 ## Git Workflow
 
-We use a **Git Flow** branching strategy to manage releases and parallel development.
+Forge uses isolated change branches against the current integration branch. Imported release automation is disabled.
 
-### Working with Forks
+### Repository remotes
 
-When contributing to Auto Claude, you'll typically fork the repository first. Proper fork configuration is essential to avoid sync issues.
-
-#### Initial Fork Setup
+Forge uses an independent repository. Clone the actual repository URL:
 
 ```bash
-# 1. Fork on GitHub (click the Fork button on the repo page)
-
-# 2. Clone YOUR fork (not the original repo)
-git clone https://github.com/YOUR-USERNAME/Auto-Claude.git
-cd Auto-Claude
-
-# 3. Verify your remotes point to YOUR fork
+git clone https://github.com/j-tide/Forge.git
+cd Forge-Aperant
 git remote -v
-# Should show:
-# origin  https://github.com/YOUR-USERNAME/Auto-Claude.git (fetch)
-# origin  https://github.com/YOUR-USERNAME/Auto-Claude.git (push)
-
-# 4. Add upstream remote to sync with the original repo
-git remote add upstream https://github.com/AndyMik90/Auto-Claude.git
 ```
 
-#### Keeping Your Fork Updated
+`origin` must point to this Forge repository before pushing. The read-only `upstream` remote and [UPSTREAM.md](UPSTREAM.md) record source provenance; they are not a GitHub Fork badge. Do not rewrite history or remove legal notices to change product branding.
+
+### Current development workflow
+
+The current Forge integration branch is `main`; imported Git Flow and automatic release examples are not the active publication process. Create an isolated change branch, run the checks documented above, and provide a focused pull request with actual verification results.
 
 ```bash
-# Fetch latest changes from upstream
-git fetch upstream
-
-# Sync your develop branch with upstream
-git checkout develop
-git merge upstream/develop
-git push origin develop
+git fetch origin
+git switch -c codex/your-change origin/main
 ```
 
-#### Converting a Fork to Standalone
-
-> ⚠️ **Common Issue:** After making a fork standalone (e.g., disconnecting from the original repo on GitHub), your local git configuration may still reference the original forked repository, causing push/pull issues.
-
-If you convert your fork to a standalone repository:
-
-```bash
-# 1. Update origin to point to your standalone repo
-git remote set-url origin https://github.com/YOUR-USERNAME/Your-Standalone-Repo.git
-
-# 2. Remove the upstream remote (no longer applicable)
-git remote remove upstream
-
-# 3. Verify your configuration
-git remote -v
-# Should only show your standalone repo as origin
-
-# 4. Update your default branch tracking if needed
-git branch --set-upstream-to=origin/main main
-git branch --set-upstream-to=origin/develop develop
-```
-
-#### Troubleshooting Fork Issues
-
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| `Permission denied` on push | Origin points to upstream repo | `git remote set-url origin <your-fork-url>` |
-| `Repository not found` | Fork was deleted or made standalone | Update remote URL to current repo location |
-| Can't push to develop | Local branch tracks wrong remote | `git branch --set-upstream-to=origin/develop` |
-| Commits show wrong author | Git config not set | `git config user.email "you@example.com"` |
-
-### Branch Overview
-
-```
-main (stable)          ← Only released, tested code (tagged versions)
-  │
-develop                ← Integration branch - all PRs merge here first
-  │
-├── feature/xxx        ← New features
-├── fix/xxx            ← Bug fixes
-├── release/vX.Y.Z     ← Release preparation
-└── hotfix/xxx         ← Emergency production fixes
-```
-
-### Main Branches
-
-| Branch | Purpose | Protected |
-|--------|---------|-----------|
-| `main` | Production-ready code. Only receives merges from `release/*` or `hotfix/*` branches. Every merge is tagged (v2.7.0, v2.8.0, etc.) | ✅ Yes |
-| `develop` | Integration branch where all features and fixes are combined. This is the default target for all PRs. | ✅ Yes |
-
-### Supporting Branches
-
-| Branch Type | Branch From | Merge To | Purpose |
-|-------------|-------------|----------|---------|
-| `feature/*` | `develop` | `develop` | New features and enhancements |
-| `fix/*` | `develop` | `develop` | Bug fixes (non-critical) |
-| `release/*` | `develop` | `main` + `develop` | Release preparation and final testing |
-| `hotfix/*` | `main` | `main` + `develop` | Critical production bug fixes |
-
-### Branch Naming
-
-Use descriptive branch names with a prefix indicating the type of change:
-
-| Prefix | Purpose | Example |
-|--------|---------|---------|
-| `feature/` | New feature | `feature/add-dark-mode` |
-| `fix/` | Bug fix | `fix/memory-leak-in-worker` |
-| `hotfix/` | Urgent production fix | `hotfix/critical-crash-fix` |
-| `docs/` | Documentation | `docs/update-readme` |
-| `refactor/` | Code refactoring | `refactor/simplify-auth-flow` |
-| `test/` | Test additions/fixes | `test/add-integration-tests` |
-| `chore/` | Maintenance tasks | `chore/update-dependencies` |
-| `release/` | Release preparation | `release/v2.8.0` |
-| `hotfix/` | Emergency fixes | `hotfix/critical-auth-bug` |
-
-### Where to Branch From
-
-```bash
-# For features and bug fixes - ALWAYS branch from develop
-git checkout develop
-git pull origin develop
-git checkout -b feature/my-new-feature
-
-# For hotfixes only - branch from main
-git checkout main
-git pull origin main
-git checkout -b hotfix/critical-fix
-```
-
-### Pull Request Targets
-
-> ⚠️ **Important:** All PRs should target `develop`, NOT `main`!
-
-| Your Branch Type | Target Branch |
-|------------------|---------------|
-| `feature/*` | `develop` |
-| `fix/*` | `develop` |
-| `docs/*` | `develop` |
-| `refactor/*` | `develop` |
-| `test/*` | `develop` |
-| `chore/*` | `develop` |
-| `hotfix/*` | `main` (maintainers only) |
-| `release/*` | `main` (maintainers only) |
-
-### Release Process (Maintainers)
-
-When ready to release a new version:
-
-```bash
-# 1. Create release branch from develop
-git checkout develop
-git pull origin develop
-git checkout -b release/v2.8.0
-
-# 2. Update version numbers, CHANGELOG, final fixes only
-# No new features allowed in release branches!
-
-# 3. Merge to main and tag
-git checkout main
-git merge release/v2.8.0
-git tag v2.8.0
-git push origin main --tags
-
-# 4. Merge back to develop (important!)
-git checkout develop
-git merge release/v2.8.0
-git push origin develop
-
-# 5. Delete release branch
-git branch -d release/v2.8.0
-git push origin --delete release/v2.8.0
-```
-
-### Beta Release Process (Maintainers)
-
-Beta releases allow users to test new features before they're included in a stable release. Beta releases are published from the `develop` branch.
-
-**Creating a Beta Release:**
-
-1. Go to **Actions** → **Beta Release** workflow in GitHub
-2. Click **Run workflow**
-3. Enter the beta version (e.g., `2.8.0-beta.1`)
-4. Optionally enable dry run to test without publishing
-5. Click **Run workflow**
-
-The workflow will:
-- Validate the version format
-- Update `package.json` on develop
-- Create and push a tag (e.g., `v2.8.0-beta.1`)
-- Build installers for all platforms
-- Create a GitHub pre-release
-
-**Version Format:**
-```
-X.Y.Z-beta.N   (e.g., 2.8.0-beta.1, 2.8.0-beta.2)
-X.Y.Z-alpha.N  (e.g., 2.8.0-alpha.1)
-X.Y.Z-rc.N     (e.g., 2.8.0-rc.1)
-```
-
-**For Users:**
-Users can opt into beta updates in Settings → Updates → "Beta Updates" toggle. When enabled, the app will check for and install beta versions. Users can switch back to stable at any time.
-
-### Hotfix Workflow
-
-For urgent production fixes that can't wait for the normal release cycle:
-
-**1. Create hotfix from main**
-
-```bash
-git checkout main
-git pull origin main
-git checkout -b hotfix/150-critical-fix
-```
-
-**2. Fix the issue**
-
-```bash
-# ... make changes ...
-git commit -m "hotfix: fix critical crash on startup"
-```
-
-**3. Open PR to main (fast-track review)**
-
-```bash
-gh pr create --base main --title "hotfix: fix critical crash on startup"
-```
-
-**4. After merge to main, sync to develop**
-
-```bash
-git checkout develop
-git pull origin develop
-git merge main
-git push origin develop
-```
-
-```
-main ─────●─────●─────●─────●───── (production)
-          ↑     ↑     ↑     ↑
-develop ──●─────●─────●─────●───── (integration)
-          ↑     ↑     ↑
-feature/123 ────●
-feature/124 ──────────●
-hotfix/125 ─────────────────●───── (from main, merge to both)
-```
-
-> **Note:** Hotfixes branch FROM `main` and merge TO `main` first, then sync back to `develop` to keep branches aligned.
+Do not reset or clean another developer’s uncommitted work. Commit, push, merge, tag, and publish only when explicitly authorized. Packaging and release steps are documented in [RELEASE.md](RELEASE.md); a normal push must not publish a release or re-enable a disabled updater.
 
 ### Commit Messages
 
@@ -598,8 +358,8 @@ git commit -m "WIP"
 ### PR Hygiene
 
 **Rebasing:**
-- **Rebase onto develop** before opening a PR and before merge to maintain linear history
-- Use `git fetch origin && git rebase origin/develop` to sync your branch
+- **Rebase onto the current integration branch** before opening a PR and before merge to maintain linear history
+- Use `git fetch origin && git rebase origin/main` to sync your branch
 - Use `--force-with-lease` when force-pushing rebased branches (safer than `--force`)
 - Notify reviewers after force-pushing during active review
 - **Exception:** Never rebase after PR is approved and others have reviewed specific commits
@@ -612,11 +372,11 @@ git commit -m "WIP"
 
 **Before requesting review:**
 ```bash
-# Ensure up-to-date with develop
-git fetch origin && git rebase origin/develop
+# Ensure up-to-date with main
+git fetch origin && git rebase origin/main
 
 # Clean up commit history (squash fixups, reword messages)
-git rebase -i origin/develop
+git rebase -i origin/main
 
 # Force push with safety check
 git push --force-with-lease
@@ -631,11 +391,11 @@ cd apps/desktop && npm test && npm run lint && npm run typecheck
 
 ## Pull Request Process
 
-1. **Fork the repository** and create your branch from `develop` (not main!)
+1. **Create an isolated branch** from the current integration branch
 
    ```bash
-   git checkout develop
-   git pull origin develop
+   git checkout main
+   git pull origin main
    git checkout -b feature/your-feature-name
    ```
 
@@ -682,7 +442,7 @@ When reporting a bug, include:
 2. **Environment details**:
    - OS and version
    - Node.js version
-   - Auto Claude version
+   - Forge version
 3. **Steps to reproduce** the issue
 4. **Expected behavior** vs **actual behavior**
 5. **Error messages** or logs (if applicable)
@@ -699,7 +459,7 @@ When requesting a feature:
 
 ## Architecture Overview
 
-Auto Claude is a single Electron desktop application in `apps/desktop/`.
+Forge is a single Electron desktop application in `apps/desktop/`.
 
 ### Electron Desktop (`apps/desktop/`)
 
@@ -719,4 +479,4 @@ If you have questions about contributing, feel free to:
 1. Open a GitHub issue with the `question` label
 2. Review existing issues and discussions
 
-Thank you for contributing to Auto Claude!
+Thank you for contributing to Forge!

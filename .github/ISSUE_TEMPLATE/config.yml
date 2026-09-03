@@ -1,8 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 💡 Feature Request
-    url: https://github.com/AndyMik90/Auto-Claude/discussions
-    about: Suggest new features in GitHub Discussions
-  - name: 💬 Discord Community
-    url: https://discord.gg/QhRnz9m5HE
-    about: Questions and discussions - join our Discord!
+  - name: Forge documentation
+    url: https://github.com/j-tide/Forge#readme
+    about: Installation, configuration, and troubleshooting

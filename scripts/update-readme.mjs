@@ -100,7 +100,7 @@ export function updateReadme(version, isPrerelease) {
       '<!-- BETA_DOWNLOADS -->',
       '<!-- BETA_DOWNLOADS_END -->',
       [
-        [`Auto-Claude-${semver}`, `Auto-Claude-${version}`],
+        [`Forge-${semver}`, `Forge-${version}`],
         [`download/v${semver}/`, `download/v${version}/`],
       ],
     );
@@ -138,7 +138,7 @@ export function updateReadme(version, isPrerelease) {
       '<!-- STABLE_DOWNLOADS -->',
       '<!-- STABLE_DOWNLOADS_END -->',
       [
-        [`Auto-Claude-${semver}`, `Auto-Claude-${version}`],
+        [`Forge-${semver}`, `Forge-${version}`],
         [`download/v${semver}/`, `download/v${version}/`],
       ],
     );
