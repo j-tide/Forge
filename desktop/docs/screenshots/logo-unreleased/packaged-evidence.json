@@ -1,0 +1,18 @@
+{
+  "name": "Forge",
+  "version": "0.1.0-preview.2",
+  "packaged": true,
+  "resources": "/Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/dist/logo-unreleased/mac-arm64/Forge.app/Contents/Resources",
+  "iconSize": {
+    "width": 256,
+    "height": 256
+  },
+  "iconEmpty": false,
+  "checkedBuiltFiles": 8,
+  "checkedNativeIcons": 4,
+  "documentLanguage": "en",
+  "screenshots": [
+    "package-startup-1440.png"
+  ],
+  "note": "Read-only startup using existing preview preferences; no provider call or preference change."
+}

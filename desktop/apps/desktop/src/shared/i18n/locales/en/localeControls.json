@@ -1,0 +1,9 @@
+{
+  "savedAutomatically": "Saved automatically. No restart required.",
+  "saving": "Saving language…",
+  "saveFailed": "Could not save the setting. Please try again.",
+  "unknownError": "Unknown error",
+  "unsupported": "Unsupported interface language",
+  "invalidLanguage": "Invalid language parameter",
+  "spellcheckFailed": "Failed to set spell check languages"
+}

@@ -1,0 +1,15 @@
+{
+  "close": "Close",
+  "select": "Select...",
+  "search": "Search...",
+  "noResults": "No results found",
+  "errorTitle": "Something went wrong",
+  "errorDescription": "An error occurred while rendering this content.",
+  "retry": "Try Again",
+  "embeddingSmall": "{{model}} (default, cheapest)",
+  "embeddingLarge": "{{model}} (higher quality)",
+  "embeddingDefault": "{{model}} (default)",
+  "azureApiKey": "Azure API Key",
+  "notification": "Notification",
+  "notifications": "Notifications ({hotkey})"
+}

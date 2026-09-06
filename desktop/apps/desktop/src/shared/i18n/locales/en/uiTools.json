@@ -1,0 +1,44 @@
+{
+  "files": {
+    "noFiles": "No files found",
+    "navigate": "navigate",
+    "select": "select",
+    "close": "close",
+    "projectFiles": "Project Files",
+    "dragTerminal": "Drag files into a terminal to insert the path",
+    "dragReferences": "Drag files to add as references",
+    "referenced": "Referenced Files",
+    "folder": "folder",
+    "remove": "Remove reference to {{name}}"
+  },
+  "images": {
+    "maximumAllowed": "Maximum of {{count}} images allowed",
+    "remaining": "Only {{count}} more image(s) can be added. Some files were skipped.",
+    "invalidType": "\"{{name}}\" is not a valid image type. Allowed: {{types}}",
+    "tooLarge": "\"{{name}}\" is larger than 10 MB. Consider compressing it for better performance.",
+    "processFailed": "Failed to process \"{{name}}\"",
+    "drop": "Drop images here or click to browse",
+    "maximumReached": "Maximum images reached",
+    "typesHint": "{{types}} up to 10 MB each ({{current}}/{{max}})",
+    "largeWarning": "Large file — consider compressing",
+    "remove": "Remove image {{name}}"
+  },
+  "thinking": {
+    "low": {
+      "label": "Low",
+      "description": "Brief consideration"
+    },
+    "medium": {
+      "label": "Medium",
+      "description": "Moderate analysis"
+    },
+    "high": {
+      "label": "High",
+      "description": "Deep thinking"
+    },
+    "xhigh": {
+      "label": "Extra High",
+      "description": "Maximum reasoning"
+    }
+  }
+}

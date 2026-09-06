@@ -1,0 +1,37 @@
+{
+  "auth": {
+    "unknownProfile": "Unknown profile",
+    "tokenExpired": "Your authentication token has expired.",
+    "tokenInvalid": "Your authentication token is invalid.",
+    "tokenMissing": "No authentication token found.",
+    "authFailed": "Authentication failed.",
+    "title": "Authentication required",
+    "profileLabel": "Account",
+    "description": "Sign in to your Claude account again to continue using Forge.",
+    "taskAffected": "Affected task",
+    "technicalDetails": "Technical details",
+    "goToSettings": "Open settings"
+  },
+  "queuePosition": "#{{position}} of {{total}}",
+  "recommended": "Recommended",
+  "yourAccount": "your account",
+  "defaultAccount": "Default account",
+  "switchAccountRetry": "Switch to another Claude account and retry the operation:",
+  "unknownInitials": "?",
+  "sources": {
+    "changelog": "Changelog generation",
+    "task": "Task execution",
+    "roadmap": "Roadmap generation",
+    "ideation": "Ideation",
+    "titleGenerator": "Title generation",
+    "claude": "Claude operation"
+  },
+  "swapReasons": {
+    "proactive": "More available capacity",
+    "reactive": "Usage limit reached",
+    "capacity": "Available capacity",
+    "rate_limit": "Usage limit reached",
+    "manual": "Manually selected",
+    "recovery": "Failure recovery"
+  }
+}

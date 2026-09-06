@@ -1,0 +1,147 @@
+{
+  "title": "MCP Server Overview",
+  "forProject": "for {{name}}",
+  "mcpCount": "{{count}} MCP",
+  "mcpServers": "MCP Servers",
+  "availableTools": "Available Tools",
+  "textOnly": "Text-only (no tools)",
+  "testConnection": "Test connection",
+  "test": "Test",
+  "edit": "Edit",
+  "delete": "Delete",
+  "healthCheckFailed": "Health check failed",
+  "connectionTestFailed": "Connection test failed",
+  "agentCount_one": "({{count}} agent)",
+  "agentCount_other": "({{count}} agents)",
+  "thinking": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "xhigh": "Extra High"
+  },
+  "categories": {
+    "spec": "Spec Creation",
+    "build": "Build",
+    "qa": "QA",
+    "utility": "Utility",
+    "ideation": "Ideation"
+  },
+  "tools": {
+    "Read": "Read",
+    "Glob": "Find files",
+    "Grep": "Search contents",
+    "Write": "Write files",
+    "Edit": "Edit files",
+    "Bash": "Run commands",
+    "WebFetch": "Fetch web pages",
+    "WebSearch": "Search the web"
+  },
+  "agents": {
+    "spec_gatherer": {
+      "name": "Spec Gatherer",
+      "description": "Collects initial requirements from user"
+    },
+    "spec_researcher": {
+      "name": "Spec Researcher",
+      "description": "Validates external integrations and APIs"
+    },
+    "spec_writer": {
+      "name": "Spec Writer",
+      "description": "Creates the spec.md document"
+    },
+    "spec_critic": {
+      "name": "Spec Critic",
+      "description": "Self-critique using deep analysis"
+    },
+    "spec_discovery": {
+      "name": "Spec Discovery",
+      "description": "Initial project discovery and analysis"
+    },
+    "spec_context": {
+      "name": "Spec Context",
+      "description": "Builds context from existing codebase"
+    },
+    "spec_validation": {
+      "name": "Spec Validation",
+      "description": "Validates spec completeness and quality"
+    },
+    "planner": {
+      "name": "Planner",
+      "description": "Creates implementation plan with subtasks"
+    },
+    "coder": {
+      "name": "Coder",
+      "description": "Implements individual subtasks"
+    },
+    "qa_reviewer": {
+      "name": "QA Reviewer",
+      "description": "Validates acceptance criteria. Uses Electron or Puppeteer based on project type."
+    },
+    "qa_fixer": {
+      "name": "QA Fixer",
+      "description": "Fixes QA-reported issues. Uses Electron or Puppeteer based on project type."
+    },
+    "pr_reviewer": {
+      "name": "PR Reviewer",
+      "description": "Reviews GitHub pull requests"
+    },
+    "commit_message": {
+      "name": "Commit Message",
+      "description": "Generates commit messages"
+    },
+    "merge_resolver": {
+      "name": "Merge Resolver",
+      "description": "Resolves merge conflicts"
+    },
+    "insights": {
+      "name": "Insights",
+      "description": "Extracts code insights"
+    },
+    "analysis": {
+      "name": "Analysis",
+      "description": "Codebase analysis with context lookup"
+    },
+    "batch_analysis": {
+      "name": "Batch Analysis",
+      "description": "Batch processing of issues or items"
+    },
+    "ideation": {
+      "name": "Ideation",
+      "description": "Generates feature ideas"
+    },
+    "roadmap_discovery": {
+      "name": "Roadmap Discovery",
+      "description": "Discovers roadmap items"
+    },
+    "pr_template_filler": {
+      "name": "PR Template Filler",
+      "description": "Generates AI-powered PR descriptions from templates"
+    }
+  },
+  "servers": {
+    "context7": {
+      "name": "Context7",
+      "description": "Documentation lookup for libraries and frameworks via @upstash/context7-mcp"
+    },
+    "memory": {
+      "name": "Memory",
+      "description": "Knowledge graph for cross-session context. Requires GRAPHITI_MCP_URL env var."
+    },
+    "linear": {
+      "name": "Linear",
+      "description": "Project management via Linear API. Requires LINEAR_API_KEY env var."
+    },
+    "electron": {
+      "name": "Electron MCP",
+      "description": "Desktop app automation via Chrome DevTools Protocol. Requires ELECTRON_MCP_ENABLED=true."
+    },
+    "puppeteer": {
+      "name": "Puppeteer MCP",
+      "description": "Web browser automation for non-Electron web frontends."
+    },
+    "forge": {
+      "name": "Forge Tools",
+      "description": "Build progress tracking, session context, discoveries & gotchas recording"
+    }
+  }
+}

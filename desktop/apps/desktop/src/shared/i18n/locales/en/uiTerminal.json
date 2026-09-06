@@ -1,0 +1,42 @@
+{
+  "title": "Terminal",
+  "agentTerminals": "Agent Terminals",
+  "emptyDescription": "Run Claude agents in parallel in separate terminals.",
+  "createShortcut": "creates a new terminal.",
+  "newTerminal": "New Terminal",
+  "terminalCount": "{{count}} / {{max}} terminals",
+  "history": "History",
+  "restoreFrom": "Restore sessions from…",
+  "sessionCount_one": "{{count}} session",
+  "sessionCount_other": "{{count}} sessions",
+  "invokeClaudeAll": "Invoke Claude in All Terminals",
+  "files": "Files",
+  "renameHint": "Double-click to rename",
+  "renameTerminal": "Terminal name",
+  "dropPath": "Drop to insert path",
+  "ide": {
+    "openFailed": "Failed to open IDE",
+    "launchFailed": "Could not launch IDE"
+  },
+  "task": {
+    "current": "Current task",
+    "switch": "Switch to…",
+    "clear": "Clear task",
+    "select": "Select task…",
+    "available": "Available tasks",
+    "add": "Add new task",
+    "none": "No tasks available",
+    "createHint": "Create tasks in the Kanban board"
+  },
+  "phases": {
+    "idle": "Ready",
+    "planning": "Planning",
+    "coding": "Coding",
+    "rate_limit_paused": "Rate Limited",
+    "auth_failure_paused": "Auth Required",
+    "qa_review": "QA Review",
+    "qa_fixing": "Fixing",
+    "complete": "Complete",
+    "failed": "Failed"
+  }
+}

@@ -1,0 +1,262 @@
+{
+  "wizard": {
+    "title": "设置向导",
+    "description": "通过几个简单步骤配置 Forge",
+    "helpText": "本向导会帮助你配置环境。你可以设置 Claude OAuth 令牌、启用记忆功能，并创建第一个任务。"
+  },
+  "welcome": {
+    "title": "欢迎使用 Forge",
+    "subtitle": "在此预览版中体验桌面任务工作流",
+    "getStarted": "开始设置",
+    "skip": "跳过设置",
+    "features": {
+      "aiPowered": {
+        "title": "AI 辅助开发",
+        "description": "使用 Claude Code 智能体 生成代码并实现功能"
+      },
+      "specDriven": {
+        "title": "规格驱动工作流",
+        "description": "用明确的规格定义任务，并审查完成后的实现"
+      },
+      "memory": {
+        "title": "记忆与上下文",
+        "description": "通过 Graphiti 保留跨会话记忆"
+      },
+      "parallel": {
+        "title": "并行执行",
+        "description": "并行运行多个 智能体，加快开发进度"
+      }
+    }
+  },
+  "oauth": {
+    "title": "Claude 身份验证",
+    "description": "连接 Claude 账户以启用 AI 功能",
+    "configureTitle": "配置 Claude 身份验证",
+    "addAccountsDesc": "添加 Claude 账户以启用 AI 功能",
+    "multiAccountInfo": "添加多个 Claude 订阅账户，达到速率限制时可自动切换。",
+    "noAccountsYet": "尚未配置账户",
+    "badges": {
+      "default": "默认",
+      "active": "正在使用",
+      "authenticated": "已验证",
+      "needsAuth": "待验证"
+    },
+    "buttons": {
+      "authenticate": "验证身份",
+      "setActive": "设为当前账户",
+      "rename": "重命名",
+      "delete": "删除",
+      "add": "添加",
+      "adding": "正在添加…",
+      "showToken": "显示令牌",
+      "hideToken": "隐藏令牌",
+      "copyToken": "复制令牌",
+      "back": "上一步",
+      "continue": "继续",
+      "skip": "跳过"
+    },
+    "labels": {
+      "accountName": "账户名称",
+      "namePlaceholder": "配置名称（例如：工作、个人）",
+      "tokenLabel": "OAuth 令牌",
+      "tokenPlaceholder": "在此输入令牌",
+      "tokenHint": "完成 OAuth 登录后，请粘贴终端中显示的令牌。"
+    },
+    "keychainTitle": "安全存储",
+    "keychainDescription": "令牌会通过系统钥匙串加密保存。macOS 可能会弹出密码提示，点击“始终允许”可避免再次提示。",
+    "toast": {
+      "authSuccess": "账户配置验证成功",
+      "authSuccessWithEmail": "账户：{{email}}",
+      "authSuccessGeneric": "身份验证完成，现在可以使用此账户配置。",
+      "authStartFailed": "无法启动身份验证",
+      "addProfileFailed": "账户配置添加失败",
+      "tokenSaved": "令牌已保存",
+      "tokenSavedDescription": "令牌已成功保存。",
+      "tokenSaveFailed": "令牌保存失败",
+      "tryAgain": "请重试。"
+    },
+    "alerts": {
+      "profileCreatedAuthFailed": "账户配置已创建，但身份验证准备失败：{{error}}",
+      "authPrepareFailed": "身份验证准备失败：{{error}}",
+      "authStartFailedMessage": "无法启动身份验证，请重试。"
+    }
+  },
+  "memory": {
+    "title": "记忆",
+    "description": "为 智能体 配置持久化的跨会话记忆",
+    "contextDescription": "记忆可以保留各次编程会话的上下文",
+    "enableMemory": "启用记忆",
+    "enableMemoryDescription": "使用嵌入式数据库保留跨会话记忆",
+    "memoryDisabledInfo": "记忆功能已停用，会话洞察只保存在本地文件中。启用记忆后，可保留跨会话上下文并进行语义检索。",
+    "embeddingProvider": "嵌入模型服务",
+    "embeddingProviderDescription": "用于语义检索的服务（可选，不配置也能使用关键词检索）",
+    "selectEmbeddingModel": "选择嵌入模型",
+    "openaiApiKey": "OpenAI API 密钥",
+    "openaiApiKeyDescription": "使用 OpenAI 嵌入模型时必填",
+    "openaiGetKey": "获取密钥：",
+    "voyageApiKey": "Voyage AI API 密钥",
+    "voyageApiKeyDescription": "使用 Voyage AI 嵌入模型时必填",
+    "voyageEmbeddingModel": "嵌入模型",
+    "googleApiKey": "Google AI API 密钥",
+    "googleApiKeyDescription": "使用 Google AI 嵌入模型时必填",
+    "azureConfig": "Azure OpenAI 配置",
+    "azureApiKey": "API 密钥",
+    "azureBaseUrl": "服务地址",
+    "azureEmbeddingDeployment": "嵌入模型部署名称",
+    "memoryInfo": "记忆会保存对代码库的发现、模式与洞察，便于后续会话直接使用已有上下文。",
+    "learnMore": "了解记忆功能",
+    "back": "上一步",
+    "skip": "跳过",
+    "saving": "正在保存…",
+    "saveAndContinue": "保存并继续",
+    "providers": {
+      "ollama": "Ollama（本地、免费）",
+      "openai": "OpenAI",
+      "voyage": "Voyage AI",
+      "google": "Google AI",
+      "azure": "Azure OpenAI"
+    },
+    "ollamaConfig": "Ollama 配置",
+    "checking": "正在检查…",
+    "connected": "已连接",
+    "notRunning": "未运行",
+    "baseUrl": "服务地址",
+    "embeddingModel": "嵌入模型",
+    "embeddingDim": "嵌入向量维度",
+    "embeddingDimDescription": "使用 Ollama 嵌入模型时必填（例如 nomic-embed-text 为 768）",
+    "modelRecommendation": "推荐：qwen3-embedding:4b（均衡）、:8b（质量优先）、:0.6b（速度优先）"
+  },
+  "completion": {
+    "title": "设置完成！",
+    "subtitle": "预览版已配置好，可以开始体验",
+    "setupComplete": "设置完成",
+    "setupCompleteDescription": "环境已配置就绪。你可以立即创建任务，也可以先熟悉应用。",
+    "whatsNext": "接下来",
+    "createTask": {
+      "title": "创建任务",
+      "description": "在 Forge 中创建第一个任务。",
+      "action": "打开任务编辑器"
+    },
+    "customizeSettings": {
+      "title": "自定义设置",
+      "description": "调整偏好、配置集成服务，或重新运行本向导。",
+      "action": "打开设置"
+    },
+    "exploreDocs": {
+      "title": "阅读文档",
+      "description": "了解进阶功能、最佳实践与故障排查方法。"
+    },
+    "finish": "完成并开始使用",
+    "rerunHint": "随时可以在“设置 → 应用”中重新运行本向导"
+  },
+  "steps": {
+    "welcome": "欢迎",
+    "accounts": "账户",
+    "devtools": "开发工具",
+    "privacy": "隐私",
+    "memory": "记忆",
+    "done": "完成"
+  },
+  "privacy": {
+    "title": "可选错误报告",
+    "previewTitle": "可选错误报告",
+    "subtitle": "匿名错误报告可以帮助我们更快修复问题",
+    "whatWeCollect": {
+      "title": "我们会收集",
+      "crashReports": "崩溃报告与错误堆栈",
+      "errorMessages": "错误消息（文件路径会匿名化）",
+      "appVersion": "应用版本与平台信息"
+    },
+    "whatWeNeverCollect": {
+      "title": "我们不会收集",
+      "code": "你的代码或项目文件",
+      "filenames": "完整文件路径（用户名会被隐藏）",
+      "apiKeys": "API 密钥或令牌",
+      "personalData": "个人信息或使用数据"
+    },
+    "toggle": {
+      "label": "发送匿名错误报告",
+      "description": "帮助我们发现并修复问题"
+    }
+  },
+  "claudeCode": {
+    "title": "Claude Code CLI",
+    "description": "安装或更新 Claude Code CLI，以启用 AI 功能",
+    "detecting": "正在检查 Claude Code 安装情况…",
+    "info": {
+      "title": "什么是 Claude Code？",
+      "description": "Claude Code 是 Anthropic 官方提供的命令行工具，本预览版的 AI 功能通过它运行。它提供安全的身份验证与 Claude 模型访问。"
+    },
+    "status": {
+      "installed": "已安装",
+      "outdated": "有可用更新",
+      "notFound": "未安装"
+    },
+    "version": {
+      "current": "当前版本",
+      "latest": "最新版本"
+    },
+    "install": {
+      "button": "安装 Claude Code",
+      "updating": "更新 Claude Code",
+      "inProgress": "正在安装…",
+      "success": "安装命令已发送到终端，请在终端中完成安装。",
+      "instructions": "安装程序将在终端中打开，请按照提示完成安装。"
+    },
+    "learnMore": "了解 Claude Code"
+  },
+  "devtools": {
+    "title": "开发工具",
+    "description": "选择用于 Forge 工作树的编辑器、终端和命令行工具",
+    "detecting": "正在检测已安装的工具…",
+    "detectAgain": "重新检测",
+    "whyConfigure": "为什么需要配置？",
+    "whyConfigureDescription": "你可以直接在常用编辑器或终端中打开任务工作树，测试和审查修改。",
+    "ide": {
+      "label": "首选编辑器",
+      "description": "Forge 将使用此编辑器打开工作树",
+      "customPath": "自定义编辑器路径"
+    },
+    "terminal": {
+      "label": "首选终端",
+      "description": "Forge 将在此终端中打开会话",
+      "customPath": "自定义终端路径"
+    },
+    "cli": {
+      "label": "首选命令行工具",
+      "description": "用于 AI 终端会话的命令行工具",
+      "customPath": "自定义命令行工具路径"
+    },
+    "detectedSummary": "在系统中检测到：",
+    "noToolsDetected": "未检测到其他工具（将使用 VS Code 和系统终端）",
+    "custom": "自定义…",
+    "saveAndContinue": "保存并继续"
+  },
+  "accounts": {
+    "title": "添加 AI 账户",
+    "description": "连接 AI 服务账户，之后也可以在设置中继续添加。",
+    "buttons": {
+      "back": "上一步",
+      "continue": "继续",
+      "skip": "暂时跳过"
+    }
+  },
+  "ollama": {
+    "notInstalled": {
+      "title": "未安装 Ollama",
+      "description": "Ollama 提供免费的本地嵌入模型，可用于语义检索。安装后即可启用此功能。",
+      "installSuccess": "已在终端中开始安装。完成安装后，请点击“重试”。",
+      "installButton": "安装 Ollama",
+      "installing": "正在安装…",
+      "retry": "重试",
+      "learnMore": "了解详情",
+      "fallbackNote": "没有 Ollama 时，记忆功能仍可使用关键词检索。"
+    },
+    "notRunning": {
+      "title": "Ollama 未运行",
+      "description": "Ollama 已安装但未运行。请启动 Ollama 以使用本地嵌入模型。",
+      "retry": "重试",
+      "fallbackNote": "没有嵌入模型时，记忆功能仍可使用关键词检索。"
+    }
+  }
+}

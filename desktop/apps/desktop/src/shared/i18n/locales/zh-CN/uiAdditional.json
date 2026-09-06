@@ -1,0 +1,28 @@
+{
+  "cli": {
+    "loadVersionsFailed": "无法加载版本列表",
+    "loadInstallationsFailed": "无法加载安装位置",
+    "installUnavailable": "当前无法安装",
+    "installFailed": "安装失败",
+    "versionSwitchUnavailable": "当前无法切换版本",
+    "versionSwitchFailed": "版本切换失败",
+    "pathSwitchUnavailable": "当前无法切换安装位置",
+    "pathSwitchFailed": "安装位置切换失败",
+    "sources": {
+      "user-config": "用户配置",
+      "venv": "虚拟环境",
+      "homebrew": "Homebrew",
+      "nvm": "nvm",
+      "system-path": "系统 PATH",
+      "bundled": "随应用提供",
+      "fallback": "备用位置"
+    },
+    "update": "更新",
+    "install": "安装"
+  },
+  "memory": {
+    "name": "记忆",
+    "description": "提供跨会话上下文的知识图谱",
+    "notConfigured": "需要先配置记忆（请前往记忆设置）"
+  }
+}

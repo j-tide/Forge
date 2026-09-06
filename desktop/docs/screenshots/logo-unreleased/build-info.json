@@ -1,0 +1,25 @@
+{
+  "buildId": "forge-logo-20260928-f3383f498f87",
+  "baseVersion": "0.1.0-preview.2",
+  "app": "/Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/dist/logo-unreleased/mac-arm64/Forge.app",
+  "appAsarSha256": "f3383f498f87f4c96ae7f3a0376b45496bdd4a6d6e4b19d1695918a21c13bba5",
+  "status": "INTERNAL / ADHOC / UNNOTARIZED / UNRELEASED",
+  "canonicalAssets": {
+    "forge-mark.png": {
+      "sha256": "4ab0001d0571051e87888aa50d7d458eb5d369f88cccc9192b768d169ef8a1fa",
+      "size": [
+        1254,
+        1254
+      ]
+    },
+    "forge-app-icon.png": {
+      "sha256": "8afef56b29b7294a76be5354286819a5e4fef5207038b3ddb76cc8a0eea3217e",
+      "size": [
+        1254,
+        1254
+      ]
+    }
+  },
+  "platform": "macOS arm64",
+  "scope": "Original Forge identity and global brand assets; derivative UI, not yet connected to Python Host."
+}

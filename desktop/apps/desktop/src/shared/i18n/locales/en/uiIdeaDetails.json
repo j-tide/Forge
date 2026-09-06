@@ -1,0 +1,123 @@
+{
+  "labels": {
+    "effort": "Effort",
+    "files": "Files",
+    "buildsUpon": "Builds Upon",
+    "implementationApproach": "Implementation Approach",
+    "affectedFiles": "Affected Files",
+    "patterns": "Patterns to Follow",
+    "severity": "Severity",
+    "category": "Category",
+    "breakingChange": "Breaking Change",
+    "breakingChangeDescription": "This refactoring may break existing code or tests.",
+    "currentState": "Current State",
+    "proposedChange": "Proposed Change",
+    "codeExample": "Code Example",
+    "metrics": "Metrics",
+    "lines": "Lines",
+    "complexity": "Complexity",
+    "duplicateLines": "Duplicate Lines",
+    "testCoverage": "Test Coverage",
+    "bestPractice": "Best Practice",
+    "prerequisites": "Prerequisites",
+    "targetAudience": "Target Audience",
+    "currentDocumentation": "Current Documentation",
+    "proposedContent": "Proposed Content",
+    "affectedAreas": "Affected Areas",
+    "priority": "Priority",
+    "impact": "Impact",
+    "expectedImprovement": "Expected Improvement",
+    "implementation": "Implementation",
+    "tradeoffs": "Tradeoffs",
+    "vulnerability": "Vulnerability",
+    "currentRisk": "Current Risk",
+    "remediation": "Remediation",
+    "references": "References",
+    "compliance": "Compliance",
+    "userBenefit": "User Benefit",
+    "affectedComponents": "Affected Components"
+  },
+  "effort": {
+    "trivial": "Trivial",
+    "small": "Small",
+    "medium": "Medium",
+    "large": "Large",
+    "complex": "Complex"
+  },
+  "status": {
+    "draft": "Draft",
+    "selected": "Selected",
+    "converted": "Converted",
+    "dismissed": "Dismissed",
+    "archived": "Archived"
+  },
+  "severity": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical",
+    "suggestion": "Suggestion",
+    "minor": "Minor",
+    "major": "Major"
+  },
+  "impact": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical"
+  },
+  "audience": {
+    "developers": "Developers",
+    "users": "Users",
+    "contributors": "Contributors",
+    "maintainers": "Maintainers"
+  },
+  "uiuxCategories": {
+    "usability": "Usability",
+    "accessibility": "Accessibility",
+    "performance": "Performance",
+    "visual": "Visual Design",
+    "interaction": "Interaction"
+  },
+  "documentationCategories": {
+    "readme": "README",
+    "api_docs": "API Documentation",
+    "inline_comments": "Inline Comments",
+    "examples": "Examples & Tutorials",
+    "architecture": "Architecture Docs",
+    "troubleshooting": "Troubleshooting Guide"
+  },
+  "securityCategories": {
+    "authentication": "Authentication",
+    "authorization": "Authorization",
+    "input_validation": "Input Validation",
+    "data_protection": "Data Protection",
+    "dependencies": "Dependencies",
+    "configuration": "Configuration",
+    "secrets_management": "Secrets Management"
+  },
+  "performanceCategories": {
+    "bundle_size": "Bundle Size",
+    "runtime": "Runtime Performance",
+    "memory": "Memory Usage",
+    "database": "Database Queries",
+    "network": "Network Requests",
+    "rendering": "Rendering",
+    "caching": "Caching"
+  },
+  "qualityCategories": {
+    "large_files": "Large Files",
+    "code_smells": "Code Smells",
+    "complexity": "High Complexity",
+    "duplication": "Code Duplication",
+    "naming": "Naming Conventions",
+    "structure": "File Structure",
+    "linting": "Linting Issues",
+    "testing": "Test Coverage",
+    "types": "Type Safety",
+    "dependencies": "Dependency Issues",
+    "dead_code": "Dead Code",
+    "git_hygiene": "Git Hygiene"
+  },
+  "impactBadge": "{{impact}} impact"
+}

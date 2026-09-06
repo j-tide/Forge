@@ -1,0 +1,132 @@
+{
+  "agentProfiles": {
+    "title": "Agent Profiles",
+    "subtitle": "Select a preset configuration for model and thinking level",
+    "description": "Agent profiles provide preset configurations for Claude model and thinking level. When you create a new task, these settings will be used as defaults. You can always override them in the task creation wizard.",
+    "thinkingBadge": "{{level}} Thinking",
+    "thinkingLevels": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "xhigh": "Extra High"
+    },
+    "presets": {
+      "auto": {
+        "name": "Auto (Optimized)",
+        "description": "Uses Opus across all phases with optimized thinking levels"
+      },
+      "complex": {
+        "name": "Complex Tasks",
+        "description": "For intricate, multi-step implementations requiring deep analysis"
+      },
+      "balanced": {
+        "name": "Balanced",
+        "description": "Good balance of speed and quality for most tasks"
+      },
+      "quick": {
+        "name": "Quick Edits",
+        "description": "Fast iterations for simple changes and quick fixes"
+      }
+    }
+  },
+  "app": {
+    "initializeFailed": "Failed to initialize Forge. Please try again.",
+    "unexpectedError": "An unexpected error occurred"
+  },
+  "ipc": {
+    "taskError": "Task {{taskId}}: {{error}}",
+    "roadmapReady": "Roadmap ready",
+    "generationFailed": "Generation failed",
+    "generationStopped": "Generation stopped"
+  },
+  "graphics": {
+    "webglFailed": "Failed to create WebGL context"
+  },
+  "stores": {
+    "unknownError": "Unknown error",
+    "failedLoadVersions": "Failed to load versions",
+    "noVersionSelected": "No version selected",
+    "failedPreflight": "Failed to run pre-flight checks",
+    "versionNotFound": "Version not found",
+    "startingRelease": "Starting release...",
+    "failedSaveProfile": "Failed to save profile",
+    "failedUpdateProfile": "Failed to update profile",
+    "failedDeleteProfile": "Failed to delete profile",
+    "failedSetActiveProfile": "Failed to set active profile",
+    "connectionSuccessful": "Connection successful",
+    "credentialsValid": "Your API credentials are valid.",
+    "failedTestConnection": "Failed to test connection",
+    "connectionTestFailed": "Connection test failed",
+    "failedDiscoverModels": "Failed to discover models",
+    "failedLoadSettings": "Failed to load settings",
+    "failedLoadProfiles": "Failed to load profiles",
+    "failedLoadChangelog": "Failed to load changelog data",
+    "failedLoadTaskSpecs": "Failed to load task specs",
+    "failedLoadGitData": "Failed to load git data",
+    "failedLoadCommits": "Failed to load commits",
+    "failedLoadCommitsPreview": "Failed to load commits preview",
+    "selectChangelogTask": "Please select at least one task to include in the changelog",
+    "noFilteredCommits": "No commits found for the selected options. Please adjust your filters.",
+    "selectBranches": "Please select both base and compare branches",
+    "differentBranches": "Base and compare branches must be different",
+    "noBranchCommits": "No commits found between the selected branches",
+    "loadingTaskSpecs": "Loading task specifications...",
+    "preparingCommits": "Preparing commit data...",
+    "failedStartChangelog": "Failed to start changelog generation",
+    "noChangelogSave": "No changelog to save",
+    "failedSaveChangelog": "Failed to save changelog",
+    "noChangelogCopy": "No changelog to copy",
+    "failedCopyClipboard": "Failed to copy to clipboard",
+    "roadmapGenerating": "Roadmap generation in progress...",
+    "startingRoadmap": "Starting roadmap generation...",
+    "refreshingRoadmap": "Refreshing roadmap...",
+    "generationStopped": "Generation stopped",
+    "failedLoadGitLabIssues": "Failed to load GitLab issues",
+    "failedGitLabConnection": "Failed to check GitLab connection",
+    "startingInvestigation": "Starting investigation...",
+    "failedImportGitLabIssues": "Failed to import GitLab issues",
+    "failedLoadTasks": "Failed to load tasks",
+    "failedCreateTask": "Failed to create task",
+    "failedRecoverTask": "Failed to recover task",
+    "failedDeleteTask": "Failed to delete task",
+    "failedArchiveTasks": "Failed to archive tasks",
+    "failedLoadEnvironment": "Failed to load environment config",
+    "failedLoadDirectory": "Failed to load directory",
+    "processingMessage": "Processing your message...",
+    "receivingResponse": "Receiving response...",
+    "failedLoadProjects": "Failed to load projects",
+    "failedAddProject": "Failed to add project",
+    "failedInitializeProject": "Failed to initialize project",
+    "failedLoadContext": "Failed to load project context",
+    "failedRefreshIndex": "Failed to refresh project index",
+    "startingIdeationParallel": "Starting ideation generation in parallel...",
+    "ideationTimeout": "Generation timed out. Some ideas may have been generated - check the results.",
+    "generationTimeout": "⚠ Generation timed out",
+    "stoppingIdeation": "Stopping ideation generation...",
+    "processStopped": "Process already stopped",
+    "ideationStopped": "Ideation generation stopped",
+    "refreshIdeationParallel": "Refreshing ideation in parallel...",
+    "ideasDismissed": "All ideas dismissed",
+    "ideaArchived": "Idea archived",
+    "ideaDeleted": "Idea deleted",
+    "ideationComplete": "Ideation complete",
+    "ideationGenerationComplete": "Ideation generation complete!",
+    "failedLoadGitHubIssues": "Failed to load GitHub issues",
+    "failedLoadMoreIssues": "Failed to load more issues",
+    "failedImportGitHubIssues": "Failed to import GitHub issues",
+    "failedGitHubConnection": "Failed to check GitHub connection",
+    "terminalTitle": "Terminal {{number}}",
+    "failedDeleteTasks": "Failed to delete {{count}} task(s)",
+    "invalidSourceMode": "Invalid source mode: {{mode}}",
+    "usingTool": "Using {{tool}}...",
+    "generatingIdeationTypes": "Generating {{count}} ideation types in parallel...",
+    "refreshingIdeationTypes": "Refreshing {{count}} ideation types in parallel...",
+    "ideasDeleted": "{{count}} ideas deleted",
+    "addingIdeationTypes": "Adding {{count}} new ideation types...",
+    "generatingAdditionalTypes": "Generating {{count}} additional ideation types...",
+    "ideationTypeComplete": "✓ {{type}} completed with {{count}} ideas",
+    "ideationTypesComplete": "{{completed}}/{{total}} ideation types complete",
+    "ideationTypeFailed": "✗ {{type}} failed",
+    "providerError": "Error: {{error}}"
+  }
+}

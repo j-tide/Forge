@@ -1,0 +1,42 @@
+{
+  "title": "终端",
+  "agentTerminals": "智能体 终端",
+  "emptyDescription": "在独立终端中并行运行 Claude 智能体。",
+  "createShortcut": "可新建终端。",
+  "newTerminal": "新建终端",
+  "terminalCount": "{{count}} / {{max}} 个终端",
+  "history": "历史会话",
+  "restoreFrom": "从以下日期恢复会话…",
+  "sessionCount_one": "{{count}} 个会话",
+  "sessionCount_other": "{{count}} 个会话",
+  "invokeClaudeAll": "在所有终端启动 Claude",
+  "files": "文件",
+  "renameHint": "双击重命名",
+  "renameTerminal": "终端名称",
+  "dropPath": "松开以插入路径",
+  "ide": {
+    "openFailed": "无法打开 IDE",
+    "launchFailed": "无法启动 IDE"
+  },
+  "task": {
+    "current": "当前任务",
+    "switch": "切换到…",
+    "clear": "取消任务关联",
+    "select": "选择任务…",
+    "available": "可关联任务",
+    "add": "新建任务",
+    "none": "暂无可关联任务",
+    "createHint": "请在看板中创建任务"
+  },
+  "phases": {
+    "idle": "就绪",
+    "planning": "规划中",
+    "coding": "开发中",
+    "rate_limit_paused": "已达用量限制",
+    "auth_failure_paused": "需要认证",
+    "qa_review": "质量审查中",
+    "qa_fixing": "修复中",
+    "complete": "已完成",
+    "failed": "失败"
+  }
+}

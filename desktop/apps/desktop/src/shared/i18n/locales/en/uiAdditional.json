@@ -1,0 +1,28 @@
+{
+  "cli": {
+    "loadVersionsFailed": "Failed to load versions",
+    "loadInstallationsFailed": "Failed to load installations",
+    "installUnavailable": "Installation not available",
+    "installFailed": "Installation failed",
+    "versionSwitchUnavailable": "Version switching not available",
+    "versionSwitchFailed": "Failed to switch version",
+    "pathSwitchUnavailable": "Path switching not available",
+    "pathSwitchFailed": "Failed to switch CLI path",
+    "sources": {
+      "user-config": "User configured",
+      "venv": "Virtual environment",
+      "homebrew": "Homebrew",
+      "nvm": "nvm",
+      "system-path": "System PATH",
+      "bundled": "Bundled",
+      "fallback": "Fallback"
+    },
+    "update": "Update",
+    "install": "Install"
+  },
+  "memory": {
+    "name": "Memory",
+    "description": "Knowledge graph for cross-session context",
+    "notConfigured": "Requires memory configuration (see Memory settings)"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "files": {
+    "noFiles": "没有找到文件",
+    "navigate": "移动",
+    "select": "选择",
+    "close": "关闭",
+    "projectFiles": "项目文件",
+    "dragTerminal": "将文件拖入终端以插入路径",
+    "dragReferences": "拖动文件以添加引用",
+    "referenced": "引用的文件",
+    "folder": "文件夹",
+    "remove": "移除对 {{name}} 的引用"
+  },
+  "images": {
+    "maximumAllowed": "最多可添加 {{count}} 张图片",
+    "remaining": "还可添加 {{count}} 张图片，部分文件已跳过。",
+    "invalidType": "“{{name}}”不是支持的图片类型。支持：{{types}}",
+    "tooLarge": "“{{name}}”超过 10 MB，建议压缩以提升性能。",
+    "processFailed": "无法处理“{{name}}”",
+    "drop": "将图片拖到这里，或点击选择",
+    "maximumReached": "已达到图片数量上限",
+    "typesHint": "{{types}}，每张不超过 10 MB（{{current}}/{{max}}）",
+    "largeWarning": "文件较大，建议压缩",
+    "remove": "移除图片 {{name}}"
+  },
+  "thinking": {
+    "low": {
+      "label": "低",
+      "description": "简短思考"
+    },
+    "medium": {
+      "label": "中",
+      "description": "适度分析"
+    },
+    "high": {
+      "label": "高",
+      "description": "深入思考"
+    },
+    "xhigh": {
+      "label": "极高",
+      "description": "充分推理"
+    }
+  }
+}

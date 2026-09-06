@@ -1,0 +1,8 @@
+{
+  "about": {
+    "provenance": "Forge is independently modified from Aperant v2.8.0-beta.6, licensed under AGPL-3.0."
+  },
+  "project": {
+    "createFolderFailed": "Failed to create project folder"
+  }
+}

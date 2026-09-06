@@ -1,0 +1,237 @@
+{
+  "actions": {
+    "completed": "Task completed successfully",
+    "loadingPlan": "Loading plan…"
+  },
+  "tabs": {
+    "overview": "Overview",
+    "subtasks": "Subtasks ({{count}})",
+    "logs": "Logs"
+  },
+  "subtasks": {
+    "fraction": "{{completed}}/{{total}} subtasks",
+    "empty": "No subtasks defined",
+    "emptyHint": "Implementation subtasks will appear here after planning",
+    "completed": "{{completed}} of {{total}} completed",
+    "verification": "Verification:"
+  },
+  "warnings": {
+    "stuckTitle": "Task appears stuck",
+    "stuckDescription": "This task is marked as running but no active process was found. This can happen if the app crashed or the process was terminated unexpectedly.",
+    "recovering": "Recovering…",
+    "recover": "Recover and restart task",
+    "incompleteTitle": "Task incomplete",
+    "resume": "Resume task",
+    "incompleteDescription": "This task has a spec and implementation plan but no completed subtasks ({{completed}}/{{total}}). The process may have crashed during spec creation. Resume to continue implementation."
+  },
+  "progress": {
+    "currentSubtask": "Subtask: {{subtask}}",
+    "title": "Progress",
+    "planning": "Planning (0-20%)",
+    "coding": "Coding (20-80%)",
+    "review": "AI Review (80-95%)",
+    "complete": "Complete (95-100%)"
+  },
+  "phases": {
+    "idle": "Idle",
+    "planning": "Planning",
+    "coding": "Coding",
+    "rate_limit_paused": "Rate limited",
+    "auth_failure_paused": "Authentication required",
+    "qa_review": "AI review",
+    "qa_fixing": "Fixing issues",
+    "complete": "Complete",
+    "failed": "Failed",
+    "validation": "Validation"
+  },
+  "metadata": {
+    "created": "Created {{time}}",
+    "updated": "Updated {{time}}",
+    "rationale": "Rationale",
+    "problemSolved": "Problem Solved",
+    "targetAudience": "Target Audience",
+    "dependencies": "Dependencies",
+    "acceptanceCriteria": "Acceptance Criteria",
+    "affectedFiles": "Affected Files"
+  },
+  "profiles": {
+    "auto": {
+      "name": "Auto (Optimized)",
+      "description": "Uses Opus across all phases with optimized thinking levels"
+    },
+    "complex": {
+      "name": "Complex Tasks",
+      "description": "For intricate, multi-step implementations requiring deep analysis"
+    },
+    "balanced": {
+      "name": "Balanced",
+      "description": "Good balance of speed and quality for most tasks"
+    },
+    "quick": {
+      "name": "Quick Edits",
+      "description": "Fast iterations for simple changes and quick fixes"
+    }
+  },
+  "thinking": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "xhigh": "Extra high"
+  },
+  "logs": {
+    "empty": "No logs yet",
+    "emptyHint": "Logs will appear here when the task runs",
+    "interrupted": "Interrupted",
+    "running": "Running",
+    "complete": "Complete",
+    "failed": "Failed",
+    "pending": "Pending",
+    "done": "Done",
+    "hideOutput": "Hide output",
+    "showOutput": "Show output",
+    "less": "Less",
+    "more": "More",
+    "entries": "({{count}} entries)",
+    "model": "Model: {{model}}",
+    "thinking": "Thinking: {{level}}"
+  },
+  "tools": {
+    "reading": "Reading",
+    "searchingFiles": "Searching files",
+    "searchingCode": "Searching code",
+    "editing": "Editing",
+    "writing": "Writing",
+    "running": "Running"
+  },
+  "severity": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical"
+  },
+  "ideation": {
+    "code_improvements": "Code improvements",
+    "ui_ux_improvements": "UI/UX improvements",
+    "documentation_gaps": "Documentation",
+    "security_hardening": "Security",
+    "performance_optimizations": "Performance",
+    "code_quality": "Code quality"
+  },
+  "source": {
+    "ideation": "Ideation",
+    "manual": "Manual",
+    "imported": "Imported",
+    "insights": "Insights",
+    "roadmap": "Roadmap",
+    "linear": "Linear",
+    "github": "GitHub",
+    "gitlab": "GitLab"
+  },
+  "errors": {
+    "mergePreview": "Merge preview: {{error}}",
+    "worktreeStatus": "Worktree status: {{error}}",
+    "mergePreviewFailed": "Failed to load merge preview",
+    "worktreeStatusFailed": "Failed to load worktree status",
+    "workspaceFailed": "An unexpected error occurred while loading workspace information",
+    "cannotResume": "Cannot resume task",
+    "planLoadFailed": "Failed to load implementation plan. Please try again or check the task files.",
+    "deleteFailed": "Failed to delete task",
+    "mergeFailed": "Failed to merge changes",
+    "mergeUnknown": "Unknown error during merge",
+    "discardFailed": "Failed to discard changes"
+  },
+  "images": {
+    "max": "Maximum of {{count}} images allowed",
+    "invalid": "Invalid image type. Allowed: {{types}}",
+    "tooLarge": "Image exceeds maximum size of {{size}} MB",
+    "pasteFailed": "Failed to process pasted image",
+    "dropFailed": "Failed to process dropped image"
+  },
+  "review": {
+    "loadingWorkspace": "Loading workspace info...",
+    "humanReviewRequired": "Human Review Required",
+    "noWorkspace": "No Workspace Found",
+    "planReviewDescription": "Human review required prior to coding. Review your spec.md for any necessary changes.",
+    "noWorkspaceDescription": "No isolated workspace was found for this task. The changes may have been made directly in your project.",
+    "updating": "Updating...",
+    "proceedToCoding": "Proceed to Coding",
+    "stagedInProject": "Changes Staged in Project",
+    "stagedDescriptionDated": "This task's changes have been staged in your main project on {{date}}.",
+    "stagedDescription": "This task's changes have been staged in your main project.",
+    "and": "and",
+    "conflictPreview": "Merge Conflicts Preview",
+    "potentialConflicts": "{{count}} potential conflicts detected.",
+    "autoMergeableCount": "{{count}} can be auto-merged.",
+    "severity": {
+      "none": "None",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "autoMerge": "auto-merge",
+    "location": "Location:",
+    "reason": "Reason:",
+    "strategy": "Strategy:",
+    "noConflicts": "No conflicts detected",
+    "conflictsFound": "{{count}} conflicts found",
+    "stageResolvesConflicts": "AI will automatically merge these conflicts when you click Stage Changes.",
+    "filesToMerge": "Files to merge: {{count}}",
+    "autoMergeable": "Auto-mergeable: {{count}}",
+    "aiResolved": "AI resolved: {{count}}",
+    "manualReview": "Manual review: {{count}}",
+    "discardBuild": "Discard Build",
+    "discardConfirm": "Are you sure you want to discard all changes for <strong>\"{{title}}\"</strong>?",
+    "discardWarning": "This will permanently delete the isolated workspace and all uncommitted changes. The task will be moved back to Planning status.",
+    "filesChanged": "Files changed:",
+    "lines": "Lines:",
+    "discarding": "Discarding...",
+    "changedFiles": "Changed Files",
+    "noChanges": "No changes found",
+    "fileStatus": {
+      "added": "Added",
+      "deleted": "Deleted",
+      "modified": "Modified",
+      "renamed": "Renamed"
+    },
+    "noChangedFiles": "No changed files found",
+    "readyForReview": "Build Ready for Review",
+    "view": "View",
+    "openIn": "Open in {{app}}",
+    "uncommittedChanges": "{{count}} uncommitted changes in main project",
+    "uncommittedHint": "Commit or stash them in your terminal before staging to avoid conflicts.",
+    "checkingConflicts": "Checking for conflicts...",
+    "checkConflicts": "Check for Conflicts",
+    "commitCount": "{{count}} commits",
+    "requestChanges": "Request Changes",
+    "feedbackDescription": "Found issues? Describe what needs to be fixed and the AI will continue working on it.",
+    "feedbackPlaceholder": "Describe the issues or changes needed...",
+    "submitting": "Submitting...",
+    "terminal": "Terminal",
+    "commitExample": "git commit -m \"your message\"",
+    "potentialConflicts_one": "{{count}} potential conflict detected.",
+    "potentialConflicts_other": "{{count}} potential conflicts detected.",
+    "conflictsFound_one": "{{count}} conflict found",
+    "conflictsFound_other": "{{count}} conflicts found",
+    "uncommittedChanges_one": "{{count}} uncommitted change in main project",
+    "uncommittedChanges_other": "{{count}} uncommitted changes in main project",
+    "commitCount_one": "{{count}} commit",
+    "commitCount_other": "{{count}} commits",
+    "changesStaged": "Changes staged in main project"
+  },
+  "category": {
+    "feature": "Feature",
+    "bug_fix": "Bug fix",
+    "refactoring": "Refactoring",
+    "documentation": "Documentation",
+    "security": "Security",
+    "performance": "Performance",
+    "ui_ux": "UI/UX",
+    "infrastructure": "Infrastructure",
+    "testing": "Testing"
+  },
+  "verificationType": {
+    "command": "Command",
+    "browser": "Browser"
+  }
+}

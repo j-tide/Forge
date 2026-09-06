@@ -1,0 +1,73 @@
+{
+  "buttons": {
+    "copy": "复制",
+    "copied": "已复制",
+    "retry": "重试",
+    "cancel": "取消"
+  },
+  "errors": {
+    "unknown": "未知错误",
+    "authentication": "认证失败",
+    "authenticationTitle": "认证失败"
+  },
+  "github": {
+    "cliRequired": "需要 GitHub CLI",
+    "cliDescription": "OAuth 认证需要 GitHub CLI（gh）。你可以安全地登录，无需手动创建令牌。",
+    "installCli": "安装 GitHub CLI",
+    "installed": "我已安装",
+    "installInstructions": "安装方式：",
+    "linuxVisit": "Linux：访问",
+    "connect": "连接 GitHub",
+    "connectDescription": "点击下方按钮登录 GitHub。浏览器将打开，你可以在其中授权此应用。",
+    "cliVersion": "使用 GitHub CLI {{version}}",
+    "authenticate": "登录 GitHub",
+    "authenticating": "正在认证…",
+    "browserInstructions": "请在浏览器中完成认证，此窗口会自动更新。",
+    "waiting": "正在等待认证流程启动…",
+    "oneTimeCode": "你的一次性验证码",
+    "enterCode": "在浏览器中输入此验证码以完成认证。",
+    "copyCode": "复制此验证码，然后打开下方链接进行认证。",
+    "openUrl": "打开 {{url}}",
+    "connected": "连接成功",
+    "connectedAs": "已以 {{username}} 登录",
+    "accountConnected": "你的 GitHub 账户已连接",
+    "timeoutTitle": "认证超时",
+    "manualTitle": "手动完成认证",
+    "manualDescription": "无法自动打开浏览器。请访问下方地址完成认证：",
+    "openBrowser": "在浏览器中打开",
+    "codeReminder": "出现提示时，输入此验证码：",
+    "errors": {
+      "timeout": "认证超时，认证窗口已等待过久。请重试。",
+      "checkCli": "检查 GitHub CLI 失败",
+      "token": "获取令牌失败"
+    }
+  },
+  "claude": {
+    "authenticateTitle": "登录 Claude",
+    "authenticateDescription": "连接 Claude 账户以使用 AI 功能。",
+    "authenticateTerminalInfo": "将在终端中打开 Claude CLI，供你完成登录。",
+    "completeAuthTitle": "完成认证",
+    "terminalOpened": "已打开运行 Claude CLI 的终端窗口。",
+    "completeStepsTitle": "在终端中完成以下步骤：",
+    "stepTypeLogin": "输入 <code>/login</code> 并按回车键",
+    "stepBrowserOpen": "浏览器将打开 Claude 认证页面",
+    "stepCompleteOAuth": "在浏览器中完成 OAuth 认证",
+    "stepReturnAndVerify": "返回这里并点击<strong>验证认证</strong>",
+    "verifyAuth": "验证认证",
+    "verifyingAuth": "正在验证认证…",
+    "checkingCredentials": "正在检查 Claude 凭据。",
+    "successTitle": "认证成功",
+    "connectedAs": "已以 {{email}} 登录",
+    "credentialsSaved": "已保存 Claude 凭据",
+    "canUseFeatures": "Claude 认证已就绪。功能是否可用取决于当前配置。",
+    "authFailed": "认证失败",
+    "skipForNow": "暂时跳过",
+    "authNotDetected": "尚未检测到认证。请先在终端中完成 /login。",
+    "noProfileSelected": "未选择要验证的账户配置",
+    "errors": {
+      "profiles": "获取 Claude 账户配置失败",
+      "terminal": "无法打开认证终端",
+      "verification": "验证失败"
+    }
+  }
+}

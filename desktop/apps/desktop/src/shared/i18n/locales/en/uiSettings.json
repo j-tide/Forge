@@ -1,0 +1,225 @@
+{
+  "text001": "Reset to default (100%)",
+  "text002": "Apply scale changes",
+  "text003": "Apply",
+  "text004": "Detecting...",
+  "text005": "Recommended",
+  "text006": "Fast",
+  "text007": "Quality",
+  "text008": "Installed",
+  "text009": "Starting download...",
+  "text010": "Select a project...",
+  "text011": "No projects yet",
+  "text012": "Add Project...",
+  "text013": "Appearance Mode",
+  "text014": "Choose light, dark, or system preference",
+  "text015": "Color Theme",
+  "text016": "Select a color palette for the interface",
+  "text017": "Background color",
+  "text018": "Accent color",
+  "text019": "Select a project to view and edit its settings",
+  "text020": "Initialize Auto-Build first to configure",
+  "text021": "Enable GitHub Issues",
+  "text022": "Sync issues from GitHub and create tasks automatically",
+  "text023": "Connected via GitHub CLI",
+  "text024": "Authenticated as",
+  "text025": "Use Different Token",
+  "text026": "GitHub Authentication",
+  "text027": "Use Manual Token",
+  "text028": "Personal Access Token",
+  "text029": "Use OAuth Instead",
+  "text030": "Create a token with",
+  "text031": "scope from",
+  "text032": "GitHub Settings",
+  "text033": "ghp_xxxxxxxx or github_pat_xxxxxxxx",
+  "text034": "Repository",
+  "text035": "Enter Manually",
+  "text036": "Loading repositories...",
+  "text037": "Select a repository...",
+  "text038": "Search repositories...",
+  "text039": "No matching repositories",
+  "text040": "No repositories found",
+  "text041": "Selected:",
+  "text042": "Format:",
+  "text043": "(e.g., facebook/react)",
+  "text044": "Connection Status",
+  "text045": "Checking...",
+  "text046": "Issues Available",
+  "text047": "Access GitHub Issues from the sidebar to view, investigate, and create tasks from issues.",
+  "text048": "Auto-Sync on Load",
+  "text049": "Automatically fetch issues when the project loads",
+  "text050": "Enable Linear Sync",
+  "text051": "Create and update Linear issues automatically",
+  "text052": "API Key",
+  "text053": "Get your API key from",
+  "text054": "Linear Settings",
+  "text055": "+ tasks available to import",
+  "text056": "Import Existing Tasks",
+  "text057": "Select which Linear issues to import into AutoBuild as tasks.",
+  "text058": "Import Tasks from Linear",
+  "text059": "Real-time Sync",
+  "text060": "Automatically import new tasks created in Linear",
+  "text061": "When enabled, new Linear issues will be automatically imported into AutoBuild. Make sure to configure your team/project filters below to control which issues are imported.",
+  "text062": "Team ID (Optional)",
+  "text063": "Auto-detected",
+  "text064": "Project ID (Optional)",
+  "text065": "Auto-created",
+  "text066": "General",
+  "mode": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "themes": {
+    "default": {
+      "name": "Default",
+      "description": "Oscura-inspired with pale yellow accent"
+    },
+    "dusk": {
+      "name": "Dusk",
+      "description": "Warmer variant with slightly lighter dark mode"
+    },
+    "lime": {
+      "name": "Lime",
+      "description": "Fresh, energetic lime with purple accents"
+    },
+    "ocean": {
+      "name": "Ocean",
+      "description": "Calm, professional blue tones"
+    },
+    "retro": {
+      "name": "Retro",
+      "description": "Warm, nostalgic amber vibes"
+    },
+    "neo": {
+      "name": "Neo",
+      "description": "Modern cyberpunk pink/magenta"
+    },
+    "forest": {
+      "name": "Forest",
+      "description": "Natural, earthy green tones"
+    },
+    "forge-glass": {
+      "name": "Forge Glass",
+      "description": "Silver and pale blue frosted workspace"
+    }
+  },
+  "customOption": "Custom...",
+  "toolsDetectFailed": "Failed to detect tools",
+  "debugLoadFailed": "Failed to load debug info",
+  "debugLogsFailed": "Failed to open logs folder",
+  "debugCopyFailed": "Failed to copy debug info",
+  "notConnected": "Not connected",
+  "connectionFailed": "Connection failed",
+  "ollamaModel0": "Qwen3 32B - Excellent coding model",
+  "ollamaModel1": "Qwen3 8B - Fast and capable",
+  "ollamaModel2": "DeepSeek R1 32B - Strong reasoning",
+  "ollamaModel3": "DeepSeek R1 8B - Compact reasoner",
+  "ollamaModel4": "Mistral Codestral - Code specialist",
+  "ollamaModel5": "Llama 3.3 70B - Large and powerful",
+  "ollamaModel6": "Llama 3.3 - Good general purpose",
+  "downloadFailed": "Download failed",
+  "downloadFailedModel": "Failed to download {{model}}",
+  "missing_debug_errorReporting_saveFailed": "Failed to save error reporting setting",
+  "missing_devtools_customPath": "Custom path",
+  "missing_modelSelect_configureProvider": "Configure",
+  "missing_modelSelect_capabilities_thinking": "Thinking",
+  "missing_modelSelect_capabilities_tools": "Tools",
+  "missing_modelSelect_capabilities_vision": "Vision",
+  "missing_modelSelect_customModel": "Custom model ID",
+  "missing_modelSelect_customModelPlaceholder": "Enter model ID...",
+  "missing_modelSelect_useCustomModel": "Use",
+  "decreaseScale": "Decrease scale by {{step}}%",
+  "increaseScale": "Increase scale by {{step}}%",
+  "modelContextWindow": "{{size}} context",
+  "removeProject": "Remove {{name}} from Forge",
+  "features": {
+    "insights": {
+      "label": "Insights Chat",
+      "description": "Ask questions about your codebase"
+    },
+    "ideation": {
+      "label": "Ideation",
+      "description": "Generate feature ideas and improvements"
+    },
+    "roadmap": {
+      "label": "Roadmap",
+      "description": "Create strategic feature roadmaps"
+    },
+    "githubIssues": {
+      "label": "GitHub Issues",
+      "description": "Automated issue triage and labeling"
+    },
+    "githubPrs": {
+      "label": "GitHub PR Review",
+      "description": "AI-powered pull request reviews"
+    },
+    "utility": {
+      "label": "Utility",
+      "description": "Commit messages and merge conflict resolution"
+    },
+    "naming": {
+      "label": "AI Naming",
+      "description": "Task titles and terminal tab names"
+    }
+  },
+  "modelDescriptions": {
+    "opus": "Most capable",
+    "opus-1m": "1M context",
+    "sonnet": "Balanced",
+    "opus-4_5": "Legacy",
+    "haiku": "Fast",
+    "gpt-5_3-codex": "Agentic coding",
+    "gpt-5_2": "Flagship",
+    "gpt-5_2-codex": "Coding",
+    "gpt-5_1-codex-mini": "Fast coding",
+    "gpt-5-nano": "Fastest & cheapest",
+    "o3": "Reasoning",
+    "o4-mini": "Fast reasoning",
+    "gemini-2_5-pro": "Advanced",
+    "gemini-2_5-flash": "Fast thinking",
+    "gemini-2_5-flash-lite": "Budget",
+    "gemini-2_0-flash": "Legacy",
+    "mistral-large-latest": "Flagship",
+    "mistral-small-latest": "Fast",
+    "meta-llama_llama-4-maverick": "Multimodal",
+    "llama-3_3-70b-versatile": "Fast inference",
+    "grok-4-0709": "Flagship",
+    "grok-3": "Text",
+    "grok-3-mini": "Fast reasoning",
+    "glm-5": "Flagship",
+    "glm-4_7": "Previous flagship",
+    "glm-4_6v": "Multimodal",
+    "glm-4_5-flash": "Fast"
+  },
+  "thinkingLevels": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "xhigh": "Extra High"
+  },
+  "providerDescriptions": {
+    "anthropic": "Claude models",
+    "openai": "GPT and Codex models",
+    "google": "Gemini models",
+    "openrouter": "Access 300+ models from all providers",
+    "zai": "GLM models",
+    "xai": "Grok models",
+    "mistral": "Mistral and Codestral models",
+    "groq": "Ultra-fast LLaMA inference",
+    "amazon-bedrock": "AWS-hosted models",
+    "azure": "Azure-hosted OpenAI models",
+    "ollama": "Local open-source models",
+    "openai-compatible": "Any OpenAI-compatible API (OpenRouter, proxies, local servers)"
+  },
+  "providerNames": {
+    "openai-compatible": "Custom Endpoint"
+  },
+  "unknownError": "Unknown error",
+  "authFailed": "Authentication failed",
+  "unexpectedError": "Unexpected error",
+  "profileCreateFailed": "Failed to create profile",
+  "branchesLoadFailed": "Failed to load branches",
+  "repositoriesLoadFailed": "Failed to load repositories",
+  "projectsLoadFailed": "Failed to load projects"
+}

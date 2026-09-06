@@ -1,0 +1,15 @@
+{
+  "close": "关闭",
+  "select": "请选择…",
+  "search": "搜索…",
+  "noResults": "未找到结果",
+  "errorTitle": "出现了问题",
+  "errorDescription": "显示此内容时发生错误。",
+  "retry": "重试",
+  "embeddingSmall": "{{model}}（默认，成本最低）",
+  "embeddingLarge": "{{model}}（更高质量）",
+  "embeddingDefault": "{{model}}（默认）",
+  "azureApiKey": "Azure API 密钥",
+  "notification": "通知",
+  "notifications": "通知（{hotkey}）"
+}
