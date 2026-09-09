@@ -3,7 +3,7 @@
   "actualVerifiedAt": "2026-09-28",
   "platform": "darwin",
   "arch": "arm64",
-  "appAsarSha256": "74d49170981acedc7d118caf653e6fe7e28ecf8b9b2475aaec07478867f94257",
+  "appAsarSha256": "9ef7f2c49c3d21a330d42760a56f58409f133fafb2944e3bb43241d0bb007b53",
   "userDataUnchanged": true,
   "packagedStartupPassed": true,
   "pythonHostConnected": false,
@@ -15,5 +15,19 @@
     "moderate": 9,
     "low": 14,
     "critical": 0
+  },
+  "canonicalSourceDirectory": "desktop/",
+  "installedDmgStartupPassed": true,
+  "dmgIntegrityPassed": true,
+  "zipIntegrityPassed": true,
+  "assets": {
+    "Forge-0.1.0-preview.3-darwin-arm64-INTERNAL.dmg": {
+      "bytes": 187812954,
+      "sha256": "e2e901910ac193cffe825c19382b40adebe5de80d720c84fa8d93fcb35e6f033"
+    },
+    "Forge-0.1.0-preview.3-darwin-arm64-INTERNAL.zip": {
+      "bytes": 162807280,
+      "sha256": "652ba9c4cdac2d8cb63b42d60b5effd8036882aa12bd5e9d600eaa54172e083a"
+    }
   }
 }

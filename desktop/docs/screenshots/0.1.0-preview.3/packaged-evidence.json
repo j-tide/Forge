@@ -2,7 +2,7 @@
   "name": "Forge",
   "version": "0.1.0-preview.3",
   "packaged": true,
-  "resources": "/Users/iamzjt/Desktop/my/myapp/Forge-Aperant/apps/desktop/dist/0.1.0-preview.3/mac-arm64/Forge.app/Contents/Resources",
+  "resources": "/Users/iamzjt/Desktop/my/myapp/Forge/output/release-0.1.0-preview.3/installed/Forge.app/Contents/Resources",
   "iconSize": {
     "width": 256,
     "height": 256

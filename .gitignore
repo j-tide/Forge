@@ -31,3 +31,6 @@ python/dist/
 **/.mypy_cache/
 **/.ruff_cache/
 *.py[cod]
+
+# Generated release bundles and staging
+build/releases/

@@ -4,7 +4,7 @@
 
 用户明确授权按功能提交、推送到 `j-tide/Forge` 并发布预览。衍生 Desktop 完整源码与历史归入 `desktop/`，原 Python Host、规格、Vue 历史实现及 SQLite 用户数据原位保留；许可/来源和独立 npm 边界见 ADR 0087。当前预览仍未连接 Forge Python Host，不是完整产品验收。普通打开使用根 `pnpm desktop:open`，开发入口位于 `desktop/`；详细变更、当前截图、检查结果及未验项见 [0.1.0-preview.3](../desktop/docs/releases/0.1.0-preview.3.md)。
 
-本轮安装依赖不变。衍生 npm i18n/lint/typecheck/test/build、亮暗 Logo 和语言重启 QA、真实 .app smoke、ad-hoc 签名通过；原 pnpm frozen install/contracts/lint/typecheck/test（含 build）与真实 Python Host Desktop smoke 通过。现有用户数据哈希保持不变，没有模型调用。app.asar SHA-256 `74d49170981acedc7d118caf653e6fe7e28ecf8b9b2475aaec07478867f94257`。生产依赖 audit 仍 33 项（10 high/9 moderate/14 low），未消除。Windows/Intel、Claude、签名/公证、正式更新与衍生 Python 集成保持未验。手机远程后置。提交时间沿用用户指定随机 1～3 天排期；实际开发与验证为 2026-09-28，二者明确区分。
+本轮追加 `pnpm py:check`：Ruff/mypy 通过，286 passed / 1 opt-in skipped。最终归拢构建的 DMG/ZIP 及安装态启动通过，摘要见当前预览 build-info。本轮安装依赖不变。衍生 npm i18n/lint/typecheck/test/build、亮暗 Logo 和语言重启 QA、真实 .app smoke、ad-hoc 签名通过；原 pnpm frozen install/contracts/lint/typecheck/test（含 build）与真实 Python Host Desktop smoke 通过。现有用户数据哈希保持不变，没有模型调用。app.asar SHA-256 `9ef7f2c49c3d21a330d42760a56f58409f133fafb2944e3bb43241d0bb007b53`。生产依赖 audit 仍 33 项（10 high/9 moderate/14 low），未消除。Windows/Intel、Claude、签名/公证、正式更新与衍生 Python 集成保持未验。手机远程后置。提交时间沿用用户指定随机 1～3 天排期；实际开发与验证为 2026-09-28，二者明确区分。
 
 
 ## 2026-09-28 · Forge original logo and native icon resources

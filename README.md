@@ -2,7 +2,7 @@
 
 <img src="apps/desktop/assets/icon.png" alt="Forge" width="80" />
 
-> **Python Core**：Desktop 的唯一业务 Runtime 是独立 Python Host。Electron Main 负责窗口、目录选择和 Host 生命周期；Vue/TypeScript 通过固定 Preload API 与 Main 通信，Main 以有版本的 JSON-RPC stdio 连接 Python。历史 Node Host 仅保留为迁移对照，不是生产 fallback。MIG-PY-09 和 P2 Phase Gate 已在 macOS arm64 开发环境通过；见 [迁移计划](docs/forge-python-core-migration-plan.md) 与 [P2 阶段报告](docs/p2-completion-report.md)。SQLite 数据不重置。
+> **原 Forge Python Core（历史路线）**：原 Vue Desktop 的唯一业务 Runtime 是独立 Python Host。Electron Main 负责窗口、目录选择和 Host 生命周期；Vue/TypeScript 通过固定 Preload API 与 Main 通信，Main 以有版本的 JSON-RPC stdio 连接 Python。历史 Node Host 仅保留为迁移对照，不是生产 fallback。MIG-PY-09 和 P2 Phase Gate 已在 macOS arm64 开发环境通过；见 [迁移计划](docs/forge-python-core-migration-plan.md) 与 [P2 阶段报告](docs/p2-completion-report.md)。SQLite 数据不重置。
 
 Forge 是自然语言驱动的多 Agent 研发工作台。需求先成为可编辑的 Task Contract，经人工批准进入 TODO；开发、Review、验证与人工验收依靠真实状态和证据。Done 不代表合并或部署。Forge 与 ProofRun 完全独立。
 
