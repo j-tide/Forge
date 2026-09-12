@@ -4,7 +4,9 @@ on:
   pull_request:
 jobs:
   workspace:
-    runs-on: ubuntu-latest
+    # Production plugin manifests currently permit darwin-arm64 only.
+    # Do not broaden their platform permissions to make Linux CI green.
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -22,6 +24,8 @@ jobs:
       - name: Install pinned Python runtime
         run: uv python install 3.12.13
       - run: pnpm install --frozen-lockfile
+      - name: Verify supported Python Host platform
+        run: uv --directory python run --frozen python -c "import sys, platform; assert (sys.platform, platform.machine()) == ('darwin', 'arm64')"
       - name: Check Python Host and business runtime
         run: pnpm py:check
       - name: Validate reference and production contracts

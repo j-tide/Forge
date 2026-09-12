@@ -7,6 +7,14 @@
 本轮追加 `pnpm py:check`：Ruff/mypy 通过，286 passed / 1 opt-in skipped。最终归拢构建的 DMG/ZIP 及安装态启动通过，摘要见当前预览 build-info。本轮安装依赖不变。衍生 npm i18n/lint/typecheck/test/build、亮暗 Logo 和语言重启 QA、真实 .app smoke、ad-hoc 签名通过；原 pnpm frozen install/contracts/lint/typecheck/test（含 build）与真实 Python Host Desktop smoke 通过。现有用户数据哈希保持不变，没有模型调用。app.asar SHA-256 `9ef7f2c49c3d21a330d42760a56f58409f133fafb2944e3bb43241d0bb007b53`。生产依赖 audit 仍 33 项（10 high/9 moderate/14 low），未消除。Windows/Intel、Claude、签名/公证、正式更新与衍生 Python 集成保持未验。手机远程后置。提交时间沿用用户指定随机 1～3 天排期；实际开发与验证为 2026-09-28，二者明确区分。
 
 
+### 发布前远程 CI 平台修正 · 2026-09-28
+
+`0.1.0-preview.3` 对应提交 `5ad0585b` 的衍生 `desktop-quality` 在 GitHub Linux runner 上通过。原 Forge `quality` 首次在继承的 Ubuntu runner 上失败（13 failed / 273 passed / 1 skipped）：生产插件 manifest 只声明 `darwin-arm64`，Linux 被 `PLUGIN_PLATFORM_UNSUPPORTED` 正确拒绝，导致下游 Registry/Host 断言无法进入目标路径。
+
+仅将原 quality gate 的 runner 调整为 GitHub 标准 `macos-14` arm64，并增加实际平台断言；所有 Python、契约、task-map、lint、typecheck、test、build gate 保留。不扩大 manifest 平台、修改权限、跳过断言或宣称 Linux/Windows/Intel 生产支持。衍生桌面独立 Linux CI 保持。Runner 依据 [GitHub 官方文档](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)，公开仓库标准 runner 不新增付费服务。
+
+这是发布包切出后的 CI/记录提交，`desktop/` 源码和安装包字节不变。已推送的 `v0.1.0-preview.3` 标签保留 `5ad0585b`，不重写标签或历史；公开 Release/对应 source archive 保持同一构建来源，主分支另包含这项 CI 修正。远程通过结果以实际 Actions 为准，不把首次 Linux 失败改写为通过。
+
 ## Forge 原创 Logo 与全局资源替换（2026-09-28）
 
 用户要求创建 Forge 标识并全局替换。使用内置 imagegen 生成原创双斜切 F 透明标识及同视觉银白／浅蓝灰应用图标；源图、SHA、完整提示词保存在 `../Forge-Aperant/apps/desktop/resources/branding/`。该目录是品牌资产源；既有 Pillow12.1.1 与 macOS iconutil 只转换尺寸和 PNG/ICO/ICNS 格式，不绘制另一套 F、不新增依赖。保留第三方 Provider/功能图标、AGPL及来源署名、两个只读资料包和历史发布截图。
