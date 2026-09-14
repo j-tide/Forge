@@ -15,6 +15,8 @@
 
 这是发布包切出后的 CI/记录提交，`desktop/` 源码和安装包字节不变。已推送的 `v0.1.0-preview.3` 标签保留 `5ad0585b`，不重写标签或历史；公开 Release/对应 source archive 保持同一构建来源，主分支另包含这项 CI 修正。远程通过结果以实际 Actions 为准，不把首次 Linux 失败改写为通过。
 
+原 `quality` 调整到 macOS arm64 后，Ruff/mypy 与 Python 286 passed / 1 skipped 真正通过；随后干净检出暴露 `validate:contracts` 漏构建 `@forge/core`，Persistence 的公开类型无法解析。本轮仅补上已有 Core 包的构建前置，不扩张 Node 业务 Runtime、改契约或降低 strict。`pnpm install --frozen-lockfile` 与修正后的 `pnpm validate:contracts` 本地通过（47 files / 0 errors / 4 既有 warnings）；远程干净检出完整回归继续执行。桌面目录、安装包、发布标签和 source archive 保持原字节；主分支包含 CI 与工程入口的补充修复。
+
 ## Forge 原创 Logo 与全局资源替换（2026-09-28）
 
 用户要求创建 Forge 标识并全局替换。使用内置 imagegen 生成原创双斜切 F 透明标识及同视觉银白／浅蓝灰应用图标；源图、SHA、完整提示词保存在 `../Forge-Aperant/apps/desktop/resources/branding/`。该目录是品牌资产源；既有 Pillow12.1.1 与 macOS iconutil 只转换尺寸和 PNG/ICO/ICNS 格式，不绘制另一套 F、不新增依赖。保留第三方 Provider/功能图标、AGPL及来源署名、两个只读资料包和历史发布截图。

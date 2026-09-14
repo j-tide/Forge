@@ -45,7 +45,7 @@
     "smoke:projects": "pnpm build && node scripts/smoke-projects.mjs",
     "smoke:p1-offline": "pnpm build && node scripts/smoke-p1-offline.mjs",
     "smoke:refiner-live": "pnpm build && node scripts/smoke-refiner-live.mjs",
-    "validate:contracts": "pnpm --filter @forge/contracts build && pnpm --filter @forge/persistence build && pnpm --filter @forge/contract-validator build && node packages/contract-validator/dist/cli.js",
+    "validate:contracts": "pnpm --filter @forge/contracts build && pnpm --filter @forge/core build && pnpm --filter @forge/persistence build && pnpm --filter @forge/contract-validator build && node packages/contract-validator/dist/cli.js",
     "validate:task-map": "node scripts/validate-playbook-task-map.mjs",
     "lint": "eslint .",
     "typecheck": "pnpm --filter @forge/contracts build && pnpm --filter @forge/core build && pnpm --filter @forge/client build && pnpm --filter @forge/persistence build && pnpm --filter @forge/process build && pnpm --filter @forge/workspace build && pnpm --filter @forge/plugin-api build && pnpm --filter @forge/executor-codex build && pnpm --filter @forge/refiner build && pnpm -r run typecheck",
