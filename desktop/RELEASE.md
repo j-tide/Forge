@@ -1,6 +1,6 @@
 # Forge Release Process
 
-Forge previews are built and published explicitly from this repository. The imported automatic release and updater channels are disabled; a push, version edit, or inherited release workflow does not authorize publication.
+Forge previews are built and published explicitly from this repository. Imported automatic release workflows and their unused helpers have been removed; updater channels remain disabled. A push or version edit does not authorize publication. Active quality checks live in the repository root `.github/workflows/desktop-quality.yml`.
 
 ## Before packaging
 

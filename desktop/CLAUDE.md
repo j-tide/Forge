@@ -153,7 +153,7 @@ cd apps/desktop && npm install
 
 ### Releases
 
-Version changes, commits, pushes, and publication require explicit user authorization. The imported automatic release workflow is disabled.
+Version changes, commits, pushes, and publication require explicit user authorization. Imported automatic release workflows and unused helpers have been removed. Current quality checks live in the Forge repository root `.github/workflows/desktop-quality.yml`.
 
 See [RELEASE.md](RELEASE.md) for full release process.
 
