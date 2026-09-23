@@ -50,3 +50,9 @@ Changes on 2026-09-28 for `0.1.0-preview.2`:
 The complete derivative desktop project is delivered under `desktop/` in [j-tide/Forge](https://github.com/j-tide/Forge/tree/main/desktop), with its npm lockfile, AGPL LICENSE, notices, build scripts and imported history retained. The pre-existing Forge Python Host/specification project remains separately rooted and unchanged in ownership; placing the projects in one repository does not integrate their runtimes or migrate user data. The sibling worktree remains a preparation/history reference. Product repository links and the source button now point to Forge. Automatic upstream publishing, updates and telemetry remain disabled as previously documented.
 
 This version releases the branding/profile-compatibility and original Logo changes described above. Preview data directory and app ID remain stable. Git commit dates continue the user's requested synthetic schedule with1–3day intervals; actual development and validation occurred on2026-09-28. Current testing/build/platform limitations appear in the corresponding release notes; prior releases are historical evidence, not overwritten.
+
+## Repository cleanup — 2026-09-28 (source cleanup, not a release)
+
+- Removed the unused standalone design demo, extracted IPC text fragments, temporary research/one-time instructions, an empty redundant lockfile, and inactive nested review configuration.
+- Removed inherited nested `.github/` automation and its unused release helpers after integration into Forge. Active quality workflows remain at the Forge repository root; publishing still requires explicit authorization and updater channels remain disabled.
+- Production application code, npm dependencies, license/copyright notices, this provenance record, runtime prompts, actual release assets/screenshots and historical acceptance evidence remain. This cleanup does not integrate the Python Host or change user data.
