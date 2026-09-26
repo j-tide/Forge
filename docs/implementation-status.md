@@ -1,5 +1,67 @@
 # Forge 实施状态
 
+## 2026-09-28 · Contributors 来源整理（用户明确授权）
+
+用户再次要求移除其他 GitHub Contributors。核查公开 `main` 及 tags：1215 条提交 = 110 条 Forge 自有记录 + 1105 条导入上游记录；不存在其他协作者提交或共同作者 trailer。按 ADR 0087 本次追加记录，以一条明确署名的来源导入快照替换上游祖先，不将原作者提交改名冒充 Forge 原创。
+
+- 导入快照：`85337af1936ea8a46fea0f026e0b2c661853953d`；原上游：`cba7a0270ec794a14ac71615bc6c48085807ede6`；二者 tree 均为 `c3c44dd2708574d045f2a8cbde9198315807abc9`。快照提交正文及 `desktop/UPSTREAM.md` 明确保留原作者和来源。
+- 公开图成为 111 条记录：110 条自有开发 + 1 条来源导入。90 条自有 SHA 不变，20 条仅因 parent SHA 或最新文档记录重新计算；自有身份、消息、原日期及 merge 父顺序保持。日期仍从 2025-11-15 至 2026-09-27；加入 2025-11-16 的合成导入日期后，相邻日期间隔仍为 1～3 天。实际操作日期是 2026-09-28。
+- 只修改根 AGENTS、UPSTREAM、本 ADR 的追加记录及本实施状态。正式源码、依赖、两个只读资料目录、README、版权与许可证保持原字节，不操作用户 SQLite 或应用数据。
+- 完整旧历史备份：`output/contributors-cleanup-20260928/forge-before-contributors-cleanup.bundle`，91,887,805 bytes，SHA-256 `d21187bda8a5c260588f9dd602686437b3f698b19199f2e2a1d1d1008536bab0`，`git bundle verify` 通过。原 main/tag SHA、contributors、发布元数据及许可证摘要存入同目录 `state-before.json`；精确旧/new SHA 对应存入 `rewrite-plan.json`。本地 backup refs 不推送。
+- 校验所有自有源码 tree、作者/提交者原始 header、日期、消息、parent 顺序、公开作者集合与 tag tree；仅最新文档 commit 的上述四份文档 tree 有变化。`v0.0.1` 对象不变；preview tag 只重算目标，原 tagger 与正文保持。
+- 已发布 DMG、ZIP、对应源码、checksums 和真实发布时间保持。历史 release 和验收记录不重写为新测试证据。Contributors 的网页/API 可能仍返回 GitHub 缓存；最终结果以推送后的实际回读为准，不声明缓存已即时刷新。
+
+本轮不重新运行模型、安装 smoke 或业务全量测试：未改正式运行源码或构建依赖。源图、许可证、发布资产及任务引用检查独立执行，回执在本地上述目录。GitHub 显示刷新不改变当前 Python 集成、Claude、平台、签名/公证与正式更新的未验状态。
+
+## 2026-09-28 · 功能提交与 Git 日期更正（用户已批准）
+
+用户明确授权本轮按功能提交并推送，随后指出合成排期已错误累积到未来，批准重写过去 Forge 开发提交：**从 2025 年 11 月开始，最新一条放昨天 2026 年 9 月 27 日。** 此要求替代原先从 2026 年 5 月接续的排期；它不改变真实开发/验收日期，也不授权新版本发布。
+
+本轮以 **2025-11-15 → 2026-09-27，UTC+08:00 01:16:33** 重排 108 个既有 Forge 开发提交，并完成余下 2 个功能提交，总计 110 个。109 个间隔随机洗牌为 2×1 天、7×2 天、100×3 天，受固定起止日期约束；author/committer 日期一致。实际操作日期是 **2026-09-28**，这些 Git 日期是用户指定的合成排期，不能作为真实产品测试日期。
+
+只替换自有提交日期及关联 parent SHA，每个既有 commit 的源码 tree、正文、作者/提交者身份和 merge 拓扑保持。1105 个导入的上游原始提交及 SHA 不变。公开 `v0.0.1` / `v0.1.0-preview.3` 映射到同一源码 tree 的新提交，preview tagger 日期同步修正；已发布 DMG/ZIP/对应源码/checksums 与真实发布时间不变。旧 SHA 的历史验收记录原位保留，通过 [Git 日期映射](git-history-date-map.json) 追踪新 SHA，不能把日期更正写成重新验收或重新发布。
+
+| 本轮功能提交 | 修正后 Git 日期（UTC+08:00） |
+| --- | --- |
+| `chore(desktop): remove obsolete design demo and IPC fragments` | 2026-09-18 01:16:33 |
+| `chore(ci): retire unused inherited release automation` | 2026-09-21 01:16:33 |
+| `chore(docs): remove temporary research and one-time prompts` | 2026-09-24 01:16:33 |
+| `docs: refresh Forge product README and delivery records` | 2026-09-27 01:16:33 |
+
+分组完整覆盖 91 个删除和 5 个文档修改；日期更正额外新增上述机器可读映射，不是新任务图或执行协议。删除清单、原文件 SHA/大小和清理后的 lint/typecheck/test/build/contracts/task-map 结果复用下方实际记录，未加入忽略的安装资产/本地日志。提交前再次核验 `git diff --check` 与当前文件引用。
+
+本地完整备份 `output/history-rewrite-20260928/forge-before-date-rewrite.bundle` 已经 `git bundle verify` 通过，暂存区和工作区 patch 同目录保留。本地 refs 用带旧 SHA 的原子事务更新；缓存/工作区 tracked diff 字节一致，没有 checkout/reset、删数据或重置 SQLite。远端 main 和两个 tag 使用逐 ref `--force-with-lease` 及 atomic push；只有远端仍等于本轮记录的旧 SHA 才能更新。实际远端核验回执在同目录，最终报告列出新的 tip。
+
+最新 About 已实际回读为：**自然语言驱动的 AI 研发工作台，让不同角色的 Agent 围绕项目协作，连接需求、开发、审查与交付。** 网站/Topics 未改。当前预览的 Python Host 集成、完整业务验收、平台、Claude、签名/公证及正式更新风险继续保留；手机/远程继续后置。
+
+## 2026-09-28 · 无用文件清理、产品 README 与中文 About
+
+用户要求删除无用代码/Markdown、重写产品 README，并将 GitHub About 改为中文。本轮仅清理已证明无正式引用的文件，不推进产品任务、不新增依赖、不迁移数据、不重新打包、不提交/推送/发布。
+
+- 删除 91 个已跟踪文件（含 7 个 Markdown），共 8,759,750 bytes：40 个独立旧设计演示文件、9 个 IPC 提取文本残片、30 个嵌套退休 GitHub 自动化/上游演示资源、5 个退休发布辅助脚本、空的 Desktop pnpm lock、临时 Codex 调研、退役 CLI 说明、未引用审查提示、未生效的嵌套 review 配置及 2 个一次性 Autopilot/迁移提示。正式 Desktop/npm scripts、根 CI、运行 prompts 和测试不依赖这些文件。
+- 删除前逐项验证路径位于仓库内、没有 symlink 逃逸、属于 tracked 文件且内容与 `c98b84eed04641a5adf42049ba6cb73a4e84edb5` 一致；没有覆盖用户改动。删除清单及原文件 SHA/大小保存在本地忽略的 `output/cleanup-20260928/deletion-manifest.json`，文件仍可从该 Git 提交恢复。
+- 保留 Python Host、现有 Vue/TS parity/build/test 源码、两个只读规格目录、AGENTS/Playbook/Protocol/ADR、许可证/来源声明、真实版本截图及验收记录、依赖锁文件和现有用户数据。原 TS Host/Core 仍被工程检查引用，不能按“旧代码”整目录删除。
+- 根 README 从 89,878 bytes 的历史流水账改为约 8.8 KB 的中文产品首页：原创 Logo、真实亮暗 Electron 截图、固定版本下载、安装/源码运行/检查命令及文档入口。明确当前衍生 Desktop 尚未连接 Python Host；不宣称完整产品验收。同步 Desktop RELEASE/CLAUDE 的退休自动化说明，在 UPSTREAM 追加修改记录，保留原始署名和历史条目。
+- GitHub `j-tide/Forge` About 已实际更新并回读为：**面向 AI 编程的桌面工作台，整合项目、任务与 Agent 协作，支持中英文及亮暗磨砂玻璃界面。** 原网站为空、Topics 无配置，两者未改；仓库仍 `isFork=false`。
+
+### 本轮实际检查（macOS arm64，无模型调用）
+
+| 命令/检查 | 结果 |
+| --- | --- |
+| `desktop/` 中 `npm run check:i18n`（Node 24） | PASS，36 namespaces / 5,167 strings，0 errors / 0 warnings；4,030 静态引用，251 动态引用仍由组件/运行测试覆盖。 |
+| `desktop/` 中 `npm run lint` | exit 0，保留 825 既有 warnings / 5 infos，不降规则。 |
+| `desktop/` 中 `npm run typecheck` | PASS。 |
+| `desktop/` 中 `npm run test` | PASS，4 品牌 + 6 引用解析器 Node tests；248 文件 / 4,763 Vitest tests。 |
+| `desktop/` 中 `npm run build` | PASS，Main/Preload/Renderer 实际构建。 |
+| 根 `pnpm validate:contracts` | PASS，47 files / 0 errors / 4 既有 warnings。 |
+| 根 `pnpm validate:task-map` | PASS，9 phases / 92 tasks / 120 acceptance cases / 84 deferred。 |
+| 根 `pnpm lint` | PASS。 |
+| 删除清单与 Git diff 对照；4 份当前文档中的本地链接/图片检查 | PASS，恰好 91 个预定删除文件；29 个本地文件引用存在。 |
+| `gh repo edit` 后 `gh repo view j-tide/Forge` | 中文 About 精确回读，网站/Topics/isFork 保持原值。 |
+| `git diff --check` | PASS。 |
+
+实际日志在本地 `output/cleanup-20260928/`。未重复执行在线模型、安装态 Smoke、DMG 构建或 Python 全量测试：本轮没有修改正式运行逻辑、依赖或安装资源，已发布 `.3` 资产和原证据保持原样。Windows/Intel、Claude、Python 集成、签名/公证、正式更新及 npm audit 风险不因本轮清理关闭；手机/远程继续后置。
+
 ## 2026-09-28 · Forge 仓库源码归拢 / 0.1.0-preview.3
 
 用户明确授权按功能提交、推送到 `j-tide/Forge` 并发布预览。衍生 Desktop 完整源码与历史归入 `desktop/`，原 Python Host、规格、Vue 历史实现及 SQLite 用户数据原位保留；许可/来源和独立 npm 边界见 ADR 0087。当前预览仍未连接 Forge Python Host，不是完整产品验收。普通打开使用根 `pnpm desktop:open`，开发入口位于 `desktop/`；详细变更、当前截图、检查结果及未验项见 [0.1.0-preview.3](../desktop/docs/releases/0.1.0-preview.3.md)。

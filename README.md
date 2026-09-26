@@ -1,254 +1,111 @@
+<div align="center">
+
+<img src="desktop/apps/desktop/resources/icon-256.png" alt="Forge Logo" width="96" />
+
 # Forge
 
-<img src="apps/desktop/assets/icon.png" alt="Forge" width="80" />
+### 自然语言驱动的 AI 研发工作台
 
-> **原 Forge Python Core（历史路线）**：原 Vue Desktop 的唯一业务 Runtime 是独立 Python Host。Electron Main 负责窗口、目录选择和 Host 生命周期；Vue/TypeScript 通过固定 Preload API 与 Main 通信，Main 以有版本的 JSON-RPC stdio 连接 Python。历史 Node Host 仅保留为迁移对照，不是生产 fallback。MIG-PY-09 和 P2 Phase Gate 已在 macOS arm64 开发环境通过；见 [迁移计划](docs/forge-python-core-migration-plan.md) 与 [P2 阶段报告](docs/p2-completion-report.md)。SQLite 数据不重置。
+围绕本地代码项目，组织任务、配置 Agent 与模型、查看开发活动和代码变化。
+中文与英文、亮色与暗色，让工作台适应你的习惯。
 
-Forge 是自然语言驱动的多 Agent 研发工作台。需求先成为可编辑的 Task Contract，经人工批准进入 TODO；开发、Review、验证与人工验收依靠真实状态和证据。Done 不代表合并或部署。Forge 与 ProofRun 完全独立。
+[![Version](https://img.shields.io/badge/version-0.1.0--preview.3-476b9b)](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.3)
+[![Desktop Quality](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml/badge.svg)](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml)
+[![Core Quality](https://github.com/j-tide/Forge/actions/workflows/quality.yml/badge.svg)](https://github.com/j-tide/Forge/actions/workflows/quality.yml)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-64748b)](desktop/LICENSE)
 
-> **当前桌面预览（2026-09-28）**：源码已归拢到本仓库 [desktop/](desktop/)，基于用户批准的 [ADR 0087](docs/decisions/0087-aperant-derived-desktop-base.md)。[v0.1.0-preview.3 下载](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.3)包含 macOS arm64 INTERNAL / ADHOC / UNNOTARIZED 安装包、对应源码和校验摘要。新 Forge 标识、玻璃亮暗主题、中文／English 切换已通过真实 Electron 与包启动检查；见[本版说明](desktop/docs/releases/0.1.0-preview.3.md)。衍生桌面尚未连接本仓库 Python Host，不能把下面历史产品验收当成本版验收。保留 AGPL-3.0 来源与法律说明。
+[**下载 macOS 预览版**](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.3) · [**从源码运行**](#从源码运行) · [**文档**](#文档)
 
-正常打开当前衍生包：`pnpm desktop:open`；开发请在 `desktop/` 中运行 `npm run dev`，详见 [desktop README](desktop/README.md)。原根目录 `pnpm dev:desktop` 仍对应下方历史 Vue/Python 路线。已发布 .2 和未发布 logo 构建记录保留在实施状态中，新包未覆盖原安装或用户数据库。
+</div>
 
-## 当前状态
+<br />
 
-### 原 Forge Desktop 路线：视频磨砂视觉与现行桌面交互结构（历史实现）
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="desktop/docs/screenshots/0.1.0-preview.3/home-dark-1440.png" />
+  <img src="desktop/docs/screenshots/0.1.0-preview.3/home-light-1440.png" alt="Forge 桌面工作台" width="100%" />
+</picture>
 
-经批准的 [ADR 0085](docs/decisions/0085-aperant-reference-desktop-redesign.md) 以公开 Aperant **2.x** 桌面版对照信息架构与交互密度；[ADR 0086](docs/decisions/0086-video-glass-visual-with-current-desktop-ia.md) 将用户先前提供的视频及 `forge_glass_v1.1/design/` 恢复为视觉材质和动效方向。这个仓库中的旧 Forge 界面独立用 Vue 实现，继续读取真实 Python Host 状态；亮色与暗色共用布局。该实现保留作历史证据，未来桌面基座已由 ADR 0087 改为独立衍生仓库。
+> 当前版本为 **0.1.0-preview.3**，提供 macOS Apple Silicon 预览包，尚未完成正式签名和公证。完整任务闭环与 Forge Python Host 集成尚未完成，其他平台仍待验证。
 
-当前源码的正常入口：
+## 功能
 
-1. Desktop 打开后进入「看板」。从顶栏项目选择器原位选择并信任项目；没有项目或任务时显示单一引导面板，有真实任务后才展开五列看板。侧栏「新建任务」和空态按钮进入同一任务面板。
-2. 「新建任务」抽屉中的讨论通过 Host 保存消息并读取回复，可选择模型「发送并整理」或「手工填写」；审阅可编辑 Task Contract、澄清与版本后，单独人工批准才进入 TODO，不自动启动 Run。
-3. 五列看板依次为待办、开发、审查、验证与验收、完成。任务卡片打开近全屏详情，按概览、运行、变更、审查与验收查看真实记录；已批准任务仍需明确 Start，Review、Verify 与 Owner 接受后才可能 Done。
-4. 侧栏进入工作流、角色、插件、项目资料、项目管理和设置；`Cmd/Ctrl+K` 打开快速导航。设置提供亮色、暗色、跟随系统及减少透明度、减少动效选项。浏览器 `dev:web` 没有本地 Python Host 业务能力。
+| 功能 | 用途 |
+| --- | --- |
+| **项目与任务** | 打开本地项目，在看板中管理任务、查看执行信息。 |
+| **Agent 与模型** | 配置模型提供方、认证和 Agent 选项。 |
+| **终端与代码** | 查看命令活动、工作区和代码变化。 |
+| **上下文与工具** | 配置项目上下文、集成和 MCP 工具。 |
+| **中文 / English** | 在设置中即时切换语言，重启后保留选择。 |
+| **亮色 / 暗色** | 银蓝磨砂界面，两种主题共用布局。 |
 
-当前页面、入口与状态约束可从 `apps/web/src/App.vue`、`components/AppShell.vue`、`BoardView.vue`、`ConversationPanel.vue`、`TaskDetailDrawer.vue` 和 [实施状态](docs/implementation-status.md)核对。单面板草稿修正后，App/组件 24/24、`smoke:projects` 23 阶段、`smoke:p1-offline`、1280/1600 宽度及缩放检查通过；`pnpm lint`、`pnpm typecheck`、`pnpm test`（含 build）、`pnpm py:check`（286 passed/1 skipped）、契约/任务图校验和 `pnpm smoke:desktop` 均通过。
+<details>
+<summary><strong>查看暗色界面与语言设置</strong></summary>
 
-**当前内部 Mac 包**：[Forge 0.0.1 glass-polish DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-glass-polish-20260927.dmg)，SHA-256 `38428e17e8f2a37eda9727f044f6cdac8c63d190edb2eb41773c3e721a124f20`，独立复制安装为 [Forge INTERNAL Glass Polish 20260927.app](</Users/iamzjt/Applications/Forge INTERNAL Glass Polish 20260927.app>)，ad-hoc `codesign --verify --deep --strict` 与普通 `open -n` 启动均通过，启动时观察到包内 Python Host。本版收紧空看板的大小和层级，采用视频方向的银蓝环境光、浅色阅读表面和 Forge 标记；任务面板按消息在前、输入在后的顺序排列，工作流、角色和插件页进一步减少重复信息，并如实显示 Host 能力。[本包安装版首页](output/playwright/forge-glass-polish-packaged-home-20260927.png)和来自当前源码真实 Electron 的[亮色看板](output/playwright/forge-visual-polish-final-20260927/forge-glass-20260927-light.png)、[暗色看板](output/playwright/forge-visual-polish-final-20260927/forge-glass-20260927-dark.png)、[亮色新建任务](output/playwright/forge-visual-polish-final-20260927/forge-glass-20260927-light-new-task.png)可供对照。当前 DMG 安装 smoke 在隔离 QA 数据下通过，确认包内 Python 3.12.13、SQLite schema38 与受限 Renderer；源码 lint/typecheck/test/build 和 Desktop smoke 均通过。本次没有新增业务、模型调用、依赖、Schema 或协议。包仍为 **INTERNAL / ADHOC / UNNOTARIZED**；当前 SHA 的完整在线 Develop→Review→Verify→Owner、Windows/Intel、Claude、正式签名公证和完整 Desktop/P6 仍未验收。详见[实施状态](docs/implementation-status.md)。
+<br />
 
-**前一 glass-layout 内部包（历史构建）**：[Forge 0.0.1 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-glass-layout-20260927.dmg)，SHA-256 `51d6b5056e396e77a2b4c8982a2f4d3ed74b6fc01b87037f39d7ef00d1183165`；[对应独立应用](</Users/iamzjt/Applications/Forge INTERNAL Glass Layout 20260927.app>)和[安装版首页](output/playwright/forge-visual-layout-final-20260927/forge-glass-packaged-home.png)只证明该旧构建。
+![Forge 暗色桌面](desktop/docs/screenshots/0.1.0-preview.3/home-dark-1440.png)
 
-**前一视频视觉内部包（历史构建）**：[macOS arm64 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-video-glass-20260927.dmg)，Forge 0.0.1，SHA-256 `0c8267885eb155858e8d2316d8f60c2066f70cb18a4ed5194d28daeb643268b6`，**INTERNAL / ADHOC / UNNOTARIZED**。另装的 [Forge INTERNAL Video Glass 20260927.app](</Users/iamzjt/Applications/Forge INTERNAL Video Glass 20260927.app>) 已通过 `codesign --verify --deep --strict`，普通 `open -n` 常驻启动时观察到包内 Python Host；没有覆盖旧安装或数据。包内 Python 3.12.13、SQLite schema38、独立 HOME 与安装 smoke 已通过。源码 `pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、`pnpm py:check`（286 passed/1 skipped，Ruff/mypy）及真实 Electron 主题/动效/1040 与 1600 宽度 smoke 通过。[安装版亮色首页](output/playwright/video-glass-20260927/forge-glass-20260927-packaged-home.png)、[安装版暗色减少透明度](output/playwright/video-glass-20260927/forge-glass-20260927-packaged-dark-reduced.png)、[亮色新建任务](output/playwright/video-glass-20260927/forge-glass-20260927-light-new-task.png)、[暗色新建任务](output/playwright/video-glass-20260927/forge-glass-20260927-dark-new-task.png)为实际应用截图；完整清单见[实施记录](docs/implementation-status.md)。此 SHA 尚未重新执行完整在线 Develop→Review→Verify→Owner，Windows/Intel、Claude、正式签名公证和完整 Desktop/P6 仍待验收。
+![Forge 中文设置](desktop/docs/screenshots/0.1.0-preview.3/settings-language-zh-light-1440.png)
 
-以下 Aperant 重设计内部包及截图早于视频视觉迁移，仍只证明该构建的行为，不能作为银白雾面和新版动效已在安装版验收的证据。
+</details>
 
-**先前 Aperant 视觉内部测试包（不含本次视频材质与动效）**：[macOS arm64 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-aperant-redesign-20260927.dmg)，Forge 0.0.1，SHA-256 `55d5c61065c60a19b33293e7f0da28a2f62fdcf52f222b8030f1d81f1982c53b`，**INTERNAL / ADHOC / UNNOTARIZED**。该历史包的 package smoke 已从 DMG 验证捆绑 CPython 3.12.13、SQLite schema38、Renderer sandbox 和独立 QA 数据。[独立 QA 应用](</Users/iamzjt/Applications/Forge INTERNAL Aperant Redesign 20260927.app>) 已复制安装，`codesign --verify --deep --strict` 通过并以普通 `open -n` 启动；数据在独立的 `~/Library/Application Support/Forge Internal QA/072243e56d709b43/Forge`，不会重置日常 SQLite。[安装版看板](output/playwright/aperant-redesign-20260927-board-top-1440x900.png)、[工作流](output/playwright/aperant-redesign-20260927-workflows-1440x900.png)、[角色](output/playwright/aperant-redesign-20260927-agents-1440x900.png)、[插件](output/playwright/aperant-redesign-20260927-plugins-1440x900.png)、[项目资料](output/playwright/aperant-redesign-20260927-knowledge-1440x900.png)和[项目管理](output/playwright/aperant-redesign-20260927-projects-1440x900.png)为此包截图。这是可操作的内部 QA 入口，不是正式签名发行。
+## 下载与安装
 
-同一安装版单次真实 Codex `gpt-6-luna` 需求整理 smoke 通过：Host 保存了非空 Forge 回复和结构化草稿，[正式新建任务抽屉](output/playwright/aperant-redesign-20260927-generated-draft-1440x900.png)显示模型与待审阅草稿，隔离 Git fixture 保持 clean。该草稿**尚未人工批准，未进入 TODO，也未启动 Run**。本新包尚未重新执行完整在线 Develop→Review→Verify→Owner；下列旧 DMG、截图和 Run 只证明各自构建。完整 Desktop/P6、Claude、Windows/Intel、Developer ID 签名/公证及发布门禁仍待验；P7/P8 新开发继续后置。
+1. 下载 [**macOS arm64 DMG**](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.3/Forge-0.1.0-preview.3-darwin-arm64-INTERNAL.dmg)。[Release](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.3) 同时提供 ZIP、源码和 `SHA256SUMS`。
+2. 核对校验摘要，打开 DMG，将 `Forge.app` 拖入 Applications。
+3. 从 Finder 打开 Forge。若系统提示无法验证开发者，可在“系统设置 → 隐私与安全性”中确认打开。
 
-### 历史内部包检查点（按各自构建追踪）
+### 首次使用
 
-**当时内部包检查点**：[desktop-planner-context-20260927 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-planner-context-20260927.dmg)，Forge 0.0.1，SHA-256 `6f58d456d87121795e01b848b3a9c743192e7bd3df4c349fa7038936485fdbd9`，**INTERNAL / ADHOC / UNNOTARIZED**。实际安装后，Planner 角色及项目资料许可、quick/standard/strict 发布版均经 UI 保存与重启读回；strict 已从人工批准的 TODO 真正执行只读 Codex Plan 并保留[计划](output/playwright/desktop-planner-context-20260927-strict-installed-plan-1440x900.png)与[冻结知识来源](output/playwright/desktop-planner-context-20260927-strict-frozen-context-1440x900.png)。人工确认后独立 Developer Run 也真实启动并接收计划/来源，但观测用量超过已选 200000 上限而失败，**没有快照、Review/Verify 或交付**；[失败页面](output/playwright/desktop-planner-context-20260927-strict-developer-failed-1440x900.png)。同一 DMG 的后续独立 QA 已完成 standard Plan→Developer→Review→Verify→Owner 全链及重启读回，详见[实施状态](docs/implementation-status.md)；strict 全链、该包 quick 全链与其余桌面缺口仍待验。这些仍是旧界面构建证据，手机/远程新增开发暂停。
+- 安装 **Git**，添加一个本地项目。建议先使用测试仓库熟悉操作。
+- 在设置中配置模型提供方与认证；部分执行器需要额外安装 CLI，并保持所需网络连接。
+- 选择中文或 English、亮色或暗色主题，再创建任务。
 
-**前一已验证安装包**：[desktop-planner-runtime-20260927 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-planner-runtime-20260927.dmg)，Forge 0.0.1，SHA-256 `1b6275423012ef13cac7545d238a23aa19e72e8b8d53eccbb730f3a4ca090793`，**INTERNAL / ADHOC / UNNOTARIZED**。此包的 Electron/包内 Python Host/SQLite schema37 已实测；正常 UI 保存 Planner v2 并重启读回、发布 quick/standard/strict 并重启读回。[Planner 角色截图](output/playwright/desktop-planner-runtime-20260927-planner-profile-saved-1440x900.png)与[严格 Plan 节点截图](output/playwright/desktop-planner-runtime-20260927-strict-plan-binding-1440x900.png)来自此包。最新源码另外补了计划流程的资料来源交接，**尚未进入此 DMG**。源码级真实 Codex 已完成一次只读 strict Plan；当前包尚无标准/严格在线 Developer→Review→Verify→Owner 全链。旧 quick 完整链只属于其原构建。完整 Desktop、Claude、Windows/Intel、签名公证仍未验收，手机/远程新增开发暂停。下面更早包的记录仅为各自历史检查点。
+预览版使用独立的 `Forge Glass Preview` 用户数据目录和 `.forge-glass-preview/` 项目数据目录。服务凭据及执行器不随安装包提供。
 
+## 从源码运行
 
-**前一源码对齐内部包**：[desktop-planner-role-20260927 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-planner-role-20260927.dmg)，Forge 0.0.1、330519685 bytes、SHA-256 `32c21e4948ee459e4298dc861156d1fabef2857aeb916f7086a66be8765179c8`，**INTERNAL / ADHOC / UNNOTARIZED**。当前可操作的 [独立 QA 应用](</Users/iamzjt/Applications/Forge INTERNAL Desktop QA Planner Role 20260927.app>) 已在 macOS arm64 用 `open -n` 无环境覆盖常驻，专属空库 schema36/`quick_check=ok`，不会改动日常数据。标准与严格模板的 Plan 节点在 Workflow 页面正确显示为只读 Planner；Python 编译器按 Plan 输出契约识别职责。Planner Runtime 尚未接通，预检继续拒绝未装 Profile 和不支持的能力，不能把模板显示当作可执行全流程。[实际 Plan 节点](output/playwright/desktop-planner-role-20260927-standard-planner-role-1440x900.png)与[预检拒绝](output/playwright/desktop-planner-role-20260927-standard-planner-unavailable-1440x900.png)来自本包；未调用在线模型。完整 Desktop/P6、Claude、Windows/Intel、签名公证、知识场景 Review/Owner、物理重启正向与跨 Host writer 对账仍未完成；手机与远程新增开发后置。
-
-**前一源码对齐内部包**：[desktop-plugin-config-final-20260927 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-plugin-config-final-20260927.dmg)，Forge 0.0.1、SHA-256 `679d6697bfe93035a894dd2c884b1dd8c769ced56d9ee8c1ca18f764adda97bc`，**INTERNAL / ADHOC / UNNOTARIZED**。另装的 [Forge INTERNAL Desktop QA Plugin Config Final 20260927.app](</Users/iamzjt/Applications/Forge INTERNAL Desktop QA Plugin Config Final 20260927.app>) 已在本机 macOS arm64 通过普通 `open -n` 常驻，使用专属空数据目录，不覆盖日常项目或旧 QA。正式「插件」页现可保存内置 Codex 的 1–60 秒启动握手等待；保存后需退出重开 Forge 才应用于新 Run。安装版已完成页面保存→重启→Host 读回；Python 归属子进程测试证明超时作用于真实 app-server 协议连接。**此包未重复在线 Codex 模型运行**，也不提供插件凭据存储。详情及[实际截图](output/playwright/desktop-plugin-config-final-20260927-plugin-config-applied-1440x900.png)见[实施状态](docs/implementation-status.md)。完整 Desktop/P6、Claude、Windows/Intel、正式签名公证/更新、旧 Run 物理重启正向及知识场景 Review/Owner 仍未通过；手机与远程新增开发后置。
-
-同一 DMG 还用 Finder 风格最小 PATH 与当前用户已授权的本机 Codex 登录完成安装版只读能力探测：包内 Python Host 找到外部 Codex CLI 0.155.1，保存的 2 秒配置已应用，真实 app-server 握手和 `model/list` 返回 7 个模型；[设置页截图](output/playwright/desktop-plugin-config-finder-20260927-finder-cli-authenticated-1440x900.png)。这没有调用模型 Turn，也不证明全新用户安装或新 Run 交付。
-
-**前一源码对齐内部包**：[desktop-finder-safe-final-20260927 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-finder-safe-final-20260927.dmg)，0.0.1、SHA-256 `0f6075d7bc62462b3849d1120cc975cedbefc5e08ea633b7057f2849d671d919`，**INTERNAL / ADHOC / UNNOTARIZED**。从该 DMG 单独安装的 [Forge INTERNAL Desktop QA Finder Safe Final 20260927.app](</Users/iamzjt/Applications/Forge INTERNAL Desktop QA Finder Safe Final 20260927.app>) 已通过 macOS `open -n` **无特殊环境变量**常驻启动；包内 Python Host 和沙箱 Renderer 在运行，默认数据自动落在 `~/Library/Application Support/Forge Internal QA/05d77bb86c01d376/Forge`，schema36、`quick_check=ok`、零 Project/Run。可从 Finder 打开此独立 QA `.app`，在「项目」中选择独立演示仓库 `/Users/iamzjt/Documents/Forge Desktop QA Finder Safe 20260927/Forge 测试项目 01` 并主动信任；它无 remote、Git clean，`npm test` 通过。旧 QA 和日常数据均未覆盖。[当前包项目页](output/playwright/desktop-finder-safe-final-20260927-projects-1440x900.png)、[插件页](output/playwright/desktop-finder-safe-final-20260927-plugins-1440x900.png)来自实际 Vue/Electron。此改动只修内部 QA 多包应用标识和默认数据隔离；前一包的真实在线自定义 Workflow 与 Review 失败证据仍按原 SHA 追踪。完整 Desktop/P6、知识场景 Review/Owner、非空插件配置、物理重启正向、Claude、Windows/Intel 和签名公证仍未验收；P7/P8 新开发后置。
-
-**前一源码对齐内部包**：[desktop-review-diagnostic-20260927 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-review-diagnostic-20260927.dmg)，0.0.1、324457875 bytes、SHA-256 `b3d01ca3710b6ebd2316b258bc2450652ecf869fb06a267cb40c04420906d3a1`，**INTERNAL / ADHOC / UNNOTARIZED**。独立安装 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Review Diagnostic 20260927.app` 可运行 `/Users/iamzjt/Documents/Forge Desktop QA Review Diagnostic 20260927/Open Forge Desktop QA.command` 以空白 QA 数据常驻，Main/包内 Host/沙箱 Renderer 已观察，schema36 `quick_check=ok`、零 Project/Run；同目录 `sample-project` 无 remote 且须主动信任。已安装包对真实旧 `inconclusive` Review 的独立 SQLite backup 展示[未完成诊断](output/playwright/desktop-review-diagnostic-20260927-inconclusive-1440x900.png)，任务仍 active；旧记录没有原因码，页面只作泛化说明。**新审查作业**会将 `REVIEW_RESULT_MISSING` / `REVIEW_RESULT_INVALID` 存入现有 `review_jobs.error_code` 并在桌面说明，原始模型输出不入库。没有为此重新调用模型或把旧 Review 改为通过。该旧包 Finder/LaunchServices 仍待验；该知识场景重新 Review/最终交付、P4-04 非空插件配置、物理重启正向、Claude/Windows/Intel/签名公证仍待验；P7/P8 新开发后置。完整 Desktop/P6 未收口。
-
-**前一源码对齐内部包**：[desktop-workflow-binding-20260927 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-workflow-binding-20260927.dmg)，0.0.1、330992035 bytes、SHA-256 `c3e6fb58ad7dbd13f9d47243414d0d77d59d233b3ab651e91e1b1adbbf53fe84`，**INTERNAL / ADHOC / UNNOTARIZED**。从该 DMG 另装的 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Workflow Binding 20260927.app` 可经 `/Users/iamzjt/Documents/Forge Desktop QA Workflow Binding 20260927/Open Forge Desktop QA.command` 以独立空白数据启动；同目录 `sample-project` Git clean、无 remote，须在页面主动选择和信任。该 `.command` 在 Terminal 中直接启动应用并保持 Terminal 会话；本机多份同标识 QA 包并行时，`open -n --env` 曾只留下无 Host 的 Main，Finder/LaunchServices 方式仍需单独查明，不能作为已验证入口。安装包 smoke 验证包内 CPython 3.12.13、SQLite 3.50.4/schema36 与沙箱 Renderer。
-
-同一新 DMG 的**独立测试安装**已用合法现有 Codex 登录完成真实自定义 quick Workflow：发布版本绑定的 Developer Profile/模型在任务抽屉显示并锁定；用户明确 Start 后隔离修改两个文件，获批命令 Verify exit 0、独立 Review approved、逐项最终人工接受后才 Done；重启仍有交付，另一个真实取消 Run 未被算作交付，源 Git clean。[开发快照](output/playwright/workflow-binding-run5-20260927-delivery-1440x900.png)、[Review](output/playwright/workflow-binding-run5-20260927-review-1440x900.png)、[最终接受](output/playwright/workflow-binding-run5-20260927-accepted-1440x900.png)。首次 50,000/100,000 Token 观测上限的两次运行分别以 `RUN_TOKEN_BUDGET_EXCEEDED` 失败并保留；200,000 上限的单独运行完成，本地上限不保证精确费用封顶。空白 QA 安装没有预置这些真实历史任务。
-
-另一个同包独立场景将真实导入文档与用户确认记忆检索成 ContextBundle，并由在线 Codex Run `ff9e77ea-689b-461d-b92f-6fabfa10e540` 实际使用；撤销后任务抽屉仍展示冻结历史来源并标记 revoked，[来源实图](output/playwright/workflow-context-run1-20260927-context-source-1440x900.png)。无命中/冲突被拒绝；Verify 通过，但该场景的只读 Review 返回 `inconclusive`/无结构化结果，所以任务仍 active、**没有**最终接受。P4-04 非空插件配置、此场景 Review/最终交付、物理重启后的恢复正向、Finder 式启动、Claude、Windows/Intel、签名公证和正式更新仍待验；完整 Desktop/P6 门禁未通过，P7/P8 手机远程新增开发后置。
-
-**前一源码对齐内部包**：[desktop-boot-recovery-20260927 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-boot-recovery-20260927.dmg)，0.0.1、329444493 bytes、SHA-256 `44a6c16b0af98cecbf931b5f1cc3d71fff0835e54c8fe15a4ba6ef28957e9052`，**INTERNAL / ADHOC / UNNOTARIZED**。双击 `/Users/iamzjt/Documents/Forge Desktop QA Boot Recovery 20260927/Open Forge Desktop QA.command` 打开另装的 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Boot Recovery 20260927.app`；它使用同目录独立空数据，`sample-project` 干净且无 remote，仍需在 UI 主动选择和信任。[安装版首页](output/playwright/desktop-boot-recovery-20260927-home-1440x900.png)、[真实旧崩溃 Run 的隔离副本](output/playwright/desktop-boot-recovery-20260927-1440x900.png)来自此 DMG。新固定命令与任务抽屉在旧 Run 的写入归属无法确定时要求**真实完整重启系统**、重新核对保留工作区并原生确认；当前启动会话拒绝解除隔离，旧 Run 不变。Schema 36 的正向解除仅在单测注入另一个启动 ID 后验证，**尚未实机重启验证**，因此不宣称旧 writer 已可安全解除或完整崩溃恢复。包内 CPython 3.12.13、SQLite 3.50.4/schema36、沙箱 Renderer 与同启动会话拒绝已实测；此旧包无新在线模型调用，不能替代新包证据。
-
-**前一源码对齐内部包**：[desktop-journal-fence-20260927 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-journal-fence-20260927.dmg)，0.0.1、327209166 bytes、SHA-256 `3c9f9682e8e99ec54a9d4fb9fc4e3bf5a1859c17284026478a5a4216265eb3c6`，**INTERNAL / ADHOC / UNNOTARIZED**。双击 `/Users/iamzjt/Documents/Forge Desktop QA Journal Fence 20260927/Open Forge Desktop QA.command` 打开另装的 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Journal Fence 20260927.app`，使用同目录独立空白数据和需主动选择、信任的无 remote `sample-project`。该包新增损坏/残留进程 journal 的保守数据切换门禁；安装版正常备份/恢复、旧真实中断 Run 恢复拒绝、损坏 journal 恢复拒绝和插件启停/新 Run 拒绝都已实测。[项目页](output/playwright/desktop-journal-fence-20260927-projects-1440x900.png)、[损坏 journal 拒绝](output/playwright/desktop-journal-fence-corrupt-20260927-journal-restore-refused-1440x900.png)、[插件停用门禁](output/playwright/desktop-journal-fence-20260927-plugin-control-run-blocked-1440x900.png)均来自此包。另一个同包隔离安装在获批 Verify 真实子进程运行中拒绝从 Forge 移除 Project，验证随后通过、源 Git clean；[项目移除拒绝](output/playwright/desktop-journal-fence-20260927-remove-blocked-1440x900.png)。没有新在线模型调用；旧包完整任务链不能转记到新 SHA。该包的跨 Host 旧 writer 解除隔离、非空插件配置与凭据消费、Claude、Windows/Intel、签名公证和正式更新仍待完成。
-
-**前一恢复安全内部包**：[desktop-recovery-fence-20260927 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-recovery-fence-20260927.dmg)，0.0.1、324834922 bytes、SHA-256 `90f71bc9891452fe0c512fe159360c96dab0a2ec390b322c643ed51e0f9292da`，**INTERNAL / ADHOC / UNNOTARIZED**。双击 `/Users/iamzjt/Documents/Forge Desktop QA Recovery Fence 20260927/Open Forge Desktop QA.command` 常驻打开另装的 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Recovery Fence 20260927.app`；它使用该目录的独立空白数据，旁边 `sample-project` 无 remote 且 Git clean，仍需在 UI 主动选择并信任。安装版包内 Python Host/schema35、沙箱 Renderer、项目/插件等页面、备份→独立恢复→重新信任→返回原库均通过；另用旧真实 Codex 崩溃 Run 的**隔离副本**验证设置页拒绝恢复，Host/数据集/备份/源码不变。[实际项目页](output/playwright/desktop-recovery-fence-20260927-projects-1440x900.png)、[恢复拒绝](output/playwright/desktop-recovery-fence-20260927-interrupted-restore-refused-1440x900.png)。本包无新在线模型 Run，不能把旧包的完整任务链转记到此 SHA；跨 Host 旧 writer 安全对账、P4-04 非空插件配置消费、Claude、Windows/Intel、签名公证与正式更新仍未通过。完整 Desktop 尚未收口，P7/P8 手机远程后置。
-
-**前一项目归档包**：[desktop-archive-race-20260927 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-archive-race-20260927.dmg)，0.0.1、326090997 bytes、SHA-256 `41f95ad87599cedbc638b6a5b55c220687ae8d28bee59dca8945389780876eab`，**INTERNAL / ADHOC / UNNOTARIZED**。双击 `/Users/iamzjt/Documents/Forge Desktop QA Archive Race 20260927/Open Forge Desktop QA.command` 常驻打开从该 DMG 另装的独立可写空数据应用；同目录 `sample-project` 是干净、无 remote 的可丢弃 Git fixture，仍需主动选择并信任。当前包修复项目归档与 Developer/Review/Verify 启动交错时的事务门禁；[实际安装包项目页](output/playwright/desktop-archive-race-20260927-projects-1440x900.png)已核对。没有新在线 Codex 执行，也没有在本包用活跃模型 Run 做归档负测；旧 Run 证据按原构建追踪。完整 Desktop、跨 Host 安全对账、P4-04 非空插件配置消费、Claude、Windows/Intel、签名公证和正式更新仍未通过；P7/P8 手机远程后置。
-
-**前一历史只读内部包**：[desktop-readonly-ui-final-20260927 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-readonly-ui-final-20260927.dmg)，0.0.1、327961146 bytes、SHA-256 `331c75a0ca2de200e20a301b2f1ac9b2a9dda459a9b383f099288b912f37c167`，**INTERNAL / ADHOC / UNNOTARIZED**。双击 `/Users/iamzjt/Documents/Forge Desktop QA Readonly UI 20260927/Open Forge Desktop QA.command` 常驻打开另装的独立**可写空数据**应用；同目录 `sample-project` 是无 remote、干净的可丢弃 Git 项目，须自行选择并信任。新包在另一隔离历史副本中真实展示任务并拒绝写入，SQLite/Host 与页面只读状态一致，[任务抽屉](output/playwright/desktop-readonly-ui-final-20260927-1440x900.png)、[项目页](output/playwright/desktop-readonly-ui-final-20260927-projects-1440x900.png)来自该安装版。没有新模型调用；旧包的在线 Run 证据不迁记到本包。完整 Desktop、跨 Host 安全对账、Claude、Windows/Intel、签名公证和正式更新仍未通过，P7/P8 手机远程后置。
-
-**前一设置与诊断内部包**：[desktop-settings-first-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-settings-first-20260926.dmg)，0.0.1、329725663 bytes、SHA-256 `da8c6fadf7dad1ddc295a46db6664fa7de762543b93afef1d691378b34e64894`，**INTERNAL / ADHOC / UNNOTARIZED**。双击 `/Users/iamzjt/Documents/Forge Desktop QA Settings First 20260927/Open Forge Desktop QA.command` 常驻打开另装的 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Settings First 20260927.app`；使用独立空白 SQLite 和同目录无 remote、未预先信任的 `sample-project`，不触及日常数据库。安装版 Settings 优先显示外观、本机依赖、诊断与备份，[真实截图](output/playwright/desktop-settings-first-diagnostics-20260926-settings-top-1440x900.png)；包内 Python Host 的[诊断预览与原生导出](output/playwright/desktop-settings-first-diagnostics-20260926-1440x900.png)字节一致且不包含隔离测试 token/路径。上一包的长中文 Task 抽屉、Dialog 焦点与减少透明度/动效证据按其原 SHA 保留；此新包未重新调用模型。完整 Desktop、Claude、Windows/Intel、签名公证和正式更新仍未通过，P7/P8 手机远程后置。
-
-**前一可访问性内部包**：[desktop-accessibility-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-accessibility-20260926.dmg)，SHA-256 `c34dea0ceb7ab611f3a97015424fcea97e27e69bf7058605c204896468369eda`。它的独立安装版验证了 120 字中文 TODO 任务抽屉在 1280px 和 100/125/150% CSS zoom 下的静止布局、键盘焦点与重启读回；[实际截图](output/playwright/desktop-a11y-drawer-20260926-long-task-drawer-1280x900.png)。这是历史子项证据，不代表 Windows DPI 或当前包新在线 Run。
-
-**前一内部包**：[desktop-quarantined-preview-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-quarantined-preview-20260926.dmg)，0.0.1、328176291 bytes、SHA-256 `a6b0679109ea8a8522584f5db7e7d78feef9c1407ef24f4c315a5e45148e30a6`，**INTERNAL / ADHOC / UNNOTARIZED**。本包在真实旧 Codex 崩溃 QA 的隔离安装中，以 SQLite 只读方式显示中断 Run 当前 worktree 的[实际变更](output/playwright/desktop-quarantined-preview-20260926-1440x900.png)；Run/租约与源 Git 不变。仅有 DB 副本、缺原 worktree 时明确拒绝预览。此功能不证明旧 Agent 已退出、不解除隔离、不允许新 Start，也没有重新调用模型。另装的空白 QA App 可双击 `/Users/iamzjt/Documents/Forge Desktop QA Quarantined Preview 20260926/Open Forge Desktop QA.command` 常驻打开，使用独立数据与同目录未预先信任的可丢弃 `sample-project`；实际包内 Host/schema35 和 Git clean 已核对。勿直接双击 `.app` 落到日常数据库。完整 Desktop、Claude、Windows/Intel、签名公证与正式更新仍未通过，P7/P8 手机远程开发后置。
-
-**前一常驻可操作内部包**：[desktop-interrupted-recovery-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-interrupted-recovery-20260926.dmg)，0.0.1，328571185 bytes，SHA-256 `2f6c8ad31dca53936759659a72679d9f9e713d066292b9d53894032091786e34`，**INTERNAL / ADHOC / UNNOTARIZED**。双击 `/Users/iamzjt/Documents/Forge Desktop QA Interrupted Recovery 20260926/Open Forge Desktop QA.command` 打开另装、常驻的 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Interrupted Recovery 20260926.app`；独立空数据、同目录干净且无 remote 的 `sample-project`，仍须在 UI 中选择并信任。实际 Main/包内 Python Host PID 96201/96212，SQLite schema35、`quick_check=ok`、0 Project/Task/Run。当前安装版从**前一包真实 Codex 崩溃 Run** 的独立 SQLite 副本读回 `interrupted`/`quarantined`，Host 对该 Project 的新 Run 能力给出 `RUN_RECOVERY_REQUIRED`，[任务详情实图](output/playwright/desktop-interrupted-recovery-20260926-1440x900.png)明确非成功且不自动重跑。没有在新包重复调用模型；安全对账尚需人工核实旧进程与工作区，不提供无证明的自动释放。安装版包内 Python/SQLite、Renderer 沙箱、Host 显式重启与 1280/1440/1600 宽度页面检查通过。完整 Desktop/P6 Gate、Claude、Windows/Intel、签名公证和正式更新仍未通过；P7/P8 手机远程后置。
-
-**前一内部包**：[desktop-host-restart-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-host-restart-20260926.dmg)，0.0.1，331964399 bytes，SHA-256 `3bd3dcac99b1447857d179108aa03d47c4ee0bb59101498129a7487244f971c6`，**INTERNAL / ADHOC / UNNOTARIZED**。双击 `/Users/iamzjt/Documents/Forge Desktop QA Host Restart 20260926/Open Forge Desktop QA.command` 打开另装的 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Host Restart 20260926.app`；独立空白数据库与同目录可丢弃 `sample-project`，需在 UI 主动选择并信任。安装版[崩溃诊断](output/playwright/desktop-host-restart-20260926-host-crashed-1440x900.png)提供显式重启；用户确认后[新 Host 已连接](output/playwright/desktop-host-restart-20260926-host-restarted-1440x900.png)，不会自动继续 Agent。包内 Python/SQLite、Renderer 沙箱、Plugins/Knowledge 等页面和重启均在实际 DMG 安装副本验证；常驻 QA Main/Host PID 65290/65295，库 `quick_check=ok`、schema35、0 Project/Run。**此包没有重新调用在线模型**；下述真实取消/Host 崩溃与完整交付仍按各自旧构建 SHA 追踪。Windows/Intel、Claude、签名公证、正式更新和完整 Desktop/P6 Gate 未通过；P7/P8 手机远程开发后置。
-
-**前一内部包**：[desktop-plugin-inspection-final-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-plugin-inspection-final-20260926.dmg)，版本 0.0.1，326540256 bytes，SHA-256 `30436883685b9cda93e51f88d2a96d0f7aa1701d53fd134590afcf3119292555`，**INTERNAL / ADHOC / UNNOTARIZED**。双击 `/Users/iamzjt/Documents/Forge Desktop QA Plugin Inspection 20260926/Open Forge Desktop QA.command` 打开另装的 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Plugin Inspection 20260926.app`；它以独立空数据常驻，同目录有干净、无 remote 的可丢弃 `sample-project`，需在 UI 主动选择并信任。包内 Host/schema35、Renderer 沙箱、项目/Workflow/Agents/Plugins/Knowledge 入口和插件页底部操作的滚动可达性已在安装版检查；[插件页](output/playwright/desktop-plugin-inspection-final-20260926-plugins-1440x900.png)、[权限与控件](output/playwright/desktop-plugin-inspection-final-20260926-plugins-controls-1440x900.png)、[知识空态](output/playwright/desktop-plugin-inspection-final-20260926-knowledge-1440x900.png)均为实图。插件页显示 Host 锁定 Manifest 的真实贡献、权限、依赖和内容摘要；Codex 仍无可编辑 configSchema，模型和凭据不伪装成插件配置。此包最初的页面/Manifest 验收未调用模型；后续同一 SHA 的活跃 Codex Run 恢复拒绝负测见下一段，旧包的完整交付链仍不能转记到新 SHA。
-
-该**同一 DMG** 后续又在独立安装副本、独立 Git 和 SQLite 数据上做了一次真实 Codex `gpt-6-luna` 活跃 Run 负测：设置页在长命令运行时拒绝恢复备份，Host/profile/备份不变，明确取消后 Run 为 `cancelled`、源 Git clean、无继续写入；[安装版拒绝实图](output/playwright/desktop-active-restore-refused-20260926-1440x900.png)。这并未把常驻空白演示 App 变成已有任务的数据集，Host 崩溃另由下段的独立 QA 验证；这仍不等于正式签名更新或完整 T120 已验收。
-
-同包另一隔离安装在真实 Codex 命令开始后，测试专属 Host 意外退出，UI 显示 [Host crashed](output/playwright/desktop-live-host-crashed-20260926-1440x900.png)；重开后 Run 为 `interrupted`、评测 0 接受交付，源 Git clean。首次自动化停在真实原生退出确认，需要限定 PID 结束 QA Main 才继续；脚本已修但没有再次消耗模型额度复跑。完整 T120 自动化/发布门禁仍保持待验。
-
-前一内部包保留两个独立入口：双击 `/Users/iamzjt/Documents/Forge Desktop QA Integrity Gate 20260926/Open Forge Desktop QA.command` 可打开**空数据、可操作**的 Forge Desktop；双击 `/Users/iamzjt/Documents/Forge Desktop Historical Evidence Integrity Gate 20260926/Open Forge Historical Evidence.command` 可免模型调用查看一条**真实已完成的历史任务**。后者的包内 Python Host 在 SQLite 只读模式打开独立备份，写入负测已返回 `DATABASE_IO_ERROR`，不会修改这份历史副本。两套演示数据均不触及日常 Forge 数据，使用说明见[内部指南](docs/user-guide/internal-macos-arm64.md)。
-
-当前安装包还从独立 SQLite 备份读回了此前真实 Run 的知识与记忆来源：[Run Context 截图](output/playwright/integrity-gate-knowledge-20260926-context-sources-1440x900.png)。这是历史记录在当前包内的显示验证，没有重新调用模型；下方可操作的空白 QA 应用不预置该任务。只读评测 CLI 对交付增加当前验收依据复核，污染备份会返回 `EVALUATION_DELIVERY_STALE`，T120 完整验收仍待办。具体命令和数据边界见[实施状态](docs/implementation-status.md)。
-
-**前一桌面内部包（2026-09-26）**：[desktop-history-readonly-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-history-readonly-20260926.dmg)，版本 0.0.1，332213155 bytes，SHA-256 `a3d9125b45c4bcfd193294cc210614bfe35457a83c917cbc08561366658cebfd`，**INTERNAL / ADHOC / UNNOTARIZED**。同一构建分装为可操作的 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Current 20260926.app` 与只读历史的 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA History Read Only 20260926.app`，分别由上方两个启动器使用独立数据常驻运行。空白库 `quick_check=ok`、0 Project/Task/Run；历史库 `quick_check=ok`、1 Project/Task/Run/Delivery。包内 Python Host、Renderer 安全和安装 smoke 通过，历史副本 `project.remove` 写入负测被拒绝且 Project 未变；[当前包实图](output/playwright/desktop-read-only-history-20260926-1440x900.png)。之前的历史入口只有环境变量标识，Main 未转发给 Host；这一缺陷在一次性测试副本上发现并修复，原 QA 库未改。**新包没有新在线 Codex Run**；前一包的正向链证据按原 SHA 保留。完整 Desktop/P6 Gate、Claude、Windows/Intel、签名公证与正式更新仍未通过；P7/P8 手机远程新增工作后置。
-
-**前一内部包的在线正向链**：[desktop-integrity-gate-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-integrity-gate-20260926.dmg)，SHA-256 `7ce3bd3ddd0966cfc0b087b3dd378621f07cfea2928bed5f9bcbdbf1945967f6`。这份旧构建的独立 QA 安装完成了 fresh 单 Codex 在线链，接受后写入门禁及依据变更阻断也在该 SHA 上实测；[历史读回](output/playwright/desktop-integrity-gate-20260926-historical-readback-1440x900.png)、[依据变更阻断](output/playwright/desktop-integrity-gate-20260926-historical-readback-1440x900-tampered.png)与[空白工作台](output/playwright/desktop-integrity-gate-20260926-packaged-home-1440x900.png)均对应旧包。上方新包只增加受限的历史 QA 只读环境转发，不将旧包模型运行记为新包在线验收。
-
-**上述前一 DMG 的 fresh 在线验收补证**：独立 QA 安装在新 Git fixture 上完成消息→手工草稿修订→人工批准 TODO→UI 明确选择 200,000 Token 观测档并 Start→真实 Codex 修改 `arithmetic.js`/`arithmetic.test.js`→隔离工作区测试通过→独立只读 Review `approved`→UI 启动冻结命令 Verify `passed`/exit 0→逐项 AC `verified`→Owner 人工接受→重启后看板 Done 与交付记录仍在。Run `1385645e-5e0d-4d27-b9f8-fc14e67d12de`、交付 `50859df4-3488-446f-aa4c-c8357833ad32`，源 Git 始终干净；[安装版交付实图](output/playwright/integrity-gate-online-closeout-owner-accepted-1440x900.png)已目视核对，日志见 [实施状态](docs/implementation-status.md)。此前 100,000 档真实超限失败、另一次旧 fixture 长命令导致取消，均保留失败证据；它们没有被算成成功。该补证覆盖本包单 Codex 正向链，不等于 Desktop 全功能或 P6 发布 Gate 完成。
-
-**前一桌面内部包**：[desktop-evidence-lock-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-evidence-lock-20260926.dmg)，版本 0.0.1，SHA-256 `0549a6866b5412677d6bb5c41f35e2fd5bbf855604bce7b8f6aa21b47fd01a02`（327073954 bytes），**INTERNAL / ADHOC / UNNOTARIZED**。另装为 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Evidence Lock 20260926.app`；双击 `/Users/iamzjt/Documents/Forge Desktop QA Evidence Lock 20260926/Open Forge Desktop QA.command` 可用独立空数据常驻打开，同目录 `sample-project` 是干净、无 remote 的可丢弃 Git 仓库，仍须主动选择并信任。实际包内 CPython 3.12.13/SQLite schema35、Renderer 沙箱与 Host 生命周期 smoke 通过；另装实例的数据库 `quick_check=ok`、0 Project/Task/Run，源 fixture `node test.js` 通过。Owner 接受固定快照后，Host 拒绝新 Review、Verify、逐项 AC 决定及建议豁免，历史证据可读；新受控 Task 修订须重新走证据和人工批准。安装版从**旧真实交付 SQLite 的独立备份**读回 Done，四类写请求都由包内 Host 拒绝且验收 basis 不变；[历史任务 UI](output/playwright/desktop-evidence-lock-20260926-historical-readback-1440x900.png)、[空白工作台](output/playwright/desktop-evidence-lock-20260926-packaged-home-1440x900.png)为实图。本包没有新在线模型全链；Git、匹配版 Codex CLI、合法登录仍是在线前置。Windows/Intel、Claude、签名公证、正式更新和完整 Desktop/P6 Gate 未通过，手机/远程新增开发后置。
-
-**前一桌面内部包**：[desktop-accepted-gate-final-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-accepted-gate-final-20260926.dmg)，SHA-256 `6fd470f49e1f2838bdb8b4c2ca9f26169141a0013038338b7f5e5dc216e01028`。它验证了 Review/Verify 的接受后启动门禁及异步准备竞态；不包含上方逐项判断与建议豁免的补充门禁。原安装与独立数据保留。
-
-**前一桌面内部包**：[desktop-reviewer-model-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-reviewer-model-20260926.dmg)，版本 0.0.1，SHA-256 `3c9501d57295accf6880dc6903ff3707f4baa03dfbfb92f5f125f61827ecb9a5`，**INTERNAL / ADHOC / UNNOTARIZED**。已从 DMG 单独安装至 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Reviewer Model 20260926.app`，使用 `/Users/iamzjt/Documents/Forge Desktop QA Reviewer Model 20260926/Open Forge Desktop QA.command` 的隔离数据入口。该包的 Reviewer 模型独立选择和[历史读回实图](output/playwright/desktop-reviewer-model-20260926-historical-readback-1440x900.png)仍是历史证据；它不包含上方新包的最终接受后 Job 门禁。
-
-**前一桌面内部包**：[desktop-review-revision-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-review-revision-20260926.dmg)，版本 0.0.1，SHA-256 `9cabc437e9337833e12550ca100d98c16d14787c784613926a21448dca917656`，**INTERNAL / ADHOC / UNNOTARIZED**。已独立安装至 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Review Revision 20260926.app`；双击 `/Users/iamzjt/Documents/Forge Desktop QA Review Revision 20260926/Open Forge Desktop QA.command` 可用隔离的空白数据常驻打开，同目录 `sample-project` 是干净、无远端的可丢弃 Git 项目，需自行在 UI 选择并信任。实际安装包通过包内 Python Host/schema35、Renderer 隔离、崩溃检测和退出清理。任务详情的本次总 Token 观测上限默认 50,000，只有明确选择才提升至 100,000/200,000；它是基于延迟用量事件的停止线，不是精确费用上限。[安装版预算选择](output/playwright/desktop-review-revision-restore-20260926-explicit-run-budget-1440x900.png)与[恢复后真实 TODO](output/playwright/desktop-review-revision-restore-20260926-restored-todo-1440x900.png)均来自本包。先前同版本族安装包从 UI 明确 Start 后真实 Codex Developer 成功并产生隔离快照；本包复用该冻结 Run，修复 Reviewer 版本绑定后真实 Review approved、冻结 Verify passed/exit 0、逐项 AC 与 Owner 接受，重启保留 Done/交付，[交付截图](output/playwright/desktop-review-revision-closeout-20260926-owner-accepted-1440x900.png)。此前一次 50,000 token Run 真实超限失败、一次 Reviewer 版本错误被拒，均保留失败记录；本包没有重新调用 Developer 来伪造同包全链。正式签名更新、Windows/Intel、Claude 和完整 Desktop/P6 门禁未通过；手机/远程新增开发后置。
-
-**前一内部包**：[desktop-data-switch-final-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-data-switch-final-20260926.dmg)，版本 0.0.1，SHA-256 `14b8d507a7216986bb04e6d3517700ca830fba591b72b14bac9e15cb82ac28fc`，**INTERNAL / ADHOC / UNNOTARIZED**。已另装 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Data Switch 20260926.app`；双击 `/Users/iamzjt/Documents/Forge Desktop QA Data Switch 20260926/Open Forge Desktop QA.command` 使用独立数据常驻打开，同目录 `sample-project` 为干净无远端的可丢弃 Git 仓库，仍需在 UI 主动选择与信任。安装版真实完成项目选择/信任、手工草稿修订与人工批准入 TODO、SQLite 备份导出、独立数据集恢复、重启保留 TODO、重新信任门禁和返回原数据集；[恢复后的 TODO](output/playwright/desktop-data-switch-history-20260926-restored-todo-1440x900.png)、[需重新信任](output/playwright/desktop-data-switch-history-20260926-needs-trust-1440x900.png)来自该包。旧 QA 数据保留作历史证据，不是最新源码对齐包。
-
-**前一桌面内部包**：[desktop-restore-profile-final-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-restore-profile-final-20260926.dmg)，SHA-256 `1a5b2649f67977755dab2fdce62b2f1fdd35668ec8d8b5d88d2afcf869327ebd`。旧安装与 QA 数据保留作为历史证据；其恢复验证不包含上述真实 TODO 历史读回与模态焦点检查。
-
-**前一内部 Desktop 包**：[desktop-run-usage-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-run-usage-20260926.dmg)，0.0.1，SHA-256 `fd867901b7f3ee2e78842411c8477f77e5a4d87ce0e3b5a526ae1e9235a214bd`，**INTERNAL / ADHOC / UNNOTARIZED**。已单独安装为 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Run Usage 20260926.app`；双击 `/Users/iamzjt/Documents/Forge Desktop QA Run Usage 20260926/Open Forge Desktop QA.command`，用独立空数据常驻打开。同目录 `sample-project` 是干净、无 remote 的可丢弃 Git 仓库，须在 UI 主动选择并信任。Host 的冻结 Run 预算现在按真实事件停止其归属进程；Codex 续用同一 thread 时，适配器按本次 turn 的用量基线计算本 Run，而不会把先前 Run 的累计 token 重新计入。全量检查、只读 DMG 安装 smoke、包内 Host/schema35/Renderer 安全，以及旧真实交付的独立数据库副本读回均通过；[本包安装版空态](output/playwright/desktop-run-usage-20260926-packaged-home-1440x900.png)和[冻结 Run 读回](output/playwright/desktop-run-usage-20260926-frozen-run-1440x900.png)可核对。**本包没有新的在线 Codex 超限或完整业务闭环测试**；Token 观测会延迟，并非精确费用上限。外部 Git/Codex CLI/合法登录仍是执行前置；安全 Restore、签名更新、Windows/Intel、Claude 与 T119 全项未验，Desktop 尚未完整收口，手机/远程新增工作后置。
-
-**前一内部 Desktop 包**：[desktop-observed-budget-final-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-observed-budget-final-20260926.dmg)，0.0.1，SHA-256 `a03cdde3fefc4971c674d5de453dad0036cd43f26d3394d135751a9329518f49`，**INTERNAL / ADHOC / UNNOTARIZED**。已另装 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Observed Budget 20260926.app`；双击 `/Users/iamzjt/Documents/Forge Desktop QA Observed Budget 20260926/Open Forge Desktop QA.command`，以独立空数据常驻打开。同目录 `sample-project` 是干净、无 remote 的可丢弃 Git 仓库，仍须主动选择并信任。该包的 Run 预算按事件停止归属进程；其 Codex 用量归一化尚未修正续用 thread 时的历史累计值，**应使用上方新包**。上游事件可能延迟，因此不是精确费用硬限制；旧包及其 QA 数据作为历史证据保留。
-
-`pnpm demo:open` 专门打开较早保留完整历史任务的录屏 Demo；要操作**当前源码包**及其独立空数据，请使用上方的 `Open Forge Desktop QA.command`。
-
-**前一内部 Desktop 包**：[desktop-plugin-capability-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-plugin-capability-20260926.dmg)，0.0.1，SHA-256 `c7e72e4f7df8d8007deab956650a0ad2340f2dd4937409690e1db2ddfbb3a26c`，**INTERNAL / ADHOC / UNNOTARIZED**。已另装 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Plugin Capability 20260926.app`；双击 `/Users/iamzjt/Documents/Forge Desktop QA Plugin Capability 20260926/Open Forge Desktop QA.command`，使用独立空数据常驻打开。同目录 `sample-project` 为干净无 remote 的可丢弃 Git 仓库，须主动选择并信任。安装版在一张真实获批 TODO 上以空 Codex 登录目录实测：插件「已装配」，执行器「不可启动」，Task Start 禁用且零 Run；[插件页](output/playwright/desktop-plugin-capability-20260926-plugin-unavailable-1440x900.png)与[任务入口](output/playwright/desktop-plugin-capability-20260926-not-logged-in-1440x900.png)均来自此 DMG。另从旧真实交付的独立 SQLite 备份副本读回两个冻结 420 秒 Run、Done 和交付；**本包未重新调用在线模型**。包内 Python Host/schema35、Renderer 安全和离线回归已验。外部 Git/Codex CLI/合法登录是执行前置；应用内安全 Restore/签名更新、Windows/Intel、Claude 第二真实执行器仍未验，**Desktop 未完整收口**，P7/P8 新开发后置。
-
-**前一内部 Desktop 包**：[desktop-codex-diagnostics-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-codex-diagnostics-20260926.dmg)，0.0.1，SHA-256 `23ab7d8090c2cb0c8bd58935f65055b15fdc6d938afd0946cf7ceffbd06b1254`，**INTERNAL / ADHOC / UNNOTARIZED**。已另装 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Codex Diagnostics 20260926.app`；双击 `/Users/iamzjt/Documents/Forge Desktop QA Codex Diagnostics 20260926/Open Forge Desktop QA.command`，独立空数据常驻打开。同目录 `sample-project` 是 clean/无 remote 的可丢弃 Git 仓库，仍须在 UI 中主动选择并信任。本包在保留的 glass 界面和外观偏好基础上，将 Codex CLI 缺失、版本不符、未登录及能力验证不足分别提示并保持 Start 禁用；隔离空登录目录的真实 CLI 探测返回“未登录”，没有调用模型。从本 DMG 安装的应用、包内 Python Host/schema35/Renderer 安全 smoke 通过；[空白首页](output/playwright/desktop-codex-diagnostics-20260926-home-1440x900.png)、[重载后外观设置](output/playwright/desktop-codex-diagnostics-20260926-settings-1440x900.png)来自安装版。同一新包从旧真实交付的独立 QA 数据备份副本读回两个冻结 420 秒 Run、Done 和交付；**未重新调用在线模型**，原 Review/返工/交付证据仍绑定旧构建 SHA。外部 Git/Codex CLI/已授权登录仍是执行前置；应用内安全 Restore/正式签名升级、Windows/Intel、Claude 第二真实 Executor 等仍未验，**Desktop 里程碑未完整收口**；P7/P8 新开发后置。
-
-同一安装包还在含真实获批 TODO 的隔离数据副本中，以空 Codex 登录目录验证了[任务入口提示与禁用 Start](output/playwright/desktop-codex-diagnostics-20260926-not-logged-in-1440x900.png)：Host 返回 `CODEX_NOT_AUTHENTICATED`，Run 仍为 0；没有消耗模型额度。
-
-**前一内部 Desktop 包**：[desktop-appearance-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-appearance-20260926.dmg)，0.0.1，SHA-256 `406a8291001ecfc80c1c511e9cabf6a8f9f9bcccc3526d583e6d3950914f393d`，**INTERNAL / ADHOC / UNNOTARIZED**。已另装 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Appearance 20260926.app`；双击 `/Users/iamzjt/Documents/Forge Desktop QA Appearance 20260926/Open Forge Desktop QA.command`，使用同目录独立空数据常驻打开。同目录 `sample-project` 是干净、无 remote 的可丢弃 Git 仓库，须在界面中主动选择并信任。从该 DMG 只读挂载复制安装的 `pnpm smoke:package:mac` 已实测包内 Python Host、SQLite schema35、Renderer 安全边界以及外观偏好重载保持；[空白首页](output/playwright/desktop-appearance-20260926-home-1440x900.png)、[持久化后的设置](output/playwright/desktop-appearance-20260926-persisted-settings-1440x900.png)来自真实安装版。新包没有重新运行在线模型场景，完整在线 Review 返工与交付证据继续按其原包 SHA 追踪。外部 Git/Codex CLI/已授权登录仍是执行前置；应用内安全 Restore/正式签名升级、Windows/Intel、Claude 第二真实 Executor 等仍未验，**Desktop 里程碑未完整收口**；P7/P8 新开发后置。
-
-**前一内部 Desktop 包**：[desktop-profile-context-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-profile-context-20260926.dmg)，0.0.1，SHA-256 `5700b1f6d681ba3943bf5070543d6b5eefc864432ae8c997b12aadc4be838487`，**INTERNAL / ADHOC / UNNOTARIZED**。已单独安装 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Profile Context 20260926.app`；双击 `/Users/iamzjt/Documents/Forge Desktop QA Profile Context 20260926/Open Forge Desktop QA.command` 以独立空数据常驻打开，同目录 `sample-project` 是干净、无远端的可丢弃 Git 仓库，仍须主动选择并信任。实测 Main PID 76060/包内 Host PID 76070、SQLite schema35/`quick_check=ok`、零 Project/Task/Run。新版 Agents 页面可编辑 Developer `maxSeconds` 和项目知识/记忆检索许可，Host 在新 Run 冻结预算，并在不允许检索时拒绝显式 `contextQuery`；Run 详情可读冻结秒数。相同新 DMG 从**旧真实交付的隔离 QA 数据**读回两个 420 秒 Run、Done/交付，见[Agents 配置](output/playwright/desktop-profile-context-20260926-agents-1440x900.png)和[冻结运行配置](output/playwright/desktop-profile-context-20260926-frozen-run-1440x900.png)。这次读回没有重新调用模型；真实 Review 阻断→自动返工→复审→Verify→Owner 接受的在线证据属于[前一 profile-budget DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-profile-budget-20260926.dmg)，按其 SHA 独立保留。应用内 Restore/正式签名升级、Windows/Intel、Claude 第二真实 Executor 等仍未验，**Desktop 里程碑未完整收口**；P7/P8 新开发后置。
-
-**前一内部 Desktop 包**：[desktop-profile-budget-20260926 DMG](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-profile-budget-20260926.dmg)，0.0.1，SHA-256 `4b51d673c3ec64d4fbf7a0dc8004927c1946d26d4fe1d0c9226abe441e84bd17`，**INTERNAL / ADHOC / UNNOTARIZED**。已另装 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Profile Budget 20260926.app`；双击 `/Users/iamzjt/Documents/Forge Desktop QA Profile Budget 20260926/Open Forge Desktop QA.command` 用独立空数据常驻打开，`sample-project` 是同目录干净、无远端的可丢弃 Git 仓库，须自行选择并确认信任。实测 Main PID 37084/包内 Host PID 37095、SQLite schema35/`quick_check=ok`，没有预置假 Task。**同一 DMG 的另一隔离安装**已完成真实 Codex Review `changes_requested`→自动返工→原 Reviewer Profile 复审 `approved`→真实 Verify→逐项 AC→Owner 接受/交付→重启读回，源 Git clean；[返工复审](output/playwright/desktop-review-rework-resumed-20260926-1440x900.png)、[人工交付](output/playwright/desktop-review-rework-accepted-20260926-1440x900.png)。此包还修正 Developer Profile `maxSeconds` 原先未进入 Run 冻结预算的问题；此前 180 秒超时仍保留为失败。详情见[实施状态](docs/implementation-status.md)。安全的应用内 Restore/正式签名升级、Windows/Intel、Claude 第二真实 Executor 等仍未验，**Desktop 里程碑未完整收口**；P7/P8 新开发后置。
-
-**前一内部 Desktop 包**：[desktop-rework-recovery-20260926](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-rework-recovery-20260926.dmg)，0.0.1，SHA-256 `e868ebce8a4a5d13ba7f1cb65fef580dbabd7298251c24e8720deceaa6ee0f6a`。独立安装 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Recovery 20260926.app` 已常驻；双击 `/Users/iamzjt/Documents/Forge Desktop QA Recovery 20260926/Open Forge Desktop QA.command` 可打开，使用同目录独立空数据与无 remote 的 `sample-project`，不会覆盖旧 Demo。新包在自动返工后 Review/Verify 启动失败时保留原始阻断记录；用户随后通过既有 UI 对**同一 Run、同一快照、同类闸门**完成真实报告，Host 才解除返工门禁，次数上限和其他验收条件不放宽。真实 Git/SQLite/进程 fixture 验证 Verify 手工恢复，Review 错类报告不能恢复；全量 212 Python 测试和 Web 测试、构建、Electron/安装版 smoke 通过。[安装版空白首页](output/playwright/desktop-rework-recovery-20260926-home-1440x900.png)已核对。此包没有新在线 Coding/Review blocker 全链，上一包的模型澄清与之前真实开发证据按各自 SHA 保留。**Desktop 尚未完整收口**：Review blocker 在线返工、应用内安全恢复/签名升级、Windows/Intel、Claude 与发行签名继续未验；P7/P8 手机与远程新增开发后置。
-
-**前一内部 Desktop 包**为 [desktop-rework-reason-20260926](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-rework-reason-20260926.dmg)（0.0.1，SHA-256 `f1692e492a38ada73d826eed60ea4cee634f006b0a823a74110d576a853f50a5`）。已安装到 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Rework 20260926.app`；使用 `/Users/iamzjt/Documents/Forge Desktop QA Rework 20260926/Open Forge Desktop QA.command` 以独立空数据常驻启动。供操作的可丢弃 Git 仓库为同目录的 `sample-project`：`node test.js` 通过、工作树干净、无远端，用户仍须在 Forge 中主动选择并信任。新包保留前一包的澄清合同门禁，并修正返工看板把 Review/Verify 启动失败误写为“次数达到上限”的提示；真实 Host/SQLite 测试与 UI 测试通过，[新包空白首页](output/playwright/desktop-rework-reason-20260926-home-1440x900.png)来自安装版。同一新包现已由真实 Codex 整理器生成含两项澄清的 Draft；安装版逐项回答、拒绝只答不改合同、将答案写入目标和验收、独立人工批准 TODO，并在重启后保持 0 Run。见[模型草稿](output/playwright/desktop-rework-refiner-20260926-generated-draft-1440x900.png)与[重启看板](output/playwright/desktop-rework-refiner-20260926-todo-restored-1440x900.png)。本包尚未重跑在线 Coding Run/Review/Verify 全链，之前的真实执行证据仍按原包分别记录。**Desktop 尚未完整收口**：Review blocker 在线返工、应用内安全恢复/签名升级、Windows/Intel、Claude 与发行签名继续未验；P7/P8 手机与远程新增开发后置。
-
-**前一澄清合同内部包**为 [desktop-clarification-guard-20260926](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-clarification-guard-20260926.dmg)（0.0.1，SHA-256 `3ac7dce68decfd2681a7c58ba048c6dca2c6d894c83a7a4680fd4560f2ece784`）。它的独立空数据安装和 `sample-project` 仍保留。安装版实测[只回答澄清时拒绝保存](output/playwright/desktop-clarification-guard-20260926-contract-guard-1440x900.png)，再明确修改目标与必需验收、人工批准后[重启保留 TODO 且 0 Run](output/playwright/desktop-clarification-guard-20260926-todo-restored-1440x900.png)。该验收使用手工草稿，没有新模型调用；更早一包虽有真实 Codex 模型整理和完整开发证据，其一次澄清审批未把答案写入合同，不能当作新包同链语义验收，历史数据也未改写。
-
-**当前执行优先级：桌面端完整可用。** 手机、Companion、配对、远程 HTTPS/命令和跨设备协作的新开发已后置，已有安全代码与验收记录保留；正常 Desktop 默认不开网络入口。前一 macOS arm64 内部 QA 包为 [desktop-plugin-gate-20260926](build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-plugin-gate-20260926.dmg)，版本 0.0.1、SHA-256 `028e33ee66f798b8f6323a2ea44c4cdd2250bb07a300b40e4d64b69fb7d961fe`。该包从 DMG 安装通过包内 Python Host/Renderer 安全检查，并以独立 Git/SQLite fixture 验证项目选择/信任/双项目切换/仅移除 Forge 记录、插件停用后 TODO 新 Run 被准确拒绝且重启保持、历史真实 Run 的 Workflow/Profile/Review/Verify/知识与记忆来源读回。**当前相同 DMG** 现还用既有授权 Codex 登录在另一隔离项目完成真实 TODO→Start→Worktree 修改→Verify/Review→逐项验收→Owner Done/未合并交付、另一 Run 取消和重启保留；前一 `desktop-owner-return-ui-20260926` 包另有 Verify 失败→自动返工→复验→人审交付及 Workflow/Profile v2 新 Run 证据。Finder 风格 PATH 下的外部 Codex CLI 识别、数据库导出与独立副本恢复演练也有记录；还没有经过验收的应用内 Restore/替换。详见[实施状态](docs/implementation-status.md)和[内部指南](docs/user-guide/internal-macos-arm64.md)。**这仍不是桌面完整交付或公开发行**：Review blocker 自动返工、正式升级、Windows/Intel、Claude、Developer ID/公证等维持未验收。
-
-前一 plugin-gate DMG 还在独立安装中通过真实 Codex 模型整理：用户保存需求后主动整理，得到含澄清问题的可编辑 Draft；随后在同一隔离 QA 数据中人工回答并保存 v2、单独请求和确认审批，重启后为 **1 Draft/1 TODO/0 Run**，没有自动开发或再次调用模型。[实际草稿](output/playwright/desktop-current-refiner-20260926-generated-draft-1440x900.png)、[重启后的 TODO](output/playwright/desktop-current-refiner-resume-20260926-todo-restored-1440x900.png)。
-
-同一前一 plugin-gate DMG 的另一隔离安装还完成了真实文档与人工确认记忆 → 冻结 ContextBundle → 新 Codex Run；撤销后历史来源可查，当前预览不再引用它们。[当前安装版来源实图](output/playwright/desktop-current-context-20260926-context-source-1440x900.png)。该 Run 未经过 Review/Verify/Owner 接受，不把它误称为 Done。
-
-此前另装 plugin-gate 包的常驻应用 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA 20260926.app`，请用 `/Users/iamzjt/Documents/Forge Desktop QA 20260926/Open Forge Desktop QA.command` 打开独立空数据与可丢弃 Git 项目。该启动入口已实际运行，包内 Host/Renderer 和 SQLite schema35 正常；不会覆盖旧 Demo，也不会自动创建或执行任务。项目选择、信任和后续任务需在 UI 明确操作。见[最新版独立 QA 操作说明](docs/demo/p6-internal-macos-package.md)。
-
-P5 已提供版本化 Workflow 模板、Python 编译预检、Desktop 线性编辑、Vue Flow 画布与发布版本冻结；受信项目资料支持只读导入、原文定位、项目/环境限定检索和经人工确认的记忆生命周期。历史安装包已有已发布 quick 与 standard 线性 Workflow 的真实 Codex 正向证据；strict 的只读 Plan 与人工门禁已运行，但完整后段仍待验。运行冻结对应 Profile 与版本，Review、Verify 和人工验收仍分别记录；不支持的非线性图继续拒绝。带资料查询的开发 Run 会拒绝无答案/冲突，并把实际使用的来源冻结到 ContextBundle；来源后来撤销会在历史 Run 中标明失效，旧输入不被改写。当前没有通用 Workflow Engine，也没有第二真实执行器。P4-05/P4-10 与完整 P4 Gate 仍因 Claude 在线验收及生产插件替换证据不足而阻塞；P5 仅在用户授权的单执行器开发范围推进。
-
-P0 工程阶段已收口。P1 离线手工闭环已在 Python-only Desktop 的独立临时 SQLite 库上验收：项目选择/信任、保存消息、草稿、人工批准入 TODO、重启恢复。P2 已用真实 Codex 在隔离工作区修改代码、生成 Diff/快照/交接，并验证真实失败与用户取消。P3-01～12 与 P3 Phase Gate 已在当前 macOS arm64 开发环境通过：固定快照 Review、命令验证、逐条 AC、有限返工、最终人工验收、独立本地合并、崩溃对账、版本失效、WAL 备份和交付样例。开发、Review 或单条命令通过都不等于 Task Done；Done 仍不等于已合并或部署。Python Host 使用非破坏性 SQLite 迁移；各历史包的 schema 版本按各自构建记录核对，项目移除只归档元数据。Web 与 Desktop Renderer 共用 Vue App；普通 Web 没有本地 Host。版本号仍为 `0.0.1`。P6-06 的旧内部 Mac 包已完成真实单 Codex 产品闭环、取消和重启恢复；当前源码的 P7 远程设备管理尚未进入该安装包。P7-05 的正文消息、真实来源的人工草稿创建、窄范围修订与当前草稿批准均已有严格授权的回环证据；手机页面可接通既有会话消息、显式本机未提交草稿及人工 Contract 的创建/有限修订，刷新页面后从 Host 重开草稿并继续修订已有本机回环实测；远端自动整理、澄清解答、其他远端写入、私网 HTTPS 和真机仍未完成；普通 Desktop 默认不开放网络监听。公开签名/公证、Windows/Intel、升级及完整发布验收仍 BLOCKED/UNVERIFIED。本仓库执行目标是完成权威任务图中的全部必做产品能力，内部 Demo 不是完成标准。
-
-工程规格在 `forge_spec_v1.0/`；`forge_glass_v1.1/` 保留为用户视频视觉/动效的只读参考，两份目录均不由产品代码修改。当前 Desktop 以 [ADR 0085](docs/decisions/0085-aperant-reference-desktop-redesign.md) 对照操作结构，以 [ADR 0086](docs/decisions/0086-video-glass-visual-with-current-desktop-ia.md) 指导银白蓝灰磨砂视觉及动效；Forge 独立实现亮暗主题与减少透明度/动效回退，原型 HTML、截图和视频帧均不参与产品构建。
-
-此前另有独立命名的 [macOS arm64 手机回环 QA 构建](docs/implementation-status.md)：`mobile-route-20260926`，包含 schema 35、设备缩权后的会话策略修订校验、移动 SSE/通知/会话防护以及显式 `/#/m` 路由横屏保持。它已通过真实 DMG 安装启动及同一安装应用 Desktop→包内 Python Host→本机 Chromium 消息回读、人工草稿批准入 TODO、Desktop 看板同步检查；离线审批不提交或重放，旧 CSRF 写请求被拒绝后需要重新人工确认，同 Project 缩权会清除已读 Host 正文，设备撤销会清除 Forge PWA 缓存和 Worker。844×390 横屏长中文未提交草稿、键盘焦点和竖屏重载保留也在安装版实测；独立 SQLite 为 1 个 TODO、0 个 Run。它仍未完成同包 Codex 业务闭环、实体手机/私网 HTTPS 或正式发行验收。原有可录屏 Demo 与数据保持不变。
-
-手机「消息」页有授权 Host 会话正文回读及审批入口已包含在上述 QA 包中。`FORGE_PACKAGE_SMOKE_DMG=<此包绝对路径> FORGE_PACKAGE_MOBILE_SCREENSHOT=<消息截图绝对路径> FORGE_PACKAGE_MOBILE_TODO_SCREENSHOT=<TODO截图绝对路径> pnpm smoke:package:mobile-local` 从 DMG 安装到隔离目录，在 Desktop 保存消息、手工创建和修订草稿、发起审批、显式开启同 Host 回环预览并批准一次性设备；本机 Chromium 读取消息、审阅并批准，Desktop 看板读到 TODO。脚本还验证横屏路由、本机未提交草稿、离线审批、缩权和设备撤销；退出时关闭监听和本轮拥有的 Host，并查询隔离数据库确认 0 个 Run。此项不调用模型，fixture 使用独立数据目录；原生确认由测试控制器代行，完整手机演示仍需要私网 HTTPS 与真机验收。
-
-[PWA 当前内部使用说明](docs/mobile/pwa-user-guide.md)区分本机回环预览与尚未交付的手机私网 HTTPS。当前源码和上述新 QA 包都包含浏览器原生能力的明确不可用状态与未来接口；这不代表原生 App 或 v1.1 已发布。
-
-当前源码的手机 Web 构建有 Manifest 与仅缓存静态资源的 Service Worker。在经授权的同源 HTTPS 或本机回环网关打开 `/#/m/inbox` 时可注册静态外壳；离线重载可显示最近一次授权读取的标时脱敏**数量摘要**，Host 操作仍不可用，不缓存 `/v1` 数据、标题、代码或证据，不排队或重放命令。「连接」页可清除本机 Forge 静态缓存、摘要和当前标签的未提交消息草稿；Host 撤销设备后，手机下次联网检查也会清除。已授权页面通过固定 SSE 游标重取 Host 权威 Task/Approval，并在「待处理」查看最近 20 条无正文站内通知；本机回环浏览器已验证离页再开和断网恢复。私网真机安装/重连仍未验收，远程 Host 也不默认开放；见 [ADR 0080](docs/decisions/0080-project-scoped-sse-invalidation.md) 与 [ADR 0082](docs/decisions/0082-mobile-static-shell-cache-boundary.md)。
-
-## 前置条件
-
-- Python Core 工具链：`uv 0.11.14` 与 CPython `3.12.13`；`python/.python-version` 和 `python/uv.lock` 固定版本。开发 Desktop 使用项目本地 `python/.venv` 中的解释器，先运行 `pnpm py:sync`；内部打包版捆绑独立 Python 运行时。
-- Node.js `>=22.13.0 <23`；本机验证版本为 `22.22.0`。Vite 8 自身要求 Node `22.12+` 或 `20.19+`，当前仓库采用更窄的 Node 22 约束。
-- pnpm `12.3.4`；仓库通过 `packageManager` 固定版本。无需修改全局开发环境；安装或切换工具请自行使用符合版本的本地工具链。
-- 开发 Desktop 时需让本机端口 `5173` 可用。Electron 首次启动会按官方安装流程下载对应平台的预编译二进制，需要可访问 Electron 发布源的网络；pnpm 依赖安装脚本保持禁用。生产业务库由 Python 标准库 `sqlite3` 独占。历史 Node `better-sqlite3` 仅用于迁移对照测试。
-
-## 启动
-
-在仓库根目录运行：
+**前置条件：Node.js 24+、npm 10+、Git。** 原生依赖需要本机编译工具；macOS 使用 Xcode Command Line Tools。
 
 ```sh
-pnpm install --frozen-lockfile
-pnpm dev:web
-pnpm dev:desktop
-pnpm dev:host
+git clone https://github.com/j-tide/Forge.git
+cd Forge/desktop
+
+# 安装锁定依赖
+npm ci --ignore-scripts
+
+# 安装 Electron 并构建原生模块
+node node_modules/electron/install.js
+npm --workspace apps/desktop run postinstall
+
+npm run dev
 ```
 
-`dev:desktop` 先执行 Python 冻结同步，再启动 Web 开发服务和 Electron；Desktop 自己只启动一个可写 Python Host。`dev:host` 是 `dev:python-host` 的别名，独立运行 Python Host stdio 协议，不开放本地 TCP；直接运行时需 JSON-RPC 客户端。`pnpm test:python-db-parity` 继续用独立临时库验证 Node↔Python schema 15 历史数据互通。
+已有 macOS 应用包时，可在 `desktop/` 执行 `npm run preview:open` 打开。
 
-### 内部 macOS 测试包
+### 工程检查
 
-仅在已核验的 macOS arm64 构建环境运行：
+在 `desktop/` 中运行：
 
 ```sh
-pnpm package:mac:internal
-pnpm smoke:package:mac
+npm run check:i18n
+npm run lint
+npm run typecheck
+npm run test
+npm run build
 ```
 
-产物在 `build/macos/`，文件名明确标注 `INTERNAL-ADHOC-UNNOTARIZED`。第二条命令真实挂载 DMG、复制并启动 `.app`，使用隔离用户数据目录，检查包内 Python Host、Renderer 安全设置、退出清理和移除应用后保留数据。该包只作内部 QA，**没有 Developer ID 签名或 Apple 公证，不能作为公开发布安装包**；macOS x64、Gatekeeper 新用户安装、签名升级与凭据连续性尚未通过。见 [ADR 0073](docs/decisions/0073-internal-macos-package-and-distribution-gate.md)。
+macOS 上可追加 `npm run test:logo:desktop` 和 `npm run test:i18n:desktop`，检查主题、语言切换与重启保存。
 
-同一内部 DMG 的完整业务闭环、独立取消与重启已用真实 Codex 验证；外部 Git/Codex 登录与 Finder PATH 限制见 [安装包验收与演示](docs/demo/p6-internal-macos-package.md)、[内部用户指南](docs/user-guide/internal-macos-arm64.md) 和 [内部版本说明](release/INTERNAL-0.0.1-macos-arm64.md)。`FORGE_VERTICAL_PACKAGED=1 FORGE_VERTICAL_FINAL_ONLY=1 FORGE_VERTICAL_TERMINATION=cancel FORGE_VERTICAL_MODEL=gpt-6-sol node scripts/smoke-python-vertical-live.mjs` 是显式、有模型用量的安装包端到端测试；不要在已有同一产物证据足够时反复运行。`pnpm package:windows:internal` 与 `pnpm smoke:package:windows` 只在真实 Windows x64 上可运行，目前**没有** Windows 包/安装签名验收。P6-08 的离线更新完整性/迁移预检尚不是安装版自动更新；[当前 P6 验收缺口](docs/p6-current-scope-acceptance.md) 保留原 Test ID。
+桌面使用 **Electron + React + TypeScript**，位于 `desktop/`，采用独立 npm workspace。仓库内的 Python Host 和原 Vue/pnpm 工程分别维护，开发说明见下方文档。
 
-`pnpm test:python-codex-live` 是显式在线测试，使用现有 Codex 登录和临时 Git/SQLite 目录验证 Python app-server Adapter 的真实写入、事件、结构化输出、取消、审批、continuation 及独立 Python Host Run/Handoff。`FORGE_VERTICAL_MODEL=gpt-6-sol pnpm smoke:python-vertical-live` 从真实 Electron Renderer 经固定桥调用 Python Host 完成隔离 Git fixture 的开发 Run、不可变交接和提供方进程故障路径；`FORGE_VERTICAL_SKIP_SUCCESS=1 FORGE_VERTICAL_TERMINATION=cancel node scripts/smoke-python-vertical-live.mjs` 额外验证用户取消。`FORGE_VERTICAL_REVIEW_ONLY=1 FORGE_VERTICAL_MODEL=gpt-6-sol node scripts/smoke-python-vertical-live.mjs` 则对真实开发快照显式启动只读 Reviewer，核对结构化报告、Job 幂等、来源 Git 隔离与 UI 截图。模型 ID 需以实时 capability 为准。`pnpm test:review-copy-live` 在固定 CodeSnapshot 的独立审查副本中测试生产 `read-only + approval: never` 门禁、真实 Codex 结构化 Reviewer 输出与写入审批拒绝；这个独立探测本身**不会**发布正式 Review 结论。普通 `pnpm test` 不调用云端模型。
-`FORGE_VERTICAL_VERIFY_ONLY=1 FORGE_VERTICAL_MODEL=gpt-6-sol node scripts/smoke-python-vertical-live.mjs` 额外在同一真实 Desktop 链路中批准隔离 fixture 的 `node test.js` Preset，对固定开发快照执行命令验证、刷新逐条验收矩阵、明确关联当前报告与 AC，并核对源仓库不变。此命令仅使用可丢弃临时项目和现有 Codex 认证；命令通过不会自动把 AC 标为已验证，逐条覆盖也不会自动将 Task 标为 Done。
+## 文档
 
-`pnpm test:p3-acceptance` 使用独立 Git/SQLite/进程 fixture 重跑正常交付、Review 退回、测试失败返工、人工建议豁免和 Host 崩溃对账。`pnpm test:p3-live` 另调用现有已登录 Codex，经真实 Electron→Python Host 完成隔离开发、测试、Review、人审和显式本地合并；这是显式联网测试，普通 `pnpm test` 不调用云端模型。任务抽屉的验证报告与输出以纯文本显示，不执行报告里的链接或脚本。详情见 [P3 验收样例](docs/demo/p3-delivery.md)。
+- [桌面开发与配置](desktop/README.md)
+- [版本说明、验证结果与已知风险](desktop/docs/releases/0.1.0-preview.3.md)
+- [兼容性记录](docs/compatibility-record.md)
+- [产品规格](forge_spec_v1.0/START_HERE.md)
 
-`pnpm eval:qa /absolute/path/to/output/qa/.../forge.sqlite` 只读汇总隔离 QA 数据库的全部 Run，将已人工交付、未交付成功、失败、取消、中断和进行中分开统计；取消/中断绝不计交付成功。它只接受本仓库 `output/qa/` 下的当前 schema 数据库，不能用于用户正式数据，也不调用模型。保留的当前安装版 [真实结果](output/qa/desktop-current-full-20260926-run1/evaluation-outcomes.json)是 1 个人工交付、1 个取消；实际在线 Host 中断仍待验，T120 不因此标为通过。
+## 许可证与来源
 
-`dev:web` 提供普通浏览器入口，不启动或连接本地 Host；`dev:desktop` 启动同一 Web 开发服务、Electron 和由 Desktop 管理的 Python Host。默认 Forge 数据目录按平台放在用户应用数据目录下的 `Forge/development`；正式打包时为 `Forge/production`。测试使用独立临时目录。要加载构建后的页面，可运行 `pnpm start:desktop`。`pnpm smoke:desktop` 用临时数据库验证 Python Host 握手、SQLite 健康、无效数据库降级、崩溃及退出清理。`pnpm dev:node-host-parity` 仅供历史迁移对照，不是 Desktop 的运行依赖。
-
-当前源码的 Settings 可在**本机原生确认**后明确开启/关闭同一 Python Host 的 `127.0.0.1` 浏览器预览，地址只适用于这台 Mac，手机无法连接。随后用同一页生成一次性配对 nonce，在本机浏览器预览的「连接」页输入；Desktop 再检查待批准设备，默认只读，按需勾选 `task:draft` 或 `task:approve`，最终经原生对话框确认 Project 与权限。Settings「远程连接与设备」还显示真实设备、Project/操作授权和审计，可只读缩权及本机确认撤销。默认启动**不**开放监听；该预览不是私网 HTTPS，也不表示手机或第二执行器在线。获得 `task:draft` 的设备可在当前构建的手机布局「消息」页向 Desktop 已存在的会话保存文字；会话修订、原子回执和设备权限由 Python Host 判定，页面可在真实 Host 消息基础上由用户填写人工 Contract，并用明确原因作有限修订；不会自动整理 Task、批准 TODO、运行 Agent 或重发不明请求。`pnpm smoke:remote-devices` 使用独立临时数据目录和真实 Electron→Python Host→loopback HTTP 验证同一实例领取/本机批准/会话与关闭，以及设备缩权和撤销；不连接公网或调用模型。
-
-Desktop 在左栏点击当前项目名称，原位打开「选择项目」弹层；已保存项目可直接切换，新目录点「选择文件夹」，查看 Git/工作树、lockfile、技术栈与声明脚本后，点「继续」并明确「信任并打开」。「项目管理」页也可管理项目。Trust 不执行脚本，也不自动批准未来的发布、推送或删除。`pnpm smoke:projects` 用独立临时 Git/非 Git fixture 和受控系统选择器返回值验证向导、取消、脏树、信任、重启、切换和仅删除元数据，并生成 1440×900 的真实 Electron 截图到 `output/playwright/`。本机还单独操作 macOS 原生面板选中临时目录并看到真实 Host 探测结果。
-
-在已信任的 Desktop 项目中，点击左栏唯一「新建任务」打开任务讨论面板。选择 Host 返回的整理模型并点「发送并整理」后，Forge 先保存消息，再明确请求只读模型整理；成功时在同一面板显示真实 Forge 回复、模型和可审阅的结构化 Task 草稿，失败时保留消息并如实显示原因。「手工填写」只通过 Host 建立草稿，不调用模型。草稿在同一面板展开编辑 Title/Goal/验收项/范围与澄清；每次确认修改要求用户决定摘要，Host 用 CAS 保存新 revision 和差异历史。未解问题阻止批准。用户另行请求审批、审阅绑定的 revision/摘要/范围后，主动批准入 TODO 或拒绝；批准**不会**启动 Agent。`pnpm smoke:projects` 验证项目、消息、手工草稿、澄清、审批、TODO、重启和看板；`pnpm smoke:p1-offline` 关闭 ModelProvider，在隔离认证与不可达代理的真实 Electron/Host/SQLite 路径下重跑手工闭环，不提供操作系统级断网保证。当前内部安装包另以真实 Codex `gpt-6-luna` 验证一次「发送并整理」得到非空回复与草稿，但该草稿未获批准或启动 Run。`pnpm validate:task-map` 对照只读权威规划校验 Playbook 的 P1～P9 任务编号、依赖、Phase Gate 与验收引用。
-
-研发看板只显示当前项目由 Host 返回的真实 Task。可以按标题、状态、优先级和已分配 Executor 筛选；TODO 卡片可在同列拖放或使用键盘可操作的上/下按钮排序。跨列移动不能绕过 Review、Verify 和人工验收门禁。**手工创建任务**会先生成带来源的手工草稿，仍需用户单独批准才进入 TODO。已启动的真实开发 Run 投影到 Development；取消或失败返回 TODO 并显示原因，成功只表示开发快照已生成，仍待 Review/Verify。Host 不可用时不会保留旧在线卡片。1280 宽度下五列横向滚动，长列只渲染可见窗口。点击卡片可查看不可变 Task revision、来源、Run 事件、Diff 和交接状态；`#/tasks/<taskId>` 是同项目内可重载的稳定详情链接。`pnpm smoke:projects` 验证 Desktop 看板创建、排序、越列拒绝和重启持久化。
-
-Design System 检视页只在 Vite 开发模式开放：运行 `pnpm dev:web` 后访问 `http://127.0.0.1:5173/#/dev/ui`。这不是正式导航或业务页面。`packages/ui/src/tokens/values.json` 是工程 token 来源；修改后运行 `node packages/ui/scripts/build-tokens.mjs` 更新 CSS，`pnpm build` 会检查二者一致。`pnpm build && node scripts/capture-ui.mjs` 会从真实 Electron Renderer 生成 1440×900、1600×1000 与 1280 宽模拟缩放截图，输出到被 Git 忽略的 `output/playwright/`；本机生成结果见实施记录。主题、减少透明度和减少动效保存在当前浏览器/应用配置中，不进入 Python Host 项目数据；系统减少动效仍独立生效。
-
-Desktop 左侧「插件」页从 Python Host 读取锁定内置 Codex 插件的版本、兼容性和配置 Schema。当前仅提供非敏感的 app-server 启动握手等待（1–60 秒）：正式页面保存到 Host，重启 Forge 后应用于新 Run，现有 Run 不变；不提供原始密钥或凭据存储。普通 Web 没有本地插件读取能力。`pnpm smoke:desktop` 验证固定桥接与真实插件页面；安装版保存/重启及协议探测的独立证据见[实施状态](docs/implementation-status.md)。
-
-P4-08 已建立 Python Host 的受控 ToolRegistry：注册工具不等于执行授权，调用须由 Core/Policy 授予一次性精确范围，输入/输出经封闭 Schema 检验，结果始终是不可信数据；当前不连接任意外部 MCP。P4-09 为受信内置插件提供激活、运行和卸载的安全故障诊断，Desktop 插件页能显示具体 code 与受影响 Run，项目/看板读路径仍可用；这不是恶意第三方 Python 插件的 OS 沙箱。
-
-Desktop 的“项目资料”入口要求先选择并信任项目，只接受白名单目录和不超过 1 MiB 的 Markdown/TXT/OpenAPI 文本；不运行项目脚本。发布 Workflow 不会自动启动任务；已发布 quick 与 standard 线性流程已有真实 Codex 路径证据；strict 的 Plan 与人工确认门禁已有证据，但完整后段仍待验。不支持的拓扑/能力继续拒绝，Review、Verify 与人工验收各需独立明确操作。普通 Web 不获得本地 Host/项目文件能力。P4-10 完整替换性验收仍 BLOCKED，单 Codex 实测不等于双执行器通过。见 [P5-11 架构记录](docs/decisions/0067-published-linear-workflow-runtime-and-retrieval-freeze.md) 和 [P4 开发范围报告](docs/p4-development-scope-report.md)。
-
-导入 Workflow 画布 JSON 时只接受 `forge-workflow-canvas/v1` 且语义定义 `schemaVersion: "1.0"`；不兼容版本会明确报错并保留当前草稿/数据库行。当前本地接口是封闭 JSON-RPC stdio；参考 OpenAPI 描述未来 Gateway，没有启用 HTTP 服务。P5 的契约、迁移与用户操作说明见 [Workflow 契约与迁移](docs/p5-workflow-contract-and-migration.md)。
-
-P4-06 已新增版本化 Developer/Reviewer Agent Profile；Host 在启动 Run/Review 时重新检查真实执行器的模型、只读、审批和网络能力。P4-07 将整理器改为独立 Python ModelProvider 接口，内置 Codex 0.0.3 插件同时注册 Executor 与模型提供方。`pnpm test:model-provider-live` 显式使用当前 Codex 登录验证结构化结果、增量文本和原生 usage；普通 `pnpm test` 不调用模型。`FORGE_MODEL_PROVIDER=disabled pnpm dev:desktop` 仅关闭模型整理器，手工草稿与看板仍可用。缺少某家模型凭据不会让其他 Provider 自动替代，Claude 仍不可选。
-
-P4-05 的 Claude 集成目前 **BLOCKED**：本机没有 Anthropic API Key，用户决定暂不运行有成本的真实验收。`pnpm probe:claude-offline` 只检查已锁定的 Python SDK 与随包 CLI 能在受控子进程中加载，不登录、不请求模型、不执行任务，也不使 Claude 出现在可用 Executor 列表。继续 P4-05 时需要在仓库外安全配置授权的 API Key，再进行独立临时 Git fixture 的有上限在线验证；不能借用 Claude 订阅登录。用户已批准精确的单执行器开发依赖例外：P4-06～P4-09 可使用已验证 Codex 路径继续开发，权威依赖不变，P4-05 不因此完成，完整 P4 验收与多执行器发布仍被阻塞。见 `docs/development-dependency-exceptions.json`。
-
-Desktop 的 Task 详情现在可打开独立应用预览窗口：用户明确输入 `http://127.0.0.1:<port>/` 后，只允许该本地 origin 的资源；Forge 不替用户启动项目服务。预览无 Preload、Node 或 Host API。Run 的变更文件与 Diff 只浏览 Host 已捕获、脱敏的只读记录，不读取当前工作树。`pnpm smoke:preview` 用一次性本地 HTTP fixture 实测隔离和越域阻断；普通 Web 不提供本地预览。完整凭据引用、诊断导出以及部分原生弹窗安全验收仍待 P6 后续门禁，见 [ADR 0070](docs/decisions/0070-isolated-local-app-preview.md)。
-
-## 工程检查
-
-在仓库根目录运行：
-
-```sh
-pnpm py:sync
-pnpm py:lint
-pnpm py:typecheck
-pnpm py:test
-pnpm py:check
-pnpm install --frozen-lockfile
-pnpm validate:contracts
-pnpm validate:task-map
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm test:python-refiner-live
-pnpm test:model-provider-live
-```
-
-`pnpm validate:contracts` 检查参考包的 JSON Schema、示例、Workflow、Profile、Plugin Manifest、OpenAPI、SQL、任务/阶段/验收引用、精确版本与许可证记录及生产 token；错误返回非零退出码，警告会显示。构建后可运行 `node packages/contract-validator/dist/cli.js --reporter=json` 获取纯 JSON 报告。它只读参考资料，SQLite 检查使用内存库，不等于产品验收。`pnpm typecheck` 先构建契约、Core、Client 和 Persistence 的公开入口，`pnpm test` 先构建当前工作区，再运行 Node/Vue/真实 SQLite 测试。首次变更依赖并重新生成 lockfile 时才运行普通 `pnpm install`；CI 使用冻结锁文件安装。`pnpm-workspace.yaml` 禁用依赖安装脚本；Electron 二进制由首次运行时单独获取。
-
-Codex P0-05 开发诊断可运行 `pnpm probe:codex`：只检查已锁 `codex-cli 0.155.1`、本地登录、app-server 握手、实时模型列表和与当前平台/版本匹配的实测能力记录，不启动写入任务。`pnpm test:codex-live` 在**独立临时 Git fixture** 中依次运行 SDK、app-server 只读/结构化输出、写入和测试、取消/跨连接及跨 Node 进程继续、审批接受/拒绝。它需要已配置的 Codex 登录与正常上游连接，属于显式 opt-in 的真实网络测试；2026-09-23 的首次重跑因代理环境遗漏而中断；修正后整套通过，见实施记录。没有 API Key 配置流程或 Renderer 凭据入口。
-
-P0-06 的 `pnpm test:workspace-live` 是另一个显式在线测试：先将可丢弃 Git fixture 放入独立 worktree，启动真实 Codex 长命令与子孙进程，取消后核对 PID、心跳、源仓库状态与 worktree 释放。默认 `pnpm test` 只运行确定性的 Git/Node 进程树测试。当前进程树后端仅在 macOS arm64 实测；Windows 后端明确不可用，不能把此命令或 macOS smoke 当成 Windows 验收。Host 崩溃的旧归属记录只报告可能 orphan，不会按历史 PID 自动杀进程或清理目录。
-
-P2-04 的 `pnpm test:p2-codex-live`、P2-05～09 的 `pnpm test:p2-run-live`、P2-08 的 `pnpm test:p2-cancel-live` 和原 `pnpm test:p2-vertical-live` 是旧 Node Host 历史 parity 测试，**不是**当前 Desktop 生产 Python Host 的验收入口。当前真实入口为上述 `smoke:python-vertical-live` 与 `test:review-copy-live`。它们依赖本机现有认证与外部模型服务，普通 `pnpm test` 不调用。
-
-P1-04 的 `pnpm test:refiner-live` 与 `pnpm smoke:refiner-live` 是显式 opt-in 的真实 Codex 模型测试，需要现有合法登录和上游连接。前者验证 feature、bug、模糊需求的结构化结果；后者通过真实 Electron/Host/SQLite 生成一个未批准草稿并核对 fixture Git 树未变。普通 `pnpm test`、`pnpm smoke:desktop` 不依赖云服务。
-
-检查和 smoke test 覆盖当前应用壳、Host 系统/项目/会话/Run 协议、SQLite 持久性与安全边界；显式 `pnpm test:p3-live` 另覆盖真实 Codex 开发、Verify、Review、人类最终验收和显式本地合并。P5-11 的真实自定义 quick 型链与资料引用测试需显式运行 `FORGE_VERTICAL_CUSTOM_WORKFLOW=1 FORGE_VERTICAL_FINAL_ONLY=1 node scripts/smoke-python-vertical-live.mjs` 和 `FORGE_VERTICAL_CONTEXT_ONLY=1 node scripts/smoke-python-vertical-live.mjs`；普通 `pnpm test` 不调用模型。通用 Workflow Engine、P6/P9 Agent 评测仍未验收。Host 使用私有进程消息通道与固定命令；协议为 `forge-host-protocol/v5`。Desktop 退出时仅关闭自己启动的 Host。内部 macOS arm64 `.asar`/DMG 已实测，公开签名/公证包、Windows 与 macOS Intel 仍未验证；实际结果见 `docs/implementation-status.md` 和 `docs/compatibility-record.md`。
+桌面基于 Aperant `v2.8.0-beta.6`，采用 [AGPL-3.0](desktop/LICENSE)。来源、版权及修改记录见 [UPSTREAM.md](desktop/UPSTREAM.md)，Release 提供对应源码。

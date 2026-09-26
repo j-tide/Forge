@@ -8,10 +8,12 @@ Forge Glass Preview is a derivative of the Aperant desktop application. Renaming
 | Upstream Git URL | `https://github.com/AndyMik90/Aperant.git` |
 | Imported tag | `v2.8.0-beta.6` |
 | Imported commit | `cba7a0270ec794a14ac71615bc6c48085807ede6` |
+| Original source tree | `c3c44dd2708574d045f2a8cbde9198315807abc9` |
+| Attributed import snapshot | [`85337af1936ea8a46fea0f026e0b2c661853953d`](https://github.com/j-tide/Forge/commit/85337af1936ea8a46fea0f026e0b2c661853953d) |
 | Modification dates | 2026-09-27 and 2026-09-28 |
 | License | GNU Affero General Public License v3.0; see [LICENSE](LICENSE) |
 
-The upstream tag resolves to the imported commit in this repository's Git history. The original source and history remain available; the preview does not claim to be an original implementation of Aperant's code. Existing copyright and license notices remain in place, and `LICENSE` is preserved unchanged.
+The original source and history remain available at the [upstream commit](https://github.com/AndyMik90/Aperant/commit/cba7a0270ec794a14ac71615bc6c48085807ede6). On 2026-09-28, the repository's public history replaced the imported upstream ancestry with the attributed source snapshot above. Its source tree is identical to the upstream tree. The snapshot author records the import operation, not original authorship of the code: AndyMik90 and the upstream contributors retain their authorship and copyright. Existing copyright and license notices remain in place, and `LICENSE` is preserved unchanged. The complete prior repository history is also retained in a verified local Git bundle.
 
 Changes initiated on 2026-09-27 for this derivative:
 
@@ -47,7 +49,7 @@ Changes on 2026-09-28 for `0.1.0-preview.2`:
 
 ## Forge repository delivery — 0.1.0-preview.3 (2026-09-28)
 
-The complete derivative desktop project is delivered under `desktop/` in [j-tide/Forge](https://github.com/j-tide/Forge/tree/main/desktop), with its npm lockfile, AGPL LICENSE, notices, build scripts and imported history retained. The pre-existing Forge Python Host/specification project remains separately rooted and unchanged in ownership; placing the projects in one repository does not integrate their runtimes or migrate user data. The sibling worktree remains a preparation/history reference. Product repository links and the source button now point to Forge. Automatic upstream publishing, updates and telemetry remain disabled as previously documented.
+The complete derivative desktop project is delivered under `desktop/` in [j-tide/Forge](https://github.com/j-tide/Forge/tree/main/desktop), with its npm lockfile, AGPL LICENSE, notices and build scripts retained. The imported history was initially included at delivery; its later public representation is described below. The pre-existing Forge Python Host/specification project remains separately rooted and unchanged in ownership; placing the projects in one repository does not integrate their runtimes or migrate user data. The sibling worktree remains a preparation/history reference. Product repository links and the source button now point to Forge. Automatic upstream publishing, updates and telemetry remain disabled as previously documented.
 
 This version releases the branding/profile-compatibility and original Logo changes described above. Preview data directory and app ID remain stable. Git commit dates continue the user's requested synthetic schedule with1–3day intervals; actual development and validation occurred on2026-09-28. Current testing/build/platform limitations appear in the corresponding release notes; prior releases are historical evidence, not overwritten.
 
@@ -56,3 +58,12 @@ This version releases the branding/profile-compatibility and original Logo chang
 - Removed the unused standalone design demo, extracted IPC text fragments, temporary research/one-time instructions, an empty redundant lockfile, and inactive nested review configuration.
 - Removed inherited nested `.github/` automation and its unused release helpers after integration into Forge. Active quality workflows remain at the Forge repository root; publishing still requires explicit authorization and updater channels remain disabled.
 - Production application code, npm dependencies, license/copyright notices, this provenance record, runtime prompts, actual release assets/screenshots and historical acceptance evidence remain. This cleanup does not integrate the Python Host or change user data.
+
+## Public import-history consolidation — 2026-09-28
+
+- At the repository owner's request, the 1,105 imported upstream commits are replaced in the public ancestry by one explicitly attributed source-import snapshot. The 110 Forge development commits retain their authors, messages, dates and parent ordering; only their parent hashes are remapped. The latest documentation commit additionally records this change.
+- The snapshot has the exact upstream source tree. Original licenses, copyright notices, acknowledgements and the application's source notice remain. This change does not transfer the upstream contributors' authorship to Forge.
+- The complete previous main/tag history is backed up in `output/contributors-cleanup-20260928/forge-before-contributors-cleanup.bundle`, verified with `git bundle verify`. Old/new commit and tag mappings are recorded locally in that directory's `rewrite-plan.json`. Backup refs remain local and are not pushed.
+- Public release tags retain the same source trees. Published installation packages, corresponding source archives, checksums and publication dates remain unchanged. Earlier release documents describing full imported history record the state at their publication.
+- Historical `git-subtree-*` trailers retain their original import hashes. They are historical metadata, not instructions for automatic upstream synchronization. Future source imports require an explicit, attributed operation.
+- Git timestamps continue the owner's synthetic schedule from November 2025 to September 27, 2026. Actual consolidation occurred on September 28, 2026; it is not a new product test or release.

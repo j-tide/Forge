@@ -1,0 +1,1133 @@
+{
+  "schemaVersion": 1,
+  "actualOperationDate": "2026-09-28",
+  "reason": "User approved replacing synthetic future dates: Forge development history starts in November 2025; latest commit is September 27, 2026. Dates are a synthetic schedule, not actual development evidence.",
+  "sourceTreesAndMessagesPreserved": true,
+  "upstreamOriginalCommitsUnchanged": 1105,
+  "schedule": {
+    "firstForgeCommit": "2025-11-15T01:16:33+08:00",
+    "latestForgeCommit": "2026-09-27T01:16:33+08:00",
+    "finalForgeCommitCount": 110,
+    "intervalDays": {
+      "minimum": 1,
+      "maximum": 3
+    },
+    "intervalDistribution": {
+      "1": 2,
+      "2": 7,
+      "3": 100
+    }
+  },
+  "previousTip": "e0cf1e1af9181e561764fed150ba59b7bc3b880f",
+  "rewrittenTipBeforeFinalTwoCommits": "dad83834450051bb8d78dc18e075456921762d84",
+  "rewrittenExistingCommits": [
+    {
+      "oldCommit": "22d165b9007c598c1107eabe84b59fff6db63a13",
+      "newCommit": "69c2a04090be046fbd81ac57e4fcc3f247e9fb40",
+      "tree": "9cfd39beb0d1ec4b215fede2d162f076ef73ad51",
+      "oldAuthorDate": "2026-05-03T17:40:33+08:00",
+      "oldCommitterDate": "2026-05-03T17:40:33+08:00",
+      "newAuthorDate": "2025-11-15T01:16:33+08:00",
+      "newCommitterDate": "2025-11-15T01:16:33+08:00",
+      "subject": "docs: add Forge product and engineering specification baseline"
+    },
+    {
+      "oldCommit": "f5b638a6997570575ad137ce1c35a603157e8b8d",
+      "newCommit": "4c6ae25e6e11a8b0908724cbb7ebf64532d4b30a",
+      "tree": "1a49254191ee70a0fb238721ec96c65f1d90417e",
+      "oldAuthorDate": "2026-05-04T12:14:44+08:00",
+      "oldCommitterDate": "2026-05-04T12:14:44+08:00",
+      "newAuthorDate": "2025-11-18T01:16:33+08:00",
+      "newCommitterDate": "2025-11-18T01:16:33+08:00",
+      "subject": "docs: add selected frosted glass design baseline"
+    },
+    {
+      "oldCommit": "ffa405b0e1399cff7210a85a96da4b06028a4542",
+      "newCommit": "1bb2c0c3f0f43c429b35390bfe8ce3c2c5aa1d32",
+      "tree": "f059b0bd40df58d673e928b634fbe3c7c2883135",
+      "oldAuthorDate": "2026-05-05T10:56:37+08:00",
+      "oldCommitterDate": "2026-05-05T10:56:37+08:00",
+      "newAuthorDate": "2025-11-21T01:16:33+08:00",
+      "newCommitterDate": "2025-11-21T01:16:33+08:00",
+      "subject": "build: establish pinned pnpm workspace and contract entry"
+    },
+    {
+      "oldCommit": "1e6550622ef523f0d9152adab3bf38a97ab5f57f",
+      "newCommit": "fe0dc96642fccc255eff322c4900e6ded2f36697",
+      "tree": "ba9cdca53c8787885a3d8e4fede37c3f4d4ff76e",
+      "oldAuthorDate": "2026-05-08T12:07:29+08:00",
+      "oldCommitterDate": "2026-05-08T12:07:29+08:00",
+      "newAuthorDate": "2025-11-24T01:16:33+08:00",
+      "newCommitterDate": "2025-11-24T01:16:33+08:00",
+      "subject": "test: enforce workspace baseline and frozen lockfile in CI"
+    },
+    {
+      "oldCommit": "3f4aa37ee2c124bb49d58461afbb590a5c013cb1",
+      "newCommit": "9fa53f4953156e6b6e370018db4c76af7c2fd631",
+      "tree": "7f40b43c3c6d436cf1dc57769dc6646c3a9c5569",
+      "oldAuthorDate": "2026-05-10T13:21:12+08:00",
+      "oldCommitterDate": "2026-05-10T13:21:12+08:00",
+      "newAuthorDate": "2025-11-27T01:16:33+08:00",
+      "newCommitterDate": "2025-11-27T01:16:33+08:00",
+      "subject": "docs: record P0-01 verification and v0.0.1 scope"
+    },
+    {
+      "oldCommit": "762f735bda70d683556c7d21fb5f429c407132af",
+      "newCommit": "f5904fe639cddf53922b6cf25387af45c166fce9",
+      "tree": "959679f88edcc50a2cbd6965b9b0dceec3903c39",
+      "oldAuthorDate": "2026-05-11T16:48:48+08:00",
+      "oldCommitterDate": "2026-05-11T16:48:48+08:00",
+      "newAuthorDate": "2025-11-30T01:16:33+08:00",
+      "newCommitterDate": "2025-11-30T01:16:33+08:00",
+      "subject": "build: pin the expanded P0 workspace and dependencies"
+    },
+    {
+      "oldCommit": "e8137b7693344bfa5c9a0fbbde6270066d676c37",
+      "newCommit": "245688afb42be579310b9f0524fd7bbb83bd8fe3",
+      "tree": "1f5411463f0c16114e5a4202dce641c523256f5d",
+      "oldAuthorDate": "2026-05-12T14:41:24+08:00",
+      "oldCommitterDate": "2026-05-12T14:41:24+08:00",
+      "newAuthorDate": "2025-12-03T01:16:33+08:00",
+      "newCommitterDate": "2025-12-03T01:16:33+08:00",
+      "subject": "feat(ui): establish the glass design system"
+    },
+    {
+      "oldCommit": "b0eeab69d21d8c67b7ac41f367a5abb8cebdf4ce",
+      "newCommit": "754c007e507cc7a57d9cdd69afd42e13687fd75e",
+      "tree": "41a13caa07e9b1275d68b0da21e3df75bbe68045",
+      "oldAuthorDate": "2026-05-13T13:49:02+08:00",
+      "oldCommitterDate": "2026-05-13T13:49:02+08:00",
+      "newAuthorDate": "2025-12-06T01:16:33+08:00",
+      "newCommitterDate": "2025-12-06T01:16:33+08:00",
+      "subject": "feat(desktop): share the Vue shell with Electron and Web"
+    },
+    {
+      "oldCommit": "320c8d67e1bad6aceb1a066a3be956921186070a",
+      "newCommit": "e67df51ee7e2e41e09462b9b6921bf6bd11eccdd",
+      "tree": "325cd4a5349727abc270097ebdf609baa80b9552",
+      "oldAuthorDate": "2026-05-16T17:05:50+08:00",
+      "oldCommitterDate": "2026-05-16T17:05:50+08:00",
+      "newAuthorDate": "2025-12-09T01:16:33+08:00",
+      "newCommitterDate": "2025-12-09T01:16:33+08:00",
+      "subject": "feat(host): add independent Host and local protocol"
+    },
+    {
+      "oldCommit": "8a97f6b8022437461049b69d95d6fd0bc2838b08",
+      "newCommit": "81213313dc019e824420292e2a03a9bc639e0838",
+      "tree": "c88224d94191cfb3a7372c44858f5f9245d7e272",
+      "oldAuthorDate": "2026-05-17T14:47:01+08:00",
+      "oldCommitterDate": "2026-05-17T14:47:01+08:00",
+      "newAuthorDate": "2025-12-12T01:16:33+08:00",
+      "newCommitterDate": "2025-12-12T01:16:33+08:00",
+      "subject": "feat(storage): add Host-owned SQLite persistence"
+    },
+    {
+      "oldCommit": "25ea87195061c10b50a3d7079bfa700a07740f88",
+      "newCommit": "584af1e4eff26aed39df1cc663c60b390066c9fb",
+      "tree": "f2e7636df1cabbfc0c8173eee2bfdabac5faf773",
+      "oldAuthorDate": "2026-05-19T14:54:53+08:00",
+      "oldCommitterDate": "2026-05-19T14:54:53+08:00",
+      "newAuthorDate": "2025-12-15T01:16:33+08:00",
+      "newCommitterDate": "2025-12-15T01:16:33+08:00",
+      "subject": "feat(workspace): manage owned worktrees and process cancellation"
+    },
+    {
+      "oldCommit": "a268049d8bc98ec61d4182d1dbcbbe01abecbde2",
+      "newCommit": "05ed1b5835990f728603c6608f88787263030466",
+      "tree": "5635a2237b3ae06aff2a251984dbd9e62b166031",
+      "oldAuthorDate": "2026-05-22T15:37:43+08:00",
+      "oldCommitterDate": "2026-05-22T15:37:43+08:00",
+      "newAuthorDate": "2025-12-18T01:16:33+08:00",
+      "newCommitterDate": "2025-12-18T01:16:33+08:00",
+      "subject": "feat(executor): integrate Codex app-server adapter"
+    },
+    {
+      "oldCommit": "6ef00bbd2fdd1cf53a2b8af440ab568b277f61f0",
+      "newCommit": "a226bdb20c0a52cfc8860e8214d46e06248304df",
+      "tree": "d78524a80d131cc583c9a01d4fc0d78055322ad7",
+      "oldAuthorDate": "2026-05-23T16:55:50+08:00",
+      "oldCommitterDate": "2026-05-23T16:55:50+08:00",
+      "newAuthorDate": "2025-12-21T01:16:33+08:00",
+      "newCommitterDate": "2025-12-21T01:16:33+08:00",
+      "subject": "feat(validation): enforce contracts in CI"
+    },
+    {
+      "oldCommit": "a0eeddc4961ff73b3f9eb7c72ff5521edfce3551",
+      "newCommit": "79016f68bf9250288a789657787d1e8a20f58ba9",
+      "tree": "c64ed7902a5aae4de2f7f81ff08a46b38dbdbce7",
+      "oldAuthorDate": "2026-05-25T17:35:30+08:00",
+      "oldCommitterDate": "2026-05-25T17:35:30+08:00",
+      "newAuthorDate": "2025-12-24T01:16:33+08:00",
+      "newCommitterDate": "2025-12-24T01:16:33+08:00",
+      "subject": "docs: record P0 implementation and remaining risks"
+    },
+    {
+      "oldCommit": "663bf98176f9d0263272b040b684d8b2c94a644e",
+      "newCommit": "d87748452098b62499914f5c6d3b52eee8798378",
+      "tree": "3cbfd22fe7efab8206408f4eea2795420f64956c",
+      "oldAuthorDate": "2026-05-28T06:16:24+08:00",
+      "oldCommitterDate": "2026-05-28T06:16:24+08:00",
+      "newAuthorDate": "2025-12-27T01:16:33+08:00",
+      "newCommitterDate": "2025-12-27T01:16:33+08:00",
+      "subject": "docs(autopilot): align canonical task map and execution policy"
+    },
+    {
+      "oldCommit": "f364c134b59b35857cef46d8858ee0a7590b69e4",
+      "newCommit": "a07581040a497bcbb19e884ca234b14df4a7885d",
+      "tree": "3c93b30282501d2aa2828bf1d54a1460a4e2cf46",
+      "oldAuthorDate": "2026-05-29T16:24:57+08:00",
+      "oldCommitterDate": "2026-05-29T16:24:57+08:00",
+      "newAuthorDate": "2025-12-30T01:16:33+08:00",
+      "newCommitterDate": "2025-12-30T01:16:33+08:00",
+      "subject": "feat(contracts): define project task run and plugin protocols"
+    },
+    {
+      "oldCommit": "fe13cc7a45f0ae2e0de22769766861f0c99342fe",
+      "newCommit": "7cd1c4a60be9d49aa20691130c5d043ce9a7a4d6",
+      "tree": "ea0d3d0cae220e9c49306199a58181f7994947af",
+      "oldAuthorDate": "2026-06-01T11:05:05+08:00",
+      "oldCommitterDate": "2026-06-01T11:05:05+08:00",
+      "newAuthorDate": "2026-01-02T01:16:33+08:00",
+      "newCommitterDate": "2026-01-02T01:16:33+08:00",
+      "subject": "feat(project): add trusted repository probing and project persistence"
+    },
+    {
+      "oldCommit": "39cecb632f9b25d1116998d8caa029d2e7e34958",
+      "newCommit": "d4bfd3625f734529ea35fc90c50effe5e2aa435a",
+      "tree": "d2804fe6bdf9fc7da87cb2ae5f2d13041647eae1",
+      "oldAuthorDate": "2026-06-03T06:50:56+08:00",
+      "oldCommitterDate": "2026-06-03T06:50:56+08:00",
+      "newAuthorDate": "2026-01-05T01:16:33+08:00",
+      "newCommitterDate": "2026-01-05T01:16:33+08:00",
+      "subject": "feat(conversation): add messages refinement and editable drafts"
+    },
+    {
+      "oldCommit": "66204e21b37596e82dfe9596a60ce0e115623347",
+      "newCommit": "9602daa3a54a9fc33b71d34c00048a23bff79869",
+      "tree": "652cf5fb8c5370c1c3f00853890603deebae97fd",
+      "oldAuthorDate": "2026-06-05T17:55:10+08:00",
+      "oldCommitterDate": "2026-06-05T17:55:10+08:00",
+      "newAuthorDate": "2026-01-08T01:16:33+08:00",
+      "newCommitterDate": "2026-01-08T01:16:33+08:00",
+      "subject": "feat(task): add approval board projections and task controls"
+    },
+    {
+      "oldCommit": "8631c3775351efc455efd6cb3becfa8c031050c1",
+      "newCommit": "40736fc1544fc50bbe214f336363ace66a575e11",
+      "tree": "c44444b0a4fae7feb15a227d8c02502f545fab24",
+      "oldAuthorDate": "2026-06-07T02:25:46+08:00",
+      "oldCommitterDate": "2026-06-07T02:25:46+08:00",
+      "newAuthorDate": "2026-01-11T01:16:33+08:00",
+      "newCommitterDate": "2026-01-11T01:16:33+08:00",
+      "subject": "feat(node-parity): preserve run workspace and Codex reference path"
+    },
+    {
+      "oldCommit": "90089c8e64d987317f278798294b8b7400907b8b",
+      "newCommit": "f7e3b2588efcdde7d92951c9d79c4fb5f2a5ca94",
+      "tree": "329c652dd1d404116c30970c83d2bea12c897673",
+      "oldAuthorDate": "2026-06-09T17:22:58+08:00",
+      "oldCommitterDate": "2026-06-09T17:22:58+08:00",
+      "newAuthorDate": "2026-01-14T01:16:33+08:00",
+      "newCommitterDate": "2026-01-14T01:16:33+08:00",
+      "subject": "feat(python-core): establish Python Host persistence and P1 services"
+    },
+    {
+      "oldCommit": "5986b95d3528a15f61d5fdeeefb7ebf0ea8bc428",
+      "newCommit": "53364825d280615b3cc3cb1f91f763e24594b735",
+      "tree": "2472ab96c6ed5eef7830f4225f3457d507622f94",
+      "oldAuthorDate": "2026-06-10T19:34:07+08:00",
+      "oldCommitterDate": "2026-06-10T19:34:07+08:00",
+      "newAuthorDate": "2026-01-17T01:16:33+08:00",
+      "newCommitterDate": "2026-01-17T01:16:33+08:00",
+      "subject": "feat(python-runs): port owned workspaces and Codex execution"
+    },
+    {
+      "oldCommit": "937fb9ae442f28c93733ba2658131adb6a3cfdaf",
+      "newCommit": "e59fa9f61aa3d1b489a97c9594d2787dbfecea2e",
+      "tree": "0697f34a54889c9a0d338a463e777b070d3bf3b8",
+      "oldAuthorDate": "2026-06-11T22:29:34+08:00",
+      "oldCommitterDate": "2026-06-11T22:29:34+08:00",
+      "newAuthorDate": "2026-01-20T01:16:33+08:00",
+      "newCommitterDate": "2026-01-20T01:16:33+08:00",
+      "subject": "feat(desktop): connect Electron to the independent Python Host"
+    },
+    {
+      "oldCommit": "a99a0aec4f942ba7ba8f92f620bc998b97d6a3b4",
+      "newCommit": "d51da20191695585351301189aac63a93ada908b",
+      "tree": "313cb578026786aa73e01898440c7b4e7804263c",
+      "oldAuthorDate": "2026-06-14T20:20:12+08:00",
+      "oldCommitterDate": "2026-06-14T20:20:12+08:00",
+      "newAuthorDate": "2026-01-23T01:16:33+08:00",
+      "newCommitterDate": "2026-01-23T01:16:33+08:00",
+      "subject": "feat(review): add snapshot-bound review and command verification"
+    },
+    {
+      "oldCommit": "36568028e5f90700700f8d61ea52a46f7719e53f",
+      "newCommit": "ce9bf0e2a36613ba3aa25a24ff0ace74724bc2e5",
+      "tree": "8a6f15bfb52baeec60dbb2d6250ca88515ace3cc",
+      "oldAuthorDate": "2026-06-16T19:58:07+08:00",
+      "oldCommitterDate": "2026-06-16T19:58:07+08:00",
+      "newAuthorDate": "2026-01-26T01:16:33+08:00",
+      "newCommitterDate": "2026-01-26T01:16:33+08:00",
+      "subject": "feat(delivery): add acceptance rework recovery and delivery"
+    },
+    {
+      "oldCommit": "2f2769101f4307d885140ff98ce904dcd0210b92",
+      "newCommit": "efcd900333b9e5f4c26aa7bc5e3c16197aa326d5",
+      "tree": "b30d73958144ed29e2aab747a6e874d2d4781db9",
+      "oldAuthorDate": "2026-06-18T16:18:41+08:00",
+      "oldCommitterDate": "2026-06-18T16:18:41+08:00",
+      "newAuthorDate": "2026-01-29T01:16:33+08:00",
+      "newCommitterDate": "2026-01-29T01:16:33+08:00",
+      "subject": "feat(web): expose real project task run and delivery views"
+    },
+    {
+      "oldCommit": "fb666394cdb55ccf4abaff09956d53cca29d347a",
+      "newCommit": "5cfc390d6ef8cc5c71d54af945a3d3146d033b08",
+      "tree": "6052d898ab66964619648b0d46e3262aa31d0bdc",
+      "oldAuthorDate": "2026-06-20T05:09:24+08:00",
+      "oldCommitterDate": "2026-06-20T05:09:24+08:00",
+      "newAuthorDate": "2026-02-01T01:16:33+08:00",
+      "newCommitterDate": "2026-02-01T01:16:33+08:00",
+      "subject": "feat(plugins): add locked registry and schema-driven inspection"
+    },
+    {
+      "oldCommit": "541f90a2a68d59d81f0246eda8bac4d0d8e49973",
+      "newCommit": "c6033ac57984ed3d9b615176bcfefa04aba541f4",
+      "tree": "b0048babefa934fd90b747466e23f8aacfafd8b1",
+      "oldAuthorDate": "2026-06-22T10:56:21+08:00",
+      "oldCommitterDate": "2026-06-22T10:56:21+08:00",
+      "newAuthorDate": "2026-02-04T01:16:33+08:00",
+      "newCommitterDate": "2026-02-04T01:16:33+08:00",
+      "subject": "chore(claude): add offline SDK preflight without activation"
+    },
+    {
+      "oldCommit": "f7cc97c7f2f3596c0965261e66c1c171098a81ae",
+      "newCommit": "fdd24376e124e1597dd5a54523f565672005abbb",
+      "tree": "d6de21bef52a56dba376390ab4ea090c25df4693",
+      "oldAuthorDate": "2026-06-24T08:29:50+08:00",
+      "oldCommitterDate": "2026-06-24T08:29:50+08:00",
+      "newAuthorDate": "2026-02-07T01:16:33+08:00",
+      "newCommitterDate": "2026-02-07T01:16:33+08:00",
+      "subject": "docs(status): record phase evidence risks and current blocker"
+    },
+    {
+      "oldCommit": "fc2e076c8d9ad074d6b07d9776f191d60f003418",
+      "newCommit": "b03dd063af7923665fb4df740b673796ccbe78f8",
+      "tree": "a8f68cad1d46d71209ef46d5d87cc33ca5c1c1d7",
+      "oldAuthorDate": "2026-06-26T17:23:36+08:00",
+      "oldCommitterDate": "2026-06-26T17:23:36+08:00",
+      "newAuthorDate": "2026-02-10T01:16:33+08:00",
+      "newCommitterDate": "2026-02-10T01:16:33+08:00",
+      "subject": "docs: preserve Markdown line breaks without trailing whitespace"
+    },
+    {
+      "oldCommit": "b76a8ca95dc289aa1a654dd1eb17aa5756f386e9",
+      "newCommit": "3ecc878129415062b5e9f0e1ef1922cc6e6a51e8",
+      "tree": "1480a222bba6821ae70966678574540c7ab7de5d",
+      "oldAuthorDate": "2026-06-27T17:23:36+08:00",
+      "oldCommitterDate": "2026-06-27T17:23:36+08:00",
+      "newAuthorDate": "2026-02-13T01:16:33+08:00",
+      "newCommitterDate": "2026-02-13T01:16:33+08:00",
+      "subject": "feat(executors): add Python profiles, provider boundary and plugin isolation"
+    },
+    {
+      "oldCommit": "470b656e5cadf76ca2ba1e92d3133ff9d767832c",
+      "newCommit": "496433e7e391792cf21503815a1cb67341e16c79",
+      "tree": "8e53ec1316662b483f8f9dbfd8cf251b446ad156",
+      "oldAuthorDate": "2026-06-29T17:23:36+08:00",
+      "oldCommitterDate": "2026-06-29T17:23:36+08:00",
+      "newAuthorDate": "2026-02-16T01:16:33+08:00",
+      "newCommitterDate": "2026-02-16T01:16:33+08:00",
+      "subject": "feat(workflows): compile, publish and execute versioned Python workflows"
+    },
+    {
+      "oldCommit": "7a16755dc69050759f7c2fc001e18d347b93f463",
+      "newCommit": "a530bcb2719c3127c19b099293ed4ebe88ef1fb4",
+      "tree": "d7dcf7110715d593ddd7e7c5f5ceb09e0bcab3cb",
+      "oldAuthorDate": "2026-06-30T17:23:36+08:00",
+      "oldCommitterDate": "2026-06-30T17:23:36+08:00",
+      "newAuthorDate": "2026-02-19T01:16:33+08:00",
+      "newCommitterDate": "2026-02-19T01:16:33+08:00",
+      "subject": "feat(knowledge): add source-backed search, context and project memory"
+    },
+    {
+      "oldCommit": "778233c4ddf3bc21a4b3b21afc4164ac6b618793",
+      "newCommit": "e34cdf090c54d63495b577a9c7be761922d61c0f",
+      "tree": "109382206ebfbe79428599c9ba576554397fcaf3",
+      "oldAuthorDate": "2026-07-01T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-01T17:23:36+08:00",
+      "newAuthorDate": "2026-02-22T01:16:33+08:00",
+      "newCommitterDate": "2026-02-22T01:16:33+08:00",
+      "subject": "feat(ui): add agent, workflow, plugin and knowledge workspaces"
+    },
+    {
+      "oldCommit": "cc3488ba73e7c0a01007fea8df9f336d4477e43f",
+      "newCommit": "3fe899a8a93317f95c42c76d8d9edb123cf1f8bd",
+      "tree": "48a00a18b3aba36948d712b37f4e233b6fe9731e",
+      "oldAuthorDate": "2026-07-02T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-02T17:23:36+08:00",
+      "newAuthorDate": "2026-02-25T01:16:33+08:00",
+      "newCommitterDate": "2026-02-25T01:16:33+08:00",
+      "subject": "feat(design): add dark tokens, accessible overlays and desktop layout polish"
+    },
+    {
+      "oldCommit": "1b0a278d048c6dcf11b0a1ec90f9171c1439f374",
+      "newCommit": "d45b46cae6be7bacf2df561ac69768a80301ab0e",
+      "tree": "a7ca22639ab96bd4d250690cfee7aabf444262eb",
+      "oldAuthorDate": "2026-07-05T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-05T17:23:36+08:00",
+      "newAuthorDate": "2026-02-28T01:16:33+08:00",
+      "newCommitterDate": "2026-02-28T01:16:33+08:00",
+      "subject": "feat(runs): inspect real changes and open isolated local previews"
+    },
+    {
+      "oldCommit": "dc4292ff638ef15bf8dd646acc675f29c42c1b8c",
+      "newCommit": "44d02d088720a9011939cd31b139447388b9af51",
+      "tree": "36b4d89629327424bca4dcd2b1f3cf1a45a796ae",
+      "oldAuthorDate": "2026-07-08T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-08T17:23:36+08:00",
+      "newAuthorDate": "2026-03-03T01:16:33+08:00",
+      "newCommitterDate": "2026-03-03T01:16:33+08:00",
+      "subject": "feat(diagnostics): export allowlisted state and clean owned artifacts"
+    },
+    {
+      "oldCommit": "631c3c9bed3d6ae1f82a074ae13c83b94d2b29c0",
+      "newCommit": "903756983891189c47ebd3a4fd1621d19678cd3c",
+      "tree": "5c28802f6bcacd25175acc0316c474d846c1fd58",
+      "oldAuthorDate": "2026-07-09T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-09T17:23:36+08:00",
+      "newAuthorDate": "2026-03-06T01:16:33+08:00",
+      "newCommitterDate": "2026-03-06T01:16:33+08:00",
+      "subject": "feat(distribution): stage internal Desktop packages and offline update checks"
+    },
+    {
+      "oldCommit": "86087231b66d37e8e46be0f0c8ae1440d58d9550",
+      "newCommit": "a2ed22c7cdb4ebf3b1ac3ec551a6156260124c69",
+      "tree": "1448ae2ced4541272a6f658f394cb96f3d2d357e",
+      "oldAuthorDate": "2026-07-11T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-11T17:23:36+08:00",
+      "newAuthorDate": "2026-03-07T01:16:33+08:00",
+      "newCommitterDate": "2026-03-07T01:16:33+08:00",
+      "subject": "feat(remote): stage loopback gateway, pairing and scoped read commands"
+    },
+    {
+      "oldCommit": "b5c7ef47653619063d165e6f488be12214fe9d53",
+      "newCommit": "bdf1c58bf5d7bca577e9a79705ef62a9e5244132",
+      "tree": "f4e6325e5a325e513f82a61cdd942e83f2fde229",
+      "oldAuthorDate": "2026-07-14T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-14T17:23:36+08:00",
+      "newAuthorDate": "2026-03-10T01:16:33+08:00",
+      "newCommitterDate": "2026-03-10T01:16:33+08:00",
+      "subject": "feat(host): wire project services, persistence and remote dispatch into Python runtime"
+    },
+    {
+      "oldCommit": "aeb4922f11fdfd65ffed7e168d380d6b622a288e",
+      "newCommit": "d1907250749714a15e7cdb2bdb15c06fe2b1ceea",
+      "tree": "c95b853e81fe42b204b1b2a0fd41c2d012fd75b9",
+      "oldAuthorDate": "2026-07-17T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-17T17:23:36+08:00",
+      "newAuthorDate": "2026-03-13T01:16:33+08:00",
+      "newCommitterDate": "2026-03-13T01:16:33+08:00",
+      "subject": "feat(desktop): connect shared UI to Python Host and secure system bridge"
+    },
+    {
+      "oldCommit": "38f681289a82273eeb1da4135e922e54795d2c1d",
+      "newCommit": "7e505ca5c16d0a62c5293d6bff0c92c8bb9912af",
+      "tree": "16745c797fb6fb2d0623e28ba54883c1b8669868",
+      "oldAuthorDate": "2026-07-20T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-20T17:23:36+08:00",
+      "newAuthorDate": "2026-03-16T01:16:33+08:00",
+      "newCommitterDate": "2026-03-16T01:16:33+08:00",
+      "subject": "test(quality): expand packaged smoke checks and lock dependency inventory"
+    },
+    {
+      "oldCommit": "51d2375177c166eabd10f145cdc91f1e992e1971",
+      "newCommit": "b8226f647da9ba674469fbec71dd55949562c1c6",
+      "tree": "0bf1c9fa39c2ee7ab82160bdc6d28ab0d38c4dac",
+      "oldAuthorDate": "2026-07-21T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-21T17:23:36+08:00",
+      "newAuthorDate": "2026-03-19T01:16:33+08:00",
+      "newCommitterDate": "2026-03-19T01:16:33+08:00",
+      "subject": "docs: record staged P4-P7 evidence, demo guide and deferred gates"
+    },
+    {
+      "oldCommit": "1f537373c15656586200058fbcb75f61a7a6eec4",
+      "newCommit": "27c421f05c5ca402752a4184ef83c52987118e1c",
+      "tree": "5089130c5618e5e17691c596de120a5360462e41",
+      "oldAuthorDate": "2026-07-23T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-23T17:23:36+08:00",
+      "newAuthorDate": "2026-03-22T01:16:33+08:00",
+      "newCommitterDate": "2026-03-22T01:16:33+08:00",
+      "subject": "feat(contracts): extend project and diagnostics models"
+    },
+    {
+      "oldCommit": "d641599c400fc5d7e4aebf44e5d844f7e3eced4c",
+      "newCommit": "a3ea34eae6499ba85840b790d8ad2bf23ac26d25",
+      "tree": "ac7c4023cf09b48cd846d6b75d43d37b50ffa758",
+      "oldAuthorDate": "2026-07-25T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-25T17:23:36+08:00",
+      "newAuthorDate": "2026-03-24T01:16:33+08:00",
+      "newCommitterDate": "2026-03-24T01:16:33+08:00",
+      "subject": "feat(contracts): describe run inspection and review evidence"
+    },
+    {
+      "oldCommit": "7a2c1b7c3aa21df8ce274653903772b7464ab152",
+      "newCommit": "368d65f77d28a407d2f34b9ab096610665f6eb79",
+      "tree": "f14b2a78413cdc483e10da4f19d62fc5065d42fd",
+      "oldAuthorDate": "2026-07-26T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-26T17:23:36+08:00",
+      "newAuthorDate": "2026-03-27T01:16:33+08:00",
+      "newCommitterDate": "2026-03-27T01:16:33+08:00",
+      "subject": "feat(contracts): define agent and plugin configuration"
+    },
+    {
+      "oldCommit": "02d06f1d9d46c8a3441eb1315225851dc52e7da8",
+      "newCommit": "d494b5c6f8a81b0e2ec978e53d248c13e6d418ed",
+      "tree": "137dcafbdf696968fbd47833f905b9c16a8acc54",
+      "oldAuthorDate": "2026-07-28T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-28T17:23:36+08:00",
+      "newAuthorDate": "2026-03-30T01:16:33+08:00",
+      "newCommitterDate": "2026-03-30T01:16:33+08:00",
+      "subject": "feat(contracts): add scoped remote read and pairing schemas"
+    },
+    {
+      "oldCommit": "fde47fa54abcfbc83b68835bd781d3601b50be00",
+      "newCommit": "9d365e28324eb3bd45f9f84c4d37fe1311997c3e",
+      "tree": "4ba00c6df6e41613f757606fe18e5de862c2d9b4",
+      "oldAuthorDate": "2026-07-31T17:23:36+08:00",
+      "oldCommitterDate": "2026-07-31T17:23:36+08:00",
+      "newAuthorDate": "2026-04-02T01:16:33+08:00",
+      "newCommitterDate": "2026-04-02T01:16:33+08:00",
+      "subject": "feat(contracts): expose validated Host protocol extensions"
+    },
+    {
+      "oldCommit": "484fd0781240dc245fb7521437f0cefbbca559be",
+      "newCommit": "cf8e985e2a0b8c1a4548bd0d957205e13685fc5d",
+      "tree": "c1c48948839fcdc43320e8cd69387c6745a4c056",
+      "oldAuthorDate": "2026-08-02T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-02T17:23:36+08:00",
+      "newAuthorDate": "2026-04-05T01:16:33+08:00",
+      "newCommitterDate": "2026-04-05T01:16:33+08:00",
+      "subject": "feat(tasks): harden project, draft and conversation state"
+    },
+    {
+      "oldCommit": "6eea06f77fcc64c0d129f9169e1fe1789efcbe3d",
+      "newCommit": "26f497b6f1db1ef31e4abd85b6b11a2257e7aa51",
+      "tree": "542740040ca37364bdbb4d3a7cee1164b0a02e4a",
+      "oldAuthorDate": "2026-08-05T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-05T17:23:36+08:00",
+      "newAuthorDate": "2026-04-08T01:16:33+08:00",
+      "newCommitterDate": "2026-04-08T01:16:33+08:00",
+      "subject": "feat(workflows): add Planner gate and frozen launch binding"
+    },
+    {
+      "oldCommit": "5357608b5c034bdf1e61c1194e8eef2516e8efb7",
+      "newCommit": "2207470c72411deff278f9b1db577366eb8afcb8",
+      "tree": "2d1edfb114282d78abf9fc7a9bcc2ecd242b9b56",
+      "oldAuthorDate": "2026-08-06T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-06T17:23:36+08:00",
+      "newAuthorDate": "2026-04-11T01:16:33+08:00",
+      "newCommitterDate": "2026-04-11T01:16:33+08:00",
+      "subject": "feat(runs): enforce scheduler ownership and actual usage"
+    },
+    {
+      "oldCommit": "3ddc927441243890ed4a0bf30ccfe9276fdb91cf",
+      "newCommit": "999cfb76f8ab04eb9156e6fc8071f0296e816ffd",
+      "tree": "a874f59c59fc6b87a98efcbb0384b876371c740b",
+      "oldAuthorDate": "2026-08-07T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-07T17:23:36+08:00",
+      "newAuthorDate": "2026-04-14T01:16:33+08:00",
+      "newCommitterDate": "2026-04-14T01:16:33+08:00",
+      "subject": "feat(review): preserve reviewer findings and source evidence"
+    },
+    {
+      "oldCommit": "5283fb7de0f416dedb72c803bb5b7d2352dad6b2",
+      "newCommit": "185a37f647cd37f9ceb6b0125ff2263f81b96a29",
+      "tree": "84873d0fb53ca77a653b788c9df9f696310de3dc",
+      "oldAuthorDate": "2026-08-08T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-08T17:23:36+08:00",
+      "newAuthorDate": "2026-04-17T01:16:33+08:00",
+      "newCommitterDate": "2026-04-17T01:16:33+08:00",
+      "subject": "feat(acceptance): gate rework and final delivery"
+    },
+    {
+      "oldCommit": "dc237316fe72759925c52f63c6f5a9f68f2874d5",
+      "newCommit": "d2e8870ed839d0c8f45d953fdffaada9244f86f5",
+      "tree": "9e1b5234d502ae964bbcae766c1abe5506e71d8b",
+      "oldAuthorDate": "2026-08-11T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-11T17:23:36+08:00",
+      "newAuthorDate": "2026-04-20T01:16:33+08:00",
+      "newCommitterDate": "2026-04-20T01:16:33+08:00",
+      "subject": "feat(recovery): protect storage and interrupted run state"
+    },
+    {
+      "oldCommit": "38b3f4c908f01ce89aba7894472901b42df4f5d9",
+      "newCommit": "d1104c013c26fd80fb2c75e2c2060f1cc96c77c5",
+      "tree": "c3579ff58a7c7ac7dedc55b437f36ff423f07236",
+      "oldAuthorDate": "2026-08-14T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-14T17:23:36+08:00",
+      "newAuthorDate": "2026-04-23T01:16:33+08:00",
+      "newCommitterDate": "2026-04-23T01:16:33+08:00",
+      "subject": "feat(plugins): persist agent profiles and bundled configuration"
+    },
+    {
+      "oldCommit": "a84f5e67a524698226884c6a7910dd155dec729d",
+      "newCommit": "241d37e8fa4b879527c217a2888f405efdfdd06d",
+      "tree": "61d1a8611b3f3a039410c598dab1c3d8a964e757",
+      "oldAuthorDate": "2026-08-15T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-15T17:23:36+08:00",
+      "newAuthorDate": "2026-04-26T01:16:33+08:00",
+      "newCommitterDate": "2026-04-26T01:16:33+08:00",
+      "subject": "feat(remote): enforce Host-owned pairing and device policy"
+    },
+    {
+      "oldCommit": "5731b24af92e18948a8ed331ddceaa92177cdad8",
+      "newCommit": "a8ea52faf64bcfb50afc9d9b224aaeab56e815e6",
+      "tree": "595924ce1cadec000c4b623dcd056d798e67c5f6",
+      "oldAuthorDate": "2026-08-18T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-18T17:23:36+08:00",
+      "newAuthorDate": "2026-04-29T01:16:33+08:00",
+      "newCommitterDate": "2026-04-29T01:16:33+08:00",
+      "subject": "feat(remote): dispatch scoped commands and project events"
+    },
+    {
+      "oldCommit": "22cdb24482f8491b107bb291df4c9f9ba8d91420",
+      "newCommit": "fb82ea2ec8a06cf4c9992fef0556be996ccc1ec6",
+      "tree": "540081bfb91713736aa849c9b1938d8f1ccb2028",
+      "oldAuthorDate": "2026-08-19T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-19T17:23:36+08:00",
+      "newAuthorDate": "2026-05-02T01:16:33+08:00",
+      "newCommitterDate": "2026-05-02T01:16:33+08:00",
+      "subject": "feat(host): integrate Python services and guarded dispatch"
+    },
+    {
+      "oldCommit": "e1c29b8e93c3000f51e653d9b4d46ab09cbcacb3",
+      "newCommit": "facf6f397e182529e33e7118fae3ac75205e738b",
+      "tree": "5c94dc5a440575ce73f2d9f8f68ad5aea9bd613c",
+      "oldAuthorDate": "2026-08-20T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-20T17:23:36+08:00",
+      "newAuthorDate": "2026-05-05T01:16:33+08:00",
+      "newCommitterDate": "2026-05-05T01:16:33+08:00",
+      "subject": "feat(client): expose Desktop Host capabilities"
+    },
+    {
+      "oldCommit": "3513575cee116a84e2eb7d63f3f2346fb6064ca5",
+      "newCommit": "d49786df7da5b83d15927ac73cdff38528a337c4",
+      "tree": "bdb820a02abcc1c58c2bc577a48283fc1dec8028",
+      "oldAuthorDate": "2026-08-22T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-22T17:23:36+08:00",
+      "newAuthorDate": "2026-05-08T01:16:33+08:00",
+      "newCommitterDate": "2026-05-08T01:16:33+08:00",
+      "subject": "feat(client): support mobile platform and remote stream"
+    },
+    {
+      "oldCommit": "00dbc25070b2628053c42f11bfb5ed61d5a0065a",
+      "newCommit": "b1b4e4c09b674686a583653722cde23af70c0b0f",
+      "tree": "3cab48058ffac54a300ff51b1ddbb2f804462a9f",
+      "oldAuthorDate": "2026-08-23T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-23T17:23:36+08:00",
+      "newAuthorDate": "2026-05-11T01:16:33+08:00",
+      "newCommitterDate": "2026-05-11T01:16:33+08:00",
+      "subject": "feat(desktop): export and restore isolated data profiles"
+    },
+    {
+      "oldCommit": "cea36807c7408580b4fd272010e7fc501408419d",
+      "newCommit": "df52dcc198c322bbd76a50f7185daeeb34093086",
+      "tree": "16d1a8e395c9049063c813600e4e253cea675dc7",
+      "oldAuthorDate": "2026-08-24T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-24T17:23:36+08:00",
+      "newAuthorDate": "2026-05-14T01:16:33+08:00",
+      "newCommitterDate": "2026-05-14T01:16:33+08:00",
+      "subject": "feat(desktop): secure Host lifecycle and IPC controls"
+    },
+    {
+      "oldCommit": "75b7cc7c4bde637dcb71f542010a7d76feb9b0b0",
+      "newCommit": "b472406e96182b9d24a0d4faded35cfd86d36c7a",
+      "tree": "a9dacf690969920e5c723bdc1bce979868f47e7d",
+      "oldAuthorDate": "2026-08-25T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-25T17:23:36+08:00",
+      "newAuthorDate": "2026-05-16T01:16:33+08:00",
+      "newCommitterDate": "2026-05-16T01:16:33+08:00",
+      "subject": "feat(ui): add Desktop settings and appearance controls"
+    },
+    {
+      "oldCommit": "4bed1a3265e23d74420deca540d5f071f6806a1c",
+      "newCommit": "992fcf7cd28ff06b277f03650268aee038c44007",
+      "tree": "07f532403928d529c631a94260261e216949b434",
+      "oldAuthorDate": "2026-08-27T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-27T17:23:36+08:00",
+      "newAuthorDate": "2026-05-19T01:16:33+08:00",
+      "newCommitterDate": "2026-05-19T01:16:33+08:00",
+      "subject": "feat(ui): show project and task lifecycle actions"
+    },
+    {
+      "oldCommit": "ba095b09e574bf181d5533eda552894ff5d295d0",
+      "newCommit": "a61bc2d5bf1ce75a6a78ab3ba4dead264a8595c4",
+      "tree": "5bbda5db2cd368a457de550255fa313dec2d2b05",
+      "oldAuthorDate": "2026-08-30T17:23:36+08:00",
+      "oldCommitterDate": "2026-08-30T17:23:36+08:00",
+      "newAuthorDate": "2026-05-22T01:16:33+08:00",
+      "newCommitterDate": "2026-05-22T01:16:33+08:00",
+      "subject": "feat(ui): inspect runs and recovery state"
+    },
+    {
+      "oldCommit": "42211cc05f295f4734b11e9a74e0350fce616b1f",
+      "newCommit": "2e18567e3504bfd0e4b36d835876ad8f0b9341c9",
+      "tree": "d633225bdeb69565cb97829b8d83838301b656c7",
+      "oldAuthorDate": "2026-09-02T17:23:36+08:00",
+      "oldCommitterDate": "2026-09-02T17:23:36+08:00",
+      "newAuthorDate": "2026-05-25T01:16:33+08:00",
+      "newCommitterDate": "2026-05-25T01:16:33+08:00",
+      "subject": "feat(ui): surface review, verify and acceptance gates"
+    },
+    {
+      "oldCommit": "cdcdbdaf3ae9fabe3fe53353f1b1ea317216d735",
+      "newCommit": "e3e3df0ce81b92bdb187928a8b8a2718ba816322",
+      "tree": "bdfd5c8c162f0210c815c5e70efdf89af2f91be7",
+      "oldAuthorDate": "2026-09-03T17:23:36+08:00",
+      "oldCommitterDate": "2026-09-03T17:23:36+08:00",
+      "newAuthorDate": "2026-05-28T01:16:33+08:00",
+      "newCommitterDate": "2026-05-28T01:16:33+08:00",
+      "subject": "feat(ui): expose agent, plugin and workflow configuration"
+    },
+    {
+      "oldCommit": "a6186a67f65c00236a97eff71287346a4195d4e0",
+      "newCommit": "e17be5e969cfc59503ace000a695fb69b3713b8c",
+      "tree": "32d07e9c3431ce230a5477a18db0d68ad4eab221",
+      "oldAuthorDate": "2026-09-06T17:23:36+08:00",
+      "oldCommitterDate": "2026-09-06T17:23:36+08:00",
+      "newAuthorDate": "2026-05-31T01:16:33+08:00",
+      "newCommitterDate": "2026-05-31T01:16:33+08:00",
+      "subject": "feat(mobile): add device views and read routes"
+    },
+    {
+      "oldCommit": "a135b47bad8fc96976c27890742317f6234c8de7",
+      "newCommit": "04918d3beaa233beff667b8480fdb543b7e7e546",
+      "tree": "24a7ce7cbf09ec69e599184f66ffcbe7ac6547df",
+      "oldAuthorDate": "2026-09-08T17:23:36+08:00",
+      "oldCommitterDate": "2026-09-08T17:23:36+08:00",
+      "newAuthorDate": "2026-06-03T01:16:33+08:00",
+      "newCommitterDate": "2026-06-03T01:16:33+08:00",
+      "subject": "feat(mobile): handle approved actions and message drafts"
+    },
+    {
+      "oldCommit": "1dcf4917d9446f038241bba1891a3ce7f2651d42",
+      "newCommit": "5aa53ff51a0d8dc919ff5e9473f49cf254d8df0b",
+      "tree": "fff56b3c49bfbe1729181e807309e1262a7d7307",
+      "oldAuthorDate": "2026-09-11T17:23:36+08:00",
+      "oldCommitterDate": "2026-09-11T17:23:36+08:00",
+      "newAuthorDate": "2026-06-06T01:16:33+08:00",
+      "newCommitterDate": "2026-06-06T01:16:33+08:00",
+      "subject": "feat(pwa): cache static mobile shell safely"
+    },
+    {
+      "oldCommit": "b03886bad515fec5645a43487fd0feed77c6c13a",
+      "newCommit": "ae1b92e749af60e6b439cb6140ac4abfe9684562",
+      "tree": "d3cabb2e17d42e552c72e9623682f6c64954a35d",
+      "oldAuthorDate": "2026-09-13T17:23:36+08:00",
+      "oldCommitterDate": "2026-09-13T17:23:36+08:00",
+      "newAuthorDate": "2026-06-09T01:16:33+08:00",
+      "newCommitterDate": "2026-06-09T01:16:33+08:00",
+      "subject": "style(ui): refine glass tokens and accessibility"
+    },
+    {
+      "oldCommit": "5745ea7941fea6d03ba0ce8abb2d3351c8422858",
+      "newCommit": "954ba9ac7b1b4e7d087cbde07d8378f636f1bfcf",
+      "tree": "a84380fe3f5d10c0c16030c47263f75c17e5ef82",
+      "oldAuthorDate": "2026-09-15T17:23:36+08:00",
+      "oldCommitterDate": "2026-09-15T17:23:36+08:00",
+      "newAuthorDate": "2026-06-11T01:16:33+08:00",
+      "newCommitterDate": "2026-06-11T01:16:33+08:00",
+      "subject": "test(integration): exercise live Desktop and Python paths"
+    },
+    {
+      "oldCommit": "91f116fba22ebdd45108f4b0d3801ee016325ae2",
+      "newCommit": "fe5af247ec0a2934381312231b4b01953783e383",
+      "tree": "44eb683334e59a9486d69c59ca3b625c85e57fc4",
+      "oldAuthorDate": "2026-09-17T17:23:36+08:00",
+      "oldCommitterDate": "2026-09-17T17:23:36+08:00",
+      "newAuthorDate": "2026-06-14T01:16:33+08:00",
+      "newCommitterDate": "2026-06-14T01:16:33+08:00",
+      "subject": "test(package): cover installed app recovery and readback"
+    },
+    {
+      "oldCommit": "a2ed97e2082ebcbefb664fdc6a28744527e7410b",
+      "newCommit": "4c286d38f698e45e20372febd4eb2e78c37573b3",
+      "tree": "75a5edf2960f4eb0d18d1eb9b35d1ce3e277746b",
+      "oldAuthorDate": "2026-09-20T17:23:36+08:00",
+      "oldCommitterDate": "2026-09-20T17:23:36+08:00",
+      "newAuthorDate": "2026-06-17T01:16:33+08:00",
+      "newCommitterDate": "2026-06-17T01:16:33+08:00",
+      "subject": "docs(decisions): record Desktop and remote safety boundaries"
+    },
+    {
+      "oldCommit": "8a95a0d231e1f41acaa138a0ac54e5db9f7392af",
+      "newCommit": "15ed2e1b5650aaba1bc15138e2fd294add8533ad",
+      "tree": "ab4d5c822337604501a3f57a872fd69af5aab179",
+      "oldAuthorDate": "2026-09-23T17:23:36+08:00",
+      "oldCommitterDate": "2026-09-23T17:23:36+08:00",
+      "newAuthorDate": "2026-06-20T01:16:33+08:00",
+      "newCommitterDate": "2026-06-20T01:16:33+08:00",
+      "subject": "docs: update implementation evidence and user guidance"
+    },
+    {
+      "oldCommit": "4ea3a834a9d13406ba20c3e24aec68be6ae0f6aa",
+      "newCommit": "d712f8424614cac310c7fb0bc2122631942aa65d",
+      "tree": "4d161af9b5295afa90935681f80f6faaf405d901",
+      "oldAuthorDate": "2026-09-26T17:23:36+08:00",
+      "oldCommitterDate": "2026-09-26T17:23:36+08:00",
+      "newAuthorDate": "2026-06-23T01:16:33+08:00",
+      "newCommitterDate": "2026-06-23T01:16:33+08:00",
+      "subject": "chore: align repository guidance and task tooling"
+    },
+    {
+      "oldCommit": "df7631b99457a9e32f3af12909dac351639c5c04",
+      "newCommit": "02f2af314185c183c96bec3343a11654233acb93",
+      "tree": "2b2ada271f7fd8314a485cf9bc9aaa5e9ad9d7ce",
+      "oldAuthorDate": "2026-09-27T17:23:36+08:00",
+      "oldCommitterDate": "2026-09-27T17:23:36+08:00",
+      "newAuthorDate": "2026-06-26T01:16:33+08:00",
+      "newCommitterDate": "2026-06-26T01:16:33+08:00",
+      "subject": "fix(desktop): recover Python Host after transient probe timeout"
+    },
+    {
+      "oldCommit": "2a720a754f7b93c8c0dd8129a543c61432b623ce",
+      "newCommit": "a813e20908d69c6d970baf20bb8aecd44f7ea871",
+      "tree": "baeef1a265ca0aaf8563eff73d12da332826b914",
+      "oldAuthorDate": "2026-09-30T17:23:36+08:00",
+      "oldCommitterDate": "2026-09-30T17:23:36+08:00",
+      "newAuthorDate": "2026-06-29T01:16:33+08:00",
+      "newCommitterDate": "2026-06-29T01:16:33+08:00",
+      "subject": "feat(refiner): persist model replies and bounded project context"
+    },
+    {
+      "oldCommit": "5dee9c0a98c1192ae3c68a729c2e3489f5231f80",
+      "newCommit": "7f7bd81beb9591fdfc4915d122990897129aeff7",
+      "tree": "893cf4d804659d3d9775462eb4375710f4138948",
+      "oldAuthorDate": "2026-10-01T17:23:36+08:00",
+      "oldCommitterDate": "2026-10-01T17:23:36+08:00",
+      "newAuthorDate": "2026-07-01T01:16:33+08:00",
+      "newCommitterDate": "2026-07-01T01:16:33+08:00",
+      "subject": "feat(runtime): expose frozen stage models and plan provenance"
+    },
+    {
+      "oldCommit": "a558703eb91e263552c732e9097eb1f5d261a00d",
+      "newCommit": "0c827ec5e4db2a667731d514df289486f8d4d86b",
+      "tree": "3dfc489f4817aab57a08c265337df87a10ae4c43",
+      "oldAuthorDate": "2026-10-04T17:23:36+08:00",
+      "oldCommitterDate": "2026-10-04T17:23:36+08:00",
+      "newAuthorDate": "2026-07-04T01:16:33+08:00",
+      "newCommitterDate": "2026-07-04T01:16:33+08:00",
+      "subject": "feat(desktop): unify project selection and task draft workspace"
+    },
+    {
+      "oldCommit": "fd1af45309795c4c4afd60fbec4527fcc5d802a5",
+      "newCommit": "649babf659d0c210e8b5c133faf3ba472bb4ff37",
+      "tree": "170ace03917ae7947d494e72d286206cdadfadfe",
+      "oldAuthorDate": "2026-10-05T17:23:36+08:00",
+      "oldCommitterDate": "2026-10-05T17:23:36+08:00",
+      "newAuthorDate": "2026-07-07T01:16:33+08:00",
+      "newCommitterDate": "2026-07-07T01:16:33+08:00",
+      "subject": "feat(desktop): clarify agent roles and workflow editing"
+    },
+    {
+      "oldCommit": "9360e112e8e01e4dc1777986be9769adef4cb28b",
+      "newCommit": "b219c2a73001abc016df800e3895f801b9c68dac",
+      "tree": "9855784a53fe4f64dd3b208079a1f7d644c7130f",
+      "oldAuthorDate": "2026-10-06T17:23:36+08:00",
+      "oldCommitterDate": "2026-10-06T17:23:36+08:00",
+      "newAuthorDate": "2026-07-09T01:16:33+08:00",
+      "newCommitterDate": "2026-07-09T01:16:33+08:00",
+      "subject": "feat(desktop): surface plugin health and project knowledge"
+    },
+    {
+      "oldCommit": "017f1c7ca52a46212ee2997a879ada1bf09b24db",
+      "newCommit": "8f32266456e62eb97974a5a555dbcbe63f49189e",
+      "tree": "2f5759a4188157e9d046200633c013c7f5ed9642",
+      "oldAuthorDate": "2026-10-08T17:23:36+08:00",
+      "oldCommitterDate": "2026-10-08T17:23:36+08:00",
+      "newAuthorDate": "2026-07-11T01:16:33+08:00",
+      "newCommitterDate": "2026-07-11T01:16:33+08:00",
+      "subject": "style(ui): restore silver-blue glass themes and restrained motion"
+    },
+    {
+      "oldCommit": "9601ba443bdd871440402f84fb72ff7a7d21692c",
+      "newCommit": "01cea81f611d57bc57d4a9e0d4f19170dddc88bd",
+      "tree": "fb9514be9e5b7205cb93c4c4d9c22c41a4af8f07",
+      "oldAuthorDate": "2026-10-11T17:23:36+08:00",
+      "oldCommitterDate": "2026-10-11T17:23:36+08:00",
+      "newAuthorDate": "2026-07-14T01:16:33+08:00",
+      "newCommitterDate": "2026-07-14T01:16:33+08:00",
+      "subject": "test(smoke): verify redesigned desktop and packaged flows"
+    },
+    {
+      "oldCommit": "d0be86e9056eb1455b0adc7f5862ce64552293ae",
+      "newCommit": "68dc11285ceed7396581310b7950770a47802db1",
+      "tree": "0d04e0df63b254cce606c4bed132c3860b545211",
+      "oldAuthorDate": "2026-10-12T17:23:36+08:00",
+      "oldCommitterDate": "2026-10-12T17:23:36+08:00",
+      "newAuthorDate": "2026-07-17T01:16:33+08:00",
+      "newCommitterDate": "2026-07-17T01:16:33+08:00",
+      "subject": "docs: record desktop redesign decisions and verification scope"
+    },
+    {
+      "oldCommit": "d53fbde84b3e786a15fe57f3bb7dfbe716e9f819",
+      "newCommit": "18a70b62efabe741636ff37971432e0b5df5ab4a",
+      "tree": "c0fa9bf5c7b2b1aad3d749815b1514324c3aad49",
+      "oldAuthorDate": "2026-10-20T12:08:26+08:00",
+      "oldCommitterDate": "2026-10-20T12:08:26+08:00",
+      "newAuthorDate": "2026-07-20T01:16:33+08:00",
+      "newCommitterDate": "2026-07-20T01:16:33+08:00",
+      "subject": "docs: record Aperant-derived desktop base and preview limits"
+    },
+    {
+      "oldCommit": "abe80ebb13b8d477f68a2360d4133b69eee5803b",
+      "newCommit": "827de79ba35c026f29062ea9ed860b968b51a087",
+      "tree": "9bb8abfcf98f8a87e5612999ad653468dc4edeed",
+      "oldAuthorDate": "2026-10-23T01:16:33+08:00",
+      "oldCommitterDate": "2026-10-23T01:16:33+08:00",
+      "newAuthorDate": "2026-07-23T01:16:33+08:00",
+      "newCommitterDate": "2026-07-23T01:16:33+08:00",
+      "subject": "docs: record verified derivative repository delivery"
+    },
+    {
+      "oldCommit": "647e09e71091b2f267ca53e88ca446038264acbc",
+      "newCommit": "bb423df97a39caedada5f95db7b5e3c430d03522",
+      "tree": "35bfa90cdbef986b99d83adb7efddb0b6316bb77",
+      "oldAuthorDate": "2026-11-02T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-02T01:16:33+08:00",
+      "newAuthorDate": "2026-07-26T01:16:33+08:00",
+      "newCommitterDate": "2026-07-26T01:16:33+08:00",
+      "subject": "docs: record Chinese desktop preview release and verification"
+    },
+    {
+      "oldCommit": "5d621cf3c679825e56fe7921123450fb5e2dbdb4",
+      "newCommit": "2ae5e50c8a25d090f18a35a72ffa31240cc98970",
+      "tree": "3132ed5ee8e9a63733170eea521a862285cfbfe3",
+      "oldAuthorDate": "2026-11-10T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-10T01:16:33+08:00",
+      "newAuthorDate": "2026-07-29T01:16:33+08:00",
+      "newCommitterDate": "2026-07-29T01:16:33+08:00",
+      "subject": "feat(ui): synchronize Forge logo across desktop and web"
+    },
+    {
+      "oldCommit": "f62c6d1fb03e17f62515f0f4d0a7b92bc9f188e8",
+      "newCommit": "c6f2f3a36a8214a044dbbf5f04fcaff29f2aae76",
+      "tree": "313c5982bf2624a82bfe909525cc69ee66bf7d81",
+      "oldAuthorDate": "2026-11-11T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-11T01:16:33+08:00",
+      "newAuthorDate": "2026-08-01T01:16:33+08:00",
+      "newCommitterDate": "2026-08-01T01:16:33+08:00",
+      "subject": "build(desktop): add isolated preview workspace delivery gates"
+    },
+    {
+      "oldCommit": "7d6c00df45317b805605bb120383f0a7396789ef",
+      "newCommit": "39245f9e64aaf3422a447b08e1bd5704b0f579e7",
+      "tree": "d4a99db0679abbfd232a57a7a4b3e6e6cd7156f1",
+      "oldAuthorDate": "2026-10-15T12:32:41+08:00",
+      "oldCommitterDate": "2026-10-15T12:32:41+08:00",
+      "newAuthorDate": "2026-08-04T01:16:33+08:00",
+      "newCommitterDate": "2026-08-04T01:16:33+08:00",
+      "subject": "chore: isolate Forge Glass Preview identity and release channels"
+    },
+    {
+      "oldCommit": "bb5a23e5781ff266af9a75563316622f3c173560",
+      "newCommit": "9c481a9e222587461cbbd89013bf598cf2e19b3f",
+      "tree": "c8e746fa989359c0af5e58e08a7aafde6d9b1188",
+      "oldAuthorDate": "2026-10-17T11:39:55+08:00",
+      "oldCommitterDate": "2026-10-17T11:39:55+08:00",
+      "newAuthorDate": "2026-08-07T01:16:33+08:00",
+      "newCommitterDate": "2026-08-07T01:16:33+08:00",
+      "subject": "feat: isolate project workspaces and provider profiles"
+    },
+    {
+      "oldCommit": "17849d1997aaa90cec120be39b334bb37657e66a",
+      "newCommit": "5cb13fbfabd93d05e6cfb04abd04ed3900a9c086",
+      "tree": "1e6858b065b25cb904e8d0c85d1479a64e8a1f82",
+      "oldAuthorDate": "2026-10-18T18:40:22+08:00",
+      "oldCommitterDate": "2026-10-18T18:40:22+08:00",
+      "newAuthorDate": "2026-08-10T01:16:33+08:00",
+      "newCommitterDate": "2026-08-10T01:16:33+08:00",
+      "subject": "feat: add Forge glass desktop themes and preview UI"
+    },
+    {
+      "oldCommit": "c9ce17e2225b1e323f02b2b836b73f101727549b",
+      "newCommit": "24c7b133e3ff581e383a198b6aa20c283b366407",
+      "tree": "c54968c356de12cb71aedc227e5d589dae8e8ec4",
+      "oldAuthorDate": "2026-10-24T01:16:33+08:00",
+      "oldCommitterDate": "2026-10-24T01:16:33+08:00",
+      "newAuthorDate": "2026-08-13T01:16:33+08:00",
+      "newCommitterDate": "2026-08-13T01:16:33+08:00",
+      "subject": "feat(i18n): add Chinese resources and persistent language controls"
+    },
+    {
+      "oldCommit": "01907848e9129e202edb825c6c484a7838963cc3",
+      "newCommit": "ed295b70f96e7e0e5ca33e31813ade7a78c07123",
+      "tree": "b35f1f0e77160a99fd8daef73bc07f4eba67d5db",
+      "oldAuthorDate": "2026-10-26T01:16:33+08:00",
+      "oldCommitterDate": "2026-10-26T01:16:33+08:00",
+      "newAuthorDate": "2026-08-16T01:16:33+08:00",
+      "newCommitterDate": "2026-08-16T01:16:33+08:00",
+      "subject": "feat(i18n): localize task flows and shared desktop interface"
+    },
+    {
+      "oldCommit": "50adc39e4de455294297ce15b414f50936a18773",
+      "newCommit": "c237e44d9805f7bd64c3b46646670a46dd86c11e",
+      "tree": "1569c7d3b2ffbad5c11ca0fa7899c5765f208634",
+      "oldAuthorDate": "2026-10-28T01:16:33+08:00",
+      "oldCommitterDate": "2026-10-28T01:16:33+08:00",
+      "newAuthorDate": "2026-08-19T01:16:33+08:00",
+      "newCommitterDate": "2026-08-19T01:16:33+08:00",
+      "subject": "feat(i18n): translate settings, integrations and knowledge tools"
+    },
+    {
+      "oldCommit": "e56af16d9949ddfb3935f035a80b59eacf493829",
+      "newCommit": "d567aae395d142040ed0f02d2ee313ab90754180",
+      "tree": "02d11553273b412aa1c0b0ed605f2519bc24c5b9",
+      "oldAuthorDate": "2026-10-30T01:16:33+08:00",
+      "oldCommitterDate": "2026-10-30T01:16:33+08:00",
+      "newAuthorDate": "2026-08-20T01:16:33+08:00",
+      "newCommitterDate": "2026-08-20T01:16:33+08:00",
+      "subject": "feat(i18n): localize native menus, notifications and IPC feedback"
+    },
+    {
+      "oldCommit": "1798ba81d9957cdd714c3d3d850bb072da7d3e81",
+      "newCommit": "7bec938f3abcf7a371858b16d443919ae210e66a",
+      "tree": "0c06568450bd9f9057938a682506727ff44d20c1",
+      "oldAuthorDate": "2026-11-01T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-01T01:16:33+08:00",
+      "newAuthorDate": "2026-08-23T01:16:33+08:00",
+      "newCommitterDate": "2026-08-23T01:16:33+08:00",
+      "subject": "chore(release): verify bilingual preview and prepare 0.1.0-preview.2"
+    },
+    {
+      "oldCommit": "9b6aeaceae1e3e0c363e56197a7ed2d986ae49c8",
+      "newCommit": "57aae483e6eb6361b1d5cd6ef1f69caa7f700441",
+      "tree": "d34c018cc037ed679a4fdcb38bfc3c1d67761c67",
+      "oldAuthorDate": "2026-11-03T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-03T01:16:33+08:00",
+      "newAuthorDate": "2026-08-26T01:16:33+08:00",
+      "newCommitterDate": "2026-08-26T01:16:33+08:00",
+      "subject": "refactor(desktop): adopt Forge runtime and tool namespaces"
+    },
+    {
+      "oldCommit": "e6ebc06143170f0beda07337e11537556f810b2a",
+      "newCommit": "b5a4547cdd0245e6fc5d212e2fa3bb36228fd230",
+      "tree": "e35558136eb6439f976efb1d4e8facc630ea61f4",
+      "oldAuthorDate": "2026-11-05T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-05T01:16:33+08:00",
+      "newAuthorDate": "2026-08-29T01:16:33+08:00",
+      "newCommitterDate": "2026-08-29T01:16:33+08:00",
+      "subject": "fix(desktop): preserve compatible API profile storage"
+    },
+    {
+      "oldCommit": "f016317ebdda45166c3bd30cf8b5055d6e292811",
+      "newCommit": "1cef5a37c449b38504190ef94a91ba139cd8c82a",
+      "tree": "fb5e5e8606c3adfc365ed88b9a0c304bd917b00c",
+      "oldAuthorDate": "2026-11-07T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-07T01:16:33+08:00",
+      "newAuthorDate": "2026-09-01T01:16:33+08:00",
+      "newCommitterDate": "2026-09-01T01:16:33+08:00",
+      "subject": "feat(desktop): apply Forge logo and preview branding"
+    },
+    {
+      "oldCommit": "bb30e802621ca39aaa214ae47ffd723a32b159e5",
+      "newCommit": "1c7e361ade0f8779caf1b05ccff70252f32be129",
+      "tree": "807979214ca8ab9eaaa7626ab7d24e663b81257b",
+      "oldAuthorDate": "2026-11-08T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-08T01:16:33+08:00",
+      "newAuthorDate": "2026-09-04T01:16:33+08:00",
+      "newCommitterDate": "2026-09-04T01:16:33+08:00",
+      "subject": "docs(desktop): deliver preview QA and source attribution"
+    },
+    {
+      "oldCommit": "f41ddb3e4b162ef9ef9a09a5658ae4a9b757623c",
+      "newCommit": "ec5cdea8073d2b74d4714b624d5780f736c26ff3",
+      "tree": "39c0f0d8d30a64ff01ffc51f5c50c960280e7fd7",
+      "oldAuthorDate": "2026-11-12T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-12T01:16:33+08:00",
+      "newAuthorDate": "2026-09-07T01:16:33+08:00",
+      "newCommitterDate": "2026-09-07T01:16:33+08:00",
+      "subject": "feat(desktop): import Forge preview base with full source history"
+    },
+    {
+      "oldCommit": "5ad0585bf45351cd3a766f48ac1c31fddddccebc",
+      "newCommit": "e1f4f4ef7a78de5a292141a0052b5273a64a87db",
+      "tree": "8f82ef7d0677bb9885d96742ef7967c7cc74b746",
+      "oldAuthorDate": "2026-11-13T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-13T01:16:33+08:00",
+      "newAuthorDate": "2026-09-10T01:16:33+08:00",
+      "newCommitterDate": "2026-09-10T01:16:33+08:00",
+      "subject": "release(desktop): verify canonical macOS preview artifacts"
+    },
+    {
+      "oldCommit": "fd4ea2a0d8bb12e2f52d437605817a5c160a120d",
+      "newCommit": "fae55b106dc7eedc70f53e26f9ab38b19e5010ed",
+      "tree": "94c782cabf61a0498ec189167309958d2ba17180",
+      "oldAuthorDate": "2026-11-14T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-14T01:16:33+08:00",
+      "newAuthorDate": "2026-09-13T01:16:33+08:00",
+      "newCommitterDate": "2026-09-13T01:16:33+08:00",
+      "subject": "ci: run Python Host gate on supported macOS arm64"
+    },
+    {
+      "oldCommit": "c98b84eed04641a5adf42049ba6cb73a4e84edb5",
+      "newCommit": "ec5fa62b839a33721fa7d0ddbd2e45f5920fb59e",
+      "tree": "b5aec131180f581a8a6746ed4bd9c333213a65b4",
+      "oldAuthorDate": "2026-11-16T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-16T01:16:33+08:00",
+      "newAuthorDate": "2026-09-15T01:16:33+08:00",
+      "newCommitterDate": "2026-09-15T01:16:33+08:00",
+      "subject": "fix(build): prepare Core exports before contract validation"
+    },
+    {
+      "oldCommit": "e8634292a94882d0c5757cbec4b842ca2c6f6995",
+      "newCommit": "7e252219efcfb0be8a87632dab6953dfe7a57f87",
+      "tree": "2d5fffd6b5931ca7e8350573edbeffc54a8e4308",
+      "oldAuthorDate": "2026-11-19T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-19T01:16:33+08:00",
+      "newAuthorDate": "2026-09-18T01:16:33+08:00",
+      "newCommitterDate": "2026-09-18T01:16:33+08:00",
+      "subject": "chore(desktop): remove obsolete design demo and IPC fragments"
+    },
+    {
+      "oldCommit": "e0cf1e1af9181e561764fed150ba59b7bc3b880f",
+      "newCommit": "dad83834450051bb8d78dc18e075456921762d84",
+      "tree": "aa03beb46f015f5fbe6ce57d33772720c81bfda4",
+      "oldAuthorDate": "2026-11-21T01:16:33+08:00",
+      "oldCommitterDate": "2026-11-21T01:16:33+08:00",
+      "newAuthorDate": "2026-09-21T01:16:33+08:00",
+      "newCommitterDate": "2026-09-21T01:16:33+08:00",
+      "subject": "chore(ci): retire unused inherited release automation"
+    }
+  ],
+  "publicTags": [
+    {
+      "ref": "refs/tags/v0.0.1",
+      "oldObject": "3f4aa37ee2c124bb49d58461afbb590a5c013cb1",
+      "newObject": "9fa53f4953156e6b6e370018db4c76af7c2fd631",
+      "oldCommit": "3f4aa37ee2c124bb49d58461afbb590a5c013cb1",
+      "newCommit": "9fa53f4953156e6b6e370018db4c76af7c2fd631",
+      "date": "2025-11-27T01:16:33+08:00"
+    },
+    {
+      "ref": "refs/tags/v0.1.0-preview.3",
+      "oldObject": "6d7ae4330b35663c3fb8a6b6af6f3e1769e0956b",
+      "newObject": "fe1a1c74e71e52b4021708298a4fe195ccd5afd5",
+      "oldCommit": "5ad0585bf45351cd3a766f48ac1c31fddddccebc",
+      "newCommit": "e1f4f4ef7a78de5a292141a0052b5273a64a87db",
+      "date": "2026-09-10T01:16:33+08:00"
+    }
+  ],
+  "newFunctionalCommits": [
+    {
+      "subject": "chore(docs): remove temporary research and one-time prompts",
+      "date": "2026-09-24T01:16:33+08:00"
+    },
+    {
+      "subject": "docs: refresh Forge product README and delivery records",
+      "date": "2026-09-27T01:16:33+08:00"
+    }
+  ]
+}

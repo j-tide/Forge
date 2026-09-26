@@ -25,3 +25,15 @@ ADR 0085/0086 选择在原 Forge 仓库独立编写 Vue 桌面，并以 Aperant 
 用户要求全部源码提交、推送到 `j-tide/Forge` 并发布新版本。将已批准的衍生项目完整导入本仓库 `desktop/`，保留导入前的 Git 历史、AGPL-3.0 许可、来源、独立 npm workspace/锁文件及数据身份。兄弟仓库仅作本次导入准备来源；不强推覆盖原 Forge 历史，不移动/删除原 Python Host、apps、规格或用户数据。
 
 `desktop/` 的专用质量 CI 与原 pnpm gate 分别执行；根 `pnpm desktop:open` 打开已生成的衍生预览包。当前版本 `0.1.0-preview.3` 仅发布 macOS arm64 INTERNAL / ADHOC / UNNOTARIZED 预览及相应源码。此次归拢不把衍生 Main 业务链升级为已验收的 Python Host 集成，不解除 Windows/Intel、Claude、签名、公证和正式更新门禁。用户本轮明确授权 commit/push/prerelease；默认不自动发布规则对后续其他任务仍生效。
+
+## 2026-09-28 · 用户批准公开导入历史整理
+
+用户再次明确要求移除其他 GitHub Contributors。核查确认：公开 `main` 的 1215 条提交中，110 条是 Forge 自有开发记录，其余 1105 条全部来自同一上游导入边界。将该上游祖先改为一条明确注明来源的 vendor snapshot，而不把原作者提交改名成 Forge 作者。
+
+- Snapshot `85337af1936ea8a46fea0f026e0b2c661853953d` 的 tree 为 `c3c44dd2708574d045f2a8cbde9198315807abc9`，与原上游 `cba7a0270ec794a14ac71615bc6c48085807ede6` 完全相同。作者记录导入行为，正文明确原维护者与贡献者；许可证、版权、应用来源说明和对应源码继续保留。
+- 110 条 Forge 自有记录保留。90 条 SHA 不变；20 条因上游父链替换重新计算 SHA，作者、提交者、日期、消息和 merge 的父节点顺序不变。最新文档提交额外写入本次来源、规则和实施记录；正式应用代码没有变化。
+- 完整旧 `main` 与公开 tags 已存入本地 `output/contributors-cleanup-20260928/forge-before-contributors-cleanup.bundle`，并通过 `git bundle verify`。本地 backup refs 与旧/new SHA 映射保留，不推送备份 refs。原上游提交及其历史仍可从公开上游取得。
+- 本追加记录替代前文“本仓库公开祖先保留全部上游历史”的表示方式；前文归拢与发布描述保留为当时的历史事实。GitHub 的贡献图不等于版权或许可证归属。
+- 只以逐 ref 的旧 SHA 校验和 atomic push 更新 `main` 及受影响的 preview tag，防止覆盖并发更新。`v0.0.1` 不变，preview tag 的源码 tree 不变，现有发布资产、摘要和发布时间不变。最新日期仍为用户指定的 2026-09-27；实际整理日期为 2026-09-28。
+
+此操作仅整理公开 Git 来源表示，不改变产品架构、安全边界、数据、功能验收或发布门禁。

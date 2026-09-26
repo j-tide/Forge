@@ -7,6 +7,7 @@
 - 任务顺序与验收：`forge_spec_v1.0/planning/tasks.json`、`forge_spec_v1.0/tests/acceptance-cases.json`。
 - 用户已批准 Python Core 架构更正：仅覆盖旧蓝图中 Node/TypeScript 业务 Host 的技术选择；权威产品语义、Task/Test ID、验收与安全边界仍有效。决策见 `docs/decisions/0029-python-core-runtime-architecture.md`，实施顺序见 `docs/forge-python-core-migration-plan.md`。
 - 2026-09-27 桌面路线先后见 ADR 0085/0086：原 Forge 仓库独立编写的 Vue 界面以 Aperant 公开 2.x 对照交互，以用户磨砂玻璃视频及 `forge_glass_v1.1/design/` 对照视觉与动效；其已有实现和验收是版本限定的历史证据。用户现批准 [ADR 0087](docs/decisions/0087-aperant-derived-desktop-base.md)：未来桌面基座采用当前仓库 `desktop/` 中的（原独立兄弟仓库 `../Forge-Aperant` 归拢） Aperant `v2.8.0-beta.6` AGPL-3.0 衍生版，并继续使用 Forge 玻璃视觉。衍生版须保留上游署名、许可证及相应源码义务；不得声称 Aperant 3.0、已接入 Forge Python Host 或已完成 Forge 产品验收。
+- 2026-09-28 用户授权整理 GitHub Contributors：公开 Git 历史中的上游祖先以来源明确、源码 tree 完全相同的导入快照代替；Forge 自有提交保留，原上游历史保存在完整本地 bundle，并在 `desktop/UPSTREAM.md` 保留原提交链接。导入者署名不代表上游代码原创作者，不修改版权、许可证或历史验收结论。该记录覆盖 ADR 0087 中先前的公开上游历史保留方式。
 - 两个资料目录是只读基线。不要移动、删除或把原型 HTML 当生产入口；参考包既有测试结果不是产品测试结果。
 
 ## 开发边界
