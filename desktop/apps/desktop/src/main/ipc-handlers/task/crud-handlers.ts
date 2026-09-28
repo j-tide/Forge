@@ -749,7 +749,7 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
     async (_, taskId: string): Promise<IPCResult<{ hasChanges: boolean; worktreePath?: string; changedFileCount?: number }>> => {
       const { task, project } = findTaskAndProject(taskId);
       if (!task || !project) {
-        return { success: true, data: { hasChanges: false } };
+        return { success: false, error: nativeText('ipc.taskOrProjectNotFound') };
       }
 
       const worktreePath = findTaskWorktree(project.path, task.specId);
@@ -771,8 +771,8 @@ export function registerTaskCRUDHandlers(agentManager: AgentManager): void {
           data: { hasChanges: changedFiles > 0, worktreePath, changedFileCount: changedFiles }
         };
       } catch {
-        // On error/timeout, return false as fail-safe (don't block deletion)
-        return { success: true, data: { hasChanges: false, worktreePath } };
+        // Unknown worktree state is not evidence of a clean worktree.
+        return { success: false, error: nativeText('ipc.failedToGetWorktreeStatus') };
       }
     }
   );

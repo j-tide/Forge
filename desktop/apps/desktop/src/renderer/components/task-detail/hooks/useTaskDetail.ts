@@ -63,7 +63,10 @@ export function useTaskDetail({ task }: UseTaskDetailOptions) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteCheckError, setDeleteCheckError] = useState<string | null>(null);
+  const [deleteCheckAttempt, setDeleteCheckAttempt] = useState(0);
   const [worktreeChangesInfo, setWorktreeChangesInfo] = useState<{ hasChanges: boolean; worktreePath?: string; changedFileCount?: number } | null>(null);
+  const [deleteCheckedIdentity, setDeleteCheckedIdentity] = useState<{ taskId: string; attempt: number } | null>(null);
   const [isCheckingChanges, setIsCheckingChanges] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [worktreeStatus, setWorktreeStatus] = useState<WorktreeStatus | null>(null);
@@ -144,18 +147,35 @@ export function useTaskDetail({ task }: UseTaskDetailOptions) {
 
   // Check for uncommitted worktree changes when delete dialog opens
   useEffect(() => {
-    if (showDeleteDialog && task) {
-      setIsCheckingChanges(true);
-      window.electronAPI.checkWorktreeChanges(task.id).then((result) => {
-        if (result.success && result.data) {
+    let current = true;
+    setWorktreeChangesInfo(null);
+    setDeleteCheckedIdentity(null);
+    setDeleteCheckError(null);
+    setDeleteError(null);
+    setIsCheckingChanges(showDeleteDialog);
+    if (!showDeleteDialog) return;
+
+    const check = async () => {
+      try {
+        const result = await window.electronAPI.checkWorktreeChanges(task.id);
+        if (!current) return;
+        if (result.success && result.data && typeof result.data.hasChanges === 'boolean') {
           setWorktreeChangesInfo(result.data);
+          setDeleteCheckedIdentity({ taskId: task.id, attempt: deleteCheckAttempt });
+        } else {
+          setDeleteCheckError(typeof result.error === 'string' && result.error ? result.error : uiT('errors.deleteCheckFailed'));
         }
-        setIsCheckingChanges(false);
-      }).catch(() => setIsCheckingChanges(false));
-    } else {
-      setWorktreeChangesInfo(null);
-    }
-  }, [showDeleteDialog, task]);
+      } catch {
+        if (current) setDeleteCheckError(uiT('errors.deleteCheckFailed'));
+      } finally {
+        if (current) setIsCheckingChanges(false);
+      }
+    };
+    void check();
+    return () => { current = false; };
+  }, [showDeleteDialog, task.id, deleteCheckAttempt, uiT]);
+
+  const retryDeleteCheck = () => setDeleteCheckAttempt(attempt => attempt + 1);
 
   // Handle scroll events in logs to detect if user scrolled away from anchor
   const handleLogsScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -510,7 +530,9 @@ export function useTaskDetail({ task }: UseTaskDetailOptions) {
     showDeleteDialog,
     isDeleting,
     deleteError,
-    worktreeChangesInfo,
+    deleteCheckError,
+    retryDeleteCheck,
+    worktreeChangesInfo: deleteCheckedIdentity?.taskId === task.id && deleteCheckedIdentity.attempt === deleteCheckAttempt ? worktreeChangesInfo : null,
     isCheckingChanges,
     isEditDialogOpen,
     worktreeStatus,

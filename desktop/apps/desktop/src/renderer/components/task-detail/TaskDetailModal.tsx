@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useToast } from '../../hooks/use-toast';
@@ -81,6 +82,7 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
   const { t } = useTranslation(['tasks', 'common']);
   const { t: uiT } = useTranslation('uiTasks');
   const { toast } = useToast();
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const state = useTaskDetail({ task });
   const activeProject = useProjectStore(s => s.getActiveProject());
   const showFilesTab = isFilesTabEnabled();
@@ -142,16 +144,22 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
   };
 
   const handleDelete = async () => {
+    if (state.isDeleting || state.isCheckingChanges || state.deleteCheckError || !state.worktreeChangesInfo) return;
     state.setIsDeleting(true);
     state.setDeleteError(null);
-    const result = await deleteTask(task.id);
-    if (result.success) {
-      state.setShowDeleteDialog(false);
-      onOpenChange(false);
-    } else {
-      state.setDeleteError(result.error || uiT('errors.deleteFailed'));
+    try {
+      const result = await deleteTask(task.id);
+      if (result.success) {
+        state.setShowDeleteDialog(false);
+        onOpenChange(false);
+      } else {
+        state.setDeleteError(result.error || uiT('errors.deleteFailed'));
+      }
+    } catch {
+      state.setDeleteError(uiT('errors.deleteFailed'));
+    } finally {
+      state.setIsDeleting(false);
     }
-    state.setIsDeleting(false);
   };
 
   const handleMerge = async () => {
@@ -350,40 +358,52 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
           {/* Semi-transparent overlay - can see background content */}
           <DialogPrimitive.Overlay
             className={cn(
-              'fixed inset-0 z-50 bg-black/60',
+              'forge-glass-task-overlay fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm',
               'data-[state=open]:animate-in data-[state=closed]:animate-out',
               'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
             )}
           />
 
-          {/* Full-height centered modal content */}
+          {/* Task workspace with readable content and persistent run actions. */}
           <DialogPrimitive.Content
+            onOpenAutoFocus={() => {
+              returnFocusRef.current = document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null;
+            }}
+            onCloseAutoFocus={(event) => {
+              const target = returnFocusRef.current;
+              if (target?.isConnected) {
+                event.preventDefault();
+                target.focus();
+              }
+            }}
             className={cn(
-              'fixed left-[50%] top-4 z-50',
-              'translate-x-[-50%]',
-              'w-[95vw] max-w-5xl h-[calc(100vh-32px)]',
-              'bg-card border border-border rounded-xl',
-              'shadow-2xl overflow-hidden flex flex-col',
+              'forge-glass-task-modal fixed left-1/2 top-1/2 z-50',
+              '-translate-x-1/2 -translate-y-1/2',
+              'w-[calc(100vw-48px)] max-w-6xl h-[min(860px,calc(100dvh-48px))]',
+              'bg-card border border-border rounded-2xl',
+              'shadow-xl overflow-hidden flex flex-col',
               'data-[state=open]:animate-in data-[state=closed]:animate-out',
               'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
               'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-              'duration-200'
+              'duration-150 motion-reduce:animate-none'
             )}
           >
             {/* Header */}
-            <div className="p-5 pb-4 border-b border-border shrink-0">
+            <div className="forge-glass-task-modal-header border-b border-border px-6 py-4 shrink-0">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0 overflow-hidden">
-                  <DialogPrimitive.Title className="text-xl font-semibold leading-tight text-foreground truncate">
+                  <DialogPrimitive.Title className="text-lg font-semibold leading-tight text-foreground break-words">
                     {task.title}
                   </DialogPrimitive.Title>
                   <DialogPrimitive.Description asChild>
-                    <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
                       <Badge variant="outline" className="text-xs font-mono">
                         {task.specId}
                       </Badge>
                       {state.isStuck ? (
-                        <Badge variant="warning" className="text-xs flex items-center gap-1 animate-pulse">
+                        <Badge variant="warning" className="text-xs flex items-center gap-1">
                           <AlertTriangle className="h-3 w-3" />
                           {t('tasks:labels.stuck')}
                         </Badge>
@@ -433,7 +453,8 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="hover:bg-primary/10 hover:text-primary transition-colors"
+                    className="h-8 w-8 rounded-[10px] hover:bg-muted transition-colors"
+                    aria-label={t('tasks:kanban.editTask')}
                     onClick={() => state.setIsEditDialogOpen(true)}
                     disabled={state.isRunning && !state.isStuck}
                   >
@@ -443,7 +464,7 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="hover:bg-muted transition-colors"
+                      className="h-8 w-8 rounded-[10px] hover:bg-muted transition-colors"
                     >
                       <X className="h-5 w-5" />
                       <span className="sr-only">{t('common:buttons.close')}</span>
@@ -476,31 +497,31 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
             </div>
 
             {/* Body - Single Column with Tabs */}
-            <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="forge-glass-task-modal-body flex-1 min-h-0 overflow-hidden">
               <Tabs value={state.activeTab} onValueChange={state.setActiveTab} className="flex flex-col h-full">
-                <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent px-5 h-auto shrink-0">
+                <TabsList className="w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border bg-muted/20 px-6 py-2 h-auto shrink-0">
                   <TabsTrigger
                     value="overview"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm"
+                    className="shrink-0 rounded-lg px-3 py-2 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                   >
                     {uiT('tabs.overview')}
                   </TabsTrigger>
                   <TabsTrigger
                     value="subtasks"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm"
+                    className="shrink-0 rounded-lg px-3 py-2 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                   >
                     {uiT('tabs.subtasks', { count: task.subtasks.length })}
                   </TabsTrigger>
                   <TabsTrigger
                     value="logs"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm"
+                    className="shrink-0 rounded-lg px-3 py-2 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                   >
                     {uiT('tabs.logs')}
                   </TabsTrigger>
                   {showFilesTab && (
                     <TabsTrigger
                       value="files"
-                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm"
+                      className="shrink-0 rounded-lg px-3 py-2 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                     >
                       {t('tasks:files.tab')}
                     </TabsTrigger>
@@ -510,7 +531,7 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                 {/* Overview Tab */}
                 <TabsContent value="overview" className="flex-1 min-h-0 overflow-hidden mt-0">
                   <ScrollArea className="h-full">
-                    <div className="p-5 space-y-5 overflow-x-hidden max-w-full">
+                    <div className="p-6 space-y-5 overflow-x-hidden max-w-full">
                       {/* Metadata */}
                       <TaskMetadata task={task} />
 
@@ -593,7 +614,7 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
             </div>
 
             {/* Footer - Actions */}
-            <div className="flex items-center gap-3 px-5 py-3 border-t border-border shrink-0">
+            <div className="forge-glass-task-modal-footer flex flex-wrap items-center gap-2 px-6 py-3 border-t border-border bg-background/80 shrink-0">
               <Button
                 variant="ghost"
                 size="sm"
@@ -605,10 +626,10 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                 {t('tasks:actions.delete')}
               </Button>
               <div className="flex-1" />
-              {renderPrimaryAction()}
               <Button variant="outline" onClick={handleClose}>
                 {t('common:buttons.close')}
               </Button>
+              {renderPrimaryAction()}
             </div>
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
@@ -635,9 +656,17 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                   {t('tasks:deleteDialog.confirmMessage')} <strong className="text-foreground">"{task.title}"</strong>?
                 </p>
                 {state.isCheckingChanges && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     {t('tasks:deleteDialog.checkingChanges')}
+                  </div>
+                )}
+                {state.deleteCheckError && (
+                  <div role="alert" className="text-destructive bg-destructive/10 px-3 py-2 rounded-lg text-sm space-y-2">
+                    <p>{state.deleteCheckError}</p>
+                    <Button variant="outline" size="sm" onClick={state.retryDeleteCheck} disabled={state.isCheckingChanges}>
+                      {t('common:buttons.retry')}
+                    </Button>
                   </div>
                 )}
                 {state.worktreeChangesInfo?.hasChanges && (
@@ -655,7 +684,7 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                   {t('tasks:deleteDialog.destructiveWarning')}
                 </p>
                 {state.deleteError && (
-                  <p className="text-destructive bg-destructive/10 px-3 py-2 rounded-lg text-sm">
+                  <p role="alert" className="text-destructive bg-destructive/10 px-3 py-2 rounded-lg text-sm">
                     {state.deleteError}
                   </p>
                 )}
@@ -669,7 +698,7 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                 e.preventDefault();
                 handleDelete();
               }}
-              disabled={state.isDeleting}
+              disabled={state.isDeleting || state.isCheckingChanges || !!state.deleteCheckError || !state.worktreeChangesInfo}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {state.isDeleting ? (

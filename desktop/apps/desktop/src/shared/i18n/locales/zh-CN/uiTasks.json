@@ -136,6 +136,7 @@
     "cannotResume": "无法继续任务",
     "planLoadFailed": "无法加载实施计划。请重试或检查任务文件。",
     "deleteFailed": "无法删除任务",
+    "deleteCheckFailed": "无法检查工作区改动。请重试检查后再删除任务。",
     "mergeFailed": "无法合并变更",
     "mergeUnknown": "合并时发生未知错误",
     "discardFailed": "无法丢弃变更"

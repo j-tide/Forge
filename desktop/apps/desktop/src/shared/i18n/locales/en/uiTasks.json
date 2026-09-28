@@ -136,6 +136,7 @@
     "cannotResume": "Cannot resume task",
     "planLoadFailed": "Failed to load implementation plan. Please try again or check the task files.",
     "deleteFailed": "Failed to delete task",
+    "deleteCheckFailed": "Could not check worktree changes. Retry the check before deleting this task.",
     "mergeFailed": "Failed to merge changes",
     "mergeUnknown": "Unknown error during merge",
     "discardFailed": "Failed to discard changes"

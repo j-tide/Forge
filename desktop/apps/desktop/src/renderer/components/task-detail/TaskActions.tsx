@@ -24,6 +24,8 @@ interface TaskActionsProps {
   deleteError: string | null;
   worktreeChangesInfo: { hasChanges: boolean; worktreePath?: string; changedFileCount?: number } | null;
   isCheckingChanges: boolean;
+  deleteCheckError?: string | null;
+  onRetryDeleteCheck?: () => void;
   onStartStop: () => void;
   onRecover: () => void;
   onDelete: () => void;
@@ -41,6 +43,8 @@ export function TaskActions({
   deleteError,
   worktreeChangesInfo,
   isCheckingChanges,
+  deleteCheckError,
+  onRetryDeleteCheck,
   onStartStop,
   onRecover,
   onDelete,
@@ -137,6 +141,14 @@ export function TaskActions({
                     {t('tasks:deleteDialog.checkingChanges')}
                   </div>
                 )}
+                {deleteCheckError && (
+                  <div role="alert" className="text-destructive bg-destructive/10 px-3 py-2 rounded-lg text-sm space-y-2">
+                    <p>{deleteCheckError}</p>
+                    {onRetryDeleteCheck && <Button variant="outline" size="sm" onClick={onRetryDeleteCheck} disabled={isCheckingChanges}>
+                      {t('common:buttons.retry')}
+                    </Button>}
+                  </div>
+                )}
                 {worktreeChangesInfo?.hasChanges && (
                   <div className="bg-amber-500/10 border border-amber-500/30 px-3 py-2 rounded-lg text-sm space-y-1">
                     <p className="font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
@@ -164,9 +176,9 @@ export function TaskActions({
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
-                onDelete();
+                if (!isDeleting && !isCheckingChanges && !deleteCheckError && worktreeChangesInfo) onDelete();
               }}
-              disabled={isDeleting}
+              disabled={isDeleting || isCheckingChanges || !!deleteCheckError || !worktreeChangesInfo}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? (
