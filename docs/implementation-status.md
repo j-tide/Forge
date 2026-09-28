@@ -1,5 +1,13 @@
 # Forge 实施状态
 
+## 2026-09-28 · 开源首页重写与中英文文档
+
+按用户要求重设计根 README，并采用用户选择的「中文首页 + 英文版」。`README.md` 与新增 `README.en.md` 同步产品定位、真实截图、功能入口、安装与上手、当前状态、本地开发、仓库结构、贡献方式和文档导航。保留当前衍生桌面尚未接入 Python Host、在线任务与平台未验、预发布签名状态，以及桌面限定的 AGPL 与 Aperant 上游归属；没有新增产品验收结论。
+
+- 文档校验：两份 README 各 37 处本地路径 / 锚点有效；4 个 shell 代码块语法通过，18 条命令跨语言一致，所引用 npm / pnpm scripts 与 package.json 对应。外部链接与图片目标跨语言一致；GitHub API 实查 preview.4 为非草稿预发布，4 个下载链接与实际资产匹配。
+- 排版检查：使用 GitHub Markdown API 渲染正文，在本地 GitHub 风格预览中通过 Playwright 检查 1280px / 390px 阅读布局、图片加载、中文 → English 导航、截图折叠区与暗色图片切换。检查范围无横向页面溢出或缺失图片。预览仅有本地服务未提供 favicon 的 404，与 README 图片无关。记录及截图位于本地 `output/playwright/readme-preview/`。
+- 本轮仅修改文档；未重新运行应用 lint / typecheck / test / build、未调用模型、未变更依赖或用户数据。`git diff --check` 通过。上述记录对应文档完成时的验证；用户随后授权按功能分别提交并推送到 `origin/main`，未请求发布新版本。
+
 ## 2026-09-28 · 0.1.0-preview.4 功能提交与发布验证
 
 用户明确授权按功能提交全部当前改动、推送到 `j-tide/Forge` 并发布新预览。版本 `0.1.0-preview.4`，构建标识 `forge-0.1.0-preview.4-9864843c064e`；新提交使用实际当前日期，不再次改写历史日期或旧 tag。版本说明与下载摘要见 [preview.4](../desktop/docs/releases/0.1.0-preview.4.md)。
