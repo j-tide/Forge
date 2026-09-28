@@ -6,4 +6,4 @@
  * New code should import from './settings' instead.
  */
 
-export { AppSettingsDialog, type AppSection } from './settings';
+export { AppSettingsPage, type AppSection } from './settings';

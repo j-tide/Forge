@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
-import { Separator } from './ui/separator';
 import {
   Tooltip,
   TooltipContent,
@@ -41,6 +40,7 @@ import {
   DialogTitle
 } from './ui/dialog';
 import { cn } from '../lib/utils';
+import { shouldIgnoreNavigationShortcut } from '../lib/navigation-shortcuts';
 import {
   useProjectStore,
   removeProject,
@@ -66,6 +66,8 @@ interface SidebarProps {
   onSettingsClick: () => void;
   onNewTaskClick: () => void;
   activeView?: SidebarView;
+  isSettingsActive?: boolean;
+  isNavigationBlocked?: boolean;
   onViewChange?: (view: SidebarView) => void;
 }
 
@@ -76,7 +78,7 @@ interface NavItem {
   shortcut?: string;
 }
 
-// Base nav items always shown
+// Navigation groups are presentation only; view IDs and shortcuts stay stable.
 const baseNavItems: NavItem[] = [
   { id: 'kanban', labelKey: 'navigation:items.kanban', icon: LayoutGrid, shortcut: 'K' },
   { id: 'terminals', labelKey: 'navigation:items.terminals', icon: Terminal, shortcut: 'A' },
@@ -105,6 +107,8 @@ export function Sidebar({
   onSettingsClick,
   onNewTaskClick,
   activeView = 'kanban',
+  isSettingsActive = false,
+  isNavigationBlocked = false,
   onViewChange
 }: SidebarProps) {
   const { t } = useTranslation(['navigation', 'dialogs', 'common', 'welcome', 'uiShell']);
@@ -182,15 +186,7 @@ export function Sidebar({
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts when typing in inputs
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        e.target instanceof HTMLSelectElement ||
-        (e.target as HTMLElement)?.isContentEditable
-      ) {
-        return;
-      }
+      if (shouldIgnoreNavigationShortcut(e, { settingsActive: isSettingsActive || isNavigationBlocked })) return;
 
       // Only handle shortcuts when a project is selected
       if (!selectedProjectId) return;
@@ -211,7 +207,7 @@ export function Sidebar({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedProjectId, onViewChange, visibleNavItems]);
+  }, [selectedProjectId, onViewChange, visibleNavItems, isSettingsActive, isNavigationBlocked]);
 
   // Check git status when project changes
   useEffect(() => {
@@ -292,7 +288,7 @@ export function Sidebar({
   };
 
   const renderNavItem = (item: NavItem) => {
-    const isActive = activeView === item.id;
+    const isActive = !isSettingsActive && !isNavigationBlocked && activeView === item.id;
     const Icon = item.icon;
 
     const button = (
@@ -301,15 +297,17 @@ export function Sidebar({
         key={item.id}
         onClick={() => handleNavClick(item.id)}
         disabled={!selectedProjectId}
+        aria-label={t(item.labelKey)}
         aria-keyshortcuts={item.shortcut}
         aria-current={isActive ? 'page' : undefined}
         data-active={isActive}
         className={cn(
-          'forge-glass-sidebar-nav-item flex w-full items-center rounded-lg text-sm transition-all duration-200',
+          'forge-glass-sidebar-nav-item group flex min-h-9 w-full items-center rounded-lg text-sm transition-colors duration-150',
           'hover:bg-accent hover:text-accent-foreground',
-          'disabled:pointer-events-none disabled:opacity-50',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar',
+          'disabled:pointer-events-none disabled:opacity-40',
           isActive && 'bg-accent text-accent-foreground',
-          isCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
+          isCollapsed ? 'justify-center px-2 py-2' : 'gap-2.5 px-3 py-2'
         )}
       >
         <Icon className="h-4 w-4 shrink-0" />
@@ -317,7 +315,7 @@ export function Sidebar({
           <>
             <span className="flex-1 text-left">{t(item.labelKey)}</span>
             {item.shortcut && (
-              <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded-md border border-border bg-secondary px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
+              <kbd className="pointer-events-none hidden select-none font-mono text-[10px] text-muted-foreground/50 group-hover:text-muted-foreground sm:block">
                 {item.shortcut}
               </kbd>
             )}
@@ -348,43 +346,34 @@ export function Sidebar({
 
   return (
     <TooltipProvider>
-      <div className={cn(
-        "forge-glass-sidebar flex h-full flex-col border-r border-border bg-sidebar text-sidebar-foreground transition-all duration-300",
-        isCollapsed ? "w-16" : "w-60"
-      )} data-collapsed={isCollapsed}>
-        {/* Header with drag area - extra top padding for macOS traffic lights */}
+      <aside
+        className={cn(
+          'forge-glass-sidebar flex h-full shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground transition-[width] duration-200',
+          isCollapsed ? 'w-16' : 'w-[220px]'
+        )}
+        data-collapsed={isCollapsed}
+        aria-label={t('sections.navigation')}
+      >
         <div className={cn(
-          "forge-glass-sidebar-header electron-drag flex h-14 items-center pt-6 transition-all duration-300",
-          isCollapsed ? "justify-center px-2" : "px-4"
+          'forge-glass-sidebar-header electron-drag flex h-16 shrink-0 items-center',
+          isCollapsed ? 'justify-center gap-1 px-1' : 'justify-between gap-2 px-4',
+          window.platform?.isMacOS && 'pt-6'
         )}>
           <ForgeBrand
             showName={!isCollapsed}
             size={24}
             className="forge-glass-sidebar-brand electron-no-drag text-lg"
           />
-        </div>
-
-        <Separator className="mt-2" />
-
-        {/* Toggle button */}
-        <div className={cn(
-          "flex py-2 transition-all duration-300",
-          isCollapsed ? "justify-center px-2" : "justify-end px-3"
-        )}>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7"
+                className="electron-no-drag h-6 w-6 shrink-0 text-muted-foreground"
                 onClick={toggleSidebar}
                 aria-label={isCollapsed ? t('actions.expandSidebar') : t('actions.collapseSidebar')}
               >
-                {isCollapsed ? (
-                  <PanelLeft className="h-4 w-4" />
-                ) : (
-                  <PanelLeftClose className="h-4 w-4" />
-                )}
+                {isCollapsed ? <PanelLeft className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">
@@ -393,95 +382,83 @@ export function Sidebar({
           </Tooltip>
         </div>
 
-        <Separator />
+        <div className={cn('forge-glass-sidebar-create shrink-0 pb-4', isCollapsed ? 'px-2' : 'px-3')}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                className="forge-glass-new-task-button h-9 w-full justify-center gap-2"
+                size={isCollapsed ? 'icon' : 'default'}
+                onClick={onNewTaskClick}
+                aria-label={t('actions.newTask')}
+                disabled={!selectedProjectId || !selectedProject?.autoBuildPath}
+              >
+                <Plus className="h-4 w-4" />
+                {!isCollapsed && t('actions.newTask')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {selectedProject && !selectedProject.autoBuildPath
+                ? t('messages.initializeToCreateTasks')
+                : t('actions.newTask')}
+            </TooltipContent>
+          </Tooltip>
+        </div>
 
-        {/* Navigation */}
-        <ScrollArea className="flex-1">
-          <div className={cn("py-4 transition-all duration-300", isCollapsed ? "px-2" : "px-3")}>
-            {/* Project Section */}
-            <div>
-              {!isCollapsed && (
-                <h3 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t('sections.project')}
-                </h3>
-              )}
-              <nav className="forge-glass-sidebar-nav space-y-1">
-                {visibleNavItems.map(renderNavItem)}
-              </nav>
-            </div>
-          </div>
+        <ScrollArea className="min-h-0 flex-1">
+          <nav className={cn('forge-glass-sidebar-nav space-y-5 pb-4', isCollapsed ? 'px-2' : 'px-3')} aria-label={t('sections.navigation')}>
+            {[
+              { label: 'sections.work', ids: ['kanban', 'terminals', 'worktrees'] },
+              { label: 'sections.explore', ids: ['insights', 'roadmap', 'ideation'] },
+              { label: 'sections.project', ids: ['context', 'agent-tools', 'changelog', 'github-issues', 'github-prs', 'gitlab-issues', 'gitlab-merge-requests'] }
+            ].map((group) => (
+              <div key={group.label} className="forge-glass-sidebar-group">
+                {!isCollapsed && <h3 className="mb-1.5 px-3 text-[11px] font-medium text-muted-foreground">{t(group.label)}</h3>}
+                <div className="space-y-0.5">
+                  {visibleNavItems.filter((item) => group.ids.includes(item.id)).map(renderNavItem)}
+                </div>
+              </div>
+            ))}
+          </nav>
         </ScrollArea>
 
-        <Separator />
-
-        {/* Rate Limit Indicator - shows when Claude is rate limited */}
         <RateLimitIndicator />
-
-        {/* Update Banner - shows when app update is available */}
         <UpdateBanner />
 
-        {/* Bottom section with Settings, Help, and New Task */}
-        <div className={cn("forge-glass-sidebar-actions space-y-3 transition-all duration-300", isCollapsed ? "p-2" : "p-4")}>
-          {/* Settings and Help row */}
-          <div className={cn(
-            "flex items-center",
-            isCollapsed ? "flex-col gap-1" : "gap-2"
-          )}>
+        <div className={cn('forge-glass-sidebar-actions shrink-0 border-t border-border/60', isCollapsed ? 'p-2' : 'p-3')}>
+          <div className={cn('flex items-center', isCollapsed ? 'flex-col gap-1' : 'gap-1')}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size={isCollapsed ? "icon" : "sm"}
-                  className={isCollapsed ? "" : "flex-1 justify-start gap-2"}
+                  size={isCollapsed ? 'icon' : 'sm'}
+                  className={cn('h-9', !isCollapsed && 'flex-1 justify-start gap-2.5 px-3', isSettingsActive && 'bg-accent text-accent-foreground')}
                   onClick={onSettingsClick}
+                  aria-current={isSettingsActive ? 'page' : undefined}
                   aria-label={t('actions.settings')}
                 >
                   <Settings className="h-4 w-4" />
                   {!isCollapsed && t('actions.settings')}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side={isCollapsed ? "right" : "top"}>{t('tooltips.settings')}</TooltipContent>
+              <TooltipContent side={isCollapsed ? 'right' : 'top'}>{t('tooltips.settings')}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="h-9 w-9 text-muted-foreground"
                   onClick={() => setShowHelpDialog(true)}
                   aria-label={t('tooltips.help')}
                 >
                   <HelpCircle className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side={isCollapsed ? "right" : "top"}>{t('tooltips.help')}</TooltipContent>
+              <TooltipContent side={isCollapsed ? 'right' : 'top'}>{t('tooltips.help')}</TooltipContent>
             </Tooltip>
           </div>
-
-          {/* New Task button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                className="forge-glass-new-task-button w-full"
-                size={isCollapsed ? "icon" : "default"}
-                onClick={onNewTaskClick}
-                aria-label={t('actions.newTask')}
-                disabled={!selectedProjectId || !selectedProject?.autoBuildPath}
-              >
-                <Plus className={isCollapsed ? "h-4 w-4" : "mr-2 h-4 w-4"} />
-                {!isCollapsed && t('actions.newTask')}
-              </Button>
-            </TooltipTrigger>
-            {isCollapsed && (
-              <TooltipContent side="right">{t('actions.newTask')}</TooltipContent>
-            )}
-          </Tooltip>
-          {!isCollapsed && selectedProject && !selectedProject.autoBuildPath && (
-            <p className="mt-2 text-xs text-muted-foreground text-center">
-              {t('messages.initializeToCreateTasks')}
-            </p>
-          )}
         </div>
-      </div>
+      </aside>
 
       {/* Application information and license notice. */}
       <Dialog open={showHelpDialog} onOpenChange={setShowHelpDialog}>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FolderOpen, FolderPlus, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
@@ -13,7 +13,7 @@ import {
   DialogTitle
 } from './ui/dialog';
 import { cn } from '../lib/utils';
-import { addProject } from '../stores/project-store';
+import { addProject, useProjectStore } from '../stores/project-store';
 import type { Project } from '../../shared/types';
 
 type ModalStep = 'choose' | 'create-form';
@@ -32,13 +32,16 @@ export function AddProjectModal({ open, onOpenChange, onProjectAdded }: AddProje
   const [initGit, setInitGit] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const defaultLocation = useRef('');
+  const locationEdited = useRef(false);
 
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
       setStep('choose');
       setProjectName('');
-      setProjectLocation('');
+      locationEdited.current = false;
+      setProjectLocation(defaultLocation.current);
       setInitGit(true);
       setError(null);
     }
@@ -46,20 +49,24 @@ export function AddProjectModal({ open, onOpenChange, onProjectAdded }: AddProje
 
   // Load default location on mount
   useEffect(() => {
+    let current = true;
     const loadDefaultLocation = async () => {
       try {
         const defaultDir = await window.electronAPI.getDefaultProjectLocation();
-        if (defaultDir) {
-          setProjectLocation(defaultDir);
+        if (current && defaultDir) {
+          defaultLocation.current = defaultDir;
+          if (!locationEdited.current) setProjectLocation(defaultDir);
         }
       } catch {
         // Ignore - will just be empty
       }
     };
     loadDefaultLocation();
+    return () => { current = false; };
   }, []);
 
   const handleOpenExisting = async () => {
+    setError(null);
     try {
       const path = await window.electronAPI.selectDirectory();
       if (path) {
@@ -78,6 +85,8 @@ export function AddProjectModal({ open, onOpenChange, onProjectAdded }: AddProje
           }
           onProjectAdded?.(project, !project.autoBuildPath);
           onOpenChange(false);
+        } else {
+          setError(useProjectStore.getState().error || t('addProject.failedToOpen'));
         }
       }
     } catch (err) {
@@ -89,6 +98,7 @@ export function AddProjectModal({ open, onOpenChange, onProjectAdded }: AddProje
     try {
       const path = await window.electronAPI.selectDirectory();
       if (path) {
+        locationEdited.current = true;
         setProjectLocation(path);
       }
     } catch {
@@ -141,6 +151,8 @@ export function AddProjectModal({ open, onOpenChange, onProjectAdded }: AddProje
         }
         onProjectAdded?.(project, true); // New projects always need init
         onOpenChange(false);
+      } else {
+        setError(useProjectStore.getState().error || t('addProject.failedToCreate'));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('addProject.failedToCreate'));
@@ -247,7 +259,10 @@ export function AddProjectModal({ open, onOpenChange, onProjectAdded }: AddProje
               id="project-location"
               placeholder={t('addProject.locationPlaceholder')}
               value={projectLocation}
-              onChange={(e) => setProjectLocation(e.target.value)}
+              onChange={(e) => {
+                locationEdited.current = true;
+                setProjectLocation(e.target.value);
+              }}
               className="flex-1"
             />
             <Button variant="outline" onClick={handleSelectLocation}>

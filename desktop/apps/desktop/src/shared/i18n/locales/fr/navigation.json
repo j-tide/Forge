@@ -1,7 +1,10 @@
 {
   "sections": {
     "project": "Projet",
-    "tools": "Outils"
+    "tools": "Outils",
+    "work": "Travail",
+    "explore": "Explorer",
+    "navigation": "Navigation principale"
   },
   "items": {
     "kanban": "Tableau Kanban",

@@ -25,7 +25,9 @@
     "hideArchivedTasks": "隐藏已归档任务",
     "closeTab": "关闭标签页",
     "closeTabAriaLabel": "关闭标签页（将项目从应用中移除）",
-    "addProjectAriaLabel": "添加项目"
+    "addProjectAriaLabel": "添加项目",
+    "projectsAriaLabel": "已打开的项目",
+    "reorderProjectAriaLabel": "调整项目 {{name}} 的顺序"
   },
   "accessibility": {
     "deleteFeatureAriaLabel": "删除功能",

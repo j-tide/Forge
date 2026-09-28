@@ -1,4 +1,3 @@
-import i18n from '../../../../shared/i18n';
 import { useTranslation } from 'react-i18next';
 import type { Project, ProjectSettings as ProjectSettingsType, AutoBuildVersionInfo, ProjectEnvConfig, LinearSyncStatus, GitHubSyncStatus, GitLabSyncStatus } from '../../../../shared/types';
 import { SettingsSection } from '../SettingsSection';
@@ -79,8 +78,8 @@ export function SectionRouter({
     case 'general':
       return (
         <SettingsSection
-          title={i18n.t('uiSettings:text066')}
-          description={`Configure Auto-Build, agent model, and notifications for ${project.name}`}
+          title={t('projectSections.general.title')}
+          description={t('projectSections.general.descriptionWithProject', { projectName: project.name })}
         >
           <GeneralSettings
             project={project}

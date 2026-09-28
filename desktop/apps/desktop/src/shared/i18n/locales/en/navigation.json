@@ -1,7 +1,10 @@
 {
   "sections": {
     "project": "Project",
-    "tools": "Tools"
+    "tools": "Tools",
+    "work": "Work",
+    "explore": "Explore",
+    "navigation": "Main navigation"
   },
   "items": {
     "kanban": "Kanban Board",

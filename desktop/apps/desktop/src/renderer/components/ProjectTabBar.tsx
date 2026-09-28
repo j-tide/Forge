@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { shouldIgnoreNavigationShortcut } from '../lib/navigation-shortcuts';
 import { Button } from './ui/button';
 import { SortableProjectTab } from './SortableProjectTab';
 import { UsageIndicator } from './UsageIndicator';
@@ -17,6 +18,7 @@ interface ProjectTabBarProps {
   className?: string;
   // Control props for active tab
   onSettingsClick?: () => void;
+  isSettingsActive?: boolean;
 }
 
 export function ProjectTabBar({
@@ -26,25 +28,30 @@ export function ProjectTabBar({
   onProjectClose,
   onAddProject,
   className,
-  onSettingsClick
+  onSettingsClick,
+  isSettingsActive = false
 }: ProjectTabBarProps) {
   const { t } = useTranslation('common');
+
+  const handleTabNavigation = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!(event.target instanceof HTMLElement) || event.target.getAttribute('role') !== 'tab') return;
+    const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    const current = tabs.indexOf(event.target as HTMLButtonElement);
+    let next: number;
+    if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    tabs[next]?.focus();
+    tabs[next]?.click();
+  };
 
   // Keyboard shortcuts for tab navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Skip if in input fields (but NOT xterm's hidden textarea —
-      // xterm already passes through Cmd/Ctrl+1-9 via attachCustomKeyEventHandler)
-      const target = e.target as HTMLElement;
-      const isXtermTextarea = target.classList?.contains('xterm-helper-textarea');
-      if (
-        !isXtermTextarea &&
-        (e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        target?.isContentEditable)
-      ) {
-        return;
-      }
+      if (shouldIgnoreNavigationShortcut(e, { settingsActive: isSettingsActive, allowTerminalTextarea: true, blockInteractiveControls: false })) return;
 
       const isMod = e.metaKey || e.ctrlKey;
       if (!isMod) return;
@@ -82,7 +89,7 @@ export function ProjectTabBar({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [projects, activeProjectId, onProjectSelect, onProjectClose]);
+  }, [projects, activeProjectId, onProjectSelect, onProjectClose, isSettingsActive]);
 
   if (projects.length === 0) {
     return null;
@@ -90,11 +97,10 @@ export function ProjectTabBar({
 
   return (
     <div className={cn(
-      'forge-glass-project-tabs flex items-center border-b border-border bg-background',
-      'overflow-x-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent',
+      'forge-glass-project-tabs flex min-h-12 shrink-0 items-center gap-2 overflow-hidden border-b border-border bg-background px-3',
       className
     )}>
-      <div className="forge-glass-project-tab-list flex items-center flex-1 min-w-0">
+      <div className="forge-glass-project-tab-list flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-1.5 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent" role="tablist" aria-label={t('projectTab.projectsAriaLabel')} onKeyDown={handleTabNavigation}>
         {projects.map((project, index) => {
           const isActiveTab = activeProjectId === project.id;
           return (
@@ -116,7 +122,7 @@ export function ProjectTabBar({
         })}
       </div>
 
-      <div className="forge-glass-project-tab-status flex items-center gap-2 px-2 py-1">
+      <div className="forge-glass-project-tab-status flex shrink-0 items-center gap-2 border-l border-border/60 pl-3 py-1">
         <AuthStatusIndicator />
         <UsageIndicator />
         <Button

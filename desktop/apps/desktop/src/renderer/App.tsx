@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { MotionConfig } from 'motion/react';
+import { useAppearancePreferences } from './hooks/useAppearancePreferences';
 import { useTranslation } from 'react-i18next';
 import { Download, RefreshCw, AlertCircle } from 'lucide-react';
 import { debugLog } from '../shared/utils/debug-logger';
@@ -31,8 +33,9 @@ import { Sidebar, type SidebarView } from './components/Sidebar';
 import { KanbanBoard } from './components/KanbanBoard';
 import { TaskDetailModal } from './components/task-detail/TaskDetailModal';
 import { TaskCreationWizard } from './components/TaskCreationWizard';
-import { AppSettingsDialog, type AppSection } from './components/settings/AppSettings';
+import { AppSettingsPage, type AppSection } from './components/settings/AppSettings';
 import type { ProjectSettingsSection } from './components/settings/ProjectSettingsContent';
+import { ProjectSettingsPage } from './components/settings/ProjectSettingsPage';
 import { TerminalGrid } from './components/TerminalGrid';
 import { Roadmap } from './components/Roadmap';
 import { Context } from './components/Context';
@@ -83,6 +86,7 @@ interface ProjectTabBarWithContextProps {
   onProjectClose: (projectId: string) => void;
   onAddProject: () => void;
   onSettingsClick: () => void;
+  isSettingsActive: boolean;
 }
 
 function ProjectTabBarWithContext({
@@ -91,7 +95,8 @@ function ProjectTabBarWithContext({
   onProjectSelect,
   onProjectClose,
   onAddProject,
-  onSettingsClick
+  onSettingsClick,
+  isSettingsActive
 }: ProjectTabBarWithContextProps) {
   return (
     <ProjectTabBar
@@ -101,6 +106,7 @@ function ProjectTabBarWithContext({
       onProjectClose={onProjectClose}
       onAddProject={onAddProject}
       onSettingsClick={onSettingsClick}
+      isSettingsActive={isSettingsActive}
     />
   );
 }
@@ -127,6 +133,7 @@ export function App() {
   const reorderTabs = useProjectStore((state) => state.reorderTabs);
   const tasks = useTaskStore((state) => state.tasks);
   const settings = useSettingsStore((state) => state.settings);
+  const { reduceMotion } = useAppearancePreferences(settings);
   const settingsLoading = useSettingsStore((state) => state.isLoading);
 
   // API Profile state
@@ -138,9 +145,10 @@ export function App() {
   // UI State
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
-  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
+  const [isSettingsPageOpen, setIsSettingsPageOpen] = useState(false);
   const [settingsInitialSection, setSettingsInitialSection] = useState<AppSection | undefined>(undefined);
   const [settingsInitialProjectSection, setSettingsInitialProjectSection] = useState<ProjectSettingsSection | undefined>(undefined);
+  const [projectSettingsProjectId, setProjectSettingsProjectId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<SidebarView>('kanban');
   const [isOnboardingWizardOpen, setIsOnboardingWizardOpen] = useState(false);
   const [isVersionWarningModalOpen, setIsVersionWarningModalOpen] = useState(false);
@@ -179,6 +187,30 @@ export function App() {
   // Get tabs and selected project
   const projectTabs = getProjectTabs();
   const selectedProject = projects.find((p) => p.id === (activeProjectId || selectedProjectId));
+  const settingsProject = projects.find((project) => project.id === projectSettingsProjectId);
+  const isAnySettingsPageOpen = isSettingsPageOpen || !!settingsProject;
+
+  const openAppSettings = (section?: AppSection) => {
+    setProjectSettingsProjectId(null);
+    setSettingsInitialProjectSection(undefined);
+    setSettingsInitialSection(section);
+    setIsSettingsPageOpen(true);
+  };
+
+  const openProjectSettings = (section: ProjectSettingsSection = 'general') => {
+    if (!selectedProject) return;
+    setIsSettingsPageOpen(false);
+    setSettingsInitialSection(undefined);
+    setSettingsInitialProjectSection(section);
+    setProjectSettingsProjectId(selectedProject.id);
+  };
+
+  const closeSettings = () => {
+    setIsSettingsPageOpen(false);
+    setProjectSettingsProjectId(null);
+    setSettingsInitialSection(undefined);
+    setSettingsInitialProjectSection(undefined);
+  };
 
   // Initial load
   useEffect(() => {
@@ -341,10 +373,10 @@ export function App() {
     const handleOpenAppSettings = (event: Event) => {
       const customEvent = event as CustomEvent<AppSection>;
       const section = customEvent.detail;
-      if (section) {
-        setSettingsInitialSection(section);
-      }
-      setIsSettingsDialogOpen(true);
+      setProjectSettingsProjectId(null);
+      setSettingsInitialProjectSection(undefined);
+      setSettingsInitialSection(section);
+      setIsSettingsPageOpen(true);
     };
 
     window.addEventListener('open-app-settings', handleOpenAppSettings);
@@ -358,8 +390,10 @@ export function App() {
     // When an update is downloaded and ready to install, open settings to updates section
     const cleanupDownloaded = window.electronAPI.onAppUpdateDownloaded(() => {
       console.warn('[App] Update downloaded, opening settings to updates section');
+      setProjectSettingsProjectId(null);
+      setSettingsInitialProjectSection(undefined);
       setSettingsInitialSection('updates');
-      setIsSettingsDialogOpen(true);
+      setIsSettingsPageOpen(true);
     });
 
     return () => {
@@ -652,6 +686,7 @@ export function App() {
   };
 
   const handleProjectTabSelect = (projectId: string) => {
+    if (projectSettingsProjectId && projectSettingsProjectId !== projectId) closeSettings();
     setActiveProject(projectId);
   };
 
@@ -827,16 +862,22 @@ export function App() {
   };
 
   return (
+    <MotionConfig reducedMotion={reduceMotion ? 'always' : 'user'}>
     <ViewStateProvider>
       <TooltipProvider>
         <ProactiveSwapListener />
-      <div className="flex h-screen bg-background">
+      <div className="forge-workspace-app flex h-screen bg-background">
         {/* Sidebar */}
         <Sidebar
-          onSettingsClick={() => setIsSettingsDialogOpen(true)}
+          onSettingsClick={() => openAppSettings()}
           onNewTaskClick={() => setIsNewTaskDialogOpen(true)}
           activeView={activeView}
-          onViewChange={setActiveView}
+          isSettingsActive={isSettingsPageOpen}
+          isNavigationBlocked={isAnySettingsPageOpen}
+          onViewChange={(view) => {
+            closeSettings();
+            setActiveView(view);
+          }}
         />
 
         {/* Main content */}
@@ -856,7 +897,8 @@ export function App() {
                   onProjectSelect={handleProjectTabSelect}
                   onProjectClose={handleProjectTabClose}
                   onAddProject={handleAddProject}
-                  onSettingsClick={() => setIsSettingsDialogOpen(true)}
+                  onSettingsClick={() => openProjectSettings()}
+                  isSettingsActive={isAnySettingsPageOpen}
                 />
               </SortableContext>
 
@@ -875,11 +917,31 @@ export function App() {
           )}
 
           {/* Main content area */}
-          <main className="flex-1 overflow-hidden">
+          <main className="min-h-0 flex-1 overflow-hidden">
+            {isSettingsPageOpen && (
+              <AppSettingsPage
+                onClose={closeSettings}
+                initialSection={settingsInitialSection}
+                onRerunWizard={() => {
+                  // Reset onboarding state to trigger wizard
+                  useSettingsStore.getState().updateSettings({ onboardingCompleted: false });
+                  // Close settings dialog
+                  setIsSettingsPageOpen(false);
+                  // Open onboarding wizard
+                  setIsOnboardingWizardOpen(true);
+                }}
+              />
+
+            )}
+            {settingsProject && (
+              <ProjectSettingsPage key={settingsProject.id} project={settingsProject} initialSection={settingsInitialProjectSection} onClose={closeSettings} />
+            )}
+            <div className="h-full" hidden={isAnySettingsPageOpen} inert={isAnySettingsPageOpen}>
             {selectedProject ? (
               <>
                 {activeView === 'kanban' && (
                   <KanbanBoard
+                    projectId={selectedProject.id}
                     tasks={tasks}
                     onTaskClick={handleTaskClick}
                     onNewTaskClick={() => setIsNewTaskDialogOpen(true)}
@@ -912,8 +974,7 @@ export function App() {
                 {activeView === 'github-issues' && (activeProjectId || selectedProjectId) && (
                   <GitHubIssues
                     onOpenSettings={() => {
-                      setSettingsInitialProjectSection('github');
-                      setIsSettingsDialogOpen(true);
+                      openProjectSettings('github');
                     }}
                     onNavigateToTask={handleGoToTask}
                   />
@@ -921,8 +982,7 @@ export function App() {
                 {activeView === 'gitlab-issues' && (activeProjectId || selectedProjectId) && (
                   <GitLabIssues
                     onOpenSettings={() => {
-                      setSettingsInitialProjectSection('gitlab');
-                      setIsSettingsDialogOpen(true);
+                      openProjectSettings('gitlab');
                     }}
                     onNavigateToTask={handleGoToTask}
                   />
@@ -932,8 +992,7 @@ export function App() {
                   <div className={activeView === 'github-prs' ? 'h-full' : 'hidden'}>
                     <GitHubPRs
                       onOpenSettings={() => {
-                        setSettingsInitialProjectSection('github');
-                        setIsSettingsDialogOpen(true);
+                        openProjectSettings('github');
                       }}
                       isActive={activeView === 'github-prs'}
                     />
@@ -943,8 +1002,7 @@ export function App() {
                   <GitLabMergeRequests
                     projectId={activeProjectId || selectedProjectId!}
                     onOpenSettings={() => {
-                      setSettingsInitialProjectSection('gitlab');
-                      setIsSettingsDialogOpen(true);
+                      openProjectSettings('gitlab');
                     }}
                   />
                 )}
@@ -966,6 +1024,7 @@ export function App() {
                 }}
               />
             )}
+            </div>
           </main>
         </div>
 
@@ -986,28 +1045,6 @@ export function App() {
             onOpenChange={setIsNewTaskDialogOpen}
           />
         )}
-
-        <AppSettingsDialog
-          open={isSettingsDialogOpen}
-          onOpenChange={(open) => {
-            setIsSettingsDialogOpen(open);
-            if (!open) {
-              // Reset initial sections when dialog closes
-              setSettingsInitialSection(undefined);
-              setSettingsInitialProjectSection(undefined);
-            }
-          }}
-          initialSection={settingsInitialSection}
-          initialProjectSection={settingsInitialProjectSection}
-          onRerunWizard={() => {
-            // Reset onboarding state to trigger wizard
-            useSettingsStore.getState().updateSettings({ onboardingCompleted: false });
-            // Close settings dialog
-            setIsSettingsDialogOpen(false);
-            // Open onboarding wizard
-            setIsOnboardingWizardOpen(true);
-          }}
-        />
 
         {/* Add Project Modal */}
         <AddProjectModal
@@ -1147,8 +1184,7 @@ export function App() {
 
         {/* Auth Failure Modal - shows when Claude CLI encounters 401/auth errors */}
         <AuthFailureModal onOpenSettings={() => {
-          setSettingsInitialSection('accounts');
-          setIsSettingsDialogOpen(true);
+          openAppSettings('accounts');
         }} />
 
         {/* Version Warning Modal - one-time notice for 2.7.5 re-authentication */}
@@ -1157,8 +1193,7 @@ export function App() {
           onClose={handleVersionWarningClose}
           onOpenSettings={() => {
             handleVersionWarningClose();
-            setSettingsInitialSection('accounts');
-            setIsSettingsDialogOpen(true);
+            openAppSettings('accounts');
           }}
         />
 
@@ -1172,7 +1207,7 @@ export function App() {
           }}
           onOpenSettings={() => {
             setIsOnboardingWizardOpen(false);
-            setIsSettingsDialogOpen(true);
+            openAppSettings();
           }}
         />
 
@@ -1187,5 +1222,6 @@ export function App() {
       </div>
       </TooltipProvider>
     </ViewStateProvider>
+    </MotionConfig>
   );
 }

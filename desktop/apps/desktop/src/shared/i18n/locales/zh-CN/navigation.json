@@ -1,7 +1,10 @@
 {
   "sections": {
     "project": "项目",
-    "tools": "工具"
+    "tools": "工具",
+    "work": "工作",
+    "explore": "探索",
+    "navigation": "主导航"
   },
   "items": {
     "kanban": "任务看板",
