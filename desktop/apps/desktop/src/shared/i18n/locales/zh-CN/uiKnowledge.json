@@ -50,6 +50,12 @@
   "external": "外部来源",
   "importedFrom": "导入自 {{provider}}",
   "saveFailed": "保存路线图失败",
+  "convertFailed": "未能根据此功能创建任务，请重试。",
+  "convertInvalidProject": "返回的任务不属于当前项目，路线图未被修改。",
+  "projectChanged": "当前项目已切换，请重新打开该项目的路线图后保存。",
+  "mutationPending": "路线图变更仍在保存，请完成后再进行其他修改。",
+  "savingChanges": "正在保存路线图…",
+  "creatingTask": "正在创建任务…",
   "priority": {
     "must": "必须实现",
     "should": "应当实现",

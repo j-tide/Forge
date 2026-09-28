@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Archive } from 'lucide-react';
 import { RoadmapGenerationProgress } from './RoadmapGenerationProgress';
@@ -27,6 +27,7 @@ import type { RoadmapProps } from './roadmap/types';
 
 export function Roadmap({ projectId, onGoToTask }: RoadmapProps) {
   const { t } = useTranslation('common');
+  const { t: tk } = useTranslation('uiKnowledge');
 
   // State management
   const [selectedFeature, setSelectedFeature] = useState<RoadmapFeature | null>(null);
@@ -37,9 +38,19 @@ export function Roadmap({ projectId, onGoToTask }: RoadmapProps) {
 
   // Custom hooks
   const { roadmap, competitorAnalysis, generationStatus } = useRoadmapData(projectId);
-  const { convertFeatureToSpec } = useFeatureActions();
-  const { saveRoadmap } = useRoadmapSave(projectId);
-  const { deleteFeature } = useFeatureDelete(projectId);
+  const { convertFeatureToSpec, error: convertError, isConverting } = useFeatureActions();
+  const { saveRoadmap, error: saveError, isSaving } = useRoadmapSave(projectId);
+  const { deleteFeature, error: deleteError, isDeleting } = useFeatureDelete(projectId);
+  const mutationError = convertError || saveError || deleteError;
+  const isMutating = isConverting || isSaving || isDeleting;
+  const previousProjectRef = useRef(projectId);
+  useEffect(() => {
+    if (previousProjectRef.current === projectId) return;
+    previousProjectRef.current = projectId;
+    setSelectedFeature(null);
+    setPendingArchiveFeatureId(null);
+    setShowAddFeatureDialog(false);
+  }, [projectId]);
   const {
     competitorAnalysisDate,
     // New dialog for existing analysis
@@ -60,7 +71,7 @@ export function Roadmap({ projectId, onGoToTask }: RoadmapProps) {
 
   // Event handlers
   const handleConvertToSpec = async (feature: RoadmapFeature) => {
-    await convertFeatureToSpec(projectId, feature, selectedFeature, setSelectedFeature);
+    return convertFeatureToSpec(projectId, feature, selectedFeature, setSelectedFeature);
   };
 
   const handleGoToTask = (specId: string) => {
@@ -75,12 +86,11 @@ export function Roadmap({ projectId, onGoToTask }: RoadmapProps) {
 
   const confirmArchiveFeature = async () => {
     if (!pendingArchiveFeatureId) return;
-    try {
-      await deleteFeature(pendingArchiveFeatureId);
+    const removed = await deleteFeature(pendingArchiveFeatureId);
+    if (removed) {
       if (selectedFeature?.id === pendingArchiveFeatureId) {
         setSelectedFeature(null);
       }
-    } finally {
       setPendingArchiveFeatureId(null);
     }
   };
@@ -136,6 +146,16 @@ export function Roadmap({ projectId, onGoToTask }: RoadmapProps) {
         onRefresh={handleRefresh}
         onViewCompetitorAnalysis={() => setShowCompetitorViewer(true)}
       />
+      {mutationError && (
+        <div role="alert" className="mx-4 mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {mutationError}
+        </div>
+      )}
+      {isMutating && (
+        <p role="status" className="mx-4 mt-2 text-sm text-muted-foreground">
+          {tk(isConverting ? 'creatingTask' : 'savingChanges')}
+        </p>
+      )}
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
@@ -159,6 +179,8 @@ export function Roadmap({ projectId, onGoToTask }: RoadmapProps) {
           onConvertToSpec={handleConvertToSpec}
           onGoToTask={handleGoToTask}
           onDelete={deleteFeature}
+          mutationError={deleteError}
+          isDeleting={isDeleting}
           onArchive={handleArchiveFeature}
           competitorInsights={getCompetitorInsightsForFeature(selectedFeature, competitorAnalysis)}
         />
@@ -217,10 +239,11 @@ export function Roadmap({ projectId, onGoToTask }: RoadmapProps) {
                   : '',
               })}
             </AlertDialogDescription>
+            {deleteError && <p role="alert" className="text-sm text-destructive">{deleteError}</p>}
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('buttons.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmArchiveFeature}>
+            <AlertDialogCancel disabled={isDeleting}>{t('buttons.cancel')}</AlertDialogCancel>
+            <AlertDialogAction disabled={isDeleting} onClick={(event) => { event.preventDefault(); void confirmArchiveFeature(); }}>
               {t('roadmap.archiveFeature')}
             </AlertDialogAction>
           </AlertDialogFooter>

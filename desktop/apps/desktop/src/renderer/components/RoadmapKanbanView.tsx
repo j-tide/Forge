@@ -36,7 +36,7 @@ interface RoadmapKanbanViewProps {
   onFeatureClick: (feature: RoadmapFeature) => void;
   onConvertToSpec?: (feature: RoadmapFeature) => void;
   onGoToTask?: (specId: string) => void;
-  onSave?: () => void;
+  onSave?: (roadmap: Roadmap) => Promise<boolean>;
   onArchive?: (featureId: string) => void;
 }
 
@@ -272,11 +272,15 @@ export function RoadmapKanbanView({
     const sourceStatus = draggedFeature.status;
 
     if (sourceStatus !== targetStatus) {
-      // Moving to a different status
+      const previousRoadmap = useRoadmapStore.getState().roadmap;
+      // Let the existing state machine resolve allowed transitions, then stage
+      // that candidate until the backend confirms the save.
       updateFeatureStatus(activeFeatureId, targetStatus);
-
-      // Trigger save callback
-      onSave?.();
+      const candidate = useRoadmapStore.getState().roadmap;
+      if (onSave && previousRoadmap && candidate && candidate !== previousRoadmap) {
+        useRoadmapStore.getState().setRoadmap(previousRoadmap);
+        void onSave(candidate);
+      }
     }
     // Note: We don't support reordering within status columns for now
     // Features are displayed in their natural order within each status

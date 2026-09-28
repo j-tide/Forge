@@ -1,7 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRoadmapStore, loadRoadmap, generateRoadmap, refreshRoadmap, stopRoadmap } from '../../stores/roadmap-store';
 import { useTaskStore } from '../../stores/task-store';
-import type { RoadmapFeature } from '../../../shared/types';
+import type { Roadmap, RoadmapFeature } from '../../../shared/types';
+
+// One user mutation per project. This is UI request ownership, not a replacement
+// for the backend's persistence or run lifecycle checks.
+const pendingProjects = new Set<string>();
+
+function currentRoadmap(projectId: string): Roadmap | null {
+  const state = useRoadmapStore.getState();
+  return state.currentProjectId === projectId && state.roadmap?.projectId === projectId
+    ? state.roadmap
+    : null;
+}
 
 /**
  * Hook to manage roadmap data and loading
@@ -27,7 +39,7 @@ export function useRoadmapData(projectId: string) {
   }, [projectId]);
 
   return {
-    roadmap,
+    roadmap: roadmap?.projectId === projectId ? roadmap : null,
     competitorAnalysis,
     generationStatus,
   };
@@ -37,6 +49,10 @@ export function useRoadmapData(projectId: string) {
  * Hook to manage feature actions (convert, link, etc.)
  */
 export function useFeatureActions() {
+  const { t } = useTranslation('uiKnowledge');
+  const activeProjectId = useRoadmapStore((state) => state.currentProjectId);
+  const [failure, setFailure] = useState<{ projectId: string; message: string } | null>(null);
+  const [pendingProjectId, setPendingProjectId] = useState<string | null>(null);
   const updateFeatureLinkedSpec = useRoadmapStore((state) => state.updateFeatureLinkedSpec);
   const addTask = useTaskStore((state) => state.addTask);
 
@@ -45,9 +61,32 @@ export function useFeatureActions() {
     feature: RoadmapFeature,
     selectedFeature: RoadmapFeature | null,
     setSelectedFeature: (feature: RoadmapFeature | null) => void
-  ) => {
-    const result = await window.electronAPI.convertFeatureToSpec(projectId, feature.id);
-    if (result.success && result.data) {
+  ): Promise<boolean> => {
+    const before = currentRoadmap(projectId);
+    if (!before || !before.features.some((item) => item.id === feature.id)) {
+      setFailure({ projectId, message: t('projectChanged') });
+      return false;
+    }
+    if (pendingProjects.has(projectId)) {
+      setFailure({ projectId, message: t('mutationPending') });
+      return false;
+    }
+    pendingProjects.add(projectId);
+    setPendingProjectId(projectId);
+    setFailure(null);
+    try {
+      const result = await window.electronAPI.convertFeatureToSpec(projectId, feature.id);
+      // A background result belongs to its original project. Never add it to a
+      // newly selected project's task list or overwrite newer roadmap data.
+      if (currentRoadmap(projectId) !== before) return false;
+      if (!result.success || !result.data) {
+        setFailure({ projectId, message: result.error || t('convertFailed') });
+        return false;
+      }
+      if (result.data.projectId !== projectId) {
+        setFailure({ projectId, message: t('convertInvalidProject') });
+        return false;
+      }
       // Add the created task to the task store so it appears in the kanban immediately
       addTask(result.data);
 
@@ -60,58 +99,98 @@ export function useFeatureActions() {
           status: 'in_progress',
         });
       }
+      return true;
+    } catch (error) {
+      if (currentRoadmap(projectId) === before) {
+        setFailure({ projectId, message: error instanceof Error ? error.message : t('convertFailed') });
+      }
+      return false;
+    } finally {
+      pendingProjects.delete(projectId);
+      setPendingProjectId(null);
     }
   };
 
   return {
     convertFeatureToSpec,
+    error: failure?.projectId === activeProjectId ? failure.message : null,
+    isConverting: pendingProjectId === activeProjectId && pendingProjectId !== null,
   };
 }
 
 /**
  * Hook to save roadmap changes to disk
  *
- * NOTE: Gets roadmap from store at call time (not render time) to ensure
- * we save the latest state after Zustand updates (e.g., after drag-drop status change)
+ * A candidate is committed to the visible store only after persistence succeeds.
+ * The previous roadmap remains visible on failure or while a request is pending.
  */
 export function useRoadmapSave(projectId: string) {
-  const saveRoadmap = async () => {
-    // Get current state at call time to avoid stale closure issues
-    const roadmap = useRoadmapStore.getState().roadmap;
-    if (!roadmap) return;
-
+  const { t } = useTranslation('uiKnowledge');
+  const projectRef = useRef(projectId);
+  projectRef.current = projectId;
+  const [failure, setFailure] = useState<{ projectId: string; message: string } | null>(null);
+  const [pendingProjectId, setPendingProjectId] = useState<string | null>(null);
+  const saveRoadmap = async (candidate?: Roadmap): Promise<boolean> => {
+    const before = currentRoadmap(projectId);
+    const roadmap = candidate ?? before;
+    if (!before || !roadmap || roadmap.projectId !== projectId || roadmap.id !== before.id) {
+      setFailure({ projectId, message: t('projectChanged') });
+      return false;
+    }
+    if (pendingProjects.has(projectId)) {
+      setFailure({ projectId, message: t('mutationPending') });
+      return false;
+    }
+    pendingProjects.add(projectId);
+    setPendingProjectId(projectId);
+    setFailure(null);
     try {
-      await window.electronAPI.saveRoadmap(projectId, roadmap);
+      const result = await window.electronAPI.saveRoadmap(projectId, roadmap);
+      if (projectRef.current !== projectId || currentRoadmap(projectId) !== before) return false;
+      if (!result.success) {
+        setFailure({ projectId, message: result.error || t('saveFailed') });
+        return false;
+      }
+      useRoadmapStore.getState().setRoadmap(roadmap);
+      return true;
     } catch (error) {
-      console.error('Failed to save roadmap:', error);
+      if (projectRef.current === projectId && currentRoadmap(projectId) === before) {
+        setFailure({ projectId, message: error instanceof Error ? error.message : t('saveFailed') });
+      }
+      return false;
+    } finally {
+      pendingProjects.delete(projectId);
+      setPendingProjectId(null);
     }
   };
 
-  return { saveRoadmap };
+  return {
+    saveRoadmap,
+    error: failure?.projectId === projectId ? failure.message : null,
+    isSaving: pendingProjectId === projectId,
+  };
 }
 
 /**
  * Hook to delete features from roadmap
  */
 export function useFeatureDelete(projectId: string) {
-  const deleteFeature = useRoadmapStore((state) => state.deleteFeature);
+  const { saveRoadmap, error, isSaving } = useRoadmapSave(projectId);
 
-  const handleDeleteFeature = async (featureId: string) => {
-    // Delete from store
-    deleteFeature(featureId);
-
-    // Persist to file
-    const roadmap = useRoadmapStore.getState().roadmap;
-    if (roadmap) {
-      try {
-        await window.electronAPI.saveRoadmap(projectId, roadmap);
-      } catch (error) {
-        console.error('Failed to save roadmap after delete:', error);
-      }
-    }
+  const handleDeleteFeature = async (featureId: string): Promise<boolean> => {
+    const roadmap = currentRoadmap(projectId);
+    if (!roadmap) return saveRoadmap();
+    if (!roadmap.features.some((feature) => feature.id === featureId)) return true;
+    return saveRoadmap({
+      ...roadmap,
+      features: roadmap.features.filter((feature) => feature.id !== featureId).map((feature) => ({
+        ...feature, dependencies: feature.dependencies.filter((id) => id !== featureId),
+      })),
+      updatedAt: new Date(),
+    });
   };
 
-  return { deleteFeature: handleDeleteFeature };
+  return { deleteFeature: handleDeleteFeature, error, isDeleting: isSaving };
 }
 
 

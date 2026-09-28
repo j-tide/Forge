@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronRight,
@@ -33,24 +34,50 @@ export function FeatureDetailPanel({
   onDelete,
   onArchive,
   competitorInsights = [],
+  mutationError,
+  isDeleting = false,
 }: FeatureDetailPanelProps) {
   const { t } = useTranslation('common');
   const { t: tk } = useTranslation('uiKnowledge');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   const handleArchive = () => {
     onArchive?.(feature.id);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (onDelete) {
-      onDelete(feature.id);
-      onClose();
+      if (await onDelete(feature.id)) onClose();
     }
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 w-96 bg-card border-l border-border shadow-lg flex flex-col z-50">
+    <DialogPrimitive.Root open modal={false} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Content
+          className="fixed inset-y-0 right-0 w-96 bg-card border-l border-border shadow-lg flex flex-col z-50"
+          aria-describedby={undefined}
+          onOpenAutoFocus={(event) => {
+            returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            event.preventDefault();
+            closeButtonRef.current?.focus();
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (returnFocusRef.current?.isConnected) returnFocusRef.current.focus();
+          }}
+          onInteractOutside={(event) => event.preventDefault()}
+          onEscapeKeyDown={(event) => {
+            if (event.target instanceof HTMLElement && event.target.closest('input, textarea, [contenteditable="true"]')) {
+              event.preventDefault();
+            } else if (showDeleteConfirm) {
+              event.preventDefault();
+              if (!isDeleting) setShowDeleteConfirm(false);
+            }
+          }}
+        >
       {/* Header */}
       <div className="shrink-0 p-4 border-b border-border electron-no-drag">
         <div className="flex items-start justify-between gap-2">
@@ -66,7 +93,9 @@ export function FeatureDetailPanel({
                 {tk(`level.${feature.complexity}`)}
               </Badge>
             </div>
-            <h2 className="font-semibold truncate">{feature.title}</h2>
+            <DialogPrimitive.Title asChild>
+              <h2 className="font-semibold truncate">{feature.title}</h2>
+            </DialogPrimitive.Title>
           </div>
           <div className="flex items-center gap-1 shrink-0 relative z-10 pointer-events-auto">
             <Button
@@ -82,7 +111,7 @@ export function FeatureDetailPanel({
             >
               <Trash2 className="h-4 w-4" />
             </Button>
-            <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label={t('accessibility.closeFeatureDetailsAriaLabel')}>
+            <Button ref={closeButtonRef} type="button" variant="ghost" size="icon" onClick={onClose} aria-label={t('accessibility.closeFeatureDetailsAriaLabel')}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -283,16 +312,19 @@ export function FeatureDetailPanel({
               </p>
             </div>
             <div className="flex gap-2 justify-center">
-              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+              <Button variant="outline" disabled={isDeleting} onClick={() => setShowDeleteConfirm(false)}>
                 {tk('cancel')}
               </Button>
-              <Button variant="destructive" onClick={handleDelete}>
+              <Button variant="destructive" disabled={isDeleting} onClick={() => void handleDelete()}>
                 {tk('delete')}
               </Button>
             </div>
+            {mutationError && <p role="alert" className="text-sm text-destructive">{mutationError}</p>}
           </div>
         </div>
       )}
-    </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

@@ -43,6 +43,7 @@ import {
   SelectValue
 } from './ui/select';
 import { useRoadmapStore } from '../stores/roadmap-store';
+import { useRoadmapSave } from './roadmap/hooks';
 import {
   ROADMAP_PRIORITY_LABELS
 } from '../../shared/constants';
@@ -102,8 +103,9 @@ export function AddFeatureDialog({
   const [impact, setImpact] = useState<'low' | 'medium' | 'high'>('medium');
 
   // UI state
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const projectId = useRoadmapStore((state) => state.currentProjectId);
+  const { saveRoadmap, isSaving, error: saveError } = useRoadmapSave(projectId ?? '');
 
   // Store actions
   const addFeature = useRoadmapStore((state) => state.addFeature);
@@ -137,11 +139,16 @@ export function AddFeatureDialog({
       return;
     }
 
-    setIsSaving(true);
     setError(null);
 
     try {
-      // Add feature to store
+      const previousRoadmap = useRoadmapStore.getState().roadmap;
+      if (!previousRoadmap || previousRoadmap.projectId !== projectId) {
+        setError(tk('projectChanged'));
+        return;
+      }
+      // Use the existing feature ID generation, but stage the candidate until
+      // persistence succeeds. A failed add must not leave a feature on the board.
       const newFeatureId = addFeature({
         title: title.trim(),
         description: description.trim(),
@@ -156,24 +163,15 @@ export function AddFeatureDialog({
         userStories: [],
         source: { provider: 'internal' }
       });
-
-      // Persist to file via IPC
-      const roadmap = useRoadmapStore.getState().roadmap;
-      if (roadmap) {
-        // Get the project ID from the roadmap
-        const result = await window.electronAPI.saveRoadmap(roadmap.projectId, roadmap);
-        if (!result.success) {
-          throw new Error(result.error || tk('saveFailed'));
-        }
-      }
+      const candidate = useRoadmapStore.getState().roadmap;
+      useRoadmapStore.getState().setRoadmap(previousRoadmap);
+      if (!candidate || !(await saveRoadmap(candidate))) return;
 
       // Success - close dialog and notify parent
       onOpenChange(false);
       onFeatureAdded?.(newFeatureId);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('addFeature.failedToAdd'));
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -339,10 +337,10 @@ export function AddFeatureDialog({
           </div>
 
           {/* Error */}
-          {error && (
+          {(error || saveError) && (
             <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/30 p-3 text-sm text-destructive" role="alert">
               <X className="h-4 w-4 mt-0.5 shrink-0" />
-              <span>{error}</span>
+              <span>{error || saveError}</span>
             </div>
           )}
         </div>

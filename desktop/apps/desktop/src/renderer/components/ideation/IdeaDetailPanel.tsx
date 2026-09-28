@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, ExternalLink, Lightbulb, Loader2, Play, X } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -36,9 +38,29 @@ export function IdeaDetailPanel({ idea, onClose, onConvert, onGoToTask, onDismis
   const { t } = useTranslation(['common', 'uiIdeaDetails', 'uiKnowledgeIdeas']);
   const isDismissed = idea.status === 'dismissed';
   const isConverted = idea.status === 'converted';
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   return (
-    <div className="fixed inset-y-0 right-0 w-96 bg-card border-l border-border shadow-lg flex flex-col z-50">
+    <DialogPrimitive.Root open modal={false} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Content
+          className="fixed inset-y-0 right-0 w-96 bg-card border-l border-border shadow-lg flex flex-col z-50"
+          aria-describedby={undefined}
+          onOpenAutoFocus={(event) => {
+            returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            event.preventDefault();
+            closeButtonRef.current?.focus();
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (returnFocusRef.current?.isConnected) returnFocusRef.current.focus();
+          }}
+          onInteractOutside={(event) => event.preventDefault()}
+          onEscapeKeyDown={(event) => {
+            if (event.target instanceof HTMLElement && event.target.closest('input, textarea, [contenteditable="true"]')) event.preventDefault();
+          }}
+        >
       {/* Header */}
       <div className="shrink-0 p-4 border-b border-border electron-no-drag">
         <div className="flex items-start justify-between">
@@ -54,9 +76,11 @@ export function IdeaDetailPanel({ idea, onClose, onConvert, onGoToTask, onDismis
                 </Badge>
               )}
             </div>
-            <h2 className="font-semibold">{idea.title}</h2>
+            <DialogPrimitive.Title asChild>
+              <h2 className="font-semibold">{idea.title}</h2>
+            </DialogPrimitive.Title>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label={t('accessibility.closePanelAriaLabel')}>
+          <Button ref={closeButtonRef} variant="ghost" size="icon" onClick={onClose} aria-label={t('accessibility.closePanelAriaLabel')}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -120,6 +144,8 @@ export function IdeaDetailPanel({ idea, onClose, onConvert, onGoToTask, onDismis
           </Button>
         </div>
       )}
-    </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

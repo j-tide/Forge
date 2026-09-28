@@ -50,6 +50,12 @@
   "external": "External",
   "importedFrom": "Imported from {{provider}}",
   "saveFailed": "Failed to save roadmap",
+  "convertFailed": "Could not create a task from this feature. Try again.",
+  "convertInvalidProject": "The task response belongs to another project. The current roadmap was not changed.",
+  "projectChanged": "The selected project has changed. Reopen its roadmap before saving.",
+  "mutationPending": "A roadmap change is still being saved. Wait before making another change.",
+  "savingChanges": "Saving roadmap changes…",
+  "creatingTask": "Creating task…",
   "priority": {
     "must": "Must Have",
     "should": "Should Have",
