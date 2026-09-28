@@ -235,7 +235,7 @@
   "ipc.failedToListEmbeddingModels": "Failed to list embedding models",
   "ipc.noResponseBodyFromOllama": "No response body from Ollama",
   "ipc.failedToPullModel": "Failed to pull model",
-  "ipc.failedToSearchMemories": "Failed to search memories",
+  "ipc.failedToSearchMemories": "Memory search failed. Try again.",
   "ipc.failedToInsertMemory": "Failed to insert memory",
   "ipc.failedToLoadProfiles": "Failed to load profiles",
   "ipc.failedToSaveProfile": "Failed to save profile",
@@ -378,5 +378,6 @@
   "mcp.whereMissing": "System utility 'where.exe' not found. Check Windows installation.",
   "mcp.whichMissing": "System utility 'which' not found. Check system PATH configuration.",
   "mcp.commandPermissionDenied": "Permission denied checking command '{{command}}'",
-  "mcp.connectionFailed": "Connection failed"
+  "mcp.connectionFailed": "Connection failed",
+  "ipc.failedToLoadMemories": "Unable to load memories. Try again."
 }

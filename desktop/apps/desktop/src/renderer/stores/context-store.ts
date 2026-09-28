@@ -1,35 +1,28 @@
 import i18n from '../../shared/i18n';
 import { create } from 'zustand';
 import type {
-  ProjectIndex,
-  MemorySystemStatus,
-  MemorySystemState,
-  RendererMemory,
-  ContextSearchResult
+  ProjectIndex, MemorySystemStatus, MemorySystemState, RendererMemory,
+  ContextSearchResult, IPCResult
 } from '../../shared/types';
 
 interface ContextState {
-  // Project Index
+  projectId: string | null;
   projectIndex: ProjectIndex | null;
   indexLoading: boolean;
   indexError: string | null;
-
-  // Memory Status
   memoryStatus: MemorySystemStatus | null;
   memoryState: MemorySystemState | null;
   memoryLoading: boolean;
   memoryError: string | null;
-
-  // Recent Memories
   recentMemories: RendererMemory[];
   memoriesLoading: boolean;
-
-  // Search
   searchResults: ContextSearchResult[];
   searchLoading: boolean;
   searchQuery: string;
-
-  // Actions
+  searchError: string | null;
+  searchCompleted: boolean;
+  mutationError: string | null;
+  pendingMemoryIds: string[];
   setProjectIndex: (index: ProjectIndex | null) => void;
   setIndexLoading: (loading: boolean) => void;
   setIndexError: (error: string | null) => void;
@@ -45,232 +38,194 @@ interface ContextState {
   clearAll: () => void;
 }
 
+const emptyContext = () => ({
+  projectId: null as string | null,
+  projectIndex: null, indexLoading: false, indexError: null,
+  memoryStatus: null, memoryState: null, memoryLoading: false, memoryError: null,
+  recentMemories: [], memoriesLoading: false,
+  searchResults: [], searchLoading: false, searchQuery: '', searchError: null,
+  searchCompleted: false, mutationError: null, pendingMemoryIds: []
+});
+
+// IPC is not abortable. A project generation and per-resource sequence ensure
+// late replies (including their finally handlers) cannot repaint another project.
+let generation = 0;
+const requests = { index: 0, memory: 0, search: 0, mutation: 0 };
+type Resource = keyof typeof requests;
+
 export const useContextStore = create<ContextState>((set) => ({
-  // Project Index
-  projectIndex: null,
-  indexLoading: false,
-  indexError: null,
-
-  // Memory Status
-  memoryStatus: null,
-  memoryState: null,
-  memoryLoading: false,
-  memoryError: null,
-
-  // Recent Memories
-  recentMemories: [],
-  memoriesLoading: false,
-
-  // Search
-  searchResults: [],
-  searchLoading: false,
-  searchQuery: '',
-
-  // Actions
-  setProjectIndex: (index) => set({ projectIndex: index }),
-  setIndexLoading: (loading) => set({ indexLoading: loading }),
-  setIndexError: (error) => set({ indexError: error }),
-  setMemoryStatus: (status) => set({ memoryStatus: status }),
-  setMemoryState: (state) => set({ memoryState: state }),
-  setMemoryLoading: (loading) => set({ memoryLoading: loading }),
-  setMemoryError: (error) => set({ memoryError: error }),
-  setRecentMemories: (memories) => set({ recentMemories: memories }),
-  setMemoriesLoading: (loading) => set({ memoriesLoading: loading }),
-  setSearchResults: (results) => set({ searchResults: results }),
-  setSearchLoading: (loading) => set({ searchLoading: loading }),
-  setSearchQuery: (query) => set({ searchQuery: query }),
-  clearAll: () =>
-    set({
-      projectIndex: null,
-      indexLoading: false,
-      indexError: null,
-      memoryStatus: null,
-      memoryState: null,
-      memoryLoading: false,
-      memoryError: null,
-      recentMemories: [],
-      memoriesLoading: false,
-      searchResults: [],
-      searchLoading: false,
-      searchQuery: ''
-    })
+  ...emptyContext(),
+  setProjectIndex: (projectIndex) => set({ projectIndex }),
+  setIndexLoading: (indexLoading) => set({ indexLoading }),
+  setIndexError: (indexError) => set({ indexError }),
+  setMemoryStatus: (memoryStatus) => set({ memoryStatus }),
+  setMemoryState: (memoryState) => set({ memoryState }),
+  setMemoryLoading: (memoryLoading) => set({ memoryLoading }),
+  setMemoryError: (memoryError) => set({ memoryError }),
+  setRecentMemories: (recentMemories) => set({ recentMemories }),
+  setMemoriesLoading: (memoriesLoading) => set({ memoriesLoading }),
+  setSearchResults: (searchResults) => set({ searchResults }),
+  setSearchLoading: (searchLoading) => set({ searchLoading }),
+  setSearchQuery: (searchQuery) => set({ searchQuery }),
+  clearAll: () => {
+    generation++;
+    set(emptyContext());
+  }
 }));
 
-/**
- * Load project context (project index + memory status)
- */
-export async function loadProjectContext(projectId: string): Promise<void> {
-  const store = useContextStore.getState();
-  store.setIndexLoading(true);
-  store.setMemoryLoading(true);
-  store.setIndexError(null);
-  store.setMemoryError(null);
+function activateProject(projectId: string): void {
+  if (useContextStore.getState().projectId !== projectId) {
+    generation++;
+    useContextStore.setState({ ...emptyContext(), projectId });
+  }
+}
 
+function beginRequest(projectId: string, resource: Resource) {
+  activateProject(projectId);
+  const scope = generation;
+  const sequence = ++requests[resource];
+  return () => generation === scope && useContextStore.getState().projectId === projectId &&
+    requests[resource] === sequence;
+}
+
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+export async function loadProjectContext(projectId: string): Promise<void> {
+  const indexCurrent = beginRequest(projectId, 'index');
+  const memoryCurrent = beginRequest(projectId, 'memory');
+  useContextStore.setState({ indexLoading: true, memoryLoading: true, memoriesLoading: true, indexError: null, memoryError: null });
+  const fail = (message: string) => {
+    if (indexCurrent()) useContextStore.setState({ projectIndex: null, indexError: message });
+    if (memoryCurrent()) useContextStore.setState({ memoryStatus: null, memoryState: null, recentMemories: [], memoryError: message });
+  };
   try {
     const result = await window.electronAPI.getProjectContext(projectId);
     if (result.success && result.data) {
-      store.setProjectIndex(result.data.projectIndex);
-      store.setMemoryStatus(result.data.memoryStatus);
-      store.setMemoryState(result.data.memoryState);
-      store.setRecentMemories(result.data.recentMemories || []);
+      if (indexCurrent()) useContextStore.setState({ projectIndex: result.data.projectIndex });
+      if (memoryCurrent()) useContextStore.setState({
+        memoryStatus: result.data.memoryStatus, memoryState: result.data.memoryState,
+        recentMemories: result.data.recentMemories || [],
+        memoryError: result.data.error || null
+      });
     } else {
-      store.setIndexError(result.error || i18n.t('uiRuntime:stores.failedLoadContext'));
+      fail(result.error || i18n.t('uiRuntime:stores.failedLoadContext'));
     }
   } catch (error) {
-    store.setIndexError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
+    fail(errorMessage(error, i18n.t('uiRuntime:stores.failedLoadContext')));
   } finally {
-    store.setIndexLoading(false);
-    store.setMemoryLoading(false);
+    if (indexCurrent()) useContextStore.setState({ indexLoading: false });
+    if (memoryCurrent()) useContextStore.setState({ memoryLoading: false, memoriesLoading: false });
   }
 }
 
-/**
- * Refresh project index by re-running analyzer
- */
 export async function refreshProjectIndex(projectId: string): Promise<void> {
-  const store = useContextStore.getState();
-  store.setIndexLoading(true);
-  store.setIndexError(null);
-
+  const current = beginRequest(projectId, 'index');
+  useContextStore.setState({ indexLoading: true, indexError: null });
   try {
     const result = await window.electronAPI.refreshProjectIndex(projectId);
+    if (!current()) return;
     if (result.success && result.data) {
-      store.setProjectIndex(result.data);
+      useContextStore.setState({ projectIndex: result.data });
     } else {
-      store.setIndexError(result.error || i18n.t('uiRuntime:stores.failedRefreshIndex'));
+      useContextStore.setState({ indexError: result.error || i18n.t('uiRuntime:stores.failedRefreshIndex') });
     }
   } catch (error) {
-    store.setIndexError(error instanceof Error ? error.message : i18n.t('uiRuntime:stores.unknownError'));
+    if (current()) useContextStore.setState({ indexError: errorMessage(error, i18n.t('uiRuntime:stores.failedRefreshIndex')) });
   } finally {
-    store.setIndexLoading(false);
+    if (current()) useContextStore.setState({ indexLoading: false });
   }
 }
 
-/**
- * Search memories using semantic search
- */
-export async function searchMemories(
-  projectId: string,
-  query: string
-): Promise<void> {
-  const store = useContextStore.getState();
-  store.setSearchQuery(query);
-
-  if (!query.trim()) {
-    store.setSearchResults([]);
-    return;
-  }
-
-  store.setSearchLoading(true);
-
+export async function searchMemories(projectId: string, query: string): Promise<void> {
+  const current = beginRequest(projectId, 'search');
+  useContextStore.setState({ searchQuery: query, searchResults: [], searchError: null, searchCompleted: false, searchLoading: Boolean(query.trim()) });
+  if (!query.trim()) return;
   try {
     const result = await window.electronAPI.searchMemories(projectId, query);
+    if (!current()) return;
     if (result.success && result.data) {
-      store.setSearchResults(result.data);
+      useContextStore.setState({ searchResults: result.data, searchCompleted: true });
     } else {
-      store.setSearchResults([]);
+      useContextStore.setState({ searchError: result.error || i18n.t('uiKnowledgeContext:searchFailed') });
     }
-  } catch (_error) {
-    store.setSearchResults([]);
+  } catch (error) {
+    if (current()) useContextStore.setState({ searchError: errorMessage(error, i18n.t('uiKnowledgeContext:searchFailed')) });
   } finally {
-    store.setSearchLoading(false);
+    if (current()) useContextStore.setState({ searchLoading: false });
   }
 }
 
-/**
- * Load recent memories
- */
-export async function loadRecentMemories(
-  projectId: string,
-  limit: number = 20
-): Promise<void> {
-  const store = useContextStore.getState();
-  store.setMemoriesLoading(true);
-
+export async function loadRecentMemories(projectId: string, limit = 20): Promise<void> {
+  const current = beginRequest(projectId, 'memory');
+  useContextStore.setState({ memoriesLoading: true, memoryError: null });
   try {
     const result = await window.electronAPI.getRecentMemories(projectId, limit);
+    if (!current()) return;
     if (result.success && result.data) {
-      store.setRecentMemories(result.data);
+      useContextStore.setState({ recentMemories: result.data });
+    } else {
+      useContextStore.setState({ recentMemories: [], memoryError: result.error || i18n.t('uiKnowledgeContext:memoriesFailed') });
     }
-  } catch (_error) {
-    // Silently fail - memories are optional
+  } catch (error) {
+    if (current()) useContextStore.setState({ recentMemories: [], memoryError: errorMessage(error, i18n.t('uiKnowledgeContext:memoriesFailed')) });
   } finally {
-    store.setMemoriesLoading(false);
+    if (current()) useContextStore.setState({ memoryLoading: false, memoriesLoading: false });
   }
 }
 
-/**
- * Verify a memory (mark as user-verified)
- */
-export async function verifyMemory(memoryId: string): Promise<boolean> {
+async function mutateMemory(
+  memoryId: string,
+  action: () => Promise<IPCResult<void>>,
+  update: (memories: RendererMemory[]) => RendererMemory[]
+): Promise<boolean> {
+  const state = useContextStore.getState();
+  if (!state.projectId || !state.recentMemories.some((memory) => memory.id === memoryId)) {
+    useContextStore.setState({ mutationError: i18n.t('uiKnowledgeContext:memoryNotInProject') });
+    return false;
+  }
+  if (state.pendingMemoryIds.includes(memoryId)) return false;
+  const projectId = state.projectId;
+  const scope = generation;
+  const feedbackSequence = ++requests.mutation;
+  const current = () => generation === scope && useContextStore.getState().projectId === projectId;
+  useContextStore.setState({ mutationError: null, pendingMemoryIds: [...state.pendingMemoryIds, memoryId] });
   try {
-    const result = await window.electronAPI.verifyMemory(memoryId);
+    const result = await action();
+    if (!current()) return result.success;
     if (result.success) {
-      const store = useContextStore.getState();
-      store.setRecentMemories(
-        store.recentMemories.map((m) =>
-          m.id === memoryId ? { ...m, userVerified: true, needsReview: false } : m
-        )
-      );
+      useContextStore.setState((latest) => ({ recentMemories: update(latest.recentMemories) }));
+    } else if (requests.mutation === feedbackSequence) {
+      useContextStore.setState({ mutationError: result.error || i18n.t('uiKnowledgeContext:memoryUpdateFailed') });
     }
     return result.success;
-  } catch {
+  } catch (error) {
+    if (current() && requests.mutation === feedbackSequence) {
+      useContextStore.setState({ mutationError: errorMessage(error, i18n.t('uiKnowledgeContext:memoryUpdateFailed')) });
+    }
     return false;
+  } finally {
+    if (current()) useContextStore.setState((latest) => ({ pendingMemoryIds: latest.pendingMemoryIds.filter((id) => id !== memoryId) }));
   }
 }
 
-/**
- * Pin/unpin a memory
- */
-export async function pinMemory(memoryId: string, pinned: boolean): Promise<boolean> {
-  try {
-    const result = await window.electronAPI.pinMemory(memoryId, pinned);
-    if (result.success) {
-      const store = useContextStore.getState();
-      store.setRecentMemories(
-        store.recentMemories.map((m) =>
-          m.id === memoryId ? { ...m, pinned } : m
-        )
-      );
-    }
-    return result.success;
-  } catch {
-    return false;
-  }
+export function verifyMemory(memoryId: string): Promise<boolean> {
+  return mutateMemory(memoryId, () => window.electronAPI.verifyMemory(memoryId),
+    (memories) => memories.map((memory) => memory.id === memoryId ? { ...memory, userVerified: true, needsReview: false } : memory));
 }
 
-/**
- * Deprecate a memory (soft delete)
- */
-export async function deprecateMemory(memoryId: string): Promise<boolean> {
-  try {
-    const result = await window.electronAPI.deprecateMemory(memoryId);
-    if (result.success) {
-      const store = useContextStore.getState();
-      store.setRecentMemories(
-        store.recentMemories.filter((m) => m.id !== memoryId)
-      );
-    }
-    return result.success;
-  } catch {
-    return false;
-  }
+export function pinMemory(memoryId: string, pinned: boolean): Promise<boolean> {
+  return mutateMemory(memoryId, () => window.electronAPI.pinMemory(memoryId, pinned),
+    (memories) => memories.map((memory) => memory.id === memoryId ? { ...memory, pinned } : memory));
 }
 
-/**
- * Delete a memory permanently
- */
-export async function deleteMemory(memoryId: string): Promise<boolean> {
-  try {
-    const result = await window.electronAPI.deleteMemory(memoryId);
-    if (result.success) {
-      const store = useContextStore.getState();
-      store.setRecentMemories(
-        store.recentMemories.filter((m) => m.id !== memoryId)
-      );
-    }
-    return result.success;
-  } catch {
-    return false;
-  }
+export function deprecateMemory(memoryId: string): Promise<boolean> {
+  return mutateMemory(memoryId, () => window.electronAPI.deprecateMemory(memoryId),
+    (memories) => memories.filter((memory) => memory.id !== memoryId));
+}
+
+export function deleteMemory(memoryId: string): Promise<boolean> {
+  return mutateMemory(memoryId, () => window.electronAPI.deleteMemory(memoryId),
+    (memories) => memories.filter((memory) => memory.id !== memoryId));
 }

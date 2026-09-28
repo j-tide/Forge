@@ -62,9 +62,9 @@ function loadProjectIndex(projectPath: string): ProjectIndex | null {
 }
 
 /**
- * Load recent memories from the MemoryService with graceful degradation.
+ * Load recent memories while retaining a distinct unavailable state.
  */
-async function loadRecentMemories(projectId: string): Promise<RendererMemory[]> {
+async function loadRecentMemories(projectId: string): Promise<IPCResult<RendererMemory[]>> {
   try {
     const service = await getMemoryService();
     const memories = await service.search({
@@ -73,10 +73,9 @@ async function loadRecentMemories(projectId: string): Promise<RendererMemory[]> 
       sort: 'recency',
       excludeDeprecated: true,
     });
-    return memories.map(toRendererMemory);
+    return { success: true, data: memories.map(toRendererMemory) };
   } catch {
-    // Memory service unavailable — return empty list
-    return [];
+    return { success: false, error: nativeText('ipc.failedToLoadMemories') };
   }
 }
 
@@ -107,16 +106,19 @@ export function registerProjectContextHandlers(
         const memoryStatus = await buildMemoryStatus();
 
         // Load recent memories from memory service
-        const recentMemories = await loadRecentMemories(projectId);
+        const memories = await loadRecentMemories(projectId);
 
         return {
           success: true,
           data: {
             projectIndex,
-            memoryStatus,
+            memoryStatus: memories.success ? memoryStatus : {
+              ...memoryStatus, available: false, reason: memories.error
+            },
             memoryState: null,
-            recentMemories,
-            isLoading: false
+            recentMemories: memories.data || [],
+            isLoading: false,
+            ...(!memories.success ? { error: memories.error } : {})
           }
         };
       } catch (error) {

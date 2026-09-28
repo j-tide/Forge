@@ -136,5 +136,14 @@
     "trivial": "极简单",
     "small": "较小",
     "large": "较大"
-  }
+  },
+  "searchFailed": "记忆检索失败，请重试。",
+  "memoriesFailed": "无法加载记忆，请重试。",
+  "memoryUpdateFailed": "记忆更新失败，修改未保存。",
+  "memoryNotInProject": "当前项目中已找不到这条记忆，请刷新后重试。",
+  "searchingMemories": "正在检索记忆…",
+  "noSearchResults": "未找到匹配的记忆。",
+  "retryMemories": "重试",
+  "notReported": "未提供",
+  "loadingMemories": "正在加载…"
 }

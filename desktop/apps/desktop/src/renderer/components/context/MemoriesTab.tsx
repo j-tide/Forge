@@ -10,7 +10,6 @@ import {
   Bug,
   Sparkles,
   RefreshCcw,
-  BookOpen,
   BarChart2
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +31,12 @@ interface MemoriesTabProps {
   memoriesLoading: boolean;
   searchResults: Array<{ type: string; content: string; score: number }>;
   searchLoading: boolean;
+  searchError?: string | null;
+  searchCompleted?: boolean;
+  memoryError?: string | null;
+  mutationError?: string | null;
+  pendingMemoryIds?: string[];
+  onReload?: () => void;
   onSearch: (query: string) => void;
   onVerify?: (memoryId: string) => void;
   onPin?: (memoryId: string, pinned: boolean) => void;
@@ -78,6 +83,12 @@ export function MemoriesTab({
   memoriesLoading,
   searchResults,
   searchLoading,
+  searchError = null,
+  searchCompleted = false,
+  memoryError = null,
+  mutationError = null,
+  pendingMemoryIds = [],
+  onReload,
   onSearch,
   onVerify,
   onPin,
@@ -127,9 +138,7 @@ export function MemoriesTab({
   }, [recentMemories, activeFilter]);
 
   const handleSearch = () => {
-    if (localSearchQuery.trim()) {
-      onSearch(localSearchQuery);
-    }
+    if (!searchLoading && memoryStatus?.available) onSearch(localSearchQuery);
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
@@ -149,7 +158,12 @@ export function MemoriesTab({
                 <Database className="h-4 w-4" />
                 {t('memory.status.title')}
               </CardTitle>
-              {memoryStatus?.available ? (
+              {memoriesLoading ? (
+                <Badge variant="outline" className="bg-muted text-muted-foreground">
+                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                  {tk('loadingMemories')}
+                </Badge>
+              ) : memoryStatus?.available ? (
                 <Badge variant="outline" className="bg-success/10 text-success border-success/30">
                   <CheckCircle className="h-3 w-3 mr-1" />
                   {t('memory.status.connected')}
@@ -166,8 +180,8 @@ export function MemoriesTab({
             {memoryStatus?.available ? (
               <>
                 <div className="grid gap-3 sm:grid-cols-2 text-sm">
-                  <InfoItem label={t('memory.info.database')} value={memoryStatus.database || 'auto_claude_memory'} />
-                  <InfoItem label={t('memory.info.path')} value={memoryStatus.dbPath || '~/.forge-glass-preview/memories'} />
+                  <InfoItem label={t('memory.info.database')} value={memoryStatus.database || tk('notReported')} />
+                  {memoryStatus.dbPath && <InfoItem label={t('memory.info.path')} value={memoryStatus.dbPath} />}
                   {memoryStatus.embeddingProvider && (
                     <InfoItem label={t('memory.info.embedding')} value={memoryStatus.embeddingProvider} />
                   )}
@@ -276,15 +290,25 @@ export function MemoriesTab({
           </h3>
           <div className="flex gap-2">
             <Input
+              aria-label={t('memory.search.title')}
               placeholder={t('memory.search.placeholder')}
               value={localSearchQuery}
-              onChange={(e) => setLocalSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setLocalSearchQuery(e.target.value);
+                if (!e.target.value.trim()) onSearch('');
+              }}
               onKeyDown={handleSearchKeyDown}
             />
-            <Button onClick={handleSearch} disabled={searchLoading} aria-label={tk('searchMemories')}>
+            <Button onClick={handleSearch} disabled={searchLoading || !localSearchQuery.trim() || !memoryStatus?.available} aria-label={tk('searchMemories')}>
               <Search className={cn('h-4 w-4', searchLoading && 'animate-pulse')} />
             </Button>
           </div>
+
+          {searchLoading && <p role="status" className="text-sm text-muted-foreground">{tk('searchingMemories')}</p>}
+          {searchError && <p role="alert" className="text-sm text-destructive">{searchError}</p>}
+          {searchCompleted && !searchLoading && !searchError && searchResults.length === 0 && (
+            <p role="status" className="text-sm text-muted-foreground">{tk('noSearchResults')}</p>
+          )}
 
           {/* Search Results */}
           {searchResults.length > 0 && (
@@ -315,6 +339,13 @@ export function MemoriesTab({
 
         {/* Memory Browser */}
         <div className="space-y-4">
+          {memoryError && (
+            <div role="alert" className="flex items-center justify-between gap-3 text-sm text-destructive">
+              <span>{memoryError}</span>
+              {onReload && <Button variant="outline" size="sm" onClick={onReload} disabled={memoriesLoading}>{tk('retryMemories')}</Button>}
+            </div>
+          )}
+          {mutationError && <p role="alert" className="text-sm text-destructive">{mutationError}</p>}
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               {t('memory.browser.title')}
@@ -373,6 +404,7 @@ export function MemoriesTab({
           )}
 
           {!memoriesLoading &&
+            !memoryError &&
             filteredMemories.length === 0 &&
             recentMemories.length === 0 && (
               <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -382,6 +414,7 @@ export function MemoriesTab({
             )}
 
           {!memoriesLoading &&
+            !memoryError &&
             filteredMemories.length === 0 &&
             recentMemories.length > 0 && (
               <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -404,6 +437,7 @@ export function MemoriesTab({
                 <MemoryCard
                   key={memory.id}
                   memory={memory}
+                  pending={pendingMemoryIds.includes(memory.id)}
                   onVerify={onVerify}
                   onPin={onPin}
                   onDeprecate={onDeprecate}

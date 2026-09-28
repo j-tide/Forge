@@ -33,8 +33,8 @@ describe('knowledge and context localization', () => {
 
   it('translates built-in profile names without changing model configuration', () => {
     render(<I18nextProvider i18n={language}><InsightsModelSelector currentConfig={{ profileId: 'balanced', model: 'sonnet', thinkingLevel: 'medium' }} onConfigChange={() => undefined} /></I18nextProvider>);
-    expect(screen.getByRole('button', { name: '均衡' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '均衡' }).getAttribute('title')).toBe('模型：均衡');
+    expect(screen.getByRole('button', { name: '均衡 · Claude Sonnet 4.6' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '均衡 · Claude Sonnet 4.6' }).getAttribute('title')).toBe('模型：均衡 · Claude Sonnet 4.6');
   });
 
   it('has identical English and Chinese keys and preserves interpolation tokens', () => {

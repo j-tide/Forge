@@ -136,5 +136,14 @@
     "trivial": "Trivial",
     "small": "Small",
     "large": "Large"
-  }
+  },
+  "searchFailed": "Memory search failed. Try again.",
+  "memoriesFailed": "Unable to load memories. Try again.",
+  "memoryUpdateFailed": "Unable to update this memory. Your changes were not saved.",
+  "memoryNotInProject": "This memory is no longer available in the current project. Refresh and try again.",
+  "searchingMemories": "Searching memories…",
+  "noSearchResults": "No matching memories found.",
+  "retryMemories": "Retry",
+  "notReported": "Not reported",
+  "loadingMemories": "Loading…"
 }

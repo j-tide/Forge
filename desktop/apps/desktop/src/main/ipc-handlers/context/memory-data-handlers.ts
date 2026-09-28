@@ -68,8 +68,7 @@ export function registerMemoryDataHandlers(
         });
         return { success: true, data: memories.map(toRendererMemory) };
       } catch {
-        // Graceful degradation: return empty list if memory service is unavailable
-        return { success: true, data: [] };
+        return { success: false, error: nativeText('ipc.failedToLoadMemories') };
       }
     }
   );
@@ -156,8 +155,7 @@ export function registerMemoryDataHandlers(
           })),
         };
       } catch {
-        // Graceful degradation: return empty list if memory service is unavailable
-        return { success: true, data: [] };
+        return { success: false, error: nativeText('ipc.failedToSearchMemories') };
       }
     }
   );

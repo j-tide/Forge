@@ -294,7 +294,7 @@
   "ipc.failedToListOllamaModels": "无法列出 Ollama 模型",
   "ipc.failedToListEmbeddingModels": "无法列出嵌入模型",
   "ipc.failedToPullModel": "无法拉取模型",
-  "ipc.failedToSearchMemories": "无法搜索记忆",
+  "ipc.failedToSearchMemories": "记忆检索失败，请重试。",
   "ipc.failedToInsertMemory": "无法添加记忆",
   "ipc.failedToLoadProfiles": "无法加载配置",
   "ipc.failedToSaveProfile": "无法保存配置",
@@ -378,5 +378,6 @@
   "mcp.whereMissing": "找不到系统工具 where.exe，请检查 Windows 安装。",
   "mcp.whichMissing": "找不到系统工具 which，请检查系统 PATH 配置。",
   "mcp.commandPermissionDenied": "没有权限检查命令“{{command}}”",
-  "mcp.connectionFailed": "连接失败"
+  "mcp.connectionFailed": "连接失败",
+  "ipc.failedToLoadMemories": "无法加载记忆，请重试。"
 }

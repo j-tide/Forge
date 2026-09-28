@@ -26,6 +26,7 @@ import { cn } from '../../lib/utils';
 
 interface MemoryCardProps {
   memory: RendererMemory;
+  pending?: boolean;
   onVerify?: (memoryId: string) => void;
   onPin?: (memoryId: string, pinned: boolean) => void;
   onDeprecate?: (memoryId: string) => void;
@@ -201,7 +202,7 @@ function WorkflowSteps({ steps, label }: { steps: string[]; label: string }) {
   );
 }
 
-export function MemoryCard({ memory, onVerify, onPin, onDeprecate }: MemoryCardProps) {
+export function MemoryCard({ memory, pending = false, onVerify, onPin, onDeprecate }: MemoryCardProps) {
   const { t: tk } = useTranslation('uiKnowledgeContext');
   const { t } = useTranslation('common');
   const [expanded, setExpanded] = useState(false);
@@ -373,6 +374,7 @@ export function MemoryCard({ memory, onVerify, onPin, onDeprecate }: MemoryCardP
                 size="sm"
                 className="h-7 gap-1 text-xs text-muted-foreground hover:text-green-400"
                 onClick={() => onVerify(memory.id)}
+                disabled={pending}
                 title={t('memory.actions.verify')}
               >
                 <ShieldCheck className="h-3.5 w-3.5" />
@@ -388,6 +390,7 @@ export function MemoryCard({ memory, onVerify, onPin, onDeprecate }: MemoryCardP
                   memory.pinned ? 'text-accent' : 'text-muted-foreground hover:text-accent'
                 )}
                 onClick={() => onPin(memory.id, !memory.pinned)}
+                disabled={pending}
                 title={memory.pinned ? t('memory.actions.unpin') : t('memory.actions.pin')}
               >
                 <Pin className="h-3.5 w-3.5" />
@@ -400,6 +403,7 @@ export function MemoryCard({ memory, onVerify, onPin, onDeprecate }: MemoryCardP
                 size="sm"
                 className="h-7 gap-1 text-xs text-muted-foreground hover:text-destructive"
                 onClick={() => onDeprecate(memory.id)}
+                disabled={pending}
                 title={t('memory.actions.deprecate')}
               >
                 <Trash2 className="h-3.5 w-3.5" />
