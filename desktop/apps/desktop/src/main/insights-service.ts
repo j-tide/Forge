@@ -47,8 +47,8 @@ export class InsightsService extends EventEmitter {
     this.executor.on('stream-chunk', (projectId, chunk) => {
       this.emit('stream-chunk', projectId, chunk);
     });
-    this.executor.on('error', (projectId, error) => {
-      this.emit('error', projectId, error);
+    this.executor.on('error', (projectId, error, sessionId?: string) => {
+      this.emit('error', projectId, error, sessionId);
     });
     this.executor.on('sdk-rate-limit', (info) => {
       this.emit('sdk-rate-limit', info);
@@ -213,7 +213,8 @@ export class InsightsService extends EventEmitter {
         message,
         conversationHistory,
         configToUse,
-        images
+        images,
+        session.id
       );
 
       // Add assistant message to session

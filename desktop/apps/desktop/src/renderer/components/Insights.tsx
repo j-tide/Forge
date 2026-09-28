@@ -49,6 +49,9 @@ import { createThumbnail, generateImageId } from './ImageUpload';
 import { loadTasks } from '../stores/task-store';
 import { ChatHistorySidebar } from './ChatHistorySidebar';
 import { InsightsModelSelector } from './InsightsModelSelector';
+import { useSettingsStore } from '../stores/settings-store';
+import { useActiveProvider } from '../hooks/useActiveProvider';
+import { resolveInsightsModelConfig } from '../../shared/utils/insights-model-config';
 import type { InsightsChatMessage, InsightsModelConfig, TaskMetadata, ImageAttachment } from '../../shared/types';
 import {
   TASK_CATEGORY_LABELS,
@@ -102,12 +105,21 @@ interface InsightsProps {
 export function Insights({ projectId }: InsightsProps) {
   const { t: tk } = useTranslation('uiKnowledgeContext');
   const { t } = useTranslation('common');
-  const session = useInsightsStore((state) => state.session);
-  const sessions = useInsightsStore((state) => state.sessions);
-  const status = useInsightsStore((state) => state.status);
-  const streamingContent = useInsightsStore((state) => state.streamingContent);
-  const currentTool = useInsightsStore((state) => state.currentTool);
+  const storedSession = useInsightsStore((state) => state.session);
+  const session = storedSession?.projectId === projectId ? storedSession : null;
+  const storedSessions = useInsightsStore((state) => state.sessions);
+  const storedStatus = useInsightsStore((state) => state.status);
+  const storedStreamingContent = useInsightsStore((state) => state.streamingContent);
+  const storedCurrentTool = useInsightsStore((state) => state.currentTool);
   const isLoadingSessions = useInsightsStore((state) => state.isLoadingSessions);
+  const isLoadingSession = useInsightsStore((state) => state.isLoadingSession);
+  const displayedProjectId = useInsightsStore((state) => state.projectId);
+  // Hide old-project data during the render before the project effect runs.
+  const belongsToProject = displayedProjectId === projectId;
+  const sessions = belongsToProject ? storedSessions : [];
+  const status = belongsToProject ? storedStatus : { phase: 'idle' as const };
+  const streamingContent = belongsToProject ? storedStreamingContent : '';
+  const currentTool = belongsToProject ? storedCurrentTool : null;
 
   // Create markdown components with translated accessibility text
   const markdownComponents = useMemo(() => ({
@@ -124,12 +136,14 @@ export function Insights({ projectId }: InsightsProps) {
   const [screenshotOpen, setScreenshotOpen] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
 
-  const pendingImages = useInsightsStore((state) => state.pendingImages);
+  const storedPendingImages = useInsightsStore((state) => state.pendingImages);
+  const pendingImages = belongsToProject ? storedPendingImages : [];
   const setPendingImages = useInsightsStore((state) => state.setPendingImages);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const isLoading = status.phase === 'thinking' || status.phase === 'streaming';
+  const isSessionUnavailable = displayedProjectId !== projectId || isLoadingSession;
 
   // Image upload hook
   const {
@@ -143,7 +157,7 @@ export function Insights({ projectId }: InsightsProps) {
   } = useImageUpload({
     images: pendingImages,
     onImagesChange: setPendingImages,
-    disabled: isLoading,
+    disabled: isLoading || isSessionUnavailable,
     onError: setImageError,
     errorMessages: {
       maxImagesReached: t('insights.images.maxImagesReached'),
@@ -180,11 +194,16 @@ export function Insights({ projectId }: InsightsProps) {
   }, [viewportEl, handleScroll, checkIfAtBottom]);
 
   // Load session and set up listeners on mount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: showArchived list updates have their own effect below
   useEffect(() => {
+    const cleanup = setupInsightsListeners(projectId);
+    setInputValue('');
+    setScreenshotOpen(false);
+    setImageError(null);
+    setCreatingTask(new Set());
+    setTaskCreated(new Set());
     loadInsightsSession(projectId, showArchived);
-    const cleanup = setupInsightsListeners();
     return cleanup;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: showArchived is handled by the dedicated effect below; including it here would cause duplicate loads
   }, [projectId]);
 
   // Reload sessions when showArchived changes (skip first run to avoid duplicate load with mount effect)
@@ -219,13 +238,18 @@ export function Insights({ projectId }: InsightsProps) {
     setCreatingTask(new Set());
   }, [session?.id]);
 
-  const handleSend = () => {
+  const settings = useSettingsStore((state) => state.settings);
+  const { account: activeAccount } = useActiveProvider();
+  const effectiveModelConfig = resolveInsightsModelConfig(settings, activeAccount, session?.modelConfig);
+
+  const handleSend = async () => {
     const message = inputValue.trim();
     const hasImages = pendingImages.length > 0;
-    if ((!message && !hasImages) || isLoading) return;
+    if ((!message && !hasImages) || isLoading || isSessionUnavailable) return;
 
+    const sent = await sendMessage(projectId, message, effectiveModelConfig, hasImages ? pendingImages : undefined);
+    if (!sent || useInsightsStore.getState().projectId !== projectId) return;
     setInputValue('');
-    sendMessage(projectId, message, session?.modelConfig, hasImages ? pendingImages : undefined);
     setPendingImages([]);
     setImageError(null);
     setIsUserAtBottom(true); // Resume auto-scroll when user sends a message
@@ -435,9 +459,9 @@ export function Insights({ projectId }: InsightsProps) {
           </div>
           <div className="flex items-center gap-2">
             <InsightsModelSelector
-              currentConfig={session?.modelConfig}
+              currentConfig={effectiveModelConfig}
               onConfigChange={handleModelConfigChange}
-              disabled={isLoading}
+              disabled={isLoading || isSessionUnavailable}
             />
             <Button
               variant="outline"
@@ -539,14 +563,13 @@ export function Insights({ projectId }: InsightsProps) {
               </div>
             )}
 
-            {/* Error message */}
-            {status.phase === 'error' && status.error && (
-              <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                {status.error}
-              </div>
-            )}
-
+          </div>
+        )}
+        {/* First-session failures must also be visible before any messages exist. */}
+        {status.phase === 'error' && status.error && (
+          <div role="alert" className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {status.error}
           </div>
         )}
       </ScrollArea>
@@ -569,7 +592,7 @@ export function Insights({ projectId }: InsightsProps) {
                 'min-h-[80px] resize-none',
                 isDragOver && 'border-primary ring-2 ring-primary/20'
               )}
-              disabled={isLoading}
+              disabled={isLoading || isSessionUnavailable}
             />
             {/* Drag-over overlay */}
             {isDragOver && (
@@ -586,7 +609,7 @@ export function Insights({ projectId }: InsightsProps) {
               size="icon"
               className="h-9 w-9"
               onClick={() => setScreenshotOpen(true)}
-              disabled={isLoading || !canAddMore}
+              disabled={isLoading || isSessionUnavailable || !canAddMore}
               title={t('insights.images.screenshotButton')}
             >
               <Camera className="h-4 w-4" />
@@ -594,7 +617,7 @@ export function Insights({ projectId }: InsightsProps) {
             <Button
               onClick={handleSend}
               aria-label={tk('send')}
-              disabled={(!inputValue.trim() && pendingImages.length === 0) || isLoading}
+              disabled={(!inputValue.trim() && pendingImages.length === 0) || isLoading || isSessionUnavailable}
               className="h-9 w-9"
               size="icon"
             >

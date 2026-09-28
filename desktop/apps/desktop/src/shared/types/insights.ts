@@ -216,12 +216,16 @@ export interface InsightsSessionSummary {
 }
 
 export interface InsightsChatStatus {
+  /** Originating session identity bound by Main, never supplied by the renderer. */
+  sessionId?: string;
   phase: 'idle' | 'thinking' | 'streaming' | 'complete' | 'error';
   message?: string;
   error?: string;
 }
 
 export interface InsightsStreamChunk {
+  /** Originating session identity bound by Main, never supplied by the renderer. */
+  sessionId?: string;
   type: 'text' | 'task_suggestion' | 'tool_start' | 'tool_end' | 'done' | 'error';
   content?: string;
   suggestedTasks?: Array<{

@@ -63,19 +63,34 @@ export class InsightsExecutor extends EventEmitter {
     message: string,
     conversationHistory: Array<{ role: string; content: string }>,
     modelConfig?: InsightsModelConfig,
-    images?: ImageAttachment[]
+    images?: ImageAttachment[],
+    sessionId?: string
   ): Promise<ProcessorResult> {
     // Cancel any existing session
     this.cancelSession(projectId);
 
+    // Capture the real session once for this execution. A later selection or
+    // request must not relabel events from this pending response.
+    const emitStatus = (status: InsightsChatStatus): void => {
+      this.emit('status', projectId, { ...status, ...(sessionId ? { sessionId } : {}) });
+    };
+    const emitChunk = (chunk: InsightsStreamChunk): void => {
+      this.emit('stream-chunk', projectId, { ...chunk, ...(sessionId ? { sessionId } : {}) });
+    };
+
     // Emit thinking status
-    this.emit('status', projectId, {
+    emitStatus({
       phase: 'thinking',
       message: 'Processing your message...'
-    } as InsightsChatStatus);
+    });
 
     const controller = new AbortController();
     this.abortControllers.set(projectId, controller);
+    const releaseController = (): void => {
+      if (this.abortControllers.get(projectId) === controller) {
+        this.abortControllers.delete(projectId);
+      }
+    };
 
     const fullResponse = '';
     const suggestedTasks: InsightsChatMessage['suggestedTasks'] = [];
@@ -110,7 +125,7 @@ export class InsightsExecutor extends EventEmitter {
             case 'text-delta': {
               accumulatedText += event.text;
               allOutput = (allOutput + event.text).slice(-10000);
-              this.emit('stream-chunk', projectId, {
+              emitChunk({
                 type: 'text',
                 content: event.text,
               } as InsightsStreamChunk);
@@ -122,14 +137,14 @@ export class InsightsExecutor extends EventEmitter {
                 input: event.input,
                 timestamp: new Date(),
               });
-              this.emit('stream-chunk', projectId, {
+              emitChunk({
                 type: 'tool_start',
                 tool: { name: event.name, input: event.input },
               } as InsightsStreamChunk);
               break;
             }
             case 'tool-end': {
-              this.emit('stream-chunk', projectId, {
+              emitChunk({
                 type: 'tool_end',
                 tool: { name: event.name },
               } as InsightsStreamChunk);
@@ -137,7 +152,7 @@ export class InsightsExecutor extends EventEmitter {
             }
             case 'error': {
               allOutput = (allOutput + event.error).slice(-10000);
-              this.emit('stream-chunk', projectId, {
+              emitChunk({
                 type: 'error',
                 error: event.error,
               } as InsightsStreamChunk);
@@ -147,7 +162,7 @@ export class InsightsExecutor extends EventEmitter {
         },
       );
 
-      this.abortControllers.delete(projectId);
+      releaseController();
 
       // Extract task suggestion from the full result
       if (result.taskSuggestion) {
@@ -160,17 +175,17 @@ export class InsightsExecutor extends EventEmitter {
           },
         };
         suggestedTasks.push(task);
-        this.emit('stream-chunk', projectId, {
+        emitChunk({
           type: 'task_suggestion',
           suggestedTasks: [task],
         } as InsightsStreamChunk);
       }
 
-      this.emit('stream-chunk', projectId, {
+      emitChunk({
         type: 'done',
       } as InsightsStreamChunk);
 
-      this.emit('status', projectId, {
+      emitStatus({
         phase: 'complete',
       } as InsightsChatStatus);
 
@@ -180,7 +195,7 @@ export class InsightsExecutor extends EventEmitter {
         toolsUsed,
       };
     } catch (error) {
-      this.abortControllers.delete(projectId);
+      releaseController();
 
       // Check for rate limit in accumulated output
       this.handleRateLimit(projectId, allOutput);
@@ -196,12 +211,12 @@ export class InsightsExecutor extends EventEmitter {
         };
       }
 
-      this.emit('stream-chunk', projectId, {
+      emitChunk({
         type: 'error',
         error: errorMsg,
       } as InsightsStreamChunk);
 
-      this.emit('error', projectId, errorMsg);
+      this.emit('error', projectId, errorMsg, sessionId);
       throw error;
     }
   }

@@ -308,9 +308,7 @@ export async function runInsightsQuery(
           break;
         }
         case 'error': {
-          const errorMsg = part.error instanceof Error ? part.error.message : String(part.error);
-          onStream?.({ type: 'error', error: errorMsg });
-          break;
+          throw part.error instanceof Error ? part.error : new Error(String(part.error));
         }
       }
     }

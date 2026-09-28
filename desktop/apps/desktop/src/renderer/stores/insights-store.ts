@@ -20,6 +20,8 @@ interface ToolUsage {
 
 interface InsightsState {
   // Data
+  projectId: string | null;
+  isLoadingSession: boolean;
   session: InsightsSession | null;
   sessions: InsightsSessionSummary[]; // List of all sessions
   status: InsightsChatStatus;
@@ -59,6 +61,8 @@ const initialStatus: InsightsChatStatus = {
 
 export const useInsightsStore = create<InsightsState>((set, _get) => ({
   // Initial state
+  projectId: null,
+  isLoadingSession: false,
   session: null,
   sessions: [],
   status: initialStatus,
@@ -91,7 +95,7 @@ export const useInsightsStore = create<InsightsState>((set, _get) => ({
         return {
           session: {
             id: `session-${Date.now()}`,
-            projectId: '',
+            projectId: state.projectId ?? '',
             messages: [message],
             createdAt: new Date(),
             updatedAt: new Date()
@@ -183,7 +187,7 @@ export const useInsightsStore = create<InsightsState>((set, _get) => ({
           toolsUsed: [],
           session: {
             id: `session-${Date.now()}`,
-            projectId: '',
+            projectId: state.projectId ?? '',
             messages: [newMessage],
             createdAt: new Date(),
             updatedAt: new Date()
@@ -220,7 +224,46 @@ export const useInsightsStore = create<InsightsState>((set, _get) => ({
 
 // Helper functions
 
+// The store represents one visible project. IPC runs and persisted sessions remain
+// owned by Main; changing this view must not cancel or move their results.
+let scopeGeneration = 0;
+let sessionRequest = 0;
+let sessionsRequest = 0;
+const streamingSessions = new Map<string, string>();
+
+function currentScope(projectId: string): number | null {
+  return useInsightsStore.getState().projectId === projectId ? scopeGeneration : null;
+}
+
+function isCurrentScope(projectId: string, generation: number | null): boolean {
+  return generation !== null && generation === scopeGeneration &&
+    useInsightsStore.getState().projectId === projectId;
+}
+
+function resetVisibleSession(): void {
+  useInsightsStore.getState().clearSession();
+  useInsightsStore.setState({ sessions: [], isLoadingSessions: false, isLoadingSession: false });
+}
+
+function beginSessionRequest(projectId: string) {
+  const generation = currentScope(projectId);
+  const request = ++sessionRequest;
+  if (generation !== null) useInsightsStore.setState({ isLoadingSession: true });
+  return {
+    current: () => isCurrentScope(projectId, generation) && request === sessionRequest,
+    finish: () => {
+      if (isCurrentScope(projectId, generation) && request === sessionRequest) {
+        useInsightsStore.setState({ isLoadingSession: false });
+      }
+    }
+  };
+}
+
 export async function loadInsightsSessions(projectId: string, includeArchived?: boolean): Promise<void> {
+  const generation = currentScope(projectId);
+  if (generation === null) return;
+  const request = ++sessionsRequest;
+  const current = () => isCurrentScope(projectId, generation) && request === sessionsRequest;
   const store = useInsightsStore.getState();
   store.setLoadingSessions(true);
 
@@ -229,29 +272,61 @@ export async function loadInsightsSessions(projectId: string, includeArchived?: 
 
   try {
     const result = await window.electronAPI.listInsightsSessions(projectId, archived);
-    if (result.success && result.data) {
+    if (!current()) return;
+    if (result.success && result.data?.every((session) => session.projectId === projectId)) {
       store.setSessions(result.data);
     } else {
       store.setSessions([]);
     }
   } finally {
-    store.setLoadingSessions(false);
+    if (current()) store.setLoadingSessions(false);
   }
 }
 
 export async function loadInsightsSession(projectId: string, includeArchived?: boolean): Promise<void> {
-  const result = await window.electronAPI.getInsightsSession(projectId);
-  if (result.success && result.data) {
-    useInsightsStore.getState().setSession(result.data);
-  } else {
-    useInsightsStore.getState().setSession(null);
+  if (currentScope(projectId) === null) return;
+  const request = beginSessionRequest(projectId);
+  try {
+    const result = await window.electronAPI.getInsightsSession(projectId);
+    if (!request.current()) return;
+    if (result.success && result.data?.projectId === projectId) {
+      useInsightsStore.getState().setSession(result.data);
+    } else {
+      useInsightsStore.getState().setSession(null);
+    }
+    // Also load the sessions list, only while this remains the visible project.
+    await loadInsightsSessions(projectId, includeArchived);
+  } finally {
+    request.finish();
   }
-  // Also load the sessions list
-  await loadInsightsSessions(projectId, includeArchived);
 }
 
-export function sendMessage(projectId: string, message: string, modelConfig?: InsightsModelConfig, images?: ImageAttachment[]): void {
-  const store = useInsightsStore.getState();
+export async function sendMessage(projectId: string, message: string, modelConfig?: InsightsModelConfig, images?: ImageAttachment[]): Promise<boolean> {
+  let store = useInsightsStore.getState();
+  if (store.projectId !== projectId || store.isLoadingSession ||
+    (store.session && store.session.projectId !== projectId)) return false;
+  const generation = currentScope(projectId);
+  // A newly opened project may not have a session yet. Obtain the persisted
+  // identity before streaming instead of guessing an ID in the Renderer.
+  if (!store.session) {
+    try {
+      await newSession(projectId);
+    } catch (error) {
+      if (isCurrentScope(projectId, generation)) {
+        useInsightsStore.getState().setStatus({
+          phase: 'error',
+          error: error instanceof Error ? error.message : i18n.t('common:errors.generic')
+        });
+      }
+      return false;
+    }
+    if (!isCurrentScope(projectId, generation)) return false;
+    store = useInsightsStore.getState();
+    if (!store.session) {
+      store.setStatus({ phase: 'error', error: i18n.t('common:errors.generic') });
+      return false;
+    }
+  }
   const session = store.session;
 
   // Add user message to session (strip data to keep memory usage low)
@@ -267,6 +342,8 @@ export function sendMessage(projectId: string, message: string, modelConfig?: In
     ...(displayImages && displayImages.length > 0 ? { images: displayImages } : {})
   };
   store.addMessage(userMessage);
+  const displaySession = useInsightsStore.getState().session;
+  if (displaySession) streamingSessions.set(projectId, displaySession.id);
 
   // Clear pending and set status
   store.setPendingMessage('');
@@ -283,11 +360,14 @@ export function sendMessage(projectId: string, message: string, modelConfig?: In
 
   // Send to main process
   window.electronAPI.sendInsightsMessage(projectId, message, configToUse, images);
+  return true;
 }
 
 export async function clearSession(projectId: string, includeArchived?: boolean): Promise<void> {
+  const generation = currentScope(projectId);
+  if (generation === null) return;
   const result = await window.electronAPI.clearInsightsSession(projectId);
-  if (result.success) {
+  if (result.success && isCurrentScope(projectId, generation)) {
     useInsightsStore.getState().clearSession();
     // Reload sessions list and current session
     await loadInsightsSession(projectId, includeArchived);
@@ -295,41 +375,56 @@ export async function clearSession(projectId: string, includeArchived?: boolean)
 }
 
 export async function newSession(projectId: string): Promise<void> {
-  const result = await window.electronAPI.newInsightsSession(projectId);
-  if (result.success && result.data) {
-    useInsightsStore.getState().setSession(result.data);
-    // Reload sessions list
-    await loadInsightsSessions(projectId);
+  if (currentScope(projectId) === null) return;
+  const request = beginSessionRequest(projectId);
+  try {
+    const result = await window.electronAPI.newInsightsSession(projectId);
+    if (request.current() && result.success && result.data?.projectId === projectId) {
+      resetVisibleSession();
+      useInsightsStore.getState().setSession(result.data);
+      // Reload sessions list
+      await loadInsightsSessions(projectId);
+    }
+  } finally {
+    request.finish();
   }
 }
 
 export async function switchSession(projectId: string, sessionId: string): Promise<void> {
-  const result = await window.electronAPI.switchInsightsSession(projectId, sessionId);
-  if (result.success && result.data) {
-    useInsightsStore.getState().setSession(result.data);
-    // Reset streaming state when switching sessions
-    useInsightsStore.getState().clearStreamingContent();
-    useInsightsStore.getState().clearToolsUsed();
-    useInsightsStore.getState().setCurrentTool(null);
-    useInsightsStore.getState().setStatus({ phase: 'idle', message: '' });
+  if (currentScope(projectId) === null) return;
+  const request = beginSessionRequest(projectId);
+  try {
+    const result = await window.electronAPI.switchInsightsSession(projectId, sessionId);
+    if (request.current() && result.success && result.data?.projectId === projectId && result.data.id === sessionId) {
+      useInsightsStore.getState().setSession(result.data);
+      // Reset streaming state when switching sessions.
+      useInsightsStore.getState().clearStreamingContent();
+      useInsightsStore.getState().clearToolsUsed();
+      useInsightsStore.getState().setCurrentTool(null);
+      useInsightsStore.getState().setStatus({ phase: 'idle', message: '' });
+    }
+  } finally {
+    request.finish();
   }
 }
 
 export async function deleteSession(projectId: string, sessionId: string, includeArchived?: boolean): Promise<boolean> {
+  const generation = currentScope(projectId);
   const result = await window.electronAPI.deleteInsightsSession(projectId, sessionId);
   if (result.success) {
     // Reload sessions list and current session
-    await loadInsightsSession(projectId, includeArchived);
+    if (isCurrentScope(projectId, generation)) await loadInsightsSession(projectId, includeArchived);
     return true;
   }
   return false;
 }
 
 export async function renameSession(projectId: string, sessionId: string, newTitle: string): Promise<boolean> {
+  const generation = currentScope(projectId);
   const result = await window.electronAPI.renameInsightsSession(projectId, sessionId, newTitle);
   if (result.success) {
     // Reload sessions list to reflect the change
-    await loadInsightsSessions(projectId);
+    if (isCurrentScope(projectId, generation)) await loadInsightsSessions(projectId);
     return true;
   }
   return false;
@@ -362,11 +457,12 @@ export async function unarchiveSession(projectId: string, sessionId: string): Pr
 }
 
 export async function updateModelConfig(projectId: string, sessionId: string, modelConfig: InsightsModelConfig): Promise<boolean> {
+  const generation = currentScope(projectId);
   const result = await window.electronAPI.updateInsightsModelConfig(projectId, sessionId, modelConfig);
   if (result.success) {
     // Update local session state
     const store = useInsightsStore.getState();
-    if (store.session?.id === sessionId) {
+    if (isCurrentScope(projectId, generation) && store.session?.projectId === projectId && store.session.id === sessionId) {
       store.setSession({
         ...store.session,
         modelConfig,
@@ -374,7 +470,7 @@ export async function updateModelConfig(projectId: string, sessionId: string, mo
       });
     }
     // Reload sessions list to reflect the change
-    await loadInsightsSessions(projectId);
+    if (isCurrentScope(projectId, generation)) await loadInsightsSessions(projectId);
     return true;
   }
   return false;
@@ -399,13 +495,29 @@ export async function createTaskFromSuggestion(
   return null;
 }
 
-// IPC listener setup - call this once when the app initializes
-export function setupInsightsListeners(): () => void {
+// Bind IPC display updates to this view; background runs stay owned by Main.
+export function setupInsightsListeners(projectId: string): () => void {
+  const generation = ++scopeGeneration;
+  resetVisibleSession();
+  useInsightsStore.setState({ projectId });
+  let disposed = false;
   const store = useInsightsStore.getState;
+  const acceptsProject = (eventProjectId: string) =>
+    !disposed && eventProjectId === projectId && isCurrentScope(projectId, generation);
+  const acceptsStream = (eventProjectId: string, eventSessionId?: string) => {
+    if (!acceptsProject(eventProjectId)) return false;
+    const session = store().session;
+    const sendingSession = streamingSessions.get(projectId);
+    if (session?.projectId !== projectId) return false;
+    // Current Main supplies the captured session ID. An old identity-free event
+    // is displayed only for a session explicitly bound by this view's send.
+    return eventSessionId ? eventSessionId === session.id : sendingSession === session.id;
+  };
 
   // Listen for streaming chunks
   const unsubStreamChunk = window.electronAPI.onInsightsStreamChunk(
-    (_projectId, chunk: InsightsStreamChunk) => {
+    (eventProjectId, chunk: InsightsStreamChunk) => {
+      if (!acceptsStream(eventProjectId, chunk.sessionId)) return;
       switch (chunk.type) {
         case 'text':
           if (chunk.content) {
@@ -465,12 +577,14 @@ export function setupInsightsListeners(): () => void {
   );
 
   // Listen for status updates
-  const unsubStatus = window.electronAPI.onInsightsStatus((_projectId, status) => {
+  const unsubStatus = window.electronAPI.onInsightsStatus((eventProjectId, status) => {
+    if (!acceptsStream(eventProjectId, status.sessionId)) return;
     store().setStatus(status);
   });
 
   // Listen for errors
-  const unsubError = window.electronAPI.onInsightsError((_projectId, error) => {
+  const unsubError = window.electronAPI.onInsightsError((eventProjectId, error, sessionId) => {
+    if (!acceptsStream(eventProjectId, sessionId)) return;
     store().setStatus({
       phase: 'error',
       error
@@ -479,10 +593,11 @@ export function setupInsightsListeners(): () => void {
 
   // Listen for session updates (e.g., after assistant message saved with auto-generated title)
   const unsubSessionUpdated = window.electronAPI.onInsightsSessionUpdated(
-    (_projectId, session: InsightsSession) => {
+    (eventProjectId, session: InsightsSession) => {
+      if (!acceptsProject(eventProjectId) || session.projectId !== projectId) return;
       // Update current session if it matches
       const currentSession = store().session;
-      if (currentSession?.id === session.id) {
+      if (currentSession?.projectId === projectId && currentSession.id === session.id) {
         store().setSession(session);
       }
       // Also refresh sessions list for sidebar
@@ -494,9 +609,16 @@ export function setupInsightsListeners(): () => void {
 
   // Return cleanup function
   return () => {
+    if (disposed) return;
+    disposed = true;
     unsubStreamChunk();
     unsubStatus();
     unsubError();
     unsubSessionUpdated();
+    if (isCurrentScope(projectId, generation)) {
+      scopeGeneration++;
+      resetVisibleSession();
+      useInsightsStore.setState({ projectId: null });
+    }
   };
 }

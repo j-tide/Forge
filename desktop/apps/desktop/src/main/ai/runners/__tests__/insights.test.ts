@@ -279,13 +279,13 @@ describe('runInsightsQuery', () => {
     expect(toolEndEvents).toHaveLength(1);
   });
 
-  it('forwards error events for error stream parts', async () => {
+  it('rejects error stream parts so failure cannot become an empty successful reply', async () => {
     mockStreamText.mockReturnValue(
       makeStream([{ type: 'error', error: new Error('tool failed') }]),
     );
 
     const events: InsightsStreamEvent[] = [];
-    await runInsightsQuery(baseConfig(), (e) => events.push(e));
+    await expect(runInsightsQuery(baseConfig(), (e) => events.push(e))).rejects.toThrow('tool failed');
 
     const errorEvents = events.filter((e) => e.type === 'error');
     expect(errorEvents).toHaveLength(1);

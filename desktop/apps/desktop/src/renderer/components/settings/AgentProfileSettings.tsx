@@ -217,7 +217,7 @@ export function AgentProfileSettings({ provider }: AgentProfileSettingsProps) {
 
           <div className="flex-1 min-w-0 pr-6">
             <div className="flex items-center gap-2">
-              <h3 className="font-medium text-sm text-foreground">{profile.name}</h3>
+              <h3 className="font-medium text-sm text-foreground">{t(`agentProfile.presets.${profile.id}.name`, { defaultValue: profile.name })}</h3>
               {isCustomized && (
                 <span className="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-medium text-amber-600 dark:text-amber-400">
                   {t('agentProfile.customized')}
@@ -225,7 +225,7 @@ export function AgentProfileSettings({ provider }: AgentProfileSettingsProps) {
               )}
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
-              {profile.description}
+              {t(`agentProfile.presets.${profile.id}.description`, { defaultValue: profile.description })}
             </p>
 
             {/* Model and thinking level badges */}

@@ -10,9 +10,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel
 } from './ui/dropdown-menu';
-import { DEFAULT_AGENT_PROFILES, AVAILABLE_MODELS } from '../../shared/constants';
+import { DEFAULT_AGENT_PROFILES, ALL_AVAILABLE_MODELS, getProviderPreset } from '../../shared/constants';
 import type { InsightsModelConfig } from '../../shared/types';
 import { CustomModelModal } from './CustomModelModal';
+import { useActiveProvider } from '../hooks/useActiveProvider';
 
 interface InsightsModelSelectorProps {
   currentConfig?: InsightsModelConfig;
@@ -34,10 +35,11 @@ export function InsightsModelSelector({
 }: InsightsModelSelectorProps) {
   const { t: tk } = useTranslation('uiKnowledgeContext');
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const { provider } = useActiveProvider();
 
-  // Default to 'balanced' if no config, or if 'auto' profile was selected (not applicable for insights)
+  // The parent passes the same resolved configuration used by the request.
   const rawProfileId = currentConfig?.profileId || 'balanced';
-  const selectedProfileId = rawProfileId === 'auto' ? 'balanced' : rawProfileId;
+  const selectedProfileId = rawProfileId;
   const profile = DEFAULT_AGENT_PROFILES.find(p => p.id === selectedProfileId);
 
   // Get the appropriate icon
@@ -53,10 +55,11 @@ export function InsightsModelSelector({
 
     const selected = DEFAULT_AGENT_PROFILES.find(p => p.id === profileId);
     if (selected) {
+      const preset = getProviderPreset(provider ?? 'anthropic', profileId);
       onConfigChange({
         profileId: selected.id,
-        model: selected.model,
-        thinkingLevel: selected.thinkingLevel
+        model: preset?.primaryModel ?? selected.model,
+        thinkingLevel: preset?.primaryThinking ?? selected.thinkingLevel
       });
     }
   };
@@ -69,10 +72,12 @@ export function InsightsModelSelector({
   // Build display text for current selection
   const getDisplayText = () => {
     if (selectedProfileId === 'custom' && currentConfig) {
-      const modelLabel = AVAILABLE_MODELS.find(m => m.value === currentConfig.model)?.label || currentConfig.model;
+      const modelLabel = ALL_AVAILABLE_MODELS.find(m => m.value === currentConfig.model)?.label || currentConfig.model;
       return `${modelLabel} + ${tk(`thinking.${currentConfig.thinkingLevel}`, { defaultValue: currentConfig.thinkingLevel })}`;
     }
-    return tk(`profiles.${selectedProfileId}`, { defaultValue: profile?.name || tk('profiles.balanced') });
+    const modelLabel = ALL_AVAILABLE_MODELS.find(m => m.value === currentConfig?.model)?.label ?? currentConfig?.model;
+    const profileLabel = tk(`profiles.${selectedProfileId}`, { defaultValue: profile?.name || tk('profiles.balanced') });
+    return modelLabel ? `${profileLabel} · ${modelLabel}` : profileLabel;
   };
 
   return (
@@ -94,10 +99,12 @@ export function InsightsModelSelector({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
           <DropdownMenuLabel>{tk('agentProfile')}</DropdownMenuLabel>
-          {DEFAULT_AGENT_PROFILES.filter(p => !p.isAutoProfile).map((p) => {
+          {DEFAULT_AGENT_PROFILES.filter(p => !provider || getProviderPreset(provider, p.id)).map((p) => {
             const ProfileIcon = iconMap[p.icon || 'Brain'];
             const isSelected = selectedProfileId === p.id;
-            const modelLabel = AVAILABLE_MODELS.find(m => m.value === p.model)?.label;
+            const preset = getProviderPreset(provider ?? 'anthropic', p.id);
+            const modelLabel = ALL_AVAILABLE_MODELS.find(m => m.value === (preset?.primaryModel ?? p.model))?.label;
+            const thinking = preset?.primaryThinking ?? p.thinkingLevel;
             return (
               <DropdownMenuItem
                 key={p.id}
@@ -108,7 +115,7 @@ export function InsightsModelSelector({
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{tk(`profiles.${p.id}`, { defaultValue: p.name })}</div>
                   <div className="truncate text-xs text-muted-foreground">
-                    {modelLabel} + {tk(`thinking.${p.thinkingLevel}`, { defaultValue: p.thinkingLevel })}
+                    {modelLabel} + {tk(`thinking.${thinking}`, { defaultValue: thinking })}
                   </div>
                 </div>
                 {isSelected && (
@@ -139,6 +146,7 @@ export function InsightsModelSelector({
       <CustomModelModal
         open={showCustomModal}
         currentConfig={currentConfig}
+        provider={provider ?? undefined}
         onSave={handleCustomSave}
         onClose={() => setShowCustomModal(false)}
       />

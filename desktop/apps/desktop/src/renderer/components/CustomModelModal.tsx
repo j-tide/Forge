@@ -17,18 +17,20 @@ import {
   SelectTrigger,
   SelectValue
 } from './ui/select';
-import { AVAILABLE_MODELS, THINKING_LEVELS } from '../../shared/constants';
+import { ALL_AVAILABLE_MODELS, THINKING_LEVELS } from '../../shared/constants';
 import type { InsightsModelConfig } from '../../shared/types';
+import type { BuiltinProvider } from '../../shared/types/provider-account';
 import type { ModelType, ThinkingLevel } from '../../shared/types';
 
 interface CustomModelModalProps {
   currentConfig?: InsightsModelConfig;
+  provider?: BuiltinProvider;
   onSave: (config: InsightsModelConfig) => void;
   onClose: () => void;
   open?: boolean;
 }
 
-export function CustomModelModal({ currentConfig, onSave, onClose, open = true }: CustomModelModalProps) {
+export function CustomModelModal({ currentConfig, provider, onSave, onClose, open = true }: CustomModelModalProps) {
   const { t } = useTranslation(['dialogs', 'uiTools']);
   const [model, setModel] = useState<ModelType>(
     currentConfig?.model || 'sonnet'
@@ -71,7 +73,7 @@ export function CustomModelModal({ currentConfig, onSave, onClose, open = true }
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {AVAILABLE_MODELS.map((m) => (
+                {ALL_AVAILABLE_MODELS.filter(m => !provider || m.provider === provider).map((m) => (
                   <SelectItem key={m.value} value={m.value}>
                     {m.label}
                   </SelectItem>

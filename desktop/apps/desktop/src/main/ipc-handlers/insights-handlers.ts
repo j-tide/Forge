@@ -418,8 +418,8 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
   });
 
   // Forward errors to renderer
-  insightsService.on("error", (projectId: string, error: string) => {
-    safeSendToRenderer(getMainWindow, IPC_CHANNELS.INSIGHTS_ERROR, projectId, error);
+  insightsService.on("error", (projectId: string, error: string, sessionId?: string) => {
+    safeSendToRenderer(getMainWindow, IPC_CHANNELS.INSIGHTS_ERROR, projectId, error, sessionId);
   });
 
   // Forward SDK rate limit events to renderer

@@ -806,7 +806,7 @@ export interface ElectronAPI {
     callback: (projectId: string, status: InsightsChatStatus) => void
   ) => () => void;
   onInsightsError: (
-    callback: (projectId: string, error: string) => void
+    callback: (projectId: string, error: string, sessionId?: string) => void
   ) => () => void;
   onInsightsSessionUpdated: (
     callback: (projectId: string, session: InsightsSession) => void

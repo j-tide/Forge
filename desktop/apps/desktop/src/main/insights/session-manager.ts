@@ -233,7 +233,11 @@ export class SessionManager {
    */
   saveSession(projectPath: string, session: InsightsSession): void {
     this.storage.saveSession(projectPath, session);
-    this.sessions.set(session.projectId, session);
+    // A response can finish after the user has selected another session.
+    // Persist its history without changing that explicit selection.
+    if (this.storage.getCurrentSessionId(projectPath) === session.id) {
+      this.sessions.set(session.projectId, session);
+    }
   }
 
   /**

@@ -217,7 +217,7 @@ export const DEFAULT_AGENT_PROFILES: AgentProfile[] = [
   {
     id: 'auto',
     name: 'Auto (Optimized)',
-    description: 'Uses Opus across all phases with optimized thinking levels',
+    description: 'Uses the selected provider’s recommended models and thinking levels across all phases',
     model: 'opus',
     thinkingLevel: 'high',
     icon: 'Sparkles',
