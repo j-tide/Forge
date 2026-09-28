@@ -7,6 +7,7 @@ import { Label } from '../../ui/label';
 import { Switch } from '../../ui/switch';
 import { Separator } from '../../ui/separator';
 import { Button } from '../../ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover';
 import { Combobox } from '../../ui/combobox';
 import { GitHubOAuthFlow } from '../../project-settings/GitHubOAuthFlow';
 import { PasswordInput } from '../../project-settings/PasswordInput';
@@ -441,7 +442,7 @@ interface RepositoryDropdownProps {
   onManualEntry: () => void;
 }
 
-function RepositoryDropdown({
+export function RepositoryDropdown({
   repos,
   selectedRepo,
   isLoading,
@@ -469,6 +470,7 @@ function RepositoryDropdown({
             variant="ghost"
             size="sm"
             onClick={onRefresh}
+          aria-label={i18n.t('common:buttons.refresh')}
             disabled={isLoading}
             className="h-7 px-2"
           >
@@ -491,36 +493,58 @@ function RepositoryDropdown({
       )}
 
       <div className="relative">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          disabled={isLoading}
-          className="w-full flex items-center justify-between px-3 py-2 text-sm border border-input rounded-md bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+        <Popover
+          open={isOpen && !isLoading}
+          onOpenChange={(open) => {
+            setIsOpen(open);
+            if (!open) setFilter('');
+          }}
         >
-          {isLoading ? (
-            <span className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />{i18n.t('uiSettings:text036')}</span>
-          ) : selectedRepo ? (
-            <span className="flex items-center gap-2">
-              {selectedRepoData?.isPrivate ? (
-                <Lock className="h-3 w-3 text-muted-foreground" />
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              disabled={isLoading}
+              className="w-full flex items-center justify-between px-3 py-2 text-sm border border-input rounded-md bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />{i18n.t('uiSettings:text036')}</span>
+              ) : selectedRepo ? (
+                <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                  {selectedRepoData?.isPrivate ? (
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  ) : (
+                    <Globe className="h-3 w-3 text-muted-foreground" />
+                  )}
+                  <span className="truncate">{selectedRepo}</span>
+                </span>
               ) : (
-                <Globe className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">{i18n.t('uiSettings:text037')}</span>
               )}
-              {selectedRepo}
-            </span>
-          ) : (
-            <span className="text-muted-foreground">{i18n.t('uiSettings:text037')}</span>
-          )}
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-        </button>
-
-        {isOpen && !isLoading && (
-          <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-64 overflow-hidden">
+              <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            collisionPadding={12}
+            aria-label={i18n.t('uiSettings:text034')}
+            className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] max-h-[min(16rem,var(--radix-popover-content-available-height))] flex flex-col overflow-hidden p-0"
+            onKeyDown={(event) => {
+              if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+              const options = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[data-integration-option]'));
+              if (options.length === 0) return;
+              event.preventDefault();
+              const index = options.indexOf(document.activeElement as HTMLButtonElement);
+              const next = index < 0 ? (event.key === 'ArrowDown' ? 0 : options.length - 1)
+                : (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+              options[next].focus();
+            }}
+          >
             {/* Search filter */}
-            <div className="p-2 border-b border-border">
+            <div className="shrink-0 p-2 border-b border-border">
               <Input
                 placeholder={i18n.t('uiSettings:text038')}
+                aria-label={i18n.t('uiSettings:text038')}
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 className="h-8 text-sm"
@@ -529,7 +553,7 @@ function RepositoryDropdown({
             </div>
 
             {/* Repository list */}
-            <div className="max-h-48 overflow-y-auto">
+            <div className="min-h-0 overflow-y-auto">
               {filteredRepos.length === 0 ? (
                 <div className="px-3 py-4 text-sm text-muted-foreground text-center">
                   {filter ? i18n.t('uiSettings:text039') : i18n.t('uiSettings:text040')}
@@ -538,6 +562,7 @@ function RepositoryDropdown({
                 filteredRepos.map((repo) => (
                   <button
                     key={repo.fullName}
+                    data-integration-option
                     type="button"
                     onClick={() => {
                       onSelect(repo.fullName);
@@ -563,8 +588,8 @@ function RepositoryDropdown({
                 ))
               )}
             </div>
-          </div>
-        )}
+          </PopoverContent>
+        </Popover>
       </div>
 
       {selectedRepo && (

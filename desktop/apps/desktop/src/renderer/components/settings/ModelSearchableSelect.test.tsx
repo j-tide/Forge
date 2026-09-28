@@ -133,12 +133,12 @@ describe('ModelSearchableSelect', () => {
     });
   });
 
-  it('should render dropdown above the input', async () => {
+  it('should portal the dropdown outside the clipped editor and request top placement', async () => {
     mockDiscoverModels.mockResolvedValue([
       { id: 'claude-sonnet-4-5-20250929', display_name: 'Claude Sonnet 4.5' }
     ]);
 
-    render(
+    const { container } = render(
       <ModelSearchableSelect
         value=""
         onChange={mockOnChange}
@@ -155,7 +155,32 @@ describe('ModelSearchableSelect', () => {
     });
 
     const dropdown = screen.getByTestId('model-select-dropdown');
-    expect(dropdown).toHaveClass('bottom-full');
+    expect(container.contains(dropdown)).toBe(false);
+    expect(document.body.contains(dropdown)).toBe(true);
+    expect(dropdown).toHaveAttribute('data-side', 'top');
+  });
+
+  it('closes with Escape and restores focus without reopening from the input', async () => {
+    mockDiscoverModels.mockResolvedValue([{ id: 'fixture-model', display_name: 'Fixture Model' }]);
+    render(<ModelSearchableSelect value="" onChange={mockOnChange} baseUrl="https://example.invalid" apiKey="unit-fixture" />);
+    fireEvent.focus(screen.getByPlaceholderText('Select a model or type manually'));
+    await screen.findByTestId('model-select-dropdown');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('model-select-dropdown')).toBeNull());
+    expect(screen.getByRole('button', { name: 'Select a model or type manually' })).toHaveFocus();
+  });
+
+  it('closes and stays closed when disabled while the model picker is open', async () => {
+    mockDiscoverModels.mockResolvedValue([{ id: 'fixture-model', display_name: 'Fixture Model' }]);
+    const props = { value: '', onChange: mockOnChange, baseUrl: 'https://example.invalid', apiKey: 'unit-fixture' };
+    const { rerender } = render(<ModelSearchableSelect {...props} />);
+    fireEvent.focus(screen.getByPlaceholderText('Select a model or type manually'));
+    await screen.findByTestId('model-select-dropdown');
+    rerender(<ModelSearchableSelect {...props} disabled />);
+    await waitFor(() => expect(screen.queryByTestId('model-select-dropdown')).toBeNull());
+    rerender(<ModelSearchableSelect {...props} />);
+    expect(screen.queryByTestId('model-select-dropdown')).toBeNull();
+    expect(mockOnChange).not.toHaveBeenCalled();
   });
 
   it('should select model and close dropdown', async () => {
@@ -374,7 +399,7 @@ describe('ModelSearchableSelect', () => {
     });
 
     // Click outside
-    fireEvent.mouseDown(screen.getByTestId('outside-element'));
+    fireEvent.pointerDown(screen.getByTestId('outside-element'), { pointerType: 'mouse' });
 
     await waitFor(() => {
       expect(screen.queryByText('Claude Sonnet 4.5')).not.toBeInTheDocument();

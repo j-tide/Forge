@@ -5,9 +5,11 @@ import { ChevronDown, Search, Check, Brain, Eye, Wrench, ExternalLink, Loader2 }
 import { ALL_AVAILABLE_MODELS, resolveModelEquivalent, type ModelOption } from '@shared/constants/models';
 import { PROVIDER_REGISTRY } from '@shared/constants/providers';
 import type { BuiltinProvider } from '@shared/types/provider-account';
-import { useSettingsStore } from '@/stores/settings-store';
+import { useSettingsStore } from '../../stores/settings-store';
 import { cn } from '../../lib/utils';
 import { Input } from '../ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { navigateModelPicker } from './model-picker-navigation';
 
 interface MultiProviderModelSelectProps {
   value: string;
@@ -26,7 +28,6 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [customInput, setCustomInput] = useState('');
-  const containerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const settings = useSettingsStore(s => s.settings);
@@ -198,7 +199,6 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
   const handleOpen = () => {
     setOpen(true);
     setSearch('');
-    setTimeout(() => searchRef.current?.focus(), 50);
   };
 
   const handleClose = () => {
@@ -219,34 +219,13 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
     }
   };
 
-  // Close on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        handleClose();
-      }
-    };
-    if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open]);
-
-  // Close on Escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && open) handleClose();
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open]);
-
   return (
-    <div ref={containerRef} className={cn('relative', className)}>
+    <Popover open={open} onOpenChange={(next) => next ? handleOpen() : handleClose()}>
+    <div className={cn('relative', className)}>
       {/* Trigger button */}
+      <PopoverTrigger asChild>
       <button
         type="button"
-        onClick={open ? handleClose : handleOpen}
         className={cn(
           'flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm',
           'ring-offset-background',
@@ -260,16 +239,25 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
         </span>
         <ChevronDown className={cn('h-4 w-4 text-muted-foreground shrink-0 ml-2 transition-transform', open && 'rotate-180')} />
       </button>
+      </PopoverTrigger>
 
       {/* Dropdown panel */}
       {open && (
-        <div className="absolute z-50 min-w-full w-max max-w-[400px] mt-1 bg-popover border border-border rounded-md shadow-lg flex flex-col max-h-80">
+        <PopoverContent
+          align="start"
+          collisionPadding={8}
+          aria-label={t('settings:modelSelect.placeholder')}
+          className="w-[var(--radix-popover-trigger-width)] max-w-[min(25rem,calc(100vw-1rem))] max-h-[min(20rem,var(--radix-popover-content-available-height))] overflow-hidden p-0 flex flex-col"
+          onOpenAutoFocus={(event) => { event.preventDefault(); searchRef.current?.focus(); }}
+          onKeyDown={navigateModelPicker}
+        >
           {/* Search */}
           <div className="p-2 border-b border-border">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 ref={searchRef}
+                data-model-search
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder={t('settings:modelSelect.searchPlaceholder', { defaultValue: 'Search models...' })}
@@ -279,7 +267,7 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
           </div>
 
           {/* Model groups */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {/* Ollama loading state */}
             {ollamaLoading && filterProvider === 'ollama' && (
               <div className="p-3 flex items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -336,6 +324,7 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
                       const isSelected = resolvedValue === model.value;
                       return (
                         <button
+                          data-model-option
                           key={model.value}
                           type="button"
                           onClick={() => configured ? handleSelect(model.value) : undefined}
@@ -428,8 +417,9 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
               </button>
             </div>
           </div>
-        </div>
+        </PopoverContent>
       )}
     </div>
+    </Popover>
   );
 }

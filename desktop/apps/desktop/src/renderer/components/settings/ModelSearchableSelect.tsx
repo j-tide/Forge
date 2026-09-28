@@ -20,6 +20,8 @@ import { Loader2, ChevronDown, Search, Check, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { navigateModelPicker } from './model-picker-navigation';
 import { cn } from '../../lib/utils';
 import { useSettingsStore } from '../../stores/settings-store';
 import type { ModelInfo } from '@shared/types/profile';
@@ -85,15 +87,13 @@ export function ModelSearchableSelect({
   // AbortController for cancelling fetch requests
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Container ref for click-outside detection
-  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   /**
    * Fetch models from API.
    * Uses store's discoverModels action which has built-in caching.
    */
   const fetchModels = async () => {
-    console.log('[ModelSearchableSelect] fetchModels called with:', { baseUrl, apiKey: `${apiKey.slice(-4)}` });
     // Fetch from API
     setIsLoading(true);
     setError(null);
@@ -102,7 +102,6 @@ export function ModelSearchableSelect({
 
     try {
       const result = await discoverModels(baseUrl, apiKey, abortControllerRef.current.signal);
-      console.log('[ModelSearchableSelect] discoverModels result:', result);
 
       if (result && Array.isArray(result)) {
         setModels(result);
@@ -173,6 +172,7 @@ export function ModelSearchableSelect({
    * Handle model selection from dropdown.
    */
   const handleSelectModel = (modelId: string) => {
+    if (disabled) return;
     onChange(modelId);
     handleClose();
   };
@@ -193,22 +193,12 @@ export function ModelSearchableSelect({
     model.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Click-outside detection for closing dropdown
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        handleClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, handleClose]);
+    if (!disabled) return;
+    setIsOpen(false);
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+  }, [disabled]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -218,8 +208,10 @@ export function ModelSearchableSelect({
   }, []);
 
   return (
-    <div ref={containerRef} className={cn('relative', className)}>
+    <Popover open={isOpen && !disabled} onOpenChange={(next) => next ? handleOpen() : handleClose()}>
+    <div className={cn('relative', className)}>
       {/* Main input with loading/dropdown indicator */}
+      <PopoverAnchor asChild>
       <div className="relative">
         <Input
           value={value || ''}
@@ -243,24 +235,34 @@ export function ModelSearchableSelect({
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           ) : !modelDiscoveryNotSupported ? (
+            <PopoverTrigger asChild>
             <Button
+              ref={triggerRef}
               type="button"
               variant="ghost"
               size="sm"
-              onClick={isOpen ? handleClose : handleOpen}
+              aria-label={resolvedPlaceholder}
               disabled={disabled}
               className="h-6 w-6 p-0 hover:bg-accent"
             >
               <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
             </Button>
+            </PopoverTrigger>
           ) : null}
         </div>
       </div>
+      </PopoverAnchor>
 
       {/* Dropdown panel - only show when we have models to display */}
       {isOpen && !isLoading && !modelDiscoveryNotSupported && models.length > 0 && (
-        <div
-          className="absolute z-50 w-full bottom-full mb-1 bg-background border rounded-md shadow-lg max-h-60 overflow-hidden flex flex-col"
+        <PopoverContent
+          side="top"
+          align="start"
+          collisionPadding={8}
+          aria-label={resolvedPlaceholder}
+          className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-1rem)] max-h-[min(15rem,var(--radix-popover-content-available-height))] p-0 overflow-hidden flex flex-col"
+          onCloseAutoFocus={(event) => { event.preventDefault(); triggerRef.current?.focus(); }}
+          onKeyDown={navigateModelPicker}
           data-testid="model-select-dropdown"
         >
           {/* Search input */}
@@ -268,6 +270,7 @@ export function ModelSearchableSelect({
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                data-model-search
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('settings:modelSelect.searchPlaceholder')}
@@ -278,7 +281,7 @@ export function ModelSearchableSelect({
           </div>
 
           {/* Model list */}
-          <div className="flex-1 overflow-y-auto py-1">
+          <div className="min-h-0 flex-1 overflow-y-auto py-1">
             {filteredModels.length === 0 ? (
               <div className="p-3 text-center text-sm text-muted-foreground">
                 {t('settings:modelSelect.noResults')}
@@ -286,6 +289,7 @@ export function ModelSearchableSelect({
             ) : (
               filteredModels.map((model) => (
                 <button
+                  data-model-option
                   key={model.id}
                   type="button"
                   onClick={() => handleSelectModel(model.id)}
@@ -305,7 +309,7 @@ export function ModelSearchableSelect({
               ))
             )}
           </div>
-        </div>
+        </PopoverContent>
       )}
 
       {/* Info/error messages below input */}
@@ -319,5 +323,6 @@ export function ModelSearchableSelect({
         <p className="text-sm text-destructive mt-1">{error}</p>
       )}
     </div>
+    </Popover>
   );
 }

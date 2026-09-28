@@ -7,6 +7,7 @@ import { Label } from '../../ui/label';
 import { Switch } from '../../ui/switch';
 import { Separator } from '../../ui/separator';
 import { Button } from '../../ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover';
 import { PasswordInput } from '../../project-settings/PasswordInput';
 import type { ProjectEnvConfig, GitLabSyncStatus, ProjectSettings } from '../../../../shared/types';
 
@@ -597,7 +598,7 @@ interface ProjectDropdownProps {
   onManualEntry: () => void;
 }
 
-function ProjectDropdown({
+export function ProjectDropdown({
   projects,
   selectedProject,
   isLoading,
@@ -626,6 +627,7 @@ function ProjectDropdown({
             variant="ghost"
             size="sm"
             onClick={onRefresh}
+          aria-label={i18n.t('common:buttons.refresh')}
             disabled={isLoading}
             className="h-7 px-2"
           >
@@ -650,37 +652,59 @@ function ProjectDropdown({
       )}
 
       <div className="relative">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          disabled={isLoading}
-          className="w-full flex items-center justify-between px-3 py-2 text-sm border border-input rounded-md bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+        <Popover
+          open={isOpen && !isLoading}
+          onOpenChange={(open) => {
+            setIsOpen(open);
+            if (!open) setFilter('');
+          }}
         >
-          {isLoading ? (
-            <span className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {t('settings.loadingProjects')}
-            </span>
-          ) : selectedProject ? (
-            <span className="flex items-center gap-2">
-              {selectedProjectData?.visibility === 'private' ? (
-                <Lock className="h-3 w-3 text-muted-foreground" />
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              disabled={isLoading}
+              className="w-full flex items-center justify-between px-3 py-2 text-sm border border-input rounded-md bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t('settings.loadingProjects')}
+                </span>
+              ) : selectedProject ? (
+                <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                  {selectedProjectData?.visibility === 'private' ? (
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  ) : (
+                    <Globe className="h-3 w-3 text-muted-foreground" />
+                  )}
+                  <span className="truncate">{selectedProject}</span>
+                </span>
               ) : (
-                <Globe className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">{t('settings.selectProject')}</span>
               )}
-              {selectedProject}
-            </span>
-          ) : (
-            <span className="text-muted-foreground">{t('settings.selectProject')}</span>
-          )}
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-        </button>
-
-        {isOpen && !isLoading && (
-          <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-64 overflow-hidden">
-            <div className="p-2 border-b border-border">
+              <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            collisionPadding={12}
+            aria-label={t('settings.project')}
+            className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] max-h-[min(16rem,var(--radix-popover-content-available-height))] flex flex-col overflow-hidden p-0"
+            onKeyDown={(event) => {
+              if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+              const options = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[data-integration-option]'));
+              if (options.length === 0) return;
+              event.preventDefault();
+              const index = options.indexOf(document.activeElement as HTMLButtonElement);
+              const next = index < 0 ? (event.key === 'ArrowDown' ? 0 : options.length - 1)
+                : (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+              options[next].focus();
+            }}
+          >
+            <div className="shrink-0 p-2 border-b border-border">
               <Input
                 placeholder={t('settings.searchProjects')}
+                aria-label={t('settings.searchProjects')}
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 className="h-8 text-sm"
@@ -688,7 +712,7 @@ function ProjectDropdown({
               />
             </div>
 
-            <div className="max-h-48 overflow-y-auto">
+            <div className="min-h-0 overflow-y-auto">
               {filteredProjects.length === 0 ? (
                 <div className="px-3 py-4 text-sm text-muted-foreground text-center">
                   {filter ? t('settings.noMatchingProjects') : t('settings.noProjectsFound')}
@@ -697,6 +721,7 @@ function ProjectDropdown({
                 filteredProjects.map((project) => (
                   <button
                     key={project.pathWithNamespace}
+                    data-integration-option
                     type="button"
                     onClick={() => {
                       onSelect(project.pathWithNamespace);
@@ -722,8 +747,8 @@ function ProjectDropdown({
                 ))
               )}
             </div>
-          </div>
-        )}
+          </PopoverContent>
+        </Popover>
       </div>
 
       {selectedProject && (
@@ -848,7 +873,7 @@ interface BranchSelectorProps {
   onRefresh: () => void;
 }
 
-function BranchSelector({
+export function BranchSelector({
   branches,
   selectedBranch,
   isLoading,
@@ -880,6 +905,7 @@ function BranchSelector({
           variant="ghost"
           size="sm"
           onClick={onRefresh}
+          aria-label={i18n.t('common:buttons.refresh')}
           disabled={isLoading}
           className="h-7 px-2"
         >
@@ -895,33 +921,55 @@ function BranchSelector({
       )}
 
       <div className="relative pl-6">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          disabled={isLoading}
-          className="w-full flex items-center justify-between px-3 py-2 text-sm border border-input rounded-md bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+        <Popover
+          open={isOpen && !isLoading}
+          onOpenChange={(open) => {
+            setIsOpen(open);
+            if (!open) setFilter('');
+          }}
         >
-          {isLoading ? (
-            <span className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {t('settings.loadingBranches')}
-            </span>
-          ) : selectedBranch ? (
-            <span className="flex items-center gap-2">
-              <GitBranch className="h-3 w-3 text-muted-foreground" />
-              {selectedBranch}
-            </span>
-          ) : (
-            <span className="text-muted-foreground">{t('settings.autoDetect')}</span>
-          )}
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-        </button>
-
-        {isOpen && !isLoading && (
-          <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-64 overflow-hidden">
-            <div className="p-2 border-b border-border">
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              disabled={isLoading}
+              className="w-full flex items-center justify-between px-3 py-2 text-sm border border-input rounded-md bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t('settings.loadingBranches')}
+                </span>
+              ) : selectedBranch ? (
+                <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                  <GitBranch className="h-3 w-3 text-muted-foreground" />
+                  <span className="truncate">{selectedBranch}</span>
+                </span>
+              ) : (
+                <span className="text-muted-foreground">{t('settings.autoDetect')}</span>
+              )}
+              <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            collisionPadding={12}
+            aria-label={t('settings.defaultBranch')}
+            className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] max-h-[min(16rem,var(--radix-popover-content-available-height))] flex flex-col overflow-hidden p-0"
+            onKeyDown={(event) => {
+              if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+              const options = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[data-integration-option]'));
+              if (options.length === 0) return;
+              event.preventDefault();
+              const index = options.indexOf(document.activeElement as HTMLButtonElement);
+              const next = index < 0 ? (event.key === 'ArrowDown' ? 0 : options.length - 1)
+                : (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+              options[next].focus();
+            }}
+          >
+            <div className="shrink-0 p-2 border-b border-border">
               <Input
                 placeholder={t('settings.searchBranches')}
+                aria-label={t('settings.searchBranches')}
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 className="h-8 text-sm"
@@ -930,20 +978,21 @@ function BranchSelector({
             </div>
 
             <button
+              data-integration-option
               type="button"
               onClick={() => {
                 onSelect('');
                 setIsOpen(false);
                 setFilter('');
               }}
-              className={`w-full px-3 py-2 text-left hover:bg-accent flex items-center gap-2 ${
+              className={`w-full shrink-0 px-3 py-2 text-left hover:bg-accent flex items-center gap-2 ${
                 !selectedBranch ? 'bg-accent' : ''
               }`}
             >
               <span className="text-sm text-muted-foreground italic">{t('settings.autoDetect')}</span>
             </button>
 
-            <div className="max-h-40 overflow-y-auto border-t border-border">
+            <div className="min-h-0 overflow-y-auto border-t border-border">
               {filteredBranches.length === 0 ? (
                 <div className="px-3 py-4 text-sm text-muted-foreground text-center">
                   {filter ? t('settings.noMatchingBranches') : t('settings.noBranchesFound')}
@@ -952,6 +1001,7 @@ function BranchSelector({
                 filteredBranches.map((branch) => (
                   <button
                     key={branch}
+                    data-integration-option
                     type="button"
                     onClick={() => {
                       onSelect(branch);
@@ -968,8 +1018,8 @@ function BranchSelector({
                 ))
               )}
             </div>
-          </div>
-        )}
+          </PopoverContent>
+        </Popover>
       </div>
 
       {selectedBranch && (
