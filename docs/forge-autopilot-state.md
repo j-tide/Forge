@@ -1,5 +1,7 @@
 # Forge Autopilot State
 
+**最新衍生 Desktop 发布检查点 · 2026-09-28**：用户明确授权功能提交 / push / 新预览发布；版本 `0.1.0-preview.4`，真实 DMG 启动与源码 / 用户数据一致性、5057 Desktop tests、双主题页面 / 弹层 / 文件引用 / 语言重启及根 Python 286 passed / 1 skipped 回归已通过，详见 [实施记录](implementation-status.md) 和 [版本说明](../desktop/docs/releases/0.1.0-preview.4.md)。衍生基座仍未接入 Python Host，本次未执行在线模型；原 Vue / Python 历史完整链不算本预览通过。手机 / 远程保持后置，Claude / 平台 / 签名 / 正式更新 / 完整业务门禁未关闭。用户授权的发布动作只覆盖本次预览；原日期重写已结束，新提交用实际日期。以下检查点仅是对应旧版本历史证据。
+
 **最新 Desktop 视觉检查点 · 2026-09-27**：视觉与动效按 [ADR 0086](decisions/0086-video-glass-visual-with-current-desktop-ia.md) 恢复银蓝雾面方向，新安装默认亮色，暗色和系统主题仍可选；Aperant 公开 2.x 仅作为交互对照。当前 `glass-polish-20260927` 内部 DMG 的安装态检查及静态截图见 [实施状态](implementation-status.md)。该包没有重新完成在线需求整理或 Develop→Review→Verify→Owner 全链，不能据此宣称 Desktop 完整交付；P7/P8 新增开发仍暂停。
 
 **历史 Desktop 界面重设计与内部包检查点 · 2026-09-27**：用户批准 [ADR 0085](decisions/0085-aperant-reference-desktop-redesign.md)，以公开 Aperant 2.x 对照桌面信息架构，Forge 独立实现。左栏项目原位选择、单一「新建任务」、同面板 Host 回复/草稿、五列看板、分区任务详情和工作流/角色/插件/项目资料/设置入口已进入正式 App；当时深色默认，保留浅色/系统、减少透明度和动效。双抽屉问题已修，App/组件 24/24、项目 smoke 23 阶段、P1 离线、1280/1600/缩放、lint/typecheck/test(build)/Python 286 passed/1 skipped/Ruff/mypy、契约/任务图和 Desktop smoke 均通过。

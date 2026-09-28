@@ -16,6 +16,8 @@ const candidates = process.argv[2]
   ? [path.resolve(process.argv[2])]
   : [
       path.join(desktop, 'dist', metadata.version, architecture, `${metadata.build.productName}.app`),
+      path.join(desktop, 'dist', 'ui-redesign-unreleased', architecture, `${metadata.build.productName}.app`),
+      path.join(desktop, 'dist', 'settings-unreleased', architecture, `${metadata.build.productName}.app`),
       path.join(desktop, 'dist', 'logo-unreleased', architecture, `${metadata.build.productName}.app`),
       path.join(desktop, 'dist', 'branding-unreleased', architecture, `${metadata.build.productName}.app`),
       path.join(desktop, 'dist', architecture, `${metadata.build.productName}.app`)

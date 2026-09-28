@@ -1,5 +1,58 @@
 # Forge 实施状态
 
+## 2026-09-28 · 0.1.0-preview.4 功能提交与发布验证
+
+用户明确授权按功能提交全部当前改动、推送到 `j-tide/Forge` 并发布新预览。版本 `0.1.0-preview.4`，构建标识 `forge-0.1.0-preview.4-9864843c064e`；新提交使用实际当前日期，不再次改写历史日期或旧 tag。版本说明与下载摘要见 [preview.4](../desktop/docs/releases/0.1.0-preview.4.md)。
+
+- 项目 / 应用设置分开；顶部 Portal 弹层、文件补全、看板列导航、亮暗外观、减少动效 / 透明度、键盘焦点修复已进入本次包。Insights 绑定真实会话 / provider 配置；Context、MCP、路线图、草稿与删除失败反馈保留真实结果。没有新增依赖、权限或 SQL migration。
+- Desktop `check:i18n` / lint / typecheck / test / build 通过：283 Vitest 文件 / 5057 tests，另 10 个 Node 检查；36 namespaces / 5224 strings 无错误；lint 仍有 797 warnings / 5 infos。真实 `.4` UI 两主题 60 条记录 / 70 张截图、语言切换重启、弹层 10 条、文件引用 8 条均通过。首次暗色 hover 超时日志保留，原生焦点 readiness 修正后同断言通过，没有修改生产代码换取成功。
+- 根 `pnpm install --frozen-lockfile` / contracts / task-map / lint / typecheck / test（含 build）/ Desktop smoke 通过。contracts 47 files / 0 errors / 4 既有 warnings；92 Task / 120 Test / 84 deferred 保留。`pnpm py:check` Ruff / mypy / 286 passed / 1 opt-in skipped；迁移路径引起的三处 Ruff 行长已修复，不降低断言。
+- DMG / ZIP 校验通过；从 DMG 实际只读挂载的 `.app` 启动验证版本 `.4`、`isPackaged=true`、8 个编译文件 / 4 个原生图标与 LICENSE / UPSTREAM 源码一致，ad-hoc deep / strict 签名通过。启动前后用户设置、项目与 API Profile 文件摘要未变。ASAR SHA-256 `9864843c064e35a1a6c8f9f003bd3838e8072675c865349760c0022573d1d2b6`。本轮无在线模型调用，无新凭据或费用。
+- 对应 tag 为 `v0.1.0-preview.4`，公开源码使用该 tag 的完整 `git archive`，不包含 node_modules、构建目录、测试数据或本机密钥；截图仅提交独立 UI 夹具画面。LICENSE / 来源保留，原有版本资产不覆盖。
+
+这只收口本次衍生桌面界面 / 受影响本地服务与构建发布验证。Python Host 集成、完整在线任务闭环、Claude、Windows / Intel、正式签名 / 公证 / 更新仍未验收；生产依赖 audit 仍为 33 项（10 high / 9 moderate / 14 low）。P7/P8 后置和原门禁不变。下面各节保留为其对应版本的历史证据。
+
+## 2026-09-28 · 桌面 UI / UX 重设计与全页面走查（本地未发布）
+
+本轮按用户反馈检查 `desktop/` 的实际 React / Electron 界面，修复项目配置误入应用设置、顶部弹层被遮挡，并继续核查导航、键盘、表单、错误反馈和跨项目数据。没有恢复手机 / 远程，没有提交、推送或发布。详细覆盖与证据在 [桌面 UI / UX 走查](desktop-ui-ux-audit.md)。
+
+- **项目范围修复**：项目标签的配置按钮打开独立“项目设置”，显示当前项目名；全局入口打开“应用设置”。GitHub / GitLab 项目深链保留范围，保存项目设置不写全局偏好，保存失败保留输入；设置页内拦截冲突快捷键并恢复关闭后的焦点。
+- **弹层和输入**：Tooltip、子菜单、模型及仓库 / 分支搜索使用 Portal，长 Popover 受窗口高度限制；实际滚轮可达末项，切换按钮不换行。`@文件` 补全跟随输入框定位，中文与完整相对路径能真实保存，非法路径拒绝；Escape、嵌套浮层和返回焦点复验通过。
+- **真实反馈和隔离**：Context / 记忆、Insights、MCP 的请求与真实项目 / 会话绑定，旧响应不污染新页面；保存和健康检查失败不能表现为成功。任务草稿保留基准分支和执行配置，分支失效明确拒绝；删除预检未完成 / 失败时不能删除，支持重试。路线图写失败不产生假卡片，详情侧板支持键盘与焦点。
+- **视觉**：银灰亮色与石墨暗色统一布局、层级、字体和焦点，玻璃集中于外壳；新建任务区分需求与配置，小窗口可滚动，六列衍生看板按真实滚动范围提供首尾导航。用户与系统减少透明度 / 动效生效并能重启读回。没有新增依赖或调用在线模型。
+
+### 当前版本验证
+
+- 独立 `desktop/`：`npm run lint`（exit 0，797 条既有 warnings / 5 infos）、`npm run typecheck`、`npm test`（283 Vitest 文件 / 5057 tests，另有 Node 品牌及翻译测试）、`npm run build`、`npm run check:i18n`（36 namespaces / 5224 strings，0 errors / warnings）全部通过。未降低类型、错误或权限断言。
+- `npm run test:ui:desktop`：真实 macOS arm64 Electron 两主题通过，60 条记录 / 70 张截图；覆盖 9 个导航页面、5 个项目设置分区、11 个应用设置分区，以及实际本地 backlog 创建、未自动 Start、键盘打开详情、看板首尾滚动、偏好保存 / 重启。证据 [workspace-redesign](../desktop/output/playwright/workspace-redesign/evidence.json)。
+- `node scripts/test-forge-overlays.mjs`：两主题 1080×760 实窗通过，Tooltip / Popover / 主模型菜单脱离裁切父层并可点击；长列表从 897px 限至 709px，实际滚动抵达末项，Escape 恢复准确触发按钮。无密钥账户元数据仅验证 UI，不能作为认证证据。[overlay evidence](../desktop/output/playwright/overlay-audit/evidence.json)。
+- 文件补全实窗：1440×900 / 1080×760、两主题通过，鼠标 / Enter / 中文 / Escape / 空列表 Tab、真实任务引用保存 / 读回；Git 夹具保持干净，无模型 Run。[file evidence](../desktop/output/playwright/file-autocomplete/evidence.json)。
+- 最终 `electron-builder --mac dir --arm64 --publish never --config.mac.identity=-` 生成 [本地 Forge.app](../desktop/apps/desktop/dist/ui-redesign-unreleased/mac-arm64/Forge.app)。构建标识 `forge-ui-ux-20260928-70c0c93c2593`，版本仍为 `0.1.0-preview.3` 的未发布修订；`app.asar` SHA-256 `70c0c93c2593b16fd6cad1d6e2f113f831ca4897744a59f1e1e463728423fe13`，生成时间 15:58:12 +08:00。
+- 包内 8 份编译文件、4 份原生图标及许可证 / 来源文件与源码构建相同，`isPackaged=true` 的真实 `.app` 只读启动通过，启动后 `codesign --verify --deep --strict` 通过。设置 / 项目 / API Profile 摘要未变，用户旧应用仍运行；[包内证据](../desktop/output/playwright/workspace-redesign/packaged/packaged-evidence.json)与[用户数据保持检查](../desktop/output/playwright/workspace-redesign/packaged/userdata-preservation.json)分开记录。
+
+人工使用前先保存工作并正常退出旧 Forge，再打开上述最新路径；同一应用 ID 可能使 macOS 继续激活旧构建。`pnpm desktop:open` 已优先选择本轮路径，普通打开常驻，与自动退出的 smoke 分开。完整截图与命令日志在集中报告中列出；失败复现和 QA 脚本窗口焦点修正记录保留，未删除断言换取通过。
+
+**边界**：本轮证明当前衍生桌面 UI、受影响本地持久化与错误 / 隔离逻辑，不证明已连接 Forge Python Host、在线 Agent / Review / Verify / Planner 闭环、外部 MCP、第三方连接或 Claude 可用。Windows / Intel、签名 / 公证、正式更新、生产依赖 audit 风险及原有发布门禁保留，未重置用户数据库或改写冻结 Run。
+
+## 2026-09-28 · GLM 请求与桌面设置修复、旧资料清理（未发布）
+
+用户明确批准删除原只读资料及规则引用。本次修复 GLM 请求/默认模型、账户按钮、错误用量提示和设置弹窗，保留工作区已有的并行界面改动；未提交、推送或发布。
+
+- 同一 Z.AI Key 在普通按量端点返回 HTTP 429 / 1113（余额不足或无可用资源包），在国内 Coding Plan 端点返回 HTTP 200。实际“项目洞察”最小请求经 Main/SDK/网络/流式 UI 完成，主进程记录 model=glm-5、thinkingLevel=low，界面收到 OK。没有打印 Key 或关闭 TLS 校验。用户当前配置已指向 Coding Plan 端点；并不代表所有模型、额度查询或 Agent 工具场景均已验收。
+- 项目洞察的显示与请求使用同一配置解析，继承当前服务商默认预设和功能覆盖，明确会话配置仍保留；旧 Claude 别名按当前服务商解析。流错误向调用方抛出，不再持久化空白助手并把失败当完成。中/英/法预设文案按当前服务商表述。
+- 设置成为 main 内普通页面，保留主侧栏和项目栏；返回/主导航可退出设置，原工作区保持挂载。紫色认证按钮打开账户页面。用量/重认证只匹配当前账户 ID 或其明确关联的 profile。实际打包界面验证：0 个 dialog，设置在 main 内，主导航设置高亮，账户按钮有效。
+- 删除 158 个 tracked 旧路径及 1 个未跟踪 .DS_Store；39 个有效测试输入迁到模块测试目录（38 个保持原字节，planning/tasks.json 仅将 orders fixture 引用改为实际迁移路径），净移除 120 个文件，其中无用 Markdown 为 **66 个**。另有 5 个提示 Markdown 是迁移而非删除；前序口头“71 个”是旧 Markdown 路径总数。
+- 契约/规划/验收/预设/示例提示归 packages/contract-validator/fixtures/，设计数值归 packages/ui/tests/fixtures/，orders 夹具归 tests/p2/fixtures/orders/。引用及根 AGENTS 已更新，原三个目录已不存在。Task/Test ID、权限/审批规则和用户数据保留。必要许可证/来源声明和有效架构/验收记录保留，不声称上游代码原创。
+- 仓库外恢复备份：/Users/iamzjt/Documents/Forge-cleanup-backups/20260928-144144/，包含原文件归档、SHA/大小清单、39 个迁移映射及 orders 原路径副本。工作区忽略清单为 output/cleanup-current.json。
+- 本地修复包：desktop/apps/desktop/dist/settings-unreleased/mac-arm64/Forge.app，ad-hoc 签名且 codesign --verify --deep --strict 通过。pnpm desktop:open 优先打开这个本地包；公开 .3 资产未覆盖，新包未发布。当前衍生基座仍未连接 Forge Python Host，原产品/跨平台/正式签名与更新验收边界保持。
+
+实际检查（macOS arm64）：
+
+- Desktop：258 文件 / 4,826 Vitest tests + 10 Node tests 通过；lint exit 0（815 既有 warnings / 5 infos）、typecheck、Main/Preload/Renderer build 通过。国际化 36 namespaces / 5,188 strings，0 errors / 0 warnings。
+- 根工程：lint/typecheck、contracts（47 files / 0 errors / 4 既有 warnings）、task-map（92 tasks / 120 acceptance / 84 deferred）通过。迁移相关 Node tests 18、UI tokens 7、Python 定向测试 15 通过。
+- 首次全量回归曾有旧欢迎页/色值/选择器断言失败，以及一个 2ms 测试的负载抖动；更新符合实际界面的断言，耗时规则保持，定向与再次全量回归均通过。
+- 当前 README/AGENTS/贡献指南本地链接、迁移引用、git diff --check 通过。日志见 /tmp/forge-final-*.log；实际截图在 output/playwright/current-glm-insights.png 和 current-settings-page.png。
+
 ## 2026-09-28 · Contributors 来源整理（用户明确授权）
 
 用户再次要求移除其他 GitHub Contributors。核查公开 `main` 及 tags：1215 条提交 = 110 条 Forge 自有记录 + 1105 条导入上游记录；不存在其他协作者提交或共同作者 trailer。按 ADR 0087 本次追加记录，以一条明确署名的来源导入快照替换上游祖先，不将原作者提交改名冒充 Forge 原创。
@@ -144,7 +197,7 @@
 
 ## Desktop 视频磨砂视觉与动效 · 2026-09-27（源码与 macOS arm64 内部包视觉检查通过）
 
-用户最新确认沿用先前视频的银白/浅蓝灰雾面材质及轻柔动效，同时保留现行原位项目选择、单一新建任务入口、五列看板和任务详情结构。已定位原始参考视频 `2026-08-27_09.02.16_短耳兔设计_UI设计灵感分享_磨砂玻璃风格UI动效参考.mp4`；[ADR 0086](decisions/0086-video-glass-visual-with-current-desktop-ia.md) 明确覆盖 ADR 0085 的视觉优先级，但不改变信息架构、产品语义或安全边界。`forge_glass_v1.1/design/` 继续作为只读视觉与动效参考，正式生产 token 仍在 `packages/ui`。
+用户最新确认沿用先前视频的银白/浅蓝灰雾面材质及轻柔动效，同时保留现行原位项目选择、单一新建任务入口、五列看板和任务详情结构。已定位原始参考视频 `2026-08-27_09.02.16_短耳兔设计_UI设计灵感分享_磨砂玻璃风格UI动效参考.mp4`；[ADR 0086](decisions/0086-video-glass-visual-with-current-desktop-ia.md) 明确覆盖 ADR 0085 的视觉优先级，但不改变信息架构、产品语义或安全边界。`packages/ui/src/tokens/` 继续作为只读视觉与动效参考，正式生产 token 仍在 `packages/ui`。
 
 当前源码已将亮色改为新安装默认，保留已存的亮色/暗色/跟随系统偏好；生产 token 更新为视频方向的银蓝亮色及同源蓝灰暗色，页面、卡片、弹层和抽屉已接入短时基础动效。系统与 Forge 的减少动效入口、减少透明度的实色回退保持可用；状态反馈继续由真实 Host 数据驱动。此项只涉及视觉表现与偏好，不代表新的 Agent/Task 能力或完整 Desktop 验收。
 
@@ -164,7 +217,7 @@
 
 ## Desktop 界面重设计 · Aperant 2.x 对照 · 先前内部包（2026-09-27）
 
-[ADR 0085](decisions/0085-aperant-reference-desktop-redesign.md) 已获批准：以 Aperant 公开 2.x 的信息架构和交互为对照，独立实现 Forge Vue 桌面界面；在当时的视觉优先级中 `forge_glass_v1.1/` 只作历史参考，不复制 Aperant AGPL 源码或素材，也不称为 3.0。该视觉优先级现由 ADR 0086 覆盖。本节只记录当时的重设计源码及该内部包；后续 Planner/Standard 等旧检查点仍按各自构建追踪。
+[ADR 0085](decisions/0085-aperant-reference-desktop-redesign.md) 已获批准：以 Aperant 公开 2.x 的信息架构和交互为对照，独立实现 Forge Vue 桌面界面；在当时的视觉优先级中 `packages/ui/src/tokens/` 只作历史参考，不复制 Aperant AGPL 源码或素材，也不称为 3.0。该视觉优先级现由 ADR 0086 覆盖。本节只记录当时的重设计源码及该内部包；后续 Planner/Standard 等旧检查点仍按各自构建追踪。
 
 | 当前正常用户入口 | 业务边界 | 本版证据 |
 | --- | --- | --- |
@@ -646,7 +699,7 @@ Agents 页面现在能编辑 Developer Profile 的 `maxSeconds`（1～3600 秒�
 
 ## 最新内部包的独立常驻 Desktop QA 入口 · 2026-09-26
 
-没有覆盖旧 Demo：从当前 `desktop-plugin-gate-20260926` DMG 另装 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA 20260926.app`，为用户保留 `/Users/iamzjt/Documents/Forge Desktop QA 20260926/Open Forge Desktop QA.command` 和独立可丢弃 Git `project`/空数据目录。启动器实际打开应用且保持运行（启动 PID 75349），包内 Python Host 与 sandboxed Renderer 子进程在，独立 SQLite `quick_check=ok`、schema35、0 Project/0 Task。新数据需要用户自己在 UI 明确信任项目；旧 Demo 的历史记录未复制或伪装为当前在线运行。该内部安装仍需外部 Git/Codex CLI/合法登录；详细操作在 [内部包演示说明](demo/p6-internal-macos-package.md)。当前包已有安装版项目双向切换与插件停用门禁证据，但这份**新空数据**还没有真实 Agent Task。无提交、推送或发布。
+没有覆盖旧 Demo：从当前 `desktop-plugin-gate-20260926` DMG 另装 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA 20260926.app`，为用户保留 `/Users/iamzjt/Documents/Forge Desktop QA 20260926/Open Forge Desktop QA.command` 和独立可丢弃 Git `project`/空数据目录。启动器实际打开应用且保持运行（启动 PID 75349），包内 Python Host 与 sandboxed Renderer 子进程在，独立 SQLite `quick_check=ok`、schema35、0 Project/0 Task。新数据需要用户自己在 UI 明确信任项目；旧 Demo 的历史记录未复制或伪装为当前在线运行。该内部安装仍需外部 Git/Codex CLI/合法登录；详细操作在 内部包演示说明（已归档）。当前包已有安装版项目双向切换与插件停用门禁证据，但这份**新空数据**还没有真实 Agent Task。无提交、推送或发布。
 
 ## Desktop 安装版插件停用阻断与当前包回归 · 2026-09-26
 
@@ -909,7 +962,7 @@ P7-08 状态：**DONE（当前 Desktop 本机管理页面范围；手机/私网 
 
 ## 本地可操作 Demo 与 P7-01 Host 常驻 · 2026-09-25
 
-用户已明确授权精确 `P6-10 → P7-01` **development-only** 放行和随后按权威顺序推进 P7/P8；P6-06～P6-10 仍 BLOCKED，P6 Phase Gate 不通过。已按通过验收的同一内部 Mac DMG（SHA-256 `a3bc0a9816dbc03a44b249305a708e8d51f5ceaf124cd820d3c5acba1e3187d9`）安装常驻 `/Users/iamzjt/Applications/Forge INTERNAL.app`，创建独立的 `/Users/iamzjt/Documents/Forge Demo/project` Git fixture 与 `app-data` SQLite。`pnpm demo:prepare` 只安装/准备并保留数据，`pnpm demo:open` 与可双击 `.command` 打开后不自动退出；实际检查本次 app PID 2958、包内 Python Host PID 2977、独立 SQLite 已创建，fixture 工作树 clean。Codex CLI 0.155.1/ChatGPT 登录本机可用，但属于外部前置；Finder 直接双击 `.app` 的 PATH/代理发现未验证。操作、录屏脚本和历史安装版验收的区分见 [P6 内部包 Demo](demo/p6-internal-macos-package.md)；[PDF 功能—真实操作集中表](pdf-feature-operation-map.md) 根据用户给的页码清单列出第 3～10 页入口、证据和缺口，仓库没有同页码的独立项目介绍 PDF。
+用户已明确授权精确 `P6-10 → P7-01` **development-only** 放行和随后按权威顺序推进 P7/P8；P6-06～P6-10 仍 BLOCKED，P6 Phase Gate 不通过。已按通过验收的同一内部 Mac DMG（SHA-256 `a3bc0a9816dbc03a44b249305a708e8d51f5ceaf124cd820d3c5acba1e3187d9`）安装常驻 `/Users/iamzjt/Applications/Forge INTERNAL.app`，创建独立的 `/Users/iamzjt/Documents/Forge Demo/project` Git fixture 与 `app-data` SQLite。`pnpm demo:prepare` 只安装/准备并保留数据，`pnpm demo:open` 与可双击 `.command` 打开后不自动退出；实际检查本次 app PID 2958、包内 Python Host PID 2977、独立 SQLite 已创建，fixture 工作树 clean。Codex CLI 0.155.1/ChatGPT 登录本机可用，但属于外部前置；Finder 直接双击 `.app` 的 PATH/代理发现未验证。操作、录屏脚本和历史安装版验收的区分见 P6 内部包 Demo（已归档）；PDF 功能—真实操作集中表（已归档） 根据用户给的页码清单列出第 3～10 页入口、证据和缺口，仓库没有同页码的独立项目介绍 PDF。
 
 P7-01「Host常驻模式」当前范围 **DONE**：P6-05 已用真实 Codex 活跃 Run 验证留托盘后无窗口仍保留同一 Python Host/归属工作、第二实例恢复、显式安全退出清理；Settings 明示用户会话/睡眠限制，本次安装版 Demo 也未自动关闭。没有开放远程网络。共享引用 T096～T100 中实际依赖后续配对/session/SSE/权限/远端断线 UI 的部分保留原 ID，映射至 P7-03/04/06/07/09 为 `DEFERRED_VERIFICATION`，不伪标 PASSED。`pnpm smoke:desktop` 当前源码真实通过 Host ready/schema30、degraded/crashed 与 P5 Workflow/插件/知识/记忆 UI 路径；`pnpm validate:task-map`、其 17 项精确例外/篡改测试、启动器 ESLint/语法和 `git diff --check` 通过。没有新增依赖、Claude 调用、Forge 仓库提交/推送/发布。P7-02 下一项，默认远程关闭。
 
@@ -935,7 +988,7 @@ Windows/签名安装与更新、生产信任根/数据 cutover、Claude 第二�
 
 ## P6-06 internal installed-app business acceptance addendum · 2026-09-25
 
-状态仍为 **BLOCKED**。同一 SHA-256 `a3bc0a9816dbc03a44b249305a708e8d51f5ceaf124cd820d3c5acba1e3187d9` 的 `0.0.1-INTERNAL-ADHOC-UNNOTARIZED` arm64 DMG 经过真实挂载、复制到独立 QA 安装目录、从复制后的 `.app` 启动后，完成项目探测/信任→消息→手工草稿修订→人审入 TODO（无自动 Run）→明确 Start→包内 Python Host 调用真实 Codex→隔离 Worktree 修改两文件、真实 `node test.js` 通过→快照/Diff/Handoff→Verify `passed`/exit 0→独立 Review `approved`→逐条验收证据→Owner 最终验收 Done。源 Git HEAD/status 未变；未合并、推送、部署。另一个长命令 Run 显式取消，归属 app-server 退出，后续 2 秒无继续写入；应用退出重开后 Done Task/交付记录仍可读，取消的 Task 未变 Done。详见 [安装包验收与演示说明](demo/p6-internal-macos-package.md)，真实截图保存在 `output/playwright/p6-06-packaged-*.png`。本次命令 `FORGE_VERTICAL_PACKAGED=1 FORGE_VERTICAL_FINAL_ONLY=1 FORGE_VERTICAL_TERMINATION=cancel FORGE_VERTICAL_MODEL=gpt-6-sol node scripts/smoke-python-vertical-live.mjs` exit 0；增强后的 `pnpm smoke:package:mac` exit 0，并在 clean PATH 下真实看到未打包的 Codex `available=false`。Codex CLI/登录和 Git 是外部前置；包内 Python/插件/Schema/Web 已检查。没有开发 Host 替代安装包、没有 Claude/Anthropic 调用。
+状态仍为 **BLOCKED**。同一 SHA-256 `a3bc0a9816dbc03a44b249305a708e8d51f5ceaf124cd820d3c5acba1e3187d9` 的 `0.0.1-INTERNAL-ADHOC-UNNOTARIZED` arm64 DMG 经过真实挂载、复制到独立 QA 安装目录、从复制后的 `.app` 启动后，完成项目探测/信任→消息→手工草稿修订→人审入 TODO（无自动 Run）→明确 Start→包内 Python Host 调用真实 Codex→隔离 Worktree 修改两文件、真实 `node test.js` 通过→快照/Diff/Handoff→Verify `passed`/exit 0→独立 Review `approved`→逐条验收证据→Owner 最终验收 Done。源 Git HEAD/status 未变；未合并、推送、部署。另一个长命令 Run 显式取消，归属 app-server 退出，后续 2 秒无继续写入；应用退出重开后 Done Task/交付记录仍可读，取消的 Task 未变 Done。详见 安装包验收与演示说明（已归档），真实截图保存在 `output/playwright/p6-06-packaged-*.png`。本次命令 `FORGE_VERTICAL_PACKAGED=1 FORGE_VERTICAL_FINAL_ONLY=1 FORGE_VERTICAL_TERMINATION=cancel FORGE_VERTICAL_MODEL=gpt-6-sol node scripts/smoke-python-vertical-live.mjs` exit 0；增强后的 `pnpm smoke:package:mac` exit 0，并在 clean PATH 下真实看到未打包的 Codex `available=false`。Codex CLI/登录和 Git 是外部前置；包内 Python/插件/Schema/Web 已检查。没有开发 Host 替代安装包、没有 Claude/Anthropic 调用。
 
 用户明确批准精确 `P6-06 → P6-07` **development-only** 调度例外；权威依赖/Test ID 不变，见 `docs/development-dependency-exceptions.json` 和 ADR 0073。P6-06 的 Developer ID 签名、公证、macOS x64、全新 Gatekeeper 用户、签名升级/回滚、凭据跨升级与 T111–T113 正式验收仍未完成；P4-05/P4-10/full P4 Gate 仍 BLOCKED。Windows 实机也未验证。此例外不通过公开发布门禁。
 
@@ -993,7 +1046,7 @@ Windows/签名安装与更新、生产信任根/数据 cutover、Claude 第二�
 
 状态：**DONE（macOS arm64 开发范围）；P5 Phase Gate 按共用定义与可运行 quick 链的当前证据通过，P6-01 开始。** 参考 Workflow JSON Schema 仍为只读权威基线；生产 Python Pydantic 与 TS Zod 共同要求 `schemaVersion: 1.0`。Python Host `workflow.saveDraft/compileDraft` 对未来 DSL 版本返回明确 `WORKFLOW_DSL_VERSION_UNSUPPORTED`，已保存的未来版草稿也拒绝读取/执行而不被自动篡改；Desktop 导入画布时给出具体不兼容版本提示并保留原草稿。参考 OpenAPI 是未来 Gateway 合同，本地 Desktop 仍只有封闭 JSON-RPC stdio，不虚构 HTTP 服务。见 [P5 契约与迁移说明](p5-workflow-contract-and-migration.md)。
 
-独立临时 schema25（P3/P4）数据库含真实已批准 Task、Run/RunConfig 与版本化 Agent Profile；schema29 两次迁移后旧 ID/内容可读、外键检查无错误，在线备份文件存在。原 P3-11 的 T086～T090 事务中断、WAL 备份、失败迁移、磁盘写失败和插件 namespace 测试仍在全量回归。**没有对真实用户数据目录执行迁移演练**。最终 `pnpm install --frozen-lockfile`、`pnpm validate:contracts`（47 文件、0 error、4 既有 warning）、`pnpm validate:task-map`（43 deferred）、`pnpm py:check`（171 pytest、Ruff、严格 mypy 58 源文件）、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、`pnpm smoke:desktop`、`git diff --check` 全部 exit 0；画布/版本导入的 Vue 测试也通过。见 [P5 阶段报告](p5-completion-report.md)。
+独立临时 schema25（P3/P4）数据库含真实已批准 Task、Run/RunConfig 与版本化 Agent Profile；schema29 两次迁移后旧 ID/内容可读、外键检查无错误，在线备份文件存在。原 P3-11 的 T086～T090 事务中断、WAL 备份、失败迁移、磁盘写失败和插件 namespace 测试仍在全量回归。**没有对真实用户数据目录执行迁移演练**。最终 `pnpm install --frozen-lockfile`、`pnpm validate:contracts`（47 文件、0 error、4 既有 warning）、`pnpm validate:task-map`（43 deferred）、`pnpm py:check`（171 pytest、Ruff、严格 mypy 58 源文件）、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、`pnpm smoke:desktop`、`git diff --check` 全部 exit 0；画布/版本导入的 Vue 测试也通过。见 P5 阶段报告（已归档）。
 
 Phase Gate 的“共用同一执行定义”指三个模板与高级编辑都使用同一闭合 Workflow DSL/版本 hash；真正运行验收只覆盖严格 quick 型四节点。含 Planner 的 `standard/strict` 模板仍不可启动，历史 P3 `standard` 开发锁并不冒充这些模板。不能宣称通用 Workflow Runtime 或完整 v1.0 发布。T029 完整新旧版本 UI 差异留 P6-01；T116～T120 的跨阶段评测仍递延。P4-05/P4-10 和完整 P4 Gate **BLOCKED**；Claude 未调用。Windows x64、macOS Intel、安装包/签名、DPI、真实用户库升级均 **UNVERIFIED**。
 
@@ -1069,7 +1122,7 @@ T026～T030 的完整编辑/运行/版本用例继续 `DEFERRED_VERIFICATION` �
 
 ## P4-10 · P4替换性验收 · 2026-09-24
 
-状态：**BLOCKED；当前单 Codex/执行器无关的适用检查已执行，完整 P4 Phase Gate 未通过。** P4-10 本地插件生命周期替换 fixture 证明旧上下文卸载并可重新解析新适配器，但不是两个真实执行器。当前 Python Host 的生产 `ProjectCommandVerifier` 仍由 Host 直接持有，PluginContext 尚无真正的 Verifier 插件注册路径，不能声称不改 Core 即可替换验证器。插件开发边界见 [说明](plugin-authoring.md)，完整证据与未完成项见 [P4 开发范围报告](p4-development-scope-report.md)。权威任务/Test ID 和 Depends on 不变；T041～T045 的 Claude 真实部分、T116～T120 的 P6/P9 评测均保留追踪，不当作 PASSED。
+状态：**BLOCKED；当前单 Codex/执行器无关的适用检查已执行，完整 P4 Phase Gate 未通过。** P4-10 本地插件生命周期替换 fixture 证明旧上下文卸载并可重新解析新适配器，但不是两个真实执行器。当前 Python Host 的生产 `ProjectCommandVerifier` 仍由 Host 直接持有，PluginContext 尚无真正的 Verifier 插件注册路径，不能声称不改 Core 即可替换验证器。插件开发边界见 [说明](plugin-authoring.md)，完整证据与未完成项见 P4 开发范围报告（已归档）。权威任务/Test ID 和 Depends on 不变；T041～T045 的 Claude 真实部分、T116～T120 的 P6/P9 评测均保留追踪，不当作 PASSED。
 
 实际 `pnpm test:p3-live` 的六个本地场景和真实 Codex 开发/Verify 通过，但第一次 Reviewer 未返回结构化结果，验收脚本正确失败。对同一隔离 Desktop/Python Host 路径仅重试一次后，真实 Codex Develop→Verify→Review→Owner 人工验收→独立本地合并成功，源 Git 保持干净；Run `31f78df5-79e8-4cb4-9f57-2c39a8dc7085`，Review `d73ad1c7-5856-4d5e-bbf2-c5cd29b40425`。这只有一个真实 Executor。`pnpm validate:contracts`、`pnpm validate:task-map`（44 deferred）、`pnpm py:check`（134 pytest、Ruff、严格 mypy 50 源文件）、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、`pnpm smoke:desktop`、`git diff --check` 均 exit 0；冻结安装沿用 P4-09 已通过结果。没有调用 Claude，也没有 Anthropic 费用。用户允许 P5 中不依赖第二执行器真实运行的开发按精确 `P4-10 → P5-01` 例外继续；因此 P5-01 已开始，但 P4-10 未标 DONE，完整多执行器发布仍 BLOCKED。
 
@@ -1095,7 +1148,7 @@ T076～T080 的本地变异/时限/权限/重复注册测试在真实 Python Reg
 
 状态：**DONE，仅获授权的 Codex 单执行器开发范围；Claude 专属验收仍待补。** 用户明确允许 P4-05 的 Claude 外部凭据阻塞不阻止不依赖 Claude 实际运行的 P4-06～09，但 P4-05 仍为 BLOCKED，权威 `Depends on`、Task/Test ID 未变。精确例外见 [ADR 0052](decisions/0052-claude-sdk-api-key-gate.md) 和 `docs/development-dependency-exceptions.json`；任务图校验器拒绝其他 BLOCKED 边或把开发例外用于完整发布。已存在的公共 `ExecutorAdapter`/`ExecutorCapabilities`、Codex app-server 实测路径和审查只读/审批门禁支持当前限定工作；不能满足的权限或能力必须拒绝启动。Claude 仅完成 SDK/CLI 离线安装探测，**没有适配器实现、本地契约完整测试或在线验收**，不可选。`T041` 的两个不同真实执行器完成同一 TODO、Claude 取消/续接/运行中认证失效，以及完整 P4 Phase Gate 和多执行器发布继续待验；用户以后提供合法凭据并授权预算后再补验，不反复询问 Key。
 
-当前实际启动命令：`pnpm dev:desktop`（先本地冻结同步 Python，再启动 Vue/Vite、Electron 与唯一业务 Python Host）；`pnpm start:desktop` 加载已构建界面；`pnpm dev:web` 没有本地 Host。MIG-PY-01～09、P2 Python-only Desktop 纵向闭环和 P3 开发→Verify→Review→人工验收→独立本地合并已有真实 macOS arm64 证据，见 [P2](p2-completion-report.md)、[P3](p3-completion-report.md) 报告。当前 Codex 可演示受信项目、手工/模型草稿、人审入 TODO、隔离开发、真实 Diff、验证、只读审查、人类终验和显式本地合并；不表示自动部署或 Claude 可用。
+当前实际启动命令：`pnpm dev:desktop`（先本地冻结同步 Python，再启动 Vue/Vite、Electron 与唯一业务 Python Host）；`pnpm start:desktop` 加载已构建界面；`pnpm dev:web` 没有本地 Host。MIG-PY-01～09、P2 Python-only Desktop 纵向闭环和 P3 开发→Verify→Review→人工验收→独立本地合并已有真实 macOS arm64 证据，见 P2（已归档）、P3（已归档） 报告。当前 Codex 可演示受信项目、手工/模型草稿、人审入 TODO、隔离开发、真实 Diff、验证、只读审查、人类终验和显式本地合并；不表示自动部署或 Claude 可用。
 
 P4-06 开始前复查：`pnpm validate:task-map`、`pnpm py:check`（111 pytest、Ruff、严格 mypy 45 源文件）、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、`git diff --check` 均 exit 0。P4-06 真实实现：Python Host 的 schema v25 新增不可变 Agent Profile 版本；Developer/Reviewer 的角色职责、上下文、权限、模型与限制独立保存，并在运行时用注册执行器的真实 capabilities 重新核验。选中版本及 hash 冻结进 RunConfig/Review job；不可满足只读、网络限制、审批或模型要求时拒绝启动。Electron Agents 页展示真实 Codex 与不可用 Claude，Web 无本地写入桥。单测覆盖 CAS、重启、SQLite 迁移、各能力拒绝；真实 Desktop/Codex Profile Run 修改隔离 fixture、测试通过、源仓库无变化，Reviewer Profile 完成固定快照的只读 Review。截图见 `output/playwright/p4-06-agents-desktop.png` 与 `output/playwright/p3-03-python-desktop-review-1440x900.png`。完整回归 `pnpm install --frozen-lockfile`、`pnpm validate:contracts`（47 文件/0 error/4 既有 warning）、`pnpm validate:task-map`（42 deferred）、`pnpm py:check`（115 pytest/Ruff/严格 mypy 46 源文件）、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、`pnpm smoke:desktop`、`git diff --check` 均通过；Windows x64、macOS Intel、打包/签名、真实用户数据库升级与 Codex utilityProcess 历史恢复风险仍未实测。
 
@@ -1135,7 +1188,7 @@ P4-06 开始前复查：`pnpm validate:task-map`、`pnpm py:check`（111 pytest�
 
 ## P3-12 · P3可交付验收样例与阶段出口 · 2026-09-24
 
-状态：**DONE（macOS arm64 当前阶段范围）；P3 Phase Gate PASSED；P4-01 已开始。** 六个独立 Git/SQLite/Python Host 场景真实覆盖正常交付、混合状态看板、结构化 Review 退回、批准测试失败后的有界返工、非安全建议的人类豁免以及 Git 已更新后 Host 崩溃重启对账。另一次真实 `pnpm test:p3-live` 经 Electron→Python Host→Codex 完成消息/手工 Draft/人工批准 TODO→隔离开发→固定快照→批准命令 Verify→逐项 AC 决定→只读 Review→独立 Owner 验收 Done→另行确认本地合并；原生确认取消时目标不变，最终源 Git 干净。任务抽屉从 Host 读取正式 text/plain 验证报告，Vue 将恶意 HTML/链接当文本渲染。独立 Desktop 混合状态看板测试发现并修复 Host TODO 排序误计 Done 及嵌套键盘 Enter 被卡片拦截的问题，并覆盖越列拒绝、筛选、键盘排序。真实 1440×900 截图与 ID 见 [P3 Demo](demo/p3-delivery.md)；阶段结果见 [P3 报告](p3-completion-report.md) 与 [ADR 0047](decisions/0047-p3-delivery-acceptance-scope.md)。
+状态：**DONE（macOS arm64 当前阶段范围）；P3 Phase Gate PASSED；P4-01 已开始。** 六个独立 Git/SQLite/Python Host 场景真实覆盖正常交付、混合状态看板、结构化 Review 退回、批准测试失败后的有界返工、非安全建议的人类豁免以及 Git 已更新后 Host 崩溃重启对账。另一次真实 `pnpm test:p3-live` 经 Electron→Python Host→Codex 完成消息/手工 Draft/人工批准 TODO→隔离开发→固定快照→批准命令 Verify→逐项 AC 决定→只读 Review→独立 Owner 验收 Done→另行确认本地合并；原生确认取消时目标不变，最终源 Git 干净。任务抽屉从 Host 读取正式 text/plain 验证报告，Vue 将恶意 HTML/链接当文本渲染。独立 Desktop 混合状态看板测试发现并修复 Host TODO 排序误计 Done 及嵌套键盘 Enter 被卡片拦截的问题，并覆盖越列拒绝、筛选、键盘排序。真实 1440×900 截图与 ID 见 P3 Demo（已归档）；阶段结果见 P3 报告（已归档） 与 [ADR 0047](decisions/0047-p3-delivery-acceptance-scope.md)。
 
 最终质量链：`pnpm install --frozen-lockfile`、`pnpm validate:contracts`（47 文件、0 error、4 既有 warning）、`pnpm validate:task-map`（9 phase/92 task/120 case/29 deferred）、`pnpm py:check`（83 pytest、Ruff、严格 mypy 41 源文件）、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、`pnpm smoke:desktop`（真实 Electron/Python Host、schema24/ready/degraded/crashed）和 `git diff --check` 均 exit 0。T116–T120 保留原权威引用、映射 P6-09/P9-06 为 `DEFERRED_VERIFICATION`，未标 PASSED。Windows x64、macOS Intel、安装包/签名/DPI、现有用户库升级、线上强制 Reviewer 二次退回与恶意第三方插件隔离仍 **UNVERIFIED**。无新依赖、凭据、提交、推送或发布。
 
@@ -1225,9 +1278,9 @@ P4-06 开始前复查：`pnpm validate:task-map`、`pnpm py:check`（111 pytest�
 
 ## P2-10 · Python Host 纵向真实 Demo · 2026-09-24
 
-状态：**DONE（当前 macOS arm64 开发运行路径的 P2 阶段范围）**。真正的 Electron Renderer→Main→Python Host→Codex app-server 链路完成系统目录选择/Project Trust→消息→手工 Task Draft→人工修订审批 TODO→显式启动→隔离 Git worktree 中的代码修改→真实 Diff/CodeSnapshot/Handoff。成功 Run `e67668ee-a32f-4718-9831-043ac3919746` 修改 `math.js`/`test.js`、运行 fixture `node test.js` 通过；人工读取生成的 Diff，确认只增加非 number 的 `TypeError` 校验与四个断言。来源仓库 HEAD/status 未变，任务仍处开发交接，正式 AC 为 `unverified`。真实 Codex 进程中断 Run `97b6b00b-8598-4cb3-9952-34871ee40bff` 留下 failed/`run.failed` 且无 Handoff；Desktop 固定 `run.cancel` 对 Run `07698a53-3f18-464b-8b7e-7a5ee6dd57bc` 得到 cancelled/`run.cancelled`，owned 进程停止，工作区无后续写入。一次模型 completed 但无改动的调用被脚本判失败，不算成功证据。完整人工检查见 [P2 Python 纵向 Demo](demo/p2-python-vertical.md)。
+状态：**DONE（当前 macOS arm64 开发运行路径的 P2 阶段范围）**。真正的 Electron Renderer→Main→Python Host→Codex app-server 链路完成系统目录选择/Project Trust→消息→手工 Task Draft→人工修订审批 TODO→显式启动→隔离 Git worktree 中的代码修改→真实 Diff/CodeSnapshot/Handoff。成功 Run `e67668ee-a32f-4718-9831-043ac3919746` 修改 `math.js`/`test.js`、运行 fixture `node test.js` 通过；人工读取生成的 Diff，确认只增加非 number 的 `TypeError` 校验与四个断言。来源仓库 HEAD/status 未变，任务仍处开发交接，正式 AC 为 `unverified`。真实 Codex 进程中断 Run `97b6b00b-8598-4cb3-9952-34871ee40bff` 留下 failed/`run.failed` 且无 Handoff；Desktop 固定 `run.cancel` 对 Run `07698a53-3f18-464b-8b7e-7a5ee6dd57bc` 得到 cancelled/`run.cancelled`，owned 进程停止，工作区无后续写入。一次模型 completed 但无改动的调用被脚本判失败，不算成功证据。完整人工检查见 P2 Python 纵向 Demo（已归档）。
 
-回归：`pnpm install --frozen-lockfile`、`pnpm validate:contracts`（47 文件、0 error、4 既有 warning）、`pnpm validate:task-map`（9 phase、92 task、120 case、36 deferred）、`pnpm py:check`（37 pytest、Ruff、strict mypy）、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、`pnpm smoke:desktop`、`git diff --check` 均 exit 0；日志 `/tmp/forge-p2-10-*.log`。真实 Demo 命令及截图/Diff 见证据文档。P2 Phase Gate 的已批准任务隔离修改、可查看结果与真实停止在本机通过，[P2 阶段报告](p2-completion-report.md)已建立。P2-10 引用的 T116–T120 仍为 `DEFERRED_VERIFICATION`，映射到 P6/P9，不计 PASSED。Windows x64、macOS Intel、安装包/签名/DPI 与异常 Host 死亡后的 Codex orphan 恢复未验证；下一权威任务 P3-01 已开始。无提交、推送或发布。
+回归：`pnpm install --frozen-lockfile`、`pnpm validate:contracts`（47 文件、0 error、4 既有 warning）、`pnpm validate:task-map`（9 phase、92 task、120 case、36 deferred）、`pnpm py:check`（37 pytest、Ruff、strict mypy）、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、`pnpm smoke:desktop`、`git diff --check` 均 exit 0；日志 `/tmp/forge-p2-10-*.log`。真实 Demo 命令及截图/Diff 见证据文档。P2 Phase Gate 的已批准任务隔离修改、可查看结果与真实停止在本机通过，P2 阶段报告（已归档）已建立。P2-10 引用的 T116–T120 仍为 `DEFERRED_VERIFICATION`，映射到 P6/P9，不计 PASSED。Windows x64、macOS Intel、安装包/签名/DPI 与异常 Host 死亡后的 Codex orphan 恢复未验证；下一权威任务 P3-01 已开始。无提交、推送或发布。
 
 ## Python Core 迁移 · MIG-PY-09 · 2026-09-24
 
@@ -1347,9 +1400,9 @@ Host-only `HostSnapshotService` 在 succeeded Run、已释放 writer lease 且�
 
 ## P1-10 · P1集成与手工降级 · 2026-09-24
 
-状态：**DONE（用户批准的 P1 阶段范围；macOS arm64 实测）**。独立 `scripts/smoke-p1-offline.mjs` 构建并启动真实 Electron/utilityProcess Host/SQLite，以中文及空格路径的临时 Git 项目从原生目录选择、信任、保存用户需求消息、手工草稿、CAS 修订、人工审阅批准到唯一 TODO，看板及详情在 Desktop 重启后保持。测试把 `CODEX_HOME` 指向空目录、清空 Key 项、设不可达 HTTP(S) 代理；整个流程不调用模型，证明没有模型认证时仍可使用任务与看板。它**不是**操作系统级断网试验。前后 Git HEAD/status 不变，声明的项目测试脚本未运行。真实 1440×900 截图 `output/playwright/p1-10-offline-approved-todo-1440x900.png` 已生成并查看。复现说明与 T011–T025、T116–T120 逐项证据见 [P1 手工降级场景](demo/p1-manual-offline.md)。
+状态：**DONE（用户批准的 P1 阶段范围；macOS arm64 实测）**。独立 `scripts/smoke-p1-offline.mjs` 构建并启动真实 Electron/utilityProcess Host/SQLite，以中文及空格路径的临时 Git 项目从原生目录选择、信任、保存用户需求消息、手工草稿、CAS 修订、人工审阅批准到唯一 TODO，看板及详情在 Desktop 重启后保持。测试把 `CODEX_HOME` 指向空目录、清空 Key 项、设不可达 HTTP(S) 代理；整个流程不调用模型，证明没有模型认证时仍可使用任务与看板。它**不是**操作系统级断网试验。前后 Git HEAD/status 不变，声明的项目测试脚本未运行。真实 1440×900 截图 `output/playwright/p1-10-offline-approved-todo-1440x900.png` 已生成并查看。复现说明与 T011–T025、T116–T120 逐项证据见 P1 手工降级场景（已归档）。
 
-本轮基线及最终回归 `pnpm install --frozen-lockfile`、`pnpm validate:contracts`（47 文件、0 error、4 既有 warning）、`pnpm validate:task-map`（9 phase、92 task、64 detail、120 case）、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、`pnpm smoke:desktop`、`pnpm smoke:p1-offline`、`git diff --check` 均 exit 0；P1-09 的 `pnpm smoke:projects` 全流程亦已通过。P1 Phase Gate 的手工路径、人工审批入 TODO、不自动写代码在 macOS arm64 成立。权威 P1-10 的跨阶段验收引用已按用户批准的 [ADR 0018](decisions/0018-p1-closure-acceptance-scope-conflict.md) A 处理：T016/T021/T022/T024/T025 与 T116–T120 的未实现分支逐项记录为 `DEFERRED_VERIFICATION`，明确最早 owner Task，未标为 PASSED；见 [追踪表](deferred-verification.json) 与 [P1 阶段报告](p1-completion-report.md)。P1 阶段核心路径有独立真实证据，允许 P2-01 启动。参考 Task/Test ID、Phase Gate 与引用保持不变。没有新依赖或迁移；生产 schema 仍为 9。
+本轮基线及最终回归 `pnpm install --frozen-lockfile`、`pnpm validate:contracts`（47 文件、0 error、4 既有 warning）、`pnpm validate:task-map`（9 phase、92 task、64 detail、120 case）、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`、`pnpm smoke:desktop`、`pnpm smoke:p1-offline`、`git diff --check` 均 exit 0；P1-09 的 `pnpm smoke:projects` 全流程亦已通过。P1 Phase Gate 的手工路径、人工审批入 TODO、不自动写代码在 macOS arm64 成立。权威 P1-10 的跨阶段验收引用已按用户批准的 [ADR 0018](decisions/0018-p1-closure-acceptance-scope-conflict.md) A 处理：T016/T021/T022/T024/T025 与 T116–T120 的未实现分支逐项记录为 `DEFERRED_VERIFICATION`，明确最早 owner Task，未标为 PASSED；见 [追踪表](deferred-verification.json) 与 P1 阶段报告（已归档）。P1 阶段核心路径有独立真实证据，允许 P2-01 启动。参考 Task/Test ID、Phase Gate 与引用保持不变。没有新依赖或迁移；生产 schema 仍为 9。
 
 ## P1-09 · 自然语言控制提议 · 2026-09-24
 
@@ -1597,7 +1650,7 @@ Windows x64、macOS Intel、真实 DPI、安装包/`.asar`、签名/公证、Cod
 
 - T086：仅以内部元数据验证事务中途进程退出无半提交；任务/审批/事件的业务原子性尚未实现。T087：真实 WAL backup API 与恢复读取已通过。T088：v2 失败不标成功、旧数据保留已通过。T089：真实锁超时与 SQLite_FULL 错误映射通过；没有模拟整机磁盘满。T090：Persistence API 不返回 driver；插件 namespace 仍需后续插件阶段。
 - 当前 `pnpm build` 后的 Node Host 与 Electron utilityProcess Host 都能加载原生文件；尚未创建 `.asar` 或安装包，原生文件随包分发、签名、公证、Windows x64、macOS Intel 均未验证，不能宣称跨平台原生兼容性完成。
-- `forge_spec_v1.0/contracts/schema.sql` 的业务 DDL 未应用；当前正式库只有两个内部表。没有 Task、Agent、Workflow 或 Project Memory 数据。
+- `packages/contract-validator/fixtures/contracts/schema.sql` 的业务 DDL 未应用；当前正式库只有两个内部表。没有 Task、Agent、Workflow 或 Project Memory 数据。
 
 ### 下一项满足依赖的任务
 
@@ -1717,7 +1770,7 @@ P0-03「Host 入口与进程通信」依赖 P0-02。本轮只记录依赖关系�
 - T001 未授权 IPC、T002 第二实例、T003 Renderer 重载、T004 跨平台快捷键、T005 布局/DPI：均依赖 P0-02 及后续 Host/UI，**尚未执行**。本轮测试不能替代它们。
 - 新目录按 README 的冻结安装方式已在当前 macOS arm64 目录验证；全新 checkout、CI 云端执行和 Windows/macOS Intel 未验证。
 - Electron、Vue/Vite、SQLite/Drizzle、执行器 SDK、安装包、签名及用户凭据均未接入或验证。
-- `forge_spec_v1.0/planning/tasks.json` 与参考测试报告保持原状；视觉原型只读查看，没有作为生产入口运行。
+- `packages/contract-validator/fixtures/planning/tasks.json` 与参考测试报告保持原状；视觉原型只读查看，没有作为生产入口运行。
 
 ### 下一项满足依赖的任务
 
@@ -1735,7 +1788,7 @@ P7-05 出现权威公开写命令与 Python Host 必填字段不一致、以及 
 
 **这是内部演示交付，不改变 P6 正式发布状态。**原始已验收 DMG 保留原 SHA；发现旧安装版运行后，包内 CPython 动态导入生成 5 个签名外 `.pyc`，导致再次 `codesign --verify --deep --strict` 失败。构建入口现在先执行当前源码 build，packaged Host 明确设置 `PYTHONDONTWRITEBYTECODE=1`。另行生成不覆盖旧包的 `0.0.1 INTERNAL / ADHOC / UNNOTARIZED` Demo DMG（SHA-256 `91595c5cbf5278ecc68227a3eb5a92ded84d26408b227d28371832e6de283eb6`），从 DMG 安装至 `/Users/iamzjt/Applications/Forge INTERNAL Current.app`。新包的启动、包内 Python Host/schema32、退出后签名复核通过，且安装版 Plugins 真正停用/启用三次重开测试通过；Workflow 真实加载 3 个模板、Knowledge 页面读取备份 Project 数据。原旧安装目录与数据库均未删除/迁移。
 
-新包通过真实付费许可范围内的单 Codex 安装版闭环：独立 Git fixture 的真实消息/草稿/审批/TODO、显式 Start、隔离 Diff/CodeSnapshot、Verify exit 0、Review approved、逐项验收与人工接受、Done 无自动合并、单独取消和重启读取均有证据。历史记录保留于 `/Users/iamzjt/Documents/Forge Demo Current/recorded-acceptance/isolated-app-data`（schema32、1 Project、2 Task、2 Run、1 Delivery），源 fixture clean，未清理。`pnpm demo:open` 与独立 `.command` 可常驻打开相同安装版及数据，不从开发 `.venv` 启动。独立安装版 QA 又以真实旧 Demo 仓库完成文件夹信任、只读导入、来源定位、关键词检索、记忆确认→检索→撤销→0 条，源 Git 未变；Workflow 页面读取 3 个 Host 模板。见 [内部 Demo 操作与证据](demo/p6-internal-macos-package.md)。当前包没有手机远程控制、公网监听、Developer ID/公证；Windows/Intel/Claude 和正式升级仍未验收。新安装版在同一持久项目的 Workflow 配置→发布→新 Run 与知识来源→实际 Run Context 交互仍需补验，PDF 对应表保持准确标签。
+新包通过真实付费许可范围内的单 Codex 安装版闭环：独立 Git fixture 的真实消息/草稿/审批/TODO、显式 Start、隔离 Diff/CodeSnapshot、Verify exit 0、Review approved、逐项验收与人工接受、Done 无自动合并、单独取消和重启读取均有证据。历史记录保留于 `/Users/iamzjt/Documents/Forge Demo Current/recorded-acceptance/isolated-app-data`（schema32、1 Project、2 Task、2 Run、1 Delivery），源 fixture clean，未清理。`pnpm demo:open` 与独立 `.command` 可常驻打开相同安装版及数据，不从开发 `.venv` 启动。独立安装版 QA 又以真实旧 Demo 仓库完成文件夹信任、只读导入、来源定位、关键词检索、记忆确认→检索→撤销→0 条，源 Git 未变；Workflow 页面读取 3 个 Host 模板。见 内部 Demo 操作与证据（已归档）。当前包没有手机远程控制、公网监听、Developer ID/公证；Windows/Intel/Claude 和正式升级仍未验收。新安装版在同一持久项目的 Workflow 配置→发布→新 Run 与知识来源→实际 Run Context 交互仍需补验，PDF 对应表保持准确标签。
 
 安装版 Workflow 的后续独立 UI 验证在该历史数据库的临时备份中完成：通过 Agents 页面保存真实 Developer/Reviewer Profile，绑定 quick 模板节点、修改步骤、Host 预检、保存草稿、发布 v1，并从 Host 回读发布定义；画布与发布截图见演示指南。首次尝试因未保存 Profile 被 Host 正确阻止发布；补齐真实 Profile 后通过。没有自动启动 Run，也没有把这个单独的版本发布测试算成“安装版新 Run 已引用此版本”。`.command` 重复启动识别现存进程，原持久数据库不受上述临时测试影响。
 

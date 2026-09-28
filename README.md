@@ -1,71 +1,96 @@
 <div align="center">
 
-<img src="desktop/apps/desktop/resources/icon-256.png" alt="Forge Logo" width="96" />
+<img src="desktop/apps/desktop/resources/icon-256.png" alt="Forge" width="100" />
 
 # Forge
 
-### 自然语言驱动的 AI 研发工作台
+### 把项目、任务与 Agent 协作放进同一个工作台。
 
-围绕本地代码项目，组织任务、配置 Agent 与模型、查看开发活动和代码变化。
-中文与英文、亮色与暗色，让工作台适应你的习惯。
+面向 AI 编程的桌面应用。围绕你的代码项目组织任务，
+配置模型与 Agent，集中查看开发活动、终端和代码变化。
 
-[![Version](https://img.shields.io/badge/version-0.1.0--preview.3-476b9b)](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.3)
-[![Desktop Quality](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml/badge.svg)](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml)
-[![Core Quality](https://github.com/j-tide/Forge/actions/workflows/quality.yml/badge.svg)](https://github.com/j-tide/Forge/actions/workflows/quality.yml)
+[![Preview](https://img.shields.io/badge/preview-0.1.0--preview.4-476b9b)](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.4)
+[![macOS](https://img.shields.io/badge/macOS-Apple_Silicon-64748b)](#下载安装)
+[![Desktop CI](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml/badge.svg)](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-64748b)](desktop/LICENSE)
 
-[**下载 macOS 预览版**](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.3) · [**从源码运行**](#从源码运行) · [**文档**](#文档)
+[**下载 Forge**](#下载安装) · [**功能概览**](#功能概览) · [**快速上手**](#快速上手) · [**源码开发**](#源码开发)
 
 </div>
 
 <br />
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="desktop/docs/screenshots/0.1.0-preview.3/home-dark-1440.png" />
-  <img src="desktop/docs/screenshots/0.1.0-preview.3/home-light-1440.png" alt="Forge 桌面工作台" width="100%" />
+  <source media="(prefers-color-scheme: dark)" srcset="desktop/docs/screenshots/0.1.0-preview.4/home-dark-1440.png" />
+  <img src="desktop/docs/screenshots/0.1.0-preview.4/home-light-1440.png" alt="Forge 桌面首页：项目入口、任务导航与磨砂玻璃界面" width="100%" />
 </picture>
 
-> 当前版本为 **0.1.0-preview.3**，提供 macOS Apple Silicon 预览包，尚未完成正式签名和公证。完整任务闭环与 Forge Python Host 集成尚未完成，其他平台仍待验证。
+## 功能概览
 
-## 功能
+### 项目与任务，集中管理
 
-| 功能 | 用途 |
-| --- | --- |
-| **项目与任务** | 打开本地项目，在看板中管理任务、查看执行信息。 |
-| **Agent 与模型** | 配置模型提供方、认证和 Agent 选项。 |
-| **终端与代码** | 查看命令活动、工作区和代码变化。 |
-| **上下文与工具** | 配置项目上下文、集成和 MCP 工具。 |
-| **中文 / English** | 在设置中即时切换语言，重启后保留选择。 |
-| **亮色 / 暗色** | 银蓝磨砂界面，两种主题共用布局。 |
+打开本地代码项目，用任务看板组织研发工作。创建任务时描述目标与限制，通过 `@` 引用项目文件、添加图片，并选择基准分支与工作树配置。
+
+### Agent 与模型，按需配置
+
+分别为需求整理、规划、开发和质量审查配置模型，在同一处管理模型服务、认证与 Agent 参数。结合项目上下文与工具配置，为任务准备所需的开发环境。
+
+### 开发过程，随时查看
+
+任务详情集中展示进度、子任务、日志与文件，配合智能体终端查看命令活动、检查代码变化。项目洞察、路线图与创意探索提供独立的项目分析入口。
+
+### 熟悉的语言，舒适的界面
+
+中文与 English 即时切换，银灰亮色与石墨暗色共用紧凑布局。磨砂集中于导航外壳，正文与表单使用清晰表面；支持减少动效与透明度。语言和主题偏好自动保留，代码、模型输出与用户内容保持原文。
+
+**本版改进**：项目设置与应用设置分开；修复顶部弹层遮挡、中文文件引用、草稿配置丢失及跨项目迟到数据；保存失败保留输入，删除预检失败时阻止删除。
 
 <details>
 <summary><strong>查看暗色界面与语言设置</strong></summary>
 
 <br />
 
-![Forge 暗色桌面](desktop/docs/screenshots/0.1.0-preview.3/home-dark-1440.png)
+**暗色工作台**
 
-![Forge 中文设置](desktop/docs/screenshots/0.1.0-preview.3/settings-language-zh-light-1440.png)
+![Forge 暗色工作台](desktop/docs/screenshots/0.1.0-preview.4/home-dark-1440.png)
+
+**中文 / English 切换**
+
+![Forge 语言设置](desktop/docs/screenshots/0.1.0-preview.4/settings-language-zh-light-1440.png)
 
 </details>
 
-## 下载与安装
+## 下载安装
 
-1. 下载 [**macOS arm64 DMG**](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.3/Forge-0.1.0-preview.3-darwin-arm64-INTERNAL.dmg)。[Release](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.3) 同时提供 ZIP、源码和 `SHA256SUMS`。
-2. 核对校验摘要，打开 DMG，将 `Forge.app` 拖入 Applications。
-3. 从 Finder 打开 Forge。若系统提示无法验证开发者，可在“系统设置 → 隐私与安全性”中确认打开。
+当前版本：**0.1.0-preview.4**，适用于 **Apple Silicon Mac（M 系列芯片）**。
 
-### 首次使用
+| 下载 | 说明 |
+| --- | --- |
+| [**macOS DMG**](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/Forge-0.1.0-preview.4-darwin-arm64-INTERNAL.dmg) | 打开后将 `Forge.app` 拖入 Applications。 |
+| [macOS ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/Forge-0.1.0-preview.4-darwin-arm64-INTERNAL.zip) | 解压后打开 `Forge.app`。 |
+| [版本说明与校验文件](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.4) | 查看发布说明、`SHA256SUMS` 与对应源码。 |
 
-- 安装 **Git**，添加一个本地项目。建议先使用测试仓库熟悉操作。
-- 在设置中配置模型提供方与认证；部分执行器需要额外安装 CLI，并保持所需网络连接。
-- 选择中文或 English、亮色或暗色主题，再创建任务。
+下载后核对校验摘要，正常退出旧 Forge，再从 Finder 打开新版。此内部预览包使用 ad-hoc 签名，尚未完成 Developer ID 签名与公证；按 macOS 自身的安全提示操作，不全局关闭 Gatekeeper。
 
-预览版使用独立的 `Forge Glass Preview` 用户数据目录和 `.forge-glass-preview/` 项目数据目录。服务凭据及执行器不随安装包提供。
+## 快速上手
 
-## 从源码运行
+1. **打开项目**：在首页点击「打开项目」，选择本地代码目录；若提示「初始化 Forge」，先完成项目初始化。首次试用建议使用测试仓库。
+2. **配置模型**：进入「设置 → 账户」配置认证，再到「智能体设置」配置各阶段的服务商与模型。需要 CLI 时，在「路径」中配置可执行程序。
+3. **创建任务**：点击「新建任务」，描述要实现或修复的内容，检查工作树、审阅与推送选项，再保存任务。
+4. **开始与检查**：创建后在「任务看板」点击「开始」，打开任务详情查看进度、子任务、日志与文件；通过「智能体终端」和「工作树」检查命令及代码变化。
+5. **调整工作台**：在「设置 → 语言」切换中文或 English，在「设置 → 外观」选择主题。
 
-**前置条件：Node.js 24+、npm 10+、Git。** 原生依赖需要本机编译工具；macOS 使用 Xcode Command Line Tools。
+使用项目功能需要 **Git**。模型调用需要你自己的有效认证和网络连接；部分执行器还需要单独安装 CLI。
+
+### 预览版说明
+
+当前已验证 macOS M 系列设备的亮暗界面、项目设置、任务本地保存、键盘及语言／主题重启恢复。**衍生桌面尚未接入 Forge Python Host，完整在线任务流程仍待当前安装包验收**；Windows 与 Intel Mac 尚未完成验证。详细范围见[版本记录](desktop/docs/releases/0.1.0-preview.4.md)。
+
+## 源码开发
+
+桌面源码位于 `desktop/`，使用 **Electron + React + TypeScript** 和独立 npm workspace。
+
+前置条件：**Node.js 24+、npm 10+、Git**。macOS 原生依赖构建需要 Xcode Command Line Tools。
 
 ```sh
 git clone https://github.com/j-tide/Forge.git
@@ -78,14 +103,13 @@ npm ci --ignore-scripts
 node node_modules/electron/install.js
 npm --workspace apps/desktop run postinstall
 
+# 启动开发环境
 npm run dev
 ```
 
-已有 macOS 应用包时，可在 `desktop/` 执行 `npm run preview:open` 打开。
+### 检查与构建
 
-### 工程检查
-
-在 `desktop/` 中运行：
+以下命令均在 `desktop/` 中执行：
 
 ```sh
 npm run check:i18n
@@ -93,19 +117,22 @@ npm run lint
 npm run typecheck
 npm run test
 npm run build
+# 真实 Electron 亮暗界面、键盘与本地保存回归
+npm run test:ui:desktop
+npm run test:overlays:desktop
+npm run test:files:desktop
 ```
 
-macOS 上可追加 `npm run test:logo:desktop` 和 `npm run test:i18n:desktop`，检查主题、语言切换与重启保存。
-
-桌面使用 **Electron + React + TypeScript**，位于 `desktop/`，采用独立 npm workspace。仓库内的 Python Host 和原 Vue/pnpm 工程分别维护，开发说明见下方文档。
+已有 macOS 应用包时，使用 `npm run preview:open` 正常打开。安装配置、原生依赖及其他工程入口见[桌面开发文档](desktop/README.md)。
 
 ## 文档
 
 - [桌面开发与配置](desktop/README.md)
-- [版本说明、验证结果与已知风险](desktop/docs/releases/0.1.0-preview.3.md)
-- [兼容性记录](docs/compatibility-record.md)
-- [产品规格](forge_spec_v1.0/START_HERE.md)
+- [发布与验证记录](desktop/docs/releases/0.1.0-preview.4.md)
+- [当前源码的桌面 UI / UX 走查](docs/desktop-ui-ux-audit.md)
+- [平台兼容性与已知风险](docs/compatibility-record.md)
+- [实施规则](AGENTS.md)
 
-## 许可证与来源
+## 许可证
 
-桌面基于 Aperant `v2.8.0-beta.6`，采用 [AGPL-3.0](desktop/LICENSE)。来源、版权及修改记录见 [UPSTREAM.md](desktop/UPSTREAM.md)，Release 提供对应源码。
+桌面基于 Aperant `v2.8.0-beta.6`，采用 [AGPL-3.0](desktop/LICENSE)。来源、版权与修改记录见 [UPSTREAM.md](desktop/UPSTREAM.md)。发布页提供对应源码。

@@ -1,7 +1,7 @@
 {
   "name": "forge-desktop-workspace",
   "private": true,
-  "version": "0.1.0-preview.3",
+  "version": "0.1.0-preview.4",
   "description": "Forge desktop workspace. License and source notices: UPSTREAM.md",
   "license": "AGPL-3.0",
   "author": "Forge contributors",
@@ -25,10 +25,13 @@
     "check:i18n": "node scripts/check-localization.mjs",
     "test:i18n:desktop": "node scripts/test-forge-languages.mjs",
     "test:logo:desktop": "node scripts/test-forge-logo.mjs",
+    "test:ui:desktop": "node scripts/test-forge-workspace-ui.mjs",
     "typecheck": "npm --workspace apps/desktop run typecheck",
     "test:i18n:references": "node --test scripts/localization-references.test.mjs",
     "preview:open": "node scripts/open-forge.mjs",
-    "test:branding": "node --test scripts/branding.test.mjs"
+    "test:branding": "node --test scripts/branding.test.mjs",
+    "test:overlays:desktop": "node scripts/test-forge-overlays.mjs",
+    "test:files:desktop": "node scripts/test-forge-file-references.mjs"
   },
   "engines": {
     "node": ">=24.0.0",

@@ -1,5 +1,23 @@
 # Forge 版本与兼容性记录
 
+## 2026-09-28 · 0.1.0-preview.4 当前发布构建
+
+`forge-0.1.0-preview.4-9864843c064e` / macOS arm64 / INTERNAL / ADHOC / UNNOTARIZED。独立 Desktop 版本及 npm lock 同步 `.4`，根 Python / pnpm 版本保持；`versions.lock.json.desktopPreview` 明确独立工作区。依赖版本不变：Electron 40.0.0、React 19.2.4、TypeScript 5.9.3、Vite 7.3.1、electron-vite 5.0.0、motion 12.36.0；无新增依赖或 install script。
+
+本次 `.4` Desktop 5057 tests、lint / typecheck / build / i18n、双主题全页面、语言重启、Portal / 实际滚轮 / 文件引用通过。根 frozen install / contracts / task-map / lint / typecheck / test（含 build）/ Python Host Desktop smoke、Python Ruff / mypy / 286 passed / 1 skipped 通过。DMG 和 ZIP 完整性通过，实际 DMG 挂载 `.app` 的版本 / 编译资源 / 图标 / 许可证 / 来源一致，启动后签名验证通过；用户设置 / 项目 / API Profile 摘要未变。完整结果及摘要见 [preview.4](../desktop/docs/releases/0.1.0-preview.4.md) 和 [UI 走查](desktop-ui-ux-audit.md)。
+
+本次模型调用 0。生产 npm audit 仍 33 项（10 high / 9 moderate / 14 low），797 条既有 lint warnings / 5 infos 保留，未声明已修复。Python Host 接入此衍生 Desktop、完整任务 / Planner / Review / Verify / Owner 业务、Claude、Windows x64、macOS Intel、各平台 DPI / 辅助技术、Developer ID、公证、正式更新仍 UNVERIFIED / BLOCKED。内部预览发布不改变正式产品门禁，手机与远程继续后置。旧版本记录和旧包摘要保留在下方。
+
+## 2026-09-28 · 本地 UI / UX 修订与包内一致性
+
+当前 `desktop/` 本地未发布构建 `forge-ui-ux-20260928-70c0c93c2593`，`0.1.0-preview.3`，macOS arm64，**UNRELEASED / INTERNAL / ADHOC / UNNOTARIZED**。Electron 40.0.0、React 19.2.4、TypeScript 5.9.3、Vite 7.3.1、electron-vite 5.0.0、motion 12.36.0 与现有锁保持；无新增依赖、原生模块、SQL migration、凭据路径或网络监听。亮 / 暗玻璃外壳与可读表面共用布局，系统 / 用户减少动效和透明度保留。
+
+独立 npm lint / typecheck / test / build / i18n 通过：283 Vitest 文件 / 5057 tests；36 namespaces / 5224 strings 无 i18n 错误。lint 仍有 797 条既有 warnings 和 5 infos，不声称零警告。真实 Electron 双主题全页面 QA 60 条记录 / 70 张截图；项目设置只保存项目偏好，重启恢复、Portal 弹层、键盘与文件补全真实读回通过。无认证账户时不会显示假的无限额度；无密钥 UI fixture 不证明 provider 可用。
+
+[本地 .app](../desktop/apps/desktop/dist/ui-redesign-unreleased/mac-arm64/Forge.app) 的 `app.asar` SHA-256：`70c0c93c2593b16fd6cad1d6e2f113f831ca4897744a59f1e1e463728423fe13`。8 份编译资源、4 份原生图标及 LICENSE / UPSTREAM 逐字节与构建核对，真实 packaged 启动及随后 ad-hoc deep / strict 签名验证通过。只读安装态检查前后现有设置、项目与 API Profile 摘要一致，没有关闭正在使用的旧 Forge。普通打开须先正常退出旧应用；发布的旧 DMG / ZIP 没有被覆盖。完整证据见 [UI / UX 报告](desktop-ui-ux-audit.md)。
+
+该验证限于界面和受影响本地服务，不新增 Forge Python Host 集成、真实在线执行器或完整任务交付证据。本轮在线模型调用 0。Windows x64、macOS Intel、系统 DPI / 辅助技术、Claude、Developer ID、公证、正式更新、衍生版 Python Core 集成及完整安装业务验收仍 **UNVERIFIED / BLOCKED**，沿用原记录。33 项继承生产依赖 audit 风险未宣称关闭；手机 / 远程后置，未放宽写入或权限安全。未提交、推送或发布。
+
 ## 2026-09-28 · Forge 仓库源码归拢 / 0.1.0-preview.3
 
 用户明确授权按功能提交、推送到 `j-tide/Forge` 并发布预览。衍生 Desktop 完整源码与历史归入 `desktop/`，原 Python Host、规格、Vue 历史实现及 SQLite 用户数据原位保留；许可/来源和独立 npm 边界见 ADR 0087。当前预览仍未连接 Forge Python Host，不是完整产品验收。普通打开使用根 `pnpm desktop:open`，开发入口位于 `desktop/`；详细变更、当前截图、检查结果及未验项见 [0.1.0-preview.3](../desktop/docs/releases/0.1.0-preview.3.md)。
@@ -500,7 +518,7 @@ The existing macOS arm64 `Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64.dm
 
 ## P5-12 · Populated schema25→29 upgrade and DSL version diagnostics
 
-2026-09-25，在 macOS arm64/Python 3.12.13/SQLite 3.50.4/Electron 44.4.3/Vue 3.5.43 开发路径，含真实 P3 批准 Task、Run/RunConfig 与 P4 Profile 的独立 schema25 临时库升级到 schema29 并重复迁移后仍可读，`foreign_key_check` 无错误，备份存在。Python Host 与 Desktop 画布导入对未来 Workflow DSL schemaVersion 明确诊断；无自动降级或数据重写。171 Python pytest/Ruff/mypy、冻结安装、合同/任务图、TS lint/typecheck/test/build、真实 Desktop smoke 和 diff check 通过。没有新增依赖、安装脚本、网络端口或付费模型调用。生产参考 OpenAPI 仍仅描述未来远程 Gateway，本地 JSON-RPC stdio 继续使用 `forge-local-jsonrpc/v1`；不宣称 HTTP 可用。P5 Phase Gate 在共用 DSL 与已验证 quick 链的开发范围通过，Planner/strict 运行没有验收。实际用户数据、Windows x64、macOS Intel、安装包/签名、DPI **UNVERIFIED**；P4 full Gate 仍 BLOCKED。见 [P5 报告](p5-completion-report.md)。
+2026-09-25，在 macOS arm64/Python 3.12.13/SQLite 3.50.4/Electron 44.4.3/Vue 3.5.43 开发路径，含真实 P3 批准 Task、Run/RunConfig 与 P4 Profile 的独立 schema25 临时库升级到 schema29 并重复迁移后仍可读，`foreign_key_check` 无错误，备份存在。Python Host 与 Desktop 画布导入对未来 Workflow DSL schemaVersion 明确诊断；无自动降级或数据重写。171 Python pytest/Ruff/mypy、冻结安装、合同/任务图、TS lint/typecheck/test/build、真实 Desktop smoke 和 diff check 通过。没有新增依赖、安装脚本、网络端口或付费模型调用。生产参考 OpenAPI 仍仅描述未来远程 Gateway，本地 JSON-RPC stdio 继续使用 `forge-local-jsonrpc/v1`；不宣称 HTTP 可用。P5 Phase Gate 在共用 DSL 与已验证 quick 链的开发范围通过，Planner/strict 运行没有验收。实际用户数据、Windows x64、macOS Intel、安装包/签名、DPI **UNVERIFIED**；P4 full Gate 仍 BLOCKED。见 P5 报告（已归档）。
 
 ## P5-11 · Published linear Workflow / retrieval freeze
 
@@ -867,7 +885,7 @@ Windows x64：**UNVERIFIED / 当前进程树 backend 不可用**。macOS Intel�
 
 实现依据：[Electron utilityProcess](https://www.electronjs.org/docs/latest/api/utility-process)、[Electron parentPort](https://www.electronjs.org/docs/latest/api/parent-port)、[Electron 进程模型](https://www.electronjs.org/docs/latest/tutorial/process-model)、[Zod 官方基础文档](https://zod.dev/basics)。这些官方资料确认私有子进程通信与 schema API；跨平台可靠性结论只来自上述 macOS arm64 本机测试，不外推至 Windows/Intel。当前本地 Host 不开放 HTTP/WebSocket/公网端口，Renderer 不能直接访问 Node、Electron IPC 或 Host；Main 只处理生命周期与受控通道。
 
-`forge_spec_v1.0/contracts/command-envelope.schema.json` 面向业务命令，和本轮系统命令字段不同；差异及范围决策见 `docs/decisions/0002-host-process-and-system-protocol.md`。SQLite/Drizzle、Codex/Claude SDK 原生组合仍待后续任务。
+`packages/contract-validator/fixtures/contracts/command-envelope.schema.json` 面向业务命令，和本轮系统命令字段不同；差异及范围决策见 `docs/decisions/0002-host-process-and-system-protocol.md`。SQLite/Drizzle、Codex/Claude SDK 原生组合仍待后续任务。
 
 ## P0-02 · 历史 Desktop / Web 基线
 
@@ -924,7 +942,7 @@ P0-01 当时 `docs/dependency-licenses.json` 有 96 项；该清单现已随 P0-
 | Codex SDK / CLI 真实认证、取消、恢复 | 未安装、未验证 | P0-05 |
 | macOS Intel、Windows x64 | 无本轮实机结果 | 后续平台验证 |
 
-参考矩阵在 `forge_spec_v1.0/docs/compatibility-record.md`；它仍保持原样。本记录不把本机 Node ABI 当作未来 Electron ABI。
+参考矩阵在 `已归档的产品设计资料`；它仍保持原样。本记录不把本机 Node ABI 当作未来 Electron ABI。
 # 2026-09-25 · P7-05 loopback HTTP command adapter checkpoint
 
 Current macOS arm64 Python Host/SQLite and optional 127.0.0.1 HTTP gateway passed authenticated Project-scoped Project, Board and real approved Task Contract reads and explicit denial of all remote writes; it was not tested over TLS, on a phone, or on Windows/macOS Intel. The current installed internal Demo is listener-free on normal startup; the added Task-detail read postdates its build. Reference OpenAPI `TaskSummary.state` omits production `blocked`, so the adapter returns 409 for that board instead of emitting a nonconforming or false state. Remote write-method names/payloads differ from the current Host API and require an explicit mapping plus operation grants and idempotency/CAS tests. See ADR 0079. No remote execution support claim yet.

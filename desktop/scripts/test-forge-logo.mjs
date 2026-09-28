@@ -161,9 +161,11 @@ try {
       await page.locator('.forge-glass-welcome').waitFor({ timeout: 20000 });
       const state = { theme, case: 'home', viewport: { width: 1440, height: 900 } };
       state.sidebarExpanded = await inspectMark(page.locator('.forge-glass-sidebar-header .forge-brand-mark'));
-      state.welcome = await inspectMark(page.locator('.forge-glass-welcome .forge-brand-mark'));
       assertMark(state.sidebarExpanded, 24);
-      assertMark(state.welcome, 48);
+      state.welcomeBrandCount = await page.locator('.forge-glass-welcome .forge-brand-mark').count();
+      assert.equal(state.welcomeBrandCount, 0, 'Welcome must not repeat the sidebar brand as an oversized empty-state logo');
+      await page.locator('.forge-glass-welcome').getByRole('heading', { name: '从一个项目开始', exact: true }).waitFor();
+      await page.locator('.forge-glass-welcome').getByRole('button', { name: '打开项目', exact: true }).waitFor({ state: 'visible' });
       assert.equal(await page.locator('.forge-glass-sidebar-header .forge-brand-name').innerText(), 'Forge');
       state.themeColors = await inspectTheme(page);
       assert.ok(state.themeColors.foregroundContrast >= 4.5, 'Brand foreground must remain readable');
