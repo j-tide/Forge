@@ -143,5 +143,9 @@
       "name": "Forge 工具",
       "description": "跟踪开发进度、会话上下文，并记录发现和注意事项"
     }
-  }
+  },
+  "configurationLoadFailed": "无法加载此项目的 MCP 配置。请重新选择项目后重试。",
+  "configurationSaveFailed": "未能确认 MCP 更改已保存。请重试，或重新打开项目核对配置。",
+  "configurationLoading": "正在加载 MCP 配置…",
+  "configurationSaving": "正在保存 MCP 配置…"
 }

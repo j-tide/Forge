@@ -143,5 +143,9 @@
       "name": "Forge Tools",
       "description": "Build progress tracking, session context, discoveries & gotchas recording"
     }
-  }
+  },
+  "configurationLoadFailed": "Could not load this project’s MCP configuration. Select the project again to retry.",
+  "configurationSaveFailed": "MCP changes were not confirmed saved. Please retry, or reopen this project to check the configuration.",
+  "configurationLoading": "Loading MCP configuration…",
+  "configurationSaving": "Saving MCP configuration…"
 }

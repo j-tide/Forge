@@ -34,7 +34,7 @@ import {
   RefreshCw,
   Lock
 } from 'lucide-react';
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { ScrollArea } from './ui/scroll-area';
 import { Switch } from './ui/switch';
 import { Button } from './ui/button';
@@ -360,11 +360,13 @@ interface AgentCardProps {
   overrides: AgentMcpOverride | undefined;
   mcpServerStates: ProjectEnvConfig['mcpServers'];
   customServers: CustomMcpServer[];
-  onAddMcp: (agentId: string, mcpId: string) => void;
+  onAddMcp: (agentId: string, mcpId: string) => Promise<boolean>;
+  isSaving: boolean;
+  saveError: string | null;
   onRemoveMcp: (agentId: string, mcpId: string) => void;
 }
 
-function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServerStates, customServers, onAddMcp, onRemoveMcp }: AgentCardProps) {
+function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServerStates, customServers, onAddMcp, onRemoveMcp, isSaving, saveError }: AgentCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const { t } = useTranslation(['settings', 'uiAgentTools']);
@@ -479,6 +481,7 @@ function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServer
               {availableMcps.length > 0 && (
                 <button
                   type="button"
+                  disabled={isSaving}
                   onClick={(e) => { e.stopPropagation(); setShowAddDialog(true); }}
                   className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
                 >
@@ -511,8 +514,9 @@ function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServer
                       {canRemove && (
                         <button
                           type="button"
+                          disabled={isSaving}
                           onClick={(e) => { e.stopPropagation(); onRemoveMcp(id, server); }}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all"
+                          className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all"
                           title={t('mcp.remove')}
                         >
                           <X className="h-3.5 w-3.5" />
@@ -539,8 +543,9 @@ function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServer
                       </div>
                       <button
                         type="button"
+                        disabled={isSaving}
                         onClick={(e) => { e.stopPropagation(); onAddMcp(id, server); }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-primary transition-all"
+                        className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 p-1 text-muted-foreground hover:text-primary transition-all"
                         title={t('mcp.restore')}
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
@@ -586,6 +591,7 @@ function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServer
             <DialogDescription>{t('mcp.addMcpDescription')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-4">
+            {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
             {availableMcps.length > 0 ? (
               availableMcps.map((mcpId) => {
                 const server = allMcpServers[mcpId];
@@ -594,7 +600,8 @@ function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServer
                   <button
                     type="button"
                     key={mcpId}
-                    onClick={() => { onAddMcp(id, mcpId); setShowAddDialog(false); }}
+                    disabled={isSaving}
+                    onClick={async () => { if (await onAddMcp(id, mcpId)) setShowAddDialog(false); }}
                     className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-left"
                   >
                     <ServerIcon className="h-4 w-4 text-muted-foreground" />
@@ -623,7 +630,8 @@ function AgentCard({ id, config, modelLabel, thinkingLabel, overrides, mcpServer
                     <button
                       type="button"
                       key={mcpId}
-                      onClick={() => { onAddMcp(id, mcpId); setShowAddDialog(false); }}
+                      disabled={isSaving}
+                      onClick={async () => { if (await onAddMcp(id, mcpId)) setShowAddDialog(false); }}
                       className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-left opacity-60"
                     >
                       <ServerIcon className="h-4 w-4 text-muted-foreground" />
@@ -653,8 +661,24 @@ export function AgentTools() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['spec', 'build', 'qa'])
   );
-  const [envConfig, setEnvConfig] = useState<ProjectEnvConfig | null>(null);
-  const [, setIsLoading] = useState(false);
+  const [storedEnvConfig, setEnvConfig] = useState<ProjectEnvConfig | null>(null);
+  const [loadedGeneration, setLoadedGeneration] = useState(-1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const scopeKey = `${selectedProjectId ?? ''}:${selectedProject?.autoBuildPath ?? ''}`;
+  const scope = useRef({ key: scopeKey, generation: 0 });
+  if (scope.current.key !== scopeKey) {
+    scope.current = { key: scopeKey, generation: scope.current.generation + 1 };
+  }
+  const generation = scope.current.generation;
+  const envConfig = loadedGeneration === generation ? storedEnvConfig : null;
+  const activeWrite = useRef<symbol | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   // Custom MCP server dialog state
   const [showCustomMcpDialog, setShowCustomMcpDialog] = useState(false);
@@ -663,29 +687,74 @@ export function AgentTools() {
   // Health status tracking for custom servers
   const [serverHealthStatus, setServerHealthStatus] = useState<Record<string, McpHealthCheckResult>>({});
   const [testingServers, setTestingServers] = useState<Set<string>>(new Set());
+  const healthRequests = useRef(new Map<string, symbol>());
+  const healthBatch = useRef(0);
 
-  // Load project env config when project changes
+  // Responses are tied to the project selection that initiated them.
   useEffect(() => {
+    let cancelled = false;
+    const isCurrent = () => !cancelled && mounted.current && scope.current.generation === generation;
+    activeWrite.current = null;
+    setIsSaving(false);
+    setSaveError(null);
+    setEnvConfig(null);
+    setShowCustomMcpDialog(false);
+    setEditingCustomServer(null);
+    healthRequests.current.clear();
+    setServerHealthStatus({});
+    setTestingServers(new Set());
     if (selectedProjectId && selectedProject?.autoBuildPath) {
       setIsLoading(true);
       window.electronAPI.getProjectEnv(selectedProjectId)
         .then((result) => {
+          if (!isCurrent()) return;
           if (result.success && result.data) {
             setEnvConfig(result.data);
+            setLoadedGeneration(generation);
           } else {
-            setEnvConfig(null);
+            setSaveError(t('uiAgentTools:configurationLoadFailed'));
           }
         })
         .catch(() => {
-          setEnvConfig(null);
+          if (isCurrent()) setSaveError(t('uiAgentTools:configurationLoadFailed'));
         })
         .finally(() => {
-          setIsLoading(false);
+          if (isCurrent()) setIsLoading(false);
         });
     } else {
-      setEnvConfig(null);
+      setIsLoading(false);
     }
-  }, [selectedProjectId, selectedProject?.autoBuildPath]);
+    return () => { cancelled = true; };
+  }, [selectedProjectId, selectedProject?.autoBuildPath, generation, t]);
+
+  // Persist first: a failed write must not appear as a saved configuration.
+  // Only one mutation per active project is allowed to avoid lost nested updates.
+  const saveConfig = useCallback(async (patch: Partial<ProjectEnvConfig>): Promise<boolean> => {
+    if (!selectedProjectId || !envConfig || activeWrite.current) return false;
+    const writeId = Symbol('mcp-save');
+    activeWrite.current = writeId;
+    setIsSaving(true);
+    setSaveError(null);
+    const isCurrent = () => mounted.current && scope.current.generation === generation && activeWrite.current === writeId;
+    try {
+      const result = await window.electronAPI.updateProjectEnv(selectedProjectId, patch);
+      if (!isCurrent()) return false;
+      if (!result.success) {
+        setSaveError(t('uiAgentTools:configurationSaveFailed'));
+        return false;
+      }
+      setEnvConfig(previous => previous ? { ...previous, ...patch } : previous);
+      return true;
+    } catch {
+      if (isCurrent()) setSaveError(t('uiAgentTools:configurationSaveFailed'));
+      return false;
+    } finally {
+      if (isCurrent()) {
+        activeWrite.current = null;
+        setIsSaving(false);
+      }
+    }
+  }, [selectedProjectId, envConfig, generation, t]);
 
   // Update MCP server toggle
   const updateMcpServer = useCallback(async (
@@ -699,24 +768,12 @@ export function AgentTools() {
       [key]: value,
     };
 
-    // Optimistic update
-    setEnvConfig((prev) => prev ? { ...prev, mcpServers: newMcpServers } : null);
-
-    // Save to backend
-    try {
-      await window.electronAPI.updateProjectEnv(selectedProjectId, {
-        mcpServers: newMcpServers,
-      });
-    } catch (error) {
-      // Revert on error
-      console.error('Failed to update MCP config:', error);
-      setEnvConfig((prev) => prev ? { ...prev, mcpServers: envConfig.mcpServers } : null);
-    }
-  }, [selectedProjectId, envConfig]);
+    return saveConfig({ mcpServers: newMcpServers });
+  }, [selectedProjectId, envConfig, saveConfig]);
 
   // Handle adding an MCP to an agent
   const handleAddMcp = useCallback(async (agentId: string, mcpId: string) => {
-    if (!selectedProjectId || !envConfig) return;
+    if (!selectedProjectId || !envConfig) return false;
 
     const currentOverrides = envConfig.agentMcpOverrides || {};
     const agentOverride = currentOverrides[agentId] || {};
@@ -747,19 +804,8 @@ export function AgentTools() {
       newOverrides[agentId] = newOverride;
     }
 
-    // Optimistic update
-    setEnvConfig((prev) => prev ? { ...prev, agentMcpOverrides: newOverrides } : null);
-
-    // Save to backend
-    try {
-      await window.electronAPI.updateProjectEnv(selectedProjectId, {
-        agentMcpOverrides: newOverrides,
-      });
-    } catch (error) {
-      console.error('Failed to update agent MCP config:', error);
-      setEnvConfig((prev) => prev ? { ...prev, agentMcpOverrides: currentOverrides } : null);
-    }
-  }, [selectedProjectId, envConfig]);
+    return saveConfig({ agentMcpOverrides: newOverrides });
+  }, [selectedProjectId, envConfig, saveConfig]);
 
   // Handle removing an MCP from an agent
   const handleRemoveMcp = useCallback(async (agentId: string, mcpId: string) => {
@@ -798,23 +844,12 @@ export function AgentTools() {
       newOverrides[agentId] = newOverride;
     }
 
-    // Optimistic update
-    setEnvConfig((prev) => prev ? { ...prev, agentMcpOverrides: newOverrides } : null);
-
-    // Save to backend
-    try {
-      await window.electronAPI.updateProjectEnv(selectedProjectId, {
-        agentMcpOverrides: newOverrides,
-      });
-    } catch (error) {
-      console.error('Failed to update agent MCP config:', error);
-      setEnvConfig((prev) => prev ? { ...prev, agentMcpOverrides: currentOverrides } : null);
-    }
-  }, [selectedProjectId, envConfig]);
+    return saveConfig({ agentMcpOverrides: newOverrides });
+  }, [selectedProjectId, envConfig, saveConfig]);
 
   // Handle saving a custom MCP server
   const handleSaveCustomServer = useCallback(async (server: CustomMcpServer) => {
-    if (!selectedProjectId || !envConfig) return;
+    if (!selectedProjectId || !envConfig) return false;
 
     const currentServers = envConfig.customMcpServers || [];
     const existingIndex = currentServers.findIndex(s => s.id === server.id);
@@ -829,19 +864,8 @@ export function AgentTools() {
       newServers = [...currentServers, server];
     }
 
-    // Optimistic update
-    setEnvConfig((prev) => prev ? { ...prev, customMcpServers: newServers } : null);
-
-    // Save to backend
-    try {
-      await window.electronAPI.updateProjectEnv(selectedProjectId, {
-        customMcpServers: newServers,
-      });
-    } catch (error) {
-      console.error('Failed to save custom MCP server:', error);
-      setEnvConfig((prev) => prev ? { ...prev, customMcpServers: currentServers } : null);
-    }
-  }, [selectedProjectId, envConfig]);
+    return saveConfig({ customMcpServers: newServers });
+  }, [selectedProjectId, envConfig, saveConfig]);
 
   // Handle deleting a custom MCP server
   const handleDeleteCustomServer = useCallback(async (serverId: string) => {
@@ -869,107 +893,92 @@ export function AgentTools() {
       }
     }
 
-    // Optimistic update
-    setEnvConfig((prev) => prev ? {
-      ...prev,
-      customMcpServers: newServers,
-      agentMcpOverrides: newOverrides,
-    } : null);
+    return saveConfig({ customMcpServers: newServers, agentMcpOverrides: newOverrides });
+  }, [selectedProjectId, envConfig, saveConfig]);
 
-    // Save to backend
-    try {
-      await window.electronAPI.updateProjectEnv(selectedProjectId, {
-        customMcpServers: newServers,
-        agentMcpOverrides: newOverrides,
-      });
-    } catch (error) {
-      console.error('Failed to delete custom MCP server:', error);
-      setEnvConfig((prev) => prev ? { ...prev, customMcpServers: currentServers, agentMcpOverrides: currentOverrides } : null);
-    }
-  }, [selectedProjectId, envConfig]);
-
-  // Check health of all custom MCP servers
+  // Ignore health replies from an old project or superseded server configuration.
   const checkAllServersHealth = useCallback(async () => {
     const servers = envConfig?.customMcpServers || [];
-    if (servers.length === 0) return;
-
+    const batchId = healthBatch.current;
     for (const server of servers) {
-      // Set checking status
+      if (!mounted.current || scope.current.generation !== generation || healthBatch.current !== batchId) return;
+      const requestId = Symbol('mcp-health');
+      healthRequests.current.set(server.id, requestId);
+      const isCurrent = () => mounted.current && scope.current.generation === generation && healthRequests.current.get(server.id) === requestId;
       setServerHealthStatus(prev => ({
         ...prev,
-        [server.id]: {
-          serverId: server.id,
-          status: 'checking',
-          checkedAt: new Date().toISOString(),
-        }
+        [server.id]: { serverId: server.id, status: 'checking', checkedAt: new Date().toISOString() },
       }));
-
       try {
         const result = await window.electronAPI.checkMcpHealth(server);
-        if (result.success && result.data) {
-          setServerHealthStatus(prev => ({
-            ...prev,
-            [server.id]: result.data!,
-          }));
-        }
-      } catch (_error) {
+        if (!isCurrent()) continue;
         setServerHealthStatus(prev => ({
           ...prev,
-          [server.id]: {
+          [server.id]: result.success && result.data ? result.data : {
             serverId: server.id,
             status: 'unknown',
             message: t('uiAgentTools:healthCheckFailed'),
             checkedAt: new Date().toISOString(),
-          }
+          },
         }));
-      }
-    }
-  }, [envConfig?.customMcpServers, t]);
-
-  // Check health when custom servers change
-  useEffect(() => {
-    if (envConfig?.customMcpServers && envConfig.customMcpServers.length > 0) {
-      checkAllServersHealth();
-    }
-  }, [envConfig?.customMcpServers, checkAllServersHealth]);
-
-  // Test a single server connection (full test)
-  const handleTestConnection = useCallback(async (server: CustomMcpServer) => {
-    setTestingServers(prev => new Set(prev).add(server.id));
-
-    try {
-      const result = await window.electronAPI.testMcpConnection(server);
-      if (result.success && result.data) {
-        // Update health status based on test result
+      } catch {
+        if (!isCurrent()) continue;
         setServerHealthStatus(prev => ({
           ...prev,
-          [server.id]: {
-            serverId: server.id,
-            status: result.data?.success ? 'healthy' : 'unhealthy',
-            message: result.data?.message,
-            responseTime: result.data?.responseTime,
-            checkedAt: new Date().toISOString(),
-          }
+          [server.id]: { serverId: server.id, status: 'unknown', message: t('uiAgentTools:healthCheckFailed'), checkedAt: new Date().toISOString() },
         }));
       }
-    } catch (_error) {
+    }
+  }, [envConfig?.customMcpServers, generation, t]);
+
+  useEffect(() => {
+    healthBatch.current += 1;
+    healthRequests.current.clear();
+    setServerHealthStatus({});
+    setTestingServers(new Set());
+    void checkAllServersHealth();
+    return () => {
+      healthBatch.current += 1;
+      healthRequests.current.clear();
+    };
+  }, [checkAllServersHealth]);
+
+  const handleTestConnection = useCallback(async (server: CustomMcpServer) => {
+    const requestId = Symbol('mcp-test');
+    healthRequests.current.set(server.id, requestId);
+    const isCurrent = () => mounted.current && scope.current.generation === generation && healthRequests.current.get(server.id) === requestId;
+    setTestingServers(prev => new Set(prev).add(server.id));
+    try {
+      const result = await window.electronAPI.testMcpConnection(server);
+      if (!isCurrent()) return;
+      const succeeded = result.success && !!result.data;
       setServerHealthStatus(prev => ({
         ...prev,
         [server.id]: {
           serverId: server.id,
-          status: 'unhealthy',
-          message: t('uiAgentTools:connectionTestFailed'),
+          status: succeeded && result.data?.success ? 'healthy' : 'unhealthy',
+          message: succeeded ? result.data?.message : t('uiAgentTools:connectionTestFailed'),
+          responseTime: succeeded ? result.data?.responseTime : undefined,
           checkedAt: new Date().toISOString(),
-        }
+        },
       }));
+    } catch {
+      if (isCurrent()) {
+        setServerHealthStatus(prev => ({
+          ...prev,
+          [server.id]: { serverId: server.id, status: 'unhealthy', message: t('uiAgentTools:connectionTestFailed'), checkedAt: new Date().toISOString() },
+        }));
+      }
     } finally {
-      setTestingServers(prev => {
-        const next = new Set(prev);
-        next.delete(server.id);
-        return next;
-      });
+      if (isCurrent()) {
+        setTestingServers(prev => {
+          const next = new Set(prev);
+          next.delete(server.id);
+          return next;
+        });
+      }
     }
-  }, [t]);
+  }, [generation, t]);
 
   // Resolve agent settings using the centralized utility, scoped to the active provider
   // Resolution order: custom overrides -> selected profile's config -> global defaults
@@ -1055,6 +1064,17 @@ export function AgentTools() {
       {/* Content */}
       <ScrollArea className="flex-1">
         <div className="p-6 space-y-6">
+          {saveError && (
+            <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {saveError}
+            </div>
+          )}
+          {(isLoading || isSaving) && (
+            <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              {t(isLoading ? 'uiAgentTools:configurationLoading' : 'uiAgentTools:configurationSaving')}
+            </p>
+          )}
           {/* No project selected message */}
           {!selectedProject && (
             <div className="rounded-lg border border-border bg-card p-6 text-center">
@@ -1100,6 +1120,8 @@ export function AgentTools() {
                   <Switch
                     checked={mcpServers.context7Enabled !== false}
                     onCheckedChange={(checked) => updateMcpServer('context7Enabled', checked)}
+                    aria-label={t('settings:mcp.servers.context7.name')}
+                    disabled={isSaving}
                   />
                 </div>
 
@@ -1119,7 +1141,8 @@ export function AgentTools() {
                   <Switch
                     checked={mcpServers.memoryEnabled !== false && !!envConfig.memoryProviderConfig}
                     onCheckedChange={(checked) => updateMcpServer('memoryEnabled', checked)}
-                    disabled={!envConfig.memoryProviderConfig}
+                    aria-label={t('uiAdditional:memory.name')}
+                    disabled={isSaving || !envConfig.memoryProviderConfig}
                   />
                 </div>
 
@@ -1139,7 +1162,8 @@ export function AgentTools() {
                   <Switch
                     checked={mcpServers.linearMcpEnabled !== false && envConfig.linearEnabled}
                     onCheckedChange={(checked) => updateMcpServer('linearMcpEnabled', checked)}
-                    disabled={!envConfig.linearEnabled}
+                    aria-label={t('settings:mcp.servers.linear.name')}
+                    disabled={isSaving || !envConfig.linearEnabled}
                   />
                 </div>
 
@@ -1164,6 +1188,8 @@ export function AgentTools() {
                     <Switch
                       checked={mcpServers.electronEnabled === true}
                       onCheckedChange={(checked) => updateMcpServer('electronEnabled', checked)}
+                    aria-label={t('settings:mcp.servers.electron.name')}
+                    disabled={isSaving}
                     />
                   </div>
 
@@ -1179,6 +1205,8 @@ export function AgentTools() {
                     <Switch
                       checked={mcpServers.puppeteerEnabled === true}
                       onCheckedChange={(checked) => updateMcpServer('puppeteerEnabled', checked)}
+                    aria-label={t('settings:mcp.servers.puppeteer.name')}
+                    disabled={isSaving}
                     />
                   </div>
                 </div>
@@ -1206,6 +1234,7 @@ export function AgentTools() {
                     </div>
                     <button
                       type="button"
+                      disabled={isSaving}
                       onClick={() => { setEditingCustomServer(null); setShowCustomMcpDialog(true); }}
                       className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
                     >
@@ -1285,9 +1314,11 @@ export function AgentTools() {
                                 <span className="ml-1">{t('uiAgentTools:test')}</span>
                               </Button>
                               {/* Edit/Delete - show on hover */}
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity">
                                 <button
                                   type="button"
+                                  disabled={isSaving}
+                                  aria-label={t('uiAgentTools:edit')}
                                   onClick={() => { setEditingCustomServer(server); setShowCustomMcpDialog(true); }}
                                   className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
                                   title={t('uiAgentTools:edit')}
@@ -1296,6 +1327,8 @@ export function AgentTools() {
                                 </button>
                                 <button
                                   type="button"
+                                  disabled={isSaving}
+                                  aria-label={t('uiAgentTools:delete')}
                                   onClick={() => handleDeleteCustomServer(server.id)}
                                   className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
                                   title={t('uiAgentTools:delete')}
@@ -1363,6 +1396,8 @@ export function AgentTools() {
                           overrides={envConfig?.agentMcpOverrides?.[id]}
                           mcpServerStates={envConfig?.mcpServers}
                           customServers={envConfig?.customMcpServers || []}
+                          saveError={saveError}
+                          isSaving={isSaving || !envConfig}
                           onAddMcp={handleAddMcp}
                           onRemoveMcp={handleRemoveMcp}
                         />
@@ -1378,6 +1413,7 @@ export function AgentTools() {
 
       {/* Custom MCP Server Dialog */}
       <CustomMcpDialog
+        key={scopeKey}
         open={showCustomMcpDialog}
         onOpenChange={setShowCustomMcpDialog}
         server={editingCustomServer}

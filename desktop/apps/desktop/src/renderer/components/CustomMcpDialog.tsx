@@ -5,7 +5,7 @@
  * Supports both command-based (npx/npm) and HTTP-based servers.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -20,14 +20,14 @@ import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { useTranslation } from 'react-i18next';
 import type { CustomMcpServer } from '../../shared/types';
-import { Terminal, Globe, X, Github, ExternalLink } from 'lucide-react';
+import { Terminal, Globe, X, Github, ExternalLink, Loader2 } from 'lucide-react';
 
 interface CustomMcpDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   server: CustomMcpServer | null; // null = create new, non-null = edit
   existingIds: string[]; // Existing server IDs for validation
-  onSave: (server: CustomMcpServer) => void;
+  onSave: (server: CustomMcpServer) => Promise<boolean>;
 }
 
 export function CustomMcpDialog({
@@ -52,11 +52,15 @@ export function CustomMcpDialog({
   });
 
   const [argsInput, setArgsInput] = useState('');
+  const [newServerId, setNewServerId] = useState(() => crypto.randomUUID());
   const [headerKey, setHeaderKey] = useState('');
   const [headerValue, setHeaderValue] = useState('');
   const [bearerToken, setBearerToken] = useState('');
   const [showAdvancedHeaders, setShowAdvancedHeaders] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const saving = useRef(false);
+  const session = useRef(0);
 
   // Known provider patterns for helpful hints
   const urlHint = useMemo(() => {
@@ -102,6 +106,9 @@ export function CustomMcpDialog({
 
   // Reset form when dialog opens/closes or server changes
   useEffect(() => {
+    session.current += 1;
+    saving.current = false;
+    setIsSaving(false);
     if (open && server) {
       setFormData(server);
       setArgsInput(server.args?.join(' ') || '');
@@ -119,6 +126,7 @@ export function CustomMcpDialog({
       setShowAdvancedHeaders(hasOtherHeaders);
       setError(null);
     } else if (open) {
+      setNewServerId(crypto.randomUUID());
       setFormData({
         id: '',
         name: '',
@@ -136,14 +144,18 @@ export function CustomMcpDialog({
     }
     setHeaderKey('');
     setHeaderValue('');
+    return () => { session.current += 1; };
   }, [open, server]);
 
   // Generate ID from name
   const generateId = (name: string): string => {
-    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    // Display names may be Chinese; the transport identifier remains ASCII.
+    return slug || (/\p{L}|\p{N}/u.test(name) ? `mcp-${newServerId}` : '');
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (saving.current) return;
     // Validate
     if (!formData.name.trim()) {
       setError(t('mcp.errorNameRequired'));
@@ -151,6 +163,11 @@ export function CustomMcpDialog({
     }
 
     const generatedId = isEditing ? formData.id : generateId(formData.name);
+
+    if (!generatedId) {
+      setError(t('mcp.errorIdRequired'));
+      return;
+    }
 
     // Check for duplicate ID (only when creating new)
     if (!isEditing && existingIds.includes(generatedId)) {
@@ -202,8 +219,23 @@ export function CustomMcpDialog({
           }),
     };
 
-    onSave(serverToSave);
-    onOpenChange(false);
+    const saveSession = session.current;
+    saving.current = true;
+    setIsSaving(true);
+    setError(null);
+    try {
+      const saved = await onSave(serverToSave);
+      if (session.current !== saveSession) return;
+      if (saved) onOpenChange(false);
+      else setError(t('mcp.errorSaveFailed'));
+    } catch {
+      if (session.current === saveSession) setError(t('mcp.errorSaveFailed'));
+    } finally {
+      if (session.current === saveSession) {
+        saving.current = false;
+        setIsSaving(false);
+      }
+    }
   };
 
   const addHeader = () => {
@@ -231,7 +263,7 @@ export function CustomMcpDialog({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!saving.current) onOpenChange(nextOpen); }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
@@ -242,10 +274,10 @@ export function CustomMcpDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <fieldset disabled={isSaving} className="min-w-0 space-y-4 py-4">
           {/* Error message */}
           {error && (
-            <div className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded">
+            <div role="alert" className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded">
               {error}
             </div>
           )}
@@ -442,6 +474,8 @@ export function CustomMcpDialog({
                                 </span>
                               </span>
                               <button
+                                type="button"
+                                aria-label={`${t('mcp.remove')} ${key}`}
                                 onClick={() => removeHeader(key)}
                                 className="text-muted-foreground hover:text-destructive transition-colors"
                               >
@@ -456,13 +490,14 @@ export function CustomMcpDialog({
               </div>
             </>
           )}
-        </div>
+        </fieldset>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" disabled={isSaving} onClick={() => onOpenChange(false)}>
             {t('common:buttons.cancel')}
           </Button>
-          <Button onClick={handleSave} disabled={!isValid}>
+          <Button onClick={handleSave} disabled={!isValid || isSaving} aria-busy={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
             {isEditing ? t('common:buttons.save') : t('mcp.addServer')}
           </Button>
         </DialogFooter>
