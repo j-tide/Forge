@@ -101,7 +101,7 @@
 
 **前一独立桌面入口（2026-09-26）**：从 [`desktop-clarification-guard-20260926` 内部 DMG](../../build/macos/Forge-0.0.1-INTERNAL-ADHOC-UNNOTARIZED-darwin-arm64-desktop-clarification-guard-20260926.dmg) 安装的 `/Users/iamzjt/Applications/Forge INTERNAL Desktop QA Clarification 20260926.app`。请双击 `/Users/iamzjt/Documents/Forge Desktop QA Clarification 20260926/Open Forge Desktop QA.command`；它使用同目录的独立空数据；可丢弃的真实任务仓库是 `sample-project`，已验证常驻包内 Host/schema35，不会覆盖下述旧安装或真实 QA 历史。SHA-256 `3ac7dce68decfd2681a7c58ba048c6d894c83a7a4680fd4560f2ece784`，**INTERNAL / ADHOC / UNNOTARIZED**。选择并信任 `sample-project` 后，手工/模型草稿的澄清回答必须同步编辑目标、验收等正式字段；只填回答会拒绝保存。最新安装版的[拒绝提示](../../output/playwright/desktop-clarification-guard-20260926-contract-guard-1440x900.png)和[人工批准后重启 TODO](../../output/playwright/desktop-clarification-guard-20260926-todo-restored-1440x900.png)来自另一隔离 QA 数据，不会预填进供你操作的空白应用。前一包的真实 Codex 模型与开发验收仍是历史证据，新包尚无全链新在线运行。
 
-**前一可直接打开的独立安装**：`/Users/iamzjt/Applications/Forge INTERNAL Desktop QA 20260926.app`；请双击 `/Users/iamzjt/Documents/Forge Desktop QA 20260926/Open Forge Desktop QA.command` 使用隔离数据。已有旧 Demo 应用/数据保留不变。新入口已确认常驻、包内 Python Host 启动，空 SQLite schema35 `quick_check=ok`；可丢弃 Git 项目在同目录 `project`，需由用户在「项目」页明确选择和信任。不要直接双击 `.app` 以免使用日常 Forge 数据目录。它尚无在线 Task 历史；下方旧真实 Run 属于先前隔离 QA 证据。见[安装与演示步骤](../demo/p6-internal-macos-package.md)。
+**前一可直接打开的独立安装**：`/Users/iamzjt/Applications/Forge INTERNAL Desktop QA 20260926.app`；请双击 `/Users/iamzjt/Documents/Forge Desktop QA 20260926/Open Forge Desktop QA.command` 使用隔离数据。已有旧 Demo 应用/数据保留不变。新入口已确认常驻、包内 Python Host 启动，空 SQLite schema35 `quick_check=ok`；可丢弃 Git 项目在同目录 `project`，需由用户在「项目」页明确选择和信任。不要直接双击 `.app` 以免使用日常 Forge 数据目录。它尚无在线 Task 历史；下方旧真实 Run 属于先前隔离 QA 证据。见安装与演示步骤（已归档）。
 
 同一当前 DMG 的**另一个隔离安装**现已完成真实文档/经人工确认记忆进入新 Codex Run、事后撤销且历史来源仍可见的验收；[真实 Run 来源页](../../output/playwright/desktop-current-context-20260926-context-source-1440x900.png)。这是独立 QA 数据，不会自动出现在上述供手动操作的空白应用中。该 Run 未做 Review/Verify/Owner 接受。
 
@@ -132,7 +132,7 @@
 4. 在已批准任务中明确选择可用 Codex 模型并点击 Start。Forge Host 创建独立 Git Worktree，Codex 只修改隔离工作区。可看实时观察、实际 Diff、CodeSnapshot 和 Handoff；源项目目录不因一次开发 Run 自动改动。
    若「插件」中停用了 Codex，任务详情会提示启用并重启，Start 被禁用；即使尝试旧窗口的启动命令，Host 也会返回 `RUN_PLUGIN_UNAVAILABLE`，原 TODO 不会产生 Run。启用偏好也必须重开 Forge 才生效。
 5. Verify 只运行事先经人确认的 Command Preset，报告以真实退出码/快照为依据。Review 对固定快照独立只读执行；必要时按有限返工状态处理。逐条关联验收证据后，由项目 Owner 另行最终验收。只有最终验收才能使 Task 进入 Done。**Done 不表示已合并、推送或部署**；本地合并也需要独立显式操作和确认。
-6. 退出并重新打开后，可在看板/任务抽屉查看持久化任务、Run 快照、Verify/Review 与交付记录。内部包真实验收了这一链路；[证据和截图](../demo/p6-internal-macos-package.md) 包含 Run ID、取消场景和 DMG 摘要。
+6. 退出并重新打开后，可在看板/任务抽屉查看持久化任务、Run 快照、Verify/Review 与交付记录。内部包真实验收了这一链路；证据和截图（已归档） 包含 Run ID、取消场景和 DMG 摘要。
 
 ## 取消与恢复
 

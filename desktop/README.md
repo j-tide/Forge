@@ -2,7 +2,7 @@
 
 <img src="apps/desktop/resources/icon-256.png" alt="Forge" width="80" />
 
-Forge 是亮色／暗色磨砂玻璃桌面 AI 研发工作台。此 npm 工程作为独立 `desktop/` 目录归入 [Forge 仓库](https://github.com/j-tide/Forge/tree/main/desktop)。原 Forge 的 Python Host、规格及 Vue 历史实现保留在仓库根；**当前衍生 Desktop 尚未连接该 Python Host，不代表完整 Forge 产品已验收**。代码来源、AGPL 许可证及修改记录见 [UPSTREAM.md](UPSTREAM.md) / [LICENSE](LICENSE)。
+Forge 是亮色／暗色磨砂玻璃桌面 AI 研发工作台。此 npm 工程作为独立 `desktop/` 目录归入 [Forge 仓库](https://github.com/j-tide/Forge/tree/main/desktop)。原 Forge 的 Python Host、契约及 Vue 历史实现保留在仓库根；**当前衍生 Desktop 尚未连接该 Python Host，不代表完整 Forge 产品已验收**。代码来源、AGPL 许可证及修改记录见 [UPSTREAM.md](UPSTREAM.md) / [LICENSE](LICENSE)。
 
 ## 当前版本：0.1.0-preview.3
 
@@ -24,7 +24,7 @@ Forge 是亮色／暗色磨砂玻璃桌面 AI 研发工作台。此 npm 工程�
 4. 若系统提示无法验证开发者，按 macOS“隐私与安全性”中的用户确认流程操作；不要全局关闭 Gatekeeper。
 5. **设置 → 语言 → 中文 / English**；主题与语言均保留用户已有显式选择。
 
-本机源码构建位于 `apps/desktop/dist/0.1.0-preview.3/mac-arm64/Forge.app`。此 npm 工程中 `npm run preview:open` 优先打开当前版本；也接受一个明确 `.app` 路径。Forge 仓库根的 `pnpm desktop:open` 使用同一正常打开入口。旧 `.2` 发布资产和历史包保留，不覆盖。
+已发布版本的本机构建位于 `apps/desktop/dist/0.1.0-preview.3/mac-arm64/Forge.app`。如果存在本地修复构建 `apps/desktop/dist/settings-unreleased/mac-arm64/Forge.app`，`npm run preview:open` 和根目录 `pnpm desktop:open` 优先打开它；也接受明确的 `.app` 路径。这是未发布的工作区构建，已发布资产和历史包保留，不覆盖。
 
 ## 前置条件、数据和能力边界
 

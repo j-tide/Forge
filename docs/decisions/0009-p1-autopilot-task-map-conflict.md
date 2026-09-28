@@ -4,10 +4,10 @@
 
 ## 事实
 
-- `forge_spec_v1.0/planning/tasks.json` 和蓝图将 P1-02 定义为 M02「项目及环境数据服务」：项目 CRUD、环境/命令预设版本、归属与写操作 CAS；测试 T006–T010。P1-03 是「会话与消息流」。
-- `forge_spec_v1.0/planning/phases.json` 的 P1 依赖链共有 P1-01～P1-10，出口为草稿经人工审批进入 TODO，且不自动写代码。
+- `packages/contract-validator/fixtures/planning/tasks.json` 和蓝图将 P1-02 定义为 M02「项目及环境数据服务」：项目 CRUD、环境/命令预设版本、归属与写操作 CAS；测试 T006–T010。P1-03 是「会话与消息流」。
+- `packages/contract-validator/fixtures/planning/phases.json` 的 P1 依赖链共有 P1-01～P1-10，出口为草稿经人工审批进入 TODO，且不自动写代码。
 - 新的 `docs/forge-codex-execution-playbook.md` 将同一 P1-02 编号定义为「模型 Provider 与 Secret Storage」，要求 Electron safeStorage、凭据 UI 和至少一次真实 Provider 请求；它仅列 P1-01～P1-07，随后直接进入 P2。其 P1-03～P1-07 的任务内容也不对应参考任务清单的相同编号。
-- Playbook 的首页明确写产品语义、架构与契约以 `forge_spec_v1.0/` 为优先来源。Autopilot Protocol 仅覆盖“做完一个 Task 就停止”的执行节奏，不覆盖任务范围、验收或依赖。
+- Playbook 的首页明确写产品语义、架构与契约以 `packages/contract-validator/fixtures/` 为优先来源。Autopilot Protocol 仅覆盖“做完一个 Task 就停止”的执行节奏，不覆盖任务范围、验收或依赖。
 
 因此，同一 P1-02 编号无法同时代表两个不同领域与验收集合。若直接照 Playbook 运行，会跳过权威 M02 数据服务；若直接照任务清单运行，会静默忽略用户提供的 Model Provider/Secret Storage 步骤。把两者合并进 P1-02 又会违反“一次仅实施一个 Task”的边界。Phase Gate 也无法在 7 项与 10 项的映射下得出一致结论。
 

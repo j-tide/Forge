@@ -23,6 +23,6 @@ Electron 文档通常要求针对其 ABI 处理原生模块；本次不能仅由
 
 ## 范围与风险
 
-本轮不建立任务、审批、事件、插件或记忆业务表。参考 `forge_spec_v1.0/contracts/schema.sql` 的 `schema_migrations` 字段形状已沿用；其完整 DDL 属于后续业务阶段。T086 的业务事务原子性、T089 的真实磁盘满、T090 插件 namespace 权限尚不具备对应业务模块；本轮只验证底层进程中断回滚、SQLite 锁/IO 映射、接口不泄露连接。Windows 与 macOS Intel 未验证，不宣称跨平台验收完成。
+本轮不建立任务、审批、事件、插件或记忆业务表。参考 `packages/contract-validator/fixtures/contracts/schema.sql` 的 `schema_migrations` 字段形状已沿用；其完整 DDL 属于后续业务阶段。T086 的业务事务原子性、T089 的真实磁盘满、T090 插件 namespace 权限尚不具备对应业务模块；本轮只验证底层进程中断回滚、SQLite 锁/IO 映射、接口不泄露连接。Windows 与 macOS Intel 未验证，不宣称跨平台验收完成。
 
 来源：[SQLite WAL](https://www.sqlite.org/wal.html)、[SQLite 备份 API](https://www.sqlite.org/backup.html)、[better-sqlite3 v13 N-API 发布说明](https://github.com/WiseLibs/better-sqlite3/releases/tag/v13.0.0)、[Drizzle SQLite 驱动](https://orm.drizzle.team/docs/sqlite/get-started-sqlite)、[Electron 原生模块](https://www.electronjs.org/docs/latest/tutorial/using-native-node-modules)。

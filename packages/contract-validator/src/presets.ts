@@ -3,7 +3,7 @@ import { isAbsolute, join, normalize, sep, win32 } from 'node:path';
 import { ReferenceIndex, ValidationContext, items, record, string } from './shared.js';
 import { SchemaRegistry } from './schemas.js';
 
-const base = 'forge_spec_v1.0/';
+const base = 'packages/contract-validator/fixtures/';
 // Static reference-pack declarations. They are not a runtime capability or installed-plugin registry.
 const declaredExecutors = ['forge.refiner'];
 const declaredVerifiers = ['verifier.project-checks'];

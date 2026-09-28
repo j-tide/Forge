@@ -58,7 +58,10 @@ def _first_sse(url: str, headers: dict[str, str]) -> tuple[int, list[str]]:
 
 
 def test_remote_write_allowlist_matches_authoritative_planning() -> None:
-    source = Path(__file__).resolve().parents[2] / "forge_spec_v1.0" / "planning" / "commands.json"
+    source = (
+        Path(__file__).resolve().parents[2]
+        / "packages/contract-validator/fixtures/planning/commands.json"
+    )
     entries = json.loads(source.read_text())
     assert _PLANNED_REMOTE_WRITES == frozenset(
         item["method"] for item in entries if item["remoteAllowed"]

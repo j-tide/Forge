@@ -6,7 +6,7 @@ const acceptance = z.strictObject({ id: identifier, statement: text,
   method: z.enum(['automated', 'manual', 'inspection']), required: z.boolean(),
   sourceRefs: z.array(text) });
 
-/** Production mirror of forge_spec_v1.0/contracts/task-contract.schema.json (v1.0). */
+/** Production mirror of packages/contract-validator/fixtures/contracts/task-contract.schema.json (v1.0). */
 export const taskContractSchema = z.strictObject({
   schemaVersion: z.literal('1.0'), taskId: identifier, projectId: identifier,
   revision: z.int().positive(), title: text.max(120),

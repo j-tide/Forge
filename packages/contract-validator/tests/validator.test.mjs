@@ -12,9 +12,9 @@ const cli = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), 'forge-contracts-'));
   for (const name of ['contracts', 'planning', 'presets', 'tests']) {
-    cpSync(join(root, 'forge_spec_v1.0', name), join(dir, 'forge_spec_v1.0', name), { recursive: true });
+    cpSync(join(root, 'packages/contract-validator/fixtures', name), join(dir, 'packages/contract-validator/fixtures', name), { recursive: true });
   }
-  cpSync(join(root, 'forge_spec_v1.0', 'prompts'), join(dir, 'forge_spec_v1.0', 'prompts'), { recursive: true });
+  cpSync(join(root, 'packages/contract-validator/fixtures', 'prompts'), join(dir, 'packages/contract-validator/fixtures', 'prompts'), { recursive: true });
   mkdirSync(join(dir, 'packages/ui/src/tokens'), { recursive: true });
   cpSync(join(root, 'packages/ui/src/tokens/values.json'), join(dir, 'packages/ui/src/tokens/values.json'));
   cpSync(join(root, 'packages/ui/src/tokens.css'), join(dir, 'packages/ui/src/tokens.css'));
@@ -53,27 +53,27 @@ test('current reference contracts and production tokens validate', () => {
   assert.ok(report.checkedFiles.some((file) => file.endsWith('schema.sql')));
   assert.ok(report.warnings.some((issue) => issue.code === 'FGV-PROFILE-006'));
 });
-checkMutation('duplicate task ID fails', (dir) => changeJson(dir, 'forge_spec_v1.0/planning/tasks.json', (tasks) => { tasks[1].id = tasks[0].id; }), 'FGV-ID-002');
+checkMutation('duplicate task ID fails', (dir) => changeJson(dir, 'packages/contract-validator/fixtures/planning/tasks.json', (tasks) => { tasks[1].id = tasks[0].id; }), 'FGV-ID-002');
 checkMutation('missing workflow profile fails', (dir) => {
-  const path = join(dir, 'forge_spec_v1.0/presets/standard.workflow.yaml');
+  const path = join(dir, 'packages/contract-validator/fixtures/presets/standard.workflow.yaml');
   writeFileSync(path, readFileSync(path, 'utf8').replace('binding: profile.reviewer', 'binding: reviewer-v9'));
 }, 'FGV-WORKFLOW-004');
-checkMutation('cyclic task dependency fails', (dir) => changeJson(dir, 'forge_spec_v1.0/planning/tasks.json', (tasks) => { tasks[0].dependsOn = ['P0-02']; }), 'FGV-PLAN-010');
-checkMutation('invalid JSON Schema fails', (dir) => changeJson(dir, 'forge_spec_v1.0/contracts/task-contract.schema.json', (schema) => { schema.type = 'invalid'; }), 'FGV-SCHEMA-007');
+checkMutation('cyclic task dependency fails', (dir) => changeJson(dir, 'packages/contract-validator/fixtures/planning/tasks.json', (tasks) => { tasks[0].dependsOn = ['P0-02']; }), 'FGV-PLAN-010');
+checkMutation('invalid JSON Schema fails', (dir) => changeJson(dir, 'packages/contract-validator/fixtures/contracts/task-contract.schema.json', (schema) => { schema.type = 'invalid'; }), 'FGV-SCHEMA-007');
 checkMutation('workflow dead end fails', (dir) => {
-  const path = join(dir, 'forge_spec_v1.0/presets/standard.workflow.yaml');
+  const path = join(dir, 'packages/contract-validator/fixtures/presets/standard.workflow.yaml');
   writeFileSync(path, readFileSync(path, 'utf8').replace('- from: verify\n  \'on\': passed\n  to: accept\n', ''));
 }, 'FGV-WORKFLOW-010');
-checkMutation('unknown plugin permission fails', (dir) => changeJson(dir, 'forge_spec_v1.0/contracts/plugin-manifest.example.json', (manifest) => { manifest.requestedPermissions.push('environment.root'); }), 'FGV-PLUGIN-005');
-checkMutation('bad acceptance reference fails', (dir) => changeJson(dir, 'forge_spec_v1.0/planning/tasks.json', (tasks) => { tasks[0].testIds.push('T999'); }), 'FGV-PLAN-021');
-checkMutation('acceptance case missing task fails', (dir) => changeJson(dir, 'forge_spec_v1.0/tests/acceptance-cases.json', (cases) => { cases[0].relatedTaskIds = ['P9-99']; }), 'FGV-TEST-006');
-checkMutation('invalid example fails', (dir) => changeJson(dir, 'forge_spec_v1.0/contracts/task-contract.example.json', (example) => { example.acceptance = []; }), 'FGV-DATA-001');
+checkMutation('unknown plugin permission fails', (dir) => changeJson(dir, 'packages/contract-validator/fixtures/contracts/plugin-manifest.example.json', (manifest) => { manifest.requestedPermissions.push('environment.root'); }), 'FGV-PLUGIN-005');
+checkMutation('bad acceptance reference fails', (dir) => changeJson(dir, 'packages/contract-validator/fixtures/planning/tasks.json', (tasks) => { tasks[0].testIds.push('T999'); }), 'FGV-PLAN-021');
+checkMutation('acceptance case missing task fails', (dir) => changeJson(dir, 'packages/contract-validator/fixtures/tests/acceptance-cases.json', (cases) => { cases[0].relatedTaskIds = ['P9-99']; }), 'FGV-TEST-006');
+checkMutation('invalid example fails', (dir) => changeJson(dir, 'packages/contract-validator/fixtures/contracts/task-contract.example.json', (example) => { example.acceptance = []; }), 'FGV-DATA-001');
 checkMutation('unresolved OpenAPI ref fails', (dir) => {
-  const path = join(dir, 'forge_spec_v1.0/contracts/openapi.yaml');
+  const path = join(dir, 'packages/contract-validator/fixtures/contracts/openapi.yaml');
   writeFileSync(path, readFileSync(path, 'utf8').replace('#/components/schemas/CommandResponse', '#/components/schemas/DoesNotExist'));
 }, 'FGV-API-013');
 checkMutation('invalid SQL fails', (dir) => {
-  const path = join(dir, 'forge_spec_v1.0/contracts/schema.sql');
+  const path = join(dir, 'packages/contract-validator/fixtures/contracts/schema.sql');
   writeFileSync(path, `${readFileSync(path, 'utf8')}\nCREATE TABLE broken(`);
 }, 'FGV-SQL-005');
 checkMutation('dependency version drift fails', (dir) => changeJson(dir, 'packages/ui/package.json', (manifest) => { manifest.dependencies.vue = '3.5.42'; }), 'FGV-VERSION-005');

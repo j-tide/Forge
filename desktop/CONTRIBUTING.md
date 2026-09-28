@@ -48,8 +48,6 @@ AI-assisted PRs go through the same review process as any other contribution. Tr
 
 Contributions to Forge are distributed under the repository’s [AGPL-3.0 license](LICENSE). Preserve applicable copyright, attribution, and source notices. Source provenance is recorded in [UPSTREAM.md](UPSTREAM.md).
 
-[CLA.md](CLA.md) is an unchanged historical upstream agreement. It is retained for provenance and does **not** apply as a required agreement for new Forge contributions. Do not claim that its original owner or automated signing process belongs to Forge.
-
 ## Prerequisites
 
 Before contributing, ensure you have the following installed:
@@ -111,7 +109,7 @@ The fastest way to get started:
 ```bash
 # Clone the repository
 git clone https://github.com/j-tide/Forge.git
-cd Forge-Aperant
+cd Forge/desktop
 
 # Install all dependencies (cross-platform)
 npm run install:all
@@ -308,7 +306,7 @@ Forge uses an independent repository. Clone the actual repository URL:
 
 ```bash
 git clone https://github.com/j-tide/Forge.git
-cd Forge-Aperant
+cd Forge/desktop
 git remote -v
 ```
 
@@ -468,7 +466,7 @@ Forge is a single Electron desktop application in `apps/desktop/`.
 - **Renderer** (`src/renderer/`) - React UI components and Zustand stores
 - **Shared** (`src/shared/`) - Types, i18n locales, constants, utilities
 
-For detailed architecture information, see [CLAUDE.md](CLAUDE.md).
+The implementation is in the source directories above. Current delivery boundaries are recorded in the root AGENTS.md and docs/implementation-status.md.
 
 ---
 

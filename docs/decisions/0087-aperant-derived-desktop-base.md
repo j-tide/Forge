@@ -4,7 +4,7 @@
 
 ## 背景
 
-ADR 0085/0086 选择在原 Forge 仓库独立编写 Vue 桌面，并以 Aperant 公开 2.x 对照交互、以用户视频和 `forge_glass_v1.1/design/` 对照视觉与动效。用户现已明确选择改用 **Aperant 2.8.0-beta.6 的衍生代码**作为未来 Forge Desktop 的基座，在其上实现 Forge 磨砂玻璃视觉。这改变的是未来桌面实现来源，不是对原 Forge 已有 Python Host、SQLite 数据、产品契约或验收证据的追溯替换。
+ADR 0085/0086 选择在原 Forge 仓库独立编写 Vue 桌面，并以 Aperant 公开 2.x 对照交互、以用户视频和 `packages/ui/src/tokens/` 对照视觉与动效。用户现已明确选择改用 **Aperant 2.8.0-beta.6 的衍生代码**作为未来 Forge Desktop 的基座，在其上实现 Forge 磨砂玻璃视觉。这改变的是未来桌面实现来源，不是对原 Forge 已有 Python Host、SQLite 数据、产品契约或验收证据的追溯替换。
 
 ## 决定
 

@@ -17,12 +17,12 @@ export class SchemaRegistry {
     let files: string[];
     try { files = readdirSync(folder).filter((name) => name.endsWith('.schema.json')).sort(); }
     catch (error) {
-      this.context.issue('FGV-IO-001', 'forge_spec_v1.0/contracts', '', `Cannot list schemas: ${String(error)}`);
+      this.context.issue('FGV-IO-001', 'packages/contract-validator/fixtures/contracts', '', `Cannot list schemas: ${String(error)}`);
       return;
     }
-    if (!files.length) this.context.issue('FGV-SCHEMA-001', 'forge_spec_v1.0/contracts', '', 'No JSON Schemas found');
+    if (!files.length) this.context.issue('FGV-SCHEMA-001', 'packages/contract-validator/fixtures/contracts', '', 'No JSON Schemas found');
     for (const name of files) {
-      const file = `forge_spec_v1.0/contracts/${name}`;
+      const file = `packages/contract-validator/fixtures/contracts/${name}`;
       const value = record(this.context.json(file));
       if (!value) { this.context.issue('FGV-SCHEMA-002', file, '', 'Schema must be an object'); continue; }
       const id = name.slice(0, -'.schema.json'.length);
@@ -41,7 +41,7 @@ export class SchemaRegistry {
       } catch (error) { this.context.issue('FGV-SCHEMA-007', file, '', `Schema registration failed: ${String(error)}`); }
     }
     for (const [id] of this.schemas) {
-      const file = `forge_spec_v1.0/contracts/${id}.schema.json`;
+      const file = `packages/contract-validator/fixtures/contracts/${id}.schema.json`;
       try {
         const schema = this.schemas.get(id);
         if (schema) this.validators.set(id, this.ajv.compile(schema));
@@ -49,7 +49,7 @@ export class SchemaRegistry {
     }
     const examples = files.length ? readdirSync(folder).filter((name) => name.endsWith('.example.json')).sort() : [];
     for (const name of examples) {
-      const file = `forge_spec_v1.0/contracts/${name}`;
+      const file = `packages/contract-validator/fixtures/contracts/${name}`;
       const schemaName = name.slice(0, -'.example.json'.length);
       const value = this.context.json(file);
       this.validate(schemaName, value, file);

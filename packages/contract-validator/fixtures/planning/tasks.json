@@ -682,7 +682,7 @@
     "module": "M24",
     "paths": [
       "tests/p2",
-      "fixtures/orders"
+      "tests/p2/fixtures/orders"
     ],
     "dependsOn": [
       "P2-09"

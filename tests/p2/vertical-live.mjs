@@ -65,7 +65,7 @@ async function approveManual(page, title, goal, inspectDraft = false) {
 
 try {
   await mkdir(source);
-  await cp(join(root, 'fixtures/orders'), source, { recursive: true });
+  await cp(join(root, 'tests/p2/fixtures/orders'), source, { recursive: true });
   git('init', '-q');
   git('config', 'user.name', 'Forge Fixture');
   git('config', 'user.email', 'forge@example.invalid');

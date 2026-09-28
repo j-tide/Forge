@@ -6,14 +6,14 @@
 > **当前基线**：MIG-PY-01～09 在当前 macOS arm64 开发环境完成；Desktop 的唯一业务 Host 已切到 Python。P2-10 的 Python Host 纵向真实 Demo 与 P2 Phase Gate 已在 macOS arm64 开发路径通过；历史 Node 结果只作对照，跨平台与安装包仍未验证。<br>
 > **执行模型**：一次只实施一个权威 Task；Autopilot 启用时完成后由 `docs/forge-codex-autopilot-protocol.md` 决定自动继续。<br>
 > **当前完整交付目标（用户 2026-09-25 授权）**：权威任务图与已批准 ADR 中的全部必做产品范围均须落地并真实验收。内部 Demo、本机闭环和阶段报告是过程证据，不是停止条件；缺少签名、Claude 凭据或目标平台时只保留精确未验项，继续不依赖它们的工作。P9 等权威可选远期增强仍按原标记，不因本目标自动实施。用户入口、真实 Python Host 运行和验收证据须同时成立。<br>
-> **最新桌面方向（2026-09-27）**：用户批准以原先提供的磨砂玻璃视频及 `forge_glass_v1.1/design/` 实现视觉材质和动效；Aperant 公开 2.x 仍对照已改进的桌面信息架构、交互密度与操作路径。见 ADR 0085/0086。新安装默认亮色，保留真实暗色与跟随系统选项及既有用户偏好。优先修正项目原位切换、新建任务与模型回复、五列看板、任务详情、Profile/Workflow/插件/知识的实际操作层级，不覆盖 Forge 的 Python Host、数据、审批与安全语义。Desktop 完整可用仍是当前里程碑；P7/P8 手机与远程新增开发后置，历史代码/权威 ID 和正式发布门禁不变。新界面每项均需真实运行、用户入口、当前版本截图与验收，旧安装包不得冒称新界面。<br>
+> **最新桌面方向（2026-09-27）**：用户批准以原先提供的磨砂玻璃视频及 `packages/ui/src/tokens/` 实现视觉材质和动效；Aperant 公开 2.x 仍对照已改进的桌面信息架构、交互密度与操作路径。见 ADR 0085/0086。新安装默认亮色，保留真实暗色与跟随系统选项及既有用户偏好。优先修正项目原位切换、新建任务与模型回复、五列看板、任务详情、Profile/Workflow/插件/知识的实际操作层级，不覆盖 Forge 的 Python Host、数据、审批与安全语义。Desktop 完整可用仍是当前里程碑；P7/P8 手机与远程新增开发后置，历史代码/权威 ID 和正式发布门禁不变。新界面每项均需真实运行、用户入口、当前版本截图与验收，旧安装包不得冒称新界面。<br>
 > **项目边界**：ProofRun 与 Forge 当前完全独立，ProofRun 不进入 Forge 仓库、数据库、工作流或默认插件。未来如需接入，只能通过稳定的公开插件接口。<br>
 > **工程规格优先级**：
 >
-> 1. 产品语义、架构、安全、契约：`forge_spec_v1.0/`
+> 1. 产品语义、架构、安全、契约：`packages/contract-validator/fixtures/`
 >    用户批准的 Python Core 架构覆盖其中的 Node/TypeScript Host 技术选择，不改变权威 Task/Test ID 和产品语义；见 ADR 0029。
 > 2. 正式生产代码与已落地 ADR
-> 3. UI：信息架构与交互路径参考 ADR 0085 的 Aperant 2.x 对照；视觉材质与动效参考用户原视频及 `forge_glass_v1.1/design/`，按 ADR 0086 独立实现。正式 token 与组件位于 `@forge/ui`，参考资料不成为运行时代码
+> 3. UI：信息架构与交互路径参考 ADR 0085 的 Aperant 2.x 对照；视觉材质与动效参考用户原视频及 `packages/ui/src/tokens/`，按 ADR 0086 独立实现。正式 token 与组件位于 `@forge/ui`，参考资料不成为运行时代码
 > 4. 本文档仅对权威 Task 提供详细实施说明，不重定义任务 ID、依赖或 Phase Gate
 >
 > **重要**：本文件不是概念 Roadmap，而是 Codex 的执行手册。每一个任务都应当可以直接照着做。
@@ -33,11 +33,11 @@
 3. 阅读 `docs/implementation-status.md`。
 4. 阅读 `docs/compatibility-record.md`。
 5. 阅读与当前任务相关 ADR。
-6. 阅读 `forge_spec_v1.0` 中当前任务引用的：
-   - blueprint
+6. 阅读 `packages/contract-validator/fixtures` 中当前任务引用的：
    - contracts
    - planning
    - acceptance cases
+   产品正文以当前 `AGENTS.md` 和相关 ADR 为准；原参考蓝图已按用户授权清理，不要求不存在的 fixture 文档。公开类型与 Python 输入校验仍须核对。
 7. 检查 Git 状态和用户已有改动。
 8. 当前 Desktop 里程碑先从既有功能对应表找第一个尚无「实现、用户入口、真实运行、当前版本验收」四层证据的桌面缺口；其权威 Task 即使标为 DONE，仍须补齐真实缺口并记录，不改写历史结论。桌面缺口清零后才按权威图找第一个依赖满足的 `Status: TODO`。
 9. 一次只实施一个任务或可验证桌面缺口；手机/远程新增工作当前不入队。
@@ -117,7 +117,7 @@ pnpm probe:codex
 - 不直接运行参考 prototype HTML 作为产品。
 - 所有运行状态必须来自真实 Host 数据。
 - 不显示虚假的在线 Agent、费用、成功率、测试结果。
-- 页面、卡片、Dialog、Drawer 的转场先对照 `forge_glass_v1.1/design/motion.json`；不连续动画化 blur、整窗透明度或背景，也不以动效预告尚无 Host 回执的成功。Reduced Motion / Reduced Transparency、可读焦点与键盘操作必须保留并验收。
+- 页面、卡片、Dialog、Drawer 的转场先对照 `packages/ui/tests/fixtures/motion.json`；不连续动画化 blur、整窗透明度或背景，也不以动效预告尚无 Host 回执的成功。Reduced Motion / Reduced Transparency、可读焦点与键盘操作必须保留并验收。
 
 ## A6. After
 
@@ -176,7 +176,7 @@ Next
 
 # Canonical Task Map
 
-以下编号、名称、依赖、模块、验收用例和 Phase Gate 逐项来自只读 `forge_spec_v1.0/planning/tasks.json`、`planning/phases.json`。**权威任务字段在前；文末 D 编号为旧 Playbook 的详细说明归档，按 `Applies to` 映射，不能扩张当前任务范围。** Autopilot 的持续执行由 `docs/forge-codex-autopilot-protocol.md` 控制。
+以下编号、名称、依赖、模块、验收用例和 Phase Gate 逐项来自只读 `packages/contract-validator/fixtures/planning/tasks.json`、`planning/phases.json`。**权威任务字段在前；文末 D 编号为旧 Playbook 的详细说明归档，按 `Applies to` 映射，不能扩张当前任务范围。** Autopilot 的持续执行由 `docs/forge-codex-autopilot-protocol.md` 控制。
 
 # P1 — 自然语言入口与审批看板
 
@@ -662,7 +662,7 @@ None; follow the authoritative task and referenced contracts.
 **Depends on:** P2-09
 **Module:** M24
 **Acceptance cases:** T116, T117, T118, T119, T120
-**Paths:** `tests/p2`, `fixtures/orders`
+**Paths:** `tests/p2`, `tests/p2/fixtures/orders`
 
 ### Authoritative implementation
 
@@ -2547,7 +2547,7 @@ None; follow the authoritative task and referenced contracts.
 
 ### Read First
 
-- `forge_spec_v1.0/planning/tasks.json`：P1-01
+- `packages/contract-validator/fixtures/planning/tasks.json`：P1-01
 - P1 phase definition
 - Project / Environment / Trust 相关 contracts
 - P1-01 acceptance cases

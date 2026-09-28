@@ -161,7 +161,10 @@ def test_narrow_revoke_and_cached_identity_cannot_regrant(tmp_path: Path) -> Non
 
 
 def test_public_remote_scope_map_matches_authoritative_commands() -> None:
-    source = Path(__file__).resolve().parents[2] / "forge_spec_v1.0/planning/commands.json"
+    source = (
+        Path(__file__).resolve().parents[2]
+        / "packages/contract-validator/fixtures/planning/commands.json"
+    )
     entries = json.loads(source.read_text())
     assert set(REMOTE_COMMAND_SCOPES) == {
         item["method"] for item in entries if item["remoteAllowed"]

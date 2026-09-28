@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import { migrations } from '@forge/persistence';
 import { ReferenceIndex, ValidationContext, items, record, string } from './shared.js';
 
-const base = 'forge_spec_v1.0/';
+const base = 'packages/contract-validator/fixtures/';
 function localReference(root: unknown, reference: string): boolean {
   if (!reference.startsWith('#/')) return false;
   let current: unknown = root;

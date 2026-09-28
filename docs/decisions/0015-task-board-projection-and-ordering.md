@@ -12,6 +12,6 @@
 
 ## 规格映射与后续
 
-- `forge_spec_v1.0/contracts/openapi.yaml` 的 `TaskSummary` 是未来远端公开 API 的权威字段；当前私有 Desktop bridge 的 `BoardTask` 增加 `priority`、`position` 和当前可用的 `executorId:null`，供本地筛选/排序使用。没有启动远端 API，也没有修改参考 Schema。生产 v8 `tasks.state` 目前仅接受 `todo`；未来状态迁移需在对应 workflow/Review/Verify Task 中扩展，并保持审批门禁。当前五列不代表这四个未来状态已可达。
+- `packages/contract-validator/fixtures/contracts/openapi.yaml` 的 `TaskSummary` 是未来远端公开 API 的权威字段；当前私有 Desktop bridge 的 `BoardTask` 增加 `priority`、`position` 和当前可用的 `executorId:null`，供本地筛选/排序使用。没有启动远端 API，也没有修改参考 Schema。生产 v8 `tasks.state` 目前仅接受 `todo`；未来状态迁移需在对应 workflow/Review/Verify Task 中扩展，并保持审批门禁。当前五列不代表这四个未来状态已可达。
 - T021 的 TODO→Done 越列拖动被阻止，并提示 Review、Verify、人工验收门禁；T022 的多状态/Executor fixture 用纯投影测试，真实产品目前没有 Run/Agent 状态；T023 重复 ID 的数据库和投影测试通过；T024 空状态与 Host 不可用实测，细粒度只读 principal/scope 待身份能力；T025 同列键盘按钮与真实 Desktop 排序通过，跨列的合法语义命令属于后续状态能力。
 - Windows x64、macOS Intel、系统 DPI、安装包/签名及远端多客户端权限仍未实测。当前 macOS arm64 的 1280×800 窗口已验证横向滚动，不等于 Windows 150% 系统缩放验收。

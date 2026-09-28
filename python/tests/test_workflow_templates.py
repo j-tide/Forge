@@ -20,7 +20,10 @@ from forge.workflow_templates import (
 
 def test_three_presets_have_one_schema_and_human_final_gate() -> None:
     templates = list_templates()
-    schema_path = Path(__file__).parents[2] / "forge_spec_v1.0/contracts/workflow.schema.json"
+    schema_path = (
+        Path(__file__).parents[2]
+        / "packages/contract-validator/fixtures/contracts/workflow.schema.json"
+    )
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
     validator = Draft202012Validator(schema)

@@ -4,7 +4,7 @@
 
 ## 决定
 
-- 权威 `forge_spec_v1.0/contracts/task-contract.schema.json` 是字段来源；生产 `@forge/contracts` 镜像 v1.0 并严格拒绝未知字段。Draft 与 Task Contract 分开：Draft 有来源消息、整理状态、可编辑原文和 provider/error 标识；它没有 Approval、TODO 或 Run 权力。P1-05 处理完整结构化编辑/修订，P1-06 才处理批准。
+- 权威 `packages/contract-validator/fixtures/contracts/task-contract.schema.json` 是字段来源；生产 `@forge/contracts` 镜像 v1.0 并严格拒绝未知字段。Draft 与 Task Contract 分开：Draft 有来源消息、整理状态、可编辑原文和 provider/error 标识；它没有 Approval、TODO 或 Run 权力。P1-05 处理完整结构化编辑/修订，P1-06 才处理批准。
 - `@forge/refiner` 是不依赖 Codex、Host、SQLite 或 Vue 的两步转换：意图分类，再生成结构化提议。初次失败最多修复两次；仍失败保留原文和错误，绝不把自由文本伪装成已验证 Task Contract。模型不能生成 taskId、projectId、revision、sourceRefs 或 approval；Forge 从已认证的 Host 上下文和持久消息写入这些字段。控制指令不转成任务执行。
 - Host 用既有已锁定的 `CodexExecutorAdapter` 作为**本机特定的整理器模型适配**，不是把 Codex 宣称为可替换的通用 Model Provider。完整 Model Provider 接口仍属 P4-07；凭据产品化仍属 P6-04。此调用使用当前已有合法 Codex 会话，不读取或存储新的 Key。没有可用认证时保留手工草稿入口。
 - 每次模型请求使用独立空临时目录、`read-only` sandbox、`approval: never` 和结构化输出；仅送入有长度上限的项目名称、类型、包管理器、分支、脏树状态、声明脚本名称与用户消息。不会把项目路径或源码交给整理器，也不运行项目脚本。若看到 command/file/approval 事件则请求取消并拒绝该输出。既有 P0-05 探测只证实 macOS arm64 的只读文件写入防护；网络策略未被证实，故不把隔离写成通用安全沙箱。

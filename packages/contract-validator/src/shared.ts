@@ -30,7 +30,7 @@ export class ValidationContext {
   readonly specRoot: string;
   readonly checked = new Set<string>();
   readonly issues: ValidationIssue[] = [];
-  constructor(readonly repoRoot: string) { this.specRoot = join(repoRoot, 'forge_spec_v1.0'); }
+  constructor(readonly repoRoot: string) { this.specRoot = join(repoRoot, 'packages/contract-validator/fixtures'); }
   issue(code: string, file: string, path: string, message: string, relatedId?: string, severity: Severity = 'error', suggestion?: string): void {
     this.issues.push({ code, severity, file, path, message, ...(relatedId ? { relatedId } : {}), ...(suggestion ? { suggestion } : {}) });
   }

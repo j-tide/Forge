@@ -5,7 +5,7 @@ Status: Accepted for P5-01 development scope
 
 ## Decision
 
-The read-only `forge_spec_v1.0/contracts/workflow.schema.json` and standard
+The read-only `packages/contract-validator/fixtures/contracts/workflow.schema.json` and standard
 reference preset remain product/spec authority. Production presets live as
 versioned JSON data in `python/src/forge/workflow_presets/`, packaged with
 the Python Host. `workflow_templates.py` is their closed Pydantic loader and

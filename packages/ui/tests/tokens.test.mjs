@@ -6,8 +6,8 @@ const css = await readFile(new URL('../src/tokens.css', import.meta.url), 'utf8'
 const componentCss = await readFile(new URL('../src/components.css', import.meta.url), 'utf8');
 const values = JSON.parse(await readFile(new URL('../src/tokens/values.json', import.meta.url), 'utf8'));
 const dark = JSON.parse(await readFile(new URL('../src/tokens/dark.json', import.meta.url), 'utf8'));
-const design = JSON.parse(await readFile(new URL('../../../forge_glass_v1.1/design/tokens.json', import.meta.url), 'utf8'));
-const motion = JSON.parse(await readFile(new URL('../../../forge_glass_v1.1/design/motion.json', import.meta.url), 'utf8'));
+const design = JSON.parse(await readFile(new URL('./fixtures/tokens.json', import.meta.url), 'utf8'));
+const motion = JSON.parse(await readFile(new URL('./fixtures/motion.json', import.meta.url), 'utf8'));
 
 test('formal tokens preserve the selected glass palette and scale', () => {
   for (const [name, value] of Object.entries(values)) {

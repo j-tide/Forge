@@ -1,6 +1,6 @@
 import { ReferenceIndex, ValidationContext, items, record, string } from './shared.js';
 
-const base = 'forge_spec_v1.0/';
+const base = 'packages/contract-validator/fixtures/';
 const allowedTaskStatus = new Set(['not_started', 'in_progress', 'blocked', 'completed']);
 const allowedTestStatus = new Set(['specified_not_executed', 'implemented_not_executed', 'passed', 'failed', 'blocked', 'skipped']);
 

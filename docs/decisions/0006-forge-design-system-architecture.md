@@ -4,7 +4,7 @@
 
 ## 背景
 
-P0-02 只有 `tokens.css` 和应用目录中的三个轻量组件；Web 与 Desktop 虽共用 Vue App，组件样式仍散在 `apps/web/src/style.css`。`forge_glass_v1.1` 是视觉基准，旧工程包的铜橙与深色侧栏不再用于新页面。P0-07 需要可维护的公开 UI 边界，同时不得提前实现任务、审批或工作流业务。
+P0-02 只有 `tokens.css` 和应用目录中的三个轻量组件；Web 与 Desktop 虽共用 Vue App，组件样式仍散在 `apps/web/src/style.css`。`packages/ui/src/tokens` 是视觉基准，旧工程包的铜橙与深色侧栏不再用于新页面。P0-07 需要可维护的公开 UI 边界，同时不得提前实现任务、审批或工作流业务。
 
 ## 决定
 

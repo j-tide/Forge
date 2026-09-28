@@ -2,13 +2,13 @@
 
 ## 资料与优先级
 
-- 产品边界、状态、权限、审批、插件及安全规则：`forge_spec_v1.0/AGENTS.md`、`forge_spec_v1.0/docs/forge_blueprint_v1.0.md`。
-- 公共字段和数据格式：`forge_spec_v1.0/contracts/` 的 Schema 与公开契约。正文与 Schema 有实质冲突时，记录问题与建议；不要静默修改基线。
-- 任务顺序与验收：`forge_spec_v1.0/planning/tasks.json`、`forge_spec_v1.0/tests/acceptance-cases.json`。
+- 产品边界、状态、权限、审批、插件及安全规则以本文件和当前架构决策为准。生产公开类型位于 `packages/contracts/`，Python 校验位于 `python/src/forge/`。
+- 公共字段和数据格式：`packages/contract-validator/fixtures/contracts/` 的 Schema 与公开契约。正文与 Schema 有实质冲突时，记录问题与建议；不要静默修改基线。
+- 任务顺序与验收：`packages/contract-validator/fixtures/planning/tasks.json`、`packages/contract-validator/fixtures/tests/acceptance-cases.json`。
 - 用户已批准 Python Core 架构更正：仅覆盖旧蓝图中 Node/TypeScript 业务 Host 的技术选择；权威产品语义、Task/Test ID、验收与安全边界仍有效。决策见 `docs/decisions/0029-python-core-runtime-architecture.md`，实施顺序见 `docs/forge-python-core-migration-plan.md`。
-- 2026-09-27 桌面路线先后见 ADR 0085/0086：原 Forge 仓库独立编写的 Vue 界面以 Aperant 公开 2.x 对照交互，以用户磨砂玻璃视频及 `forge_glass_v1.1/design/` 对照视觉与动效；其已有实现和验收是版本限定的历史证据。用户现批准 [ADR 0087](docs/decisions/0087-aperant-derived-desktop-base.md)：未来桌面基座采用当前仓库 `desktop/` 中的（原独立兄弟仓库 `../Forge-Aperant` 归拢） Aperant `v2.8.0-beta.6` AGPL-3.0 衍生版，并继续使用 Forge 玻璃视觉。衍生版须保留上游署名、许可证及相应源码义务；不得声称 Aperant 3.0、已接入 Forge Python Host 或已完成 Forge 产品验收。
+- 2026-09-27 桌面路线先后见 ADR 0085/0086：原 Forge 仓库独立编写的 Vue 界面以 Aperant 公开 2.x 对照交互，以用户磨砂玻璃视频及 `packages/ui/src/tokens/` 对照视觉与动效；其已有实现和验收是版本限定的历史证据。用户现批准 [ADR 0087](docs/decisions/0087-aperant-derived-desktop-base.md)：未来桌面基座采用当前仓库 `desktop/` 中的（原独立兄弟仓库 `../Forge-Aperant` 归拢） Aperant `v2.8.0-beta.6` AGPL-3.0 衍生版，并继续使用 Forge 玻璃视觉。衍生版须保留上游署名、许可证及相应源码义务；不得声称 Aperant 3.0、已接入 Forge Python Host 或已完成 Forge 产品验收。
 - 2026-09-28 用户授权整理 GitHub Contributors：公开 Git 历史中的上游祖先以来源明确、源码 tree 完全相同的导入快照代替；Forge 自有提交保留，原上游历史保存在完整本地 bundle，并在 `desktop/UPSTREAM.md` 保留原提交链接。导入者署名不代表上游代码原创作者，不修改版权、许可证或历史验收结论。该记录覆盖 ADR 0087 中先前的公开上游历史保留方式。
-- 两个资料目录是只读基线。不要移动、删除或把原型 HTML 当生产入口；参考包既有测试结果不是产品测试结果。
+- 用户已批准删除根目录的两份旧资料包。仍被测试使用的契约/任务/验收数据归 `packages/contract-validator/fixtures/`，设计数值归 `packages/ui/tests/fixtures/`，orders 夹具归 `tests/p2/fixtures/orders/`。这些是测试输入，不是已通过的产品验收；不得把参考页面或模拟结果当生产状态。
 
 ## 开发边界
 
@@ -27,4 +27,8 @@
 - 新增功能须有有意义的 lint、typecheck、test、build 结果；不能用空脚本冒充检查。平台与 SDK 未实际探测时标记未验证。
 - 本地实施进度写入根目录 `docs/implementation-status.md`，不篡改参考包中的任务状态。涉及产品语义、安全或技术路线的变更先写 `docs/decisions/` ADR 并取得确认。
 - 当前用户已批准 Python Core 迁移；MIG-PY-01～09 已在 macOS arm64 的 Python-only Desktop 开发路径完成。历史阶段结论和递延验收以实施记录为准。完整交付须同时具备真实实现、用户入口、运行链路及当前版本验收；内部 Demo 只是过程证据。保留现有 SQLite 数据，不重置或删除项目、任务和运行记录。缺少 Claude 凭据、签名证书或目标平台时继续独立开发，但不得将未验项写为通过或放宽远程安全门禁。
-- 遵守 `forge_spec_v1.0/AGENTS.md` 的状态、身份、租约、证据及凭据规则。不得擅自提交、推送或发布。
+- 身份和 scope 由 Host 注入；审批绑定 revision/scopeHash，审查和验证绑定 snapshot。旧结果不能推进新任务。
+- Core 掌握审批、权限、任务与执行状态、租约和证据；插件只提供公开能力，不能写 Core 状态或伪造用户身份。
+- 单工作区只允许一个写入者；取消须确认进程退出才释放租约。外部动作先记录 intent，崩溃后对账，不能盲目重试。
+- 日志和诊断不得包含密钥明文，Renderer 不提供任意 Node/Shell/IPC；运行模型时遵守真实认证与计费授权。
+- 不得擅自提交、推送或发布。

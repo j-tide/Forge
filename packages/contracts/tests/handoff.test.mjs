@@ -6,7 +6,7 @@ import { codeSnapshotSchema, developmentStepResultSchema,
   handoffBundleSchema } from '../dist/index.js';
 
 const reference = (name) => JSON.parse(readFileSync(join(import.meta.dirname,
-  '../../../forge_spec_v1.0/contracts', name), 'utf8'));
+  '../../../packages/contract-validator/fixtures/contracts', name), 'utf8'));
 
 test('production handoff and step-result fields match the read-only specification contracts', () => {
   const handoff = reference('handoff-bundle.schema.json');

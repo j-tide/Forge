@@ -8,7 +8,7 @@
 - Host 收到所选路径后重新 `realpath`、确认目录，并只读取仓库顶层受限清单及 Git 本地状态。Git 以 `execFile(executable, argv[])` 运行；关闭 terminal prompt 和可选锁，禁用 fsmonitor，不执行依赖安装、项目 script、hook 或网络请求。Git 子目录规范化到真实 Git root；非 Git 目录允许保存，worktree 能力明确为 false。符号链接 manifest 不读取；用户所选根目录的符号链接规范化后在 UI 显示真实目标。
 - Probe 生成规范路径、Git/lockfile/script 摘要及 SHA-256 fingerprint。`project.create` 要求明确的 `project-trust/v1` 与 `approved:true`，Host 在写入前重新探测，fingerprint 改变时拒绝并要求重新查看。信任只允许 Forge 把项目作为未来的可执行上下文，不免除后续危险操作审批。Trust 审计仅记录版本、时间、环境摘要 hash 和 `local-user`，不记录凭据。
 - Project 有独立 UUID；规范根路径在当前 Forge Host 数据库中唯一。环境快照通过严格 Zod Schema 验证后存 JSON，并有独立 environmentId。当前项目 ID 存于 Host 元数据；再次选择相同 realpath/Git root 返回已有 Project。移除只执行 SQLite 记录删除，绝不删源码。项目从磁盘移动后，旧路径不会因 ID 变化被误认为新项目；重新定位路径属于后续数据服务任务。
-- P1-01 增加生产 migration v3 的最小 `projects` 与 `project_trust_decisions` 表。参考 `forge_spec_v1.0/contracts/schema.sql` 是完整产品 DDL，包含当前尚无稳定逻辑 Host 身份的 `host_id`、trust_mode、revision/archived_at 和未来关联表；本轮未复制完整 DDL，也未修改只读参考。P1-02 的环境/命令预设、CAS 和归档设计需对齐这些字段。本轮 `remove` 是无关联业务表时的元数据移除；未来有 Task/Run 后不能沿用简单物理删除。
+- P1-01 增加生产 migration v3 的最小 `projects` 与 `project_trust_decisions` 表。参考 `packages/contract-validator/fixtures/contracts/schema.sql` 是完整产品 DDL，包含当前尚无稳定逻辑 Host 身份的 `host_id`、trust_mode、revision/archived_at 和未来关联表；本轮未复制完整 DDL，也未修改只读参考。P1-02 的环境/命令预设、CAS 和归档设计需对齐这些字段。本轮 `remove` 是无关联业务表时的元数据移除；未来有 Task/Run 后不能沿用简单物理删除。
 - Host 私有协议增加经过严格 payload 校验的 project 命令，并显式从 `forge-host-protocol/v2` 升到 `/v3`，防止旧 Host 在握手成功后不支持项目命令。系统命令继续保留原语义。
 
 ## 安全与尚未验证

@@ -12,7 +12,7 @@
 
 > 2026-09-24：用户批准 [ADR 0018](decisions/0018-p1-closure-acceptance-scope-conflict.md) 的 A，新增下面的跨阶段验收映射与最小安全可逆决策规则。权威 Test ID 和任务引用保持原样。
 
-任务 ID、名称、依赖与 Phase Gate 固定来自 `forge_spec_v1.0/planning/tasks.json` 和 `planning/phases.json`；Playbook 只承载这些权威 Task 的实施说明。
+任务 ID、名称、依赖与 Phase Gate 固定来自 `packages/contract-validator/fixtures/planning/tasks.json` 和 `planning/phases.json`；Playbook 只承载这些权威 Task 的实施说明。
 
 > **2026-09-27 Desktop 界面重做排期覆盖**：用户要求以 Aperant 公开 2.x 桌面版为逐屏对照，替换 Forge 当前不可用的主界面（ADR 0085）。先完成原位项目选择、真实回复/模型显示、新建任务、看板和任务详情，再逐页改造 Profile/Workflow/插件/知识及设置；每页须保留真实 Python Host 行为和安全门禁。旧 glass 布局及旧安装包不算新界面验收。P7/P8 手机、Companion、配对、远程 HTTPS/命令与跨设备协作的新增工作仍暂停；远程历史代码/测试/记录保留，未完成写继续拒绝，网络默认关闭。Desktop 里程碑完成后停止并报告，不自动恢复 P7/P8。Claude、Windows/Intel、签名/公证、真机等原验收与发布门禁不因排期而通过。
 
@@ -75,7 +75,7 @@
 - `docs/compatibility-record.md`
 - `docs/forge-autopilot-state.md`
 - 当前任务相关 ADR
-- 当前任务在 `forge_spec_v1.0` 中引用的 contracts / acceptance cases
+- 当前任务在 `packages/contract-validator/fixtures` 中引用的 contracts / acceptance cases
 
 重新检查：
 
@@ -89,7 +89,7 @@ git status --short
 
 ## STEP 2 — Select Next Task
 
-当前 Desktop 里程碑先读取 `docs/pdf-feature-operation-map.md`，从 A～H 桌面功能中找第一个缺少真实实现、用户入口、Python Host 运行或当前版本验收证据的缺口。优先检查自定义 Workflow 修正后复验、知识/记忆进入实际 Run、Profile/模型/插件对新 Run 的作用、安装版与源码一致性；沿已有权威 Task/Test 映射补齐，保留原 DONE 历史状态及新的缺口说明。一个缺口真实验证后继续下一个。P7/P8 手机/远程新增工作当前不选。
+当前 Desktop 里程碑先读取 `docs/implementation-status.md` 与 `docs/desktop-ui-ux-audit.md`，结合已有 ADR 找第一个缺少真实实现、用户入口、Python Host 运行或当前版本验收证据的缺口。原 PDF 功能表已按用户授权清理；UI 走查只能证明其列明的界面与本地服务，不替代完整业务验收。优先检查自定义 Workflow 修正后复验、知识/记忆进入实际 Run、Profile/模型/插件对新 Run 的作用、安装版与源码一致性；沿已有权威 Task/Test 映射补齐，保留原 DONE 历史状态及新的缺口说明。一个缺口真实验证后继续下一个。P7/P8 手机/远程新增工作当前不选。
 
 桌面缺口清零且用户以后恢复远程排期时，才按 Playbook 寻找：
 
@@ -423,7 +423,7 @@ Last updated:
 
 ## 规格冲突
 
-- `forge_spec_v1.0`
+- `packages/contract-validator/fixtures`
 - 已落地 ADR
 - 当前真实代码
 

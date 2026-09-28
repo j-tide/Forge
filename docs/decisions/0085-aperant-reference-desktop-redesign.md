@@ -11,7 +11,7 @@
 - 桌面布局和交互以公开可核对的 Aperant 2.x 为直接对照：左侧项目和导航、单一 New Task 入口、主区域五列看板、原位项目选择、近全屏任务详情和清晰的 Profile/模型配置。
 - 以 [v2.7.6 官方看板截图](https://github.com/AndyMik90/Aperant/blob/v2.7.6/.github/assets/Auto-Claude-Kanban.png)对照布局；以公开的 v2.8.0-beta.6 组件结构核对新建任务、项目切换和详情交互。Aperant 3.0 尚未公开，不能声称复刻其界面。
 - 独立重写 Forge Vue 界面并复用正式 `@forge/ui`、Python Host 和既有数据契约。Aperant 源码和图片采用 AGPL-3.0，不直接移植到 Forge。若未来要直接 fork/移植，需先明确许可、署名和分发义务。
-- 新视觉优先级覆盖 `forge_glass_v1.1` 的旧桌面方向；保留其只读资料。主题选择必须真实生效，默认深色，同时保留减少动效和减少透明度。
+- 新视觉优先级覆盖 `packages/ui/src/tokens` 的旧桌面方向；保留其只读资料。主题选择必须真实生效，默认深色，同时保留减少动效和减少透明度。
 - Forge 产品语义不因界面模仿而变化：模型回复与任务草稿来自真实 Host；人工批准只入 TODO；明确 Start、Review、Verify 和人工接受后才 Done；不自动合并、推送或部署。Claude 未验收不显示可用。
 - 保留现有 SQLite 用户数据和历史 Run 冻结记录。界面替换不执行数据清理或强制迁移。手机和远程仍按用户要求后置。
 

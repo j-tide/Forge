@@ -8,7 +8,7 @@ package needs an explicit trusted bundle/lock update and platform testing.
 
 ## Manifest and package
 
-Use the closed `forge_spec_v1.0/contracts/plugin-manifest.schema.json` reference
+Use the closed `packages/contract-validator/fixtures/contracts/plugin-manifest.schema.json` reference
 as the source for `id`, SemVer `version`, `forgeApiRange`, `execution`,
 `contributes`, `requires`, `requestedPermissions`, `configSchema` and
 `supportedPlatforms`. The current built-in Codex manifest is at

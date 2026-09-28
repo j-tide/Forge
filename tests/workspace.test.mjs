@@ -8,7 +8,7 @@ const root = new URL('../', import.meta.url);
 const readJson = async (path) => JSON.parse(await readFile(new URL(path, root), 'utf8'));
 
 test('public contract registry matches the read-only specification baseline', async () => {
-  const actual = (await readdir(new URL('forge_spec_v1.0/contracts/', root)))
+  const actual = (await readdir(new URL('packages/contract-validator/fixtures/contracts/', root)))
     .filter((name) => name.endsWith('.schema.json'))
     .map((name) => name.slice(0, -'.schema.json'.length))
     .sort();

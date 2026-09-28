@@ -8,7 +8,7 @@
 - 每次已有 Project、Environment、CommandPreset 写入必须带 `expectedRevision`，SQL 使用 `WHERE revision = ?` 并在同一事务中递增；未命中返回明确冲突，不静默覆盖。创建使用期望版本 0 与唯一约束。Host 根据自己的已认证本地通道确定调用者，输入的 projectId 只能用于定位，不能证明身份。
 - Environment 与 CommandPreset 都存 `project_id`，所有读取、修改和引用检查同时限定项目；跨项目资源以不可见处理。CommandPreset 仅保存可审查的 `executable + argv[] + cwdRelative + envRefs + timeoutSeconds` 配置与来源 hash，不在本任务执行项目命令。授权时将精确配置摘要与版本绑定，后续修改会使授权失效。
 - `Remove from Forge` 从 P1-01 的无关联物理删除切换为项目归档：保留 trust、环境与命令配置供未来审计，不删除用户仓库或 Forge 历史记录。普通列表和 active project 不显示归档项；归档后写操作拒绝。P1-01 的旧库由无损迁移补上 revision=1。未来 Task/Run 表仍需依外键和保留策略扩展。
-- `forge_spec_v1.0/contracts/openapi.yaml` 对完整产品命令使用顶层 `expectedRevision`/`idempotencyKey`；当前 Desktop 私有 Host protocol 仍采用固定本地 project 命令。P1-02 对所有写命令增加期望版本并升协议版本；不把当前私有桥冒充未来 Remote Gateway。独立幂等键/持久 receipt 属于正式 CommandService 阶段，当前 commandId 与唯一约束、CAS 共同避免重复副作用。
+- `packages/contract-validator/fixtures/contracts/openapi.yaml` 对完整产品命令使用顶层 `expectedRevision`/`idempotencyKey`；当前 Desktop 私有 Host protocol 仍采用固定本地 project 命令。P1-02 对所有写命令增加期望版本并升协议版本；不把当前私有桥冒充未来 Remote Gateway。独立幂等键/持久 receipt 属于正式 CommandService 阶段，当前 commandId 与唯一约束、CAS 共同避免重复副作用。
 
 桌面重启修正（2026-09-26）：Main 的 `project.probe(rootPath)` 仍只接受本次系统目录选择器授权的路径，不能把保存在 Renderer 的任意路径当作新的选择。已信任 Project 的环境页改用固定 `project.reprobe(projectId)`：Python Host 从 SQLite 查找未归档、仍符合当前 trustVersion 的项目，只对它保存的 root 做只读探测，并重新确认 canonical root/Git root 身份。命令不接受客户端路径，源目录身份变化时拒绝；无需重启后扩大 Main 的文件系统路径白名单。该加法不修改现有 Project 数据或权限。
 
