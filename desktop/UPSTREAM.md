@@ -67,3 +67,12 @@ This version releases the branding/profile-compatibility and original Logo chang
 - Public release tags retain the same source trees. Published installation packages, corresponding source archives, checksums and publication dates remain unchanged. Earlier release documents describing full imported history record the state at their publication.
 - Historical `git-subtree-*` trailers retain their original import hashes. They are historical metadata, not instructions for automatic upstream synchronization. Future source imports require an explicit, attributed operation.
 - Git timestamps continue the owner's synthetic schedule from November 2025 to September 27, 2026. Actual consolidation occurred on September 28, 2026; it is not a new product test or release.
+
+## Forge desktop UI and reliability revision — 0.1.0-preview.4 (2026-09-28)
+
+- Redesigned the light and dark workspace, navigation, task forms and reading surfaces; retained the imported workflow behavior and stable preview data identity. Reduced motion/transparency preferences and keyboard focus are preserved.
+- Split project configuration from application preferences. Repaired portal/collision behavior for tooltips, popovers, nested menus, model/repository selectors and file references; bounded long menus to the viewport.
+- Corrected project/session scoping, failed-save feedback, task-draft branch retention and fail-closed task-deletion checks. Provider model resolution and Insights failures now retain actual configuration and errors instead of false completion.
+- Removed user-authorized obsolete reference assets and unused documentation, retaining required test inputs in module fixtures. Original licenses, notices, runtime prompts and historical release artifacts remain.
+- This is an explicitly authorized Forge prerelease, not an Aperant-maintained release, not a completed Forge Python Host integration, and not evidence of full business or multi-executor acceptance. Corresponding source is supplied with the release. No automatic upstream publishing or updater was enabled.
+- New commits use the actual development/publication date. Previously rewritten synthetic Git dates and historical release evidence remain unchanged; no further history rewrite is part of this publication.

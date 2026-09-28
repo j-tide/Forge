@@ -357,5 +357,13 @@
       "jsonschema": "4.26.0",
       "types-jsonschema": "4.26.0.20260518"
     }
+  },
+  "desktopPreview": {
+    "version": "0.1.0-preview.4",
+    "workspace": "desktop/",
+    "packageManager": "npm",
+    "lockfile": "desktop/package-lock.json",
+    "electron": "40.0.0",
+    "runtimeIntegration": "Aperant-derived preview; Forge Python Host integration unverified"
   }
 }

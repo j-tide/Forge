@@ -142,9 +142,11 @@ _bmad-output/
 /docs/screenshots/*
 !/docs/screenshots/logo-unreleased/
 !/docs/screenshots/0.1.0-preview.3/
+!/docs/screenshots/0.1.0-preview.4/
 !/docs/releases/
 /docs/releases/*
 !/docs/releases/0.1.0-preview.3.md
+!/docs/releases/0.1.0-preview.4.md
 OPUS_ANALYSIS_AND_IDEAS.md
 /.github/agents
 

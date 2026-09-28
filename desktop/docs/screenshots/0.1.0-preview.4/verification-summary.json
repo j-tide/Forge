@@ -1,0 +1,135 @@
+{
+  "version": "0.1.0-preview.4",
+  "sourceTag": "v0.1.0-preview.4",
+  "buildId": "forge-0.1.0-preview.4-9864843c064e",
+  "platform": "darwin",
+  "arch": "arm64",
+  "classification": [
+    "PRERELEASE",
+    "INTERNAL",
+    "ADHOC",
+    "UNNOTARIZED"
+  ],
+  "modelCalls": 0,
+  "workspaceQuality": {
+    "desktopVitestFiles": 283,
+    "desktopVitestPassed": 5057,
+    "desktopNodeChecksPassed": 10,
+    "desktopLintWarnings": 797,
+    "desktopLintInfos": 5,
+    "i18nNamespaces": 36,
+    "i18nStrings": 5224,
+    "i18nErrors": 0,
+    "pythonPassed": 286,
+    "pythonOptInSkipped": 1,
+    "referenceFilesChecked": 47,
+    "referenceErrors": 0,
+    "referenceWarnings": 4,
+    "planningTasks": 92,
+    "acceptanceDefinitions": 120,
+    "deferredVerificationEntries": 84,
+    "testsAreNotAcceptanceDefinitionClaims": true
+  },
+  "nativeUi": {
+    "workspace": {
+      "valid": true,
+      "recordedAt": "2026-09-28T08:37:39.807Z",
+      "records": 60,
+      "screenshots": 70,
+      "sourceHashes": {
+        "out/main/index.js": "5e02110bcdcc7fec42654244f71e3823dff3fa1903349a7a0738373fdd6ffbc0",
+        "out/preload/index.mjs": "9a78ad7158f8efbff9add969b2ecd96c1acc1094e7a93bf142065adcb4e5641d",
+        "out/renderer/index.html": "826d3f289f720817fe0427ddda106e11dbe8a164e8d6ea88fc4a09e30ab226af",
+        "out/renderer/assets/AuthTerminal-B5T0b6zx.js": "6334d815f4a443a07bd3375b1b2a7ebd57c2e6bcbb46165c6d2eb6802dae2a1d",
+        "out/renderer/assets/index-DDR3Z5HQ.css": "b05f4d48ceab02ef8ae357d96763ba87af58e03f135f6eeee76e887642d56a9b",
+        "out/renderer/assets/index-G2palBZI.js": "9f1e22e7151f7cabb0ba8df89492588a1cc00e821ff4e1b7eea78a0324934811",
+        "out/renderer/assets/webgl-context-manager-DjyceXWu.js": "8446a4b1a727755491af72fa687ff52fc70a28250ac20f52ef8a9b9688000429"
+      }
+    },
+    "overlays": {
+      "valid": true,
+      "recordedAt": "2026-09-28T08:52:00.414Z",
+      "version": "0.1.0-preview.4",
+      "records": 10,
+      "sourceHashes": {
+        "AuthTerminal-B5T0b6zx.js": "6334d815f4a443a07bd3375b1b2a7ebd57c2e6bcbb46165c6d2eb6802dae2a1d",
+        "index-DDR3Z5HQ.css": "b05f4d48ceab02ef8ae357d96763ba87af58e03f135f6eeee76e887642d56a9b",
+        "index-G2palBZI.js": "9f1e22e7151f7cabb0ba8df89492588a1cc00e821ff4e1b7eea78a0324934811",
+        "webgl-context-manager-DjyceXWu.js": "8446a4b1a727755491af72fa687ff52fc70a28250ac20f52ef8a9b9688000429"
+      },
+      "hoverReadiness": [
+        {
+          "theme": "light",
+          "attempts": 1,
+          "documentFocused": true,
+          "triggerHovered": true
+        },
+        {
+          "theme": "dark",
+          "attempts": 1,
+          "documentFocused": true,
+          "triggerHovered": true
+        }
+      ],
+      "initialDarkHoverFailureRetained": true,
+      "assertionsNotWeakened": true
+    },
+    "fileReferences": {
+      "valid": true,
+      "recordedAt": "2026-09-28T08:53:06.575Z",
+      "version": "0.1.0-preview.4",
+      "records": 8,
+      "sourceHashes": {
+        "out/main/index.js": "5e02110bcdcc7fec42654244f71e3823dff3fa1903349a7a0738373fdd6ffbc0",
+        "out/preload/index.mjs": "9a78ad7158f8efbff9add969b2ecd96c1acc1094e7a93bf142065adcb4e5641d",
+        "out/renderer/index.html": "826d3f289f720817fe0427ddda106e11dbe8a164e8d6ea88fc4a09e30ab226af",
+        "AuthTerminal-B5T0b6zx.js": "6334d815f4a443a07bd3375b1b2a7ebd57c2e6bcbb46165c6d2eb6802dae2a1d",
+        "index-DDR3Z5HQ.css": "b05f4d48ceab02ef8ae357d96763ba87af58e03f135f6eeee76e887642d56a9b",
+        "index-G2palBZI.js": "9f1e22e7151f7cabb0ba8df89492588a1cc00e821ff4e1b7eea78a0324934811",
+        "webgl-context-manager-DjyceXWu.js": "8446a4b1a727755491af72fa687ff52fc70a28250ac20f52ef8a9b9688000429"
+      },
+      "savedTaskRemainedBacklog": true
+    },
+    "languages": "Chinese/English switches and restart passed in light/dark"
+  },
+  "packaged": {
+    "version": "0.1.0-preview.4",
+    "appAsarSha256": "9864843c064e35a1a6c8f9f003bd3838e8072675c865349760c0022573d1d2b6",
+    "actualDmgMountedAppLaunch": true,
+    "readOnlyMount": true,
+    "adHocSignatureDeepStrict": true,
+    "compiledFilesCompared": 8,
+    "nativeIconsCompared": 4,
+    "userFilesChanged": [],
+    "modelCalls": 0
+  },
+  "artifacts": [
+    {
+      "file": "Forge-0.1.0-preview.4-darwin-arm64-INTERNAL.dmg",
+      "bytes": 166196894,
+      "sha256": "a7c127a8d42125c078d2e2e0433a10ee8d47b07484e580c4cbcbc7cf6f25a495"
+    },
+    {
+      "file": "Forge-0.1.0-preview.4-darwin-arm64-INTERNAL.zip",
+      "bytes": 162326565,
+      "sha256": "c1ff09f9c144e97bd9232094fe48fd40153926b92d3cae1b0afe090bda6a8ed5"
+    }
+  ],
+  "inheritedProductionAudit": {
+    "total": 33,
+    "high": 10,
+    "moderate": 9,
+    "low": 14,
+    "critical": 0
+  },
+  "unverified": [
+    "Derivative Desktop integration with Forge Python Host",
+    "Complete live Agent/Planner/Review/Verify/Owner task lifecycle",
+    "Claude online acceptance",
+    "Windows x64",
+    "macOS Intel",
+    "Cross-platform DPI and assistive technology",
+    "Developer ID signing and notarization",
+    "Signed automatic updates"
+  ]
+}

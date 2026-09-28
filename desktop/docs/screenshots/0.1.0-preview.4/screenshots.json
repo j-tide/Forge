@@ -1,0 +1,169 @@
+{
+  "version": "0.1.0-preview.4",
+  "platform": "darwin",
+  "arch": "arm64",
+  "actualCapturedAt": "2026-09-28T08:37:39.807Z",
+  "modelCalls": 0,
+  "note": "Actual Electron screenshots from the compiled preview.4 workspace. UI-test projects, tasks and account metadata are isolated fixtures, not online Agent or provider authentication evidence. PNG files are copied byte-for-byte without edits.",
+  "builtSourceHashes": {
+    "out/main/index.js": "5e02110bcdcc7fec42654244f71e3823dff3fa1903349a7a0738373fdd6ffbc0",
+    "out/preload/index.mjs": "9a78ad7158f8efbff9add969b2ecd96c1acc1094e7a93bf142065adcb4e5641d",
+    "out/renderer/index.html": "826d3f289f720817fe0427ddda106e11dbe8a164e8d6ea88fc4a09e30ab226af",
+    "out/renderer/assets/AuthTerminal-B5T0b6zx.js": "6334d815f4a443a07bd3375b1b2a7ebd57c2e6bcbb46165c6d2eb6802dae2a1d",
+    "out/renderer/assets/index-DDR3Z5HQ.css": "b05f4d48ceab02ef8ae357d96763ba87af58e03f135f6eeee76e887642d56a9b",
+    "out/renderer/assets/index-G2palBZI.js": "9f1e22e7151f7cabb0ba8df89492588a1cc00e821ff4e1b7eea78a0324934811",
+    "out/renderer/assets/webgl-context-manager-DjyceXWu.js": "8446a4b1a727755491af72fa687ff52fc70a28250ac20f52ef8a9b9688000429"
+  },
+  "files": [
+    {
+      "file": "home-light-1440.png",
+      "source": "output/playwright/workspace-redesign/home-light-1440.png",
+      "bytes": 58142,
+      "sha256": "5616fa9ec2e1c978006fa7fa11d637e6c45257c7f16e327e12c257e0f5bb9c20",
+      "size": [
+        1440,
+        900
+      ]
+    },
+    {
+      "file": "home-dark-1440.png",
+      "source": "output/playwright/workspace-redesign/home-dark-1440.png",
+      "bytes": 58418,
+      "sha256": "99e28e74cb8fc26f2c68f2324dd812278fb19c0b1eda45f9b50b30c3e8743850",
+      "size": [
+        1440,
+        900
+      ]
+    },
+    {
+      "file": "board-light-1440.png",
+      "source": "output/playwright/workspace-redesign/board-light-1440.png",
+      "bytes": 63630,
+      "sha256": "20ec0df40697459fef7a8d2c2c04071f10ad64c2e9066cf54cfbc7100a6ff701",
+      "size": [
+        1440,
+        900
+      ]
+    },
+    {
+      "file": "new-task-light-1440.png",
+      "source": "output/playwright/workspace-redesign/new-task-light-1440.png",
+      "bytes": 147786,
+      "sha256": "c4bf76c943a823f7f5d7d9b3e18fa21635c6897ae35f2478c92309984f045066",
+      "size": [
+        1440,
+        900
+      ]
+    },
+    {
+      "file": "new-task-dark-1440.png",
+      "source": "output/playwright/workspace-redesign/new-task-dark-1440.png",
+      "bytes": 143005,
+      "sha256": "35c071873f94e2632d12464460a5ea67d8c181562631c4cdc524ac0c89d57a3a",
+      "size": [
+        1440,
+        900
+      ]
+    },
+    {
+      "file": "task-detail-light.png",
+      "source": "output/playwright/workspace-redesign/task-detail-light.png",
+      "bytes": 82070,
+      "sha256": "e0448c0825caf6c430b6568c270bd942d176aad940468a60fb353a7808ca7e7a",
+      "size": [
+        1440,
+        900
+      ]
+    },
+    {
+      "file": "project-settings-general-light.png",
+      "source": "output/playwright/workspace-redesign/project-settings-general-light.png",
+      "bytes": 88956,
+      "sha256": "de3f0b1f9fed6d361284e2ec06d4ac28276403102567d4e56f3df3cd5c2f0176",
+      "size": [
+        1440,
+        900
+      ]
+    },
+    {
+      "file": "app-settings-appearance-light.png",
+      "source": "output/playwright/workspace-redesign/app-settings-appearance-light.png",
+      "bytes": 105263,
+      "sha256": "0515bc39d608c9fd23a02d8537b6622fbd363d6111bbd072e9de742c2158c19d",
+      "size": [
+        1440,
+        900
+      ]
+    },
+    {
+      "file": "context-light.png",
+      "source": "output/playwright/workspace-redesign/context-light.png",
+      "bytes": 56471,
+      "sha256": "4a3f94b3b8d31304bbdfd1ee30cf0c40d70cc514706b60668ba31ad0e94c72fb",
+      "size": [
+        1440,
+        900
+      ]
+    },
+    {
+      "file": "tools-dark.png",
+      "source": "output/playwright/workspace-redesign/tools-dark.png",
+      "bytes": 123595,
+      "sha256": "6e8145b762e5935161f56ffa12bea65e9af40f34fa379660acbec3d6e1421cbe",
+      "size": [
+        1440,
+        900
+      ]
+    },
+    {
+      "file": "settings-language-zh-light-1440.png",
+      "source": "output/playwright/localization/settings-language-zh-light-1440.png",
+      "bytes": 74459,
+      "sha256": "724a9152509cccdc80d7ca6e40be75a04be8068eace4bc20d33b1ea2bfe464ba",
+      "size": [
+        1440,
+        900
+      ]
+    },
+    {
+      "file": "settings-language-en-dark-1440.png",
+      "source": "output/playwright/localization/settings-language-en-dark-1440.png",
+      "bytes": 85347,
+      "sha256": "9440461272da20221143b93348cdd814240bf6ebb94e3b95e47d4c4e001f0b13",
+      "size": [
+        1440,
+        900
+      ]
+    },
+    {
+      "file": "file-autocomplete-light-1080.png",
+      "source": "output/playwright/file-autocomplete/file-autocomplete-light-1080.png",
+      "bytes": 109005,
+      "sha256": "48d33a2dd31ae7985c564f5e54fa2afc50455eb61e9f07d456b9136271f37a75",
+      "size": [
+        1080,
+        760
+      ]
+    },
+    {
+      "file": "file-autocomplete-dark-1440.png",
+      "source": "output/playwright/file-autocomplete/file-autocomplete-dark-1440.png",
+      "bytes": 157469,
+      "sha256": "32e6b1ed259ed686cdc0e0680452a39216b76da58f009211aea26b44e94d06f9",
+      "size": [
+        1440,
+        900
+      ]
+    },
+    {
+      "file": "account-tooltip-light.png",
+      "source": "output/playwright/overlay-audit/account-tooltip-light.png",
+      "bytes": 66607,
+      "sha256": "0235c8cef4a849c7e11ba75eadaa689fd9a9f61bbf8d57f82a4b24b653ecaa8c",
+      "size": [
+        1080,
+        760
+      ]
+    }
+  ]
+}
