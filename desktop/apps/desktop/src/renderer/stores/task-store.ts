@@ -1131,6 +1131,10 @@ export function loadDraft(projectId: string): TaskDraft | null {
     const draft = JSON.parse(stored);
     // Convert savedAt back to Date
     draft.savedAt = new Date(draft.savedAt);
+    draft.referencedFiles = (draft.referencedFiles ?? []).map((file: TaskDraft['referencedFiles'][number]) => ({
+      ...file,
+      addedAt: new Date(file.addedAt)
+    }));
     return draft as TaskDraft;
   } catch (error) {
     console.error('Failed to load draft:', error);
@@ -1159,7 +1163,8 @@ export function hasDraft(projectId: string): boolean {
 }
 
 /**
- * Check if a draft has any meaningful content (title, description, or images)
+ * Check for content or explicit execution choices. A branch-only draft must not
+ * be discarded merely because the user has not written the request yet.
  */
 export function isDraftEmpty(draft: TaskDraft | null): boolean {
   if (!draft) return true;
@@ -1167,10 +1172,16 @@ export function isDraftEmpty(draft: TaskDraft | null): boolean {
     !draft.title.trim() &&
     !draft.description.trim() &&
     draft.images.length === 0 &&
+    (draft.referencedFiles?.length ?? 0) === 0 &&
     !draft.category &&
     !draft.priority &&
     !draft.complexity &&
-    !draft.impact
+    !draft.impact &&
+    (!draft.baseBranch || draft.baseBranch === '__project_default__') &&
+    draft.useWorktree !== false &&
+    draft.pushNewBranches !== false &&
+    !draft.requireReviewBeforeCoding &&
+    !draft.fastMode
   );
 }
 

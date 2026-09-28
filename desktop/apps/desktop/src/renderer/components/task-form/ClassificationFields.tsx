@@ -60,10 +60,10 @@ export function ClassificationFields({
   const prefix = idPrefix ? `${idPrefix}-` : '';
 
   return (
-    <div className="space-y-4 p-4 rounded-lg border border-border bg-muted/30">
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-3 rounded-lg border border-border bg-background p-3">
+      <div className="grid grid-cols-2 gap-3">
         {/* Category */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor={`${prefix}category`} className="text-xs font-medium text-muted-foreground">
             {t('form.classification.category')}
           </Label>
@@ -86,7 +86,7 @@ export function ClassificationFields({
         </div>
 
         {/* Priority */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor={`${prefix}priority`} className="text-xs font-medium text-muted-foreground">
             {t('form.classification.priority')}
           </Label>
@@ -109,7 +109,7 @@ export function ClassificationFields({
         </div>
 
         {/* Complexity */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor={`${prefix}complexity`} className="text-xs font-medium text-muted-foreground">
             {t('form.classification.complexity')}
           </Label>
@@ -132,7 +132,7 @@ export function ClassificationFields({
         </div>
 
         {/* Impact */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor={`${prefix}impact`} className="text-xs font-medium text-muted-foreground">
             {t('form.classification.impact')}
           </Label>

@@ -1,4 +1,5 @@
 
+import { useRef } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X, ImageIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +14,7 @@ interface ImagePreviewModalProps {
 
 export function ImagePreviewModal({ open, onOpenChange, image }: ImagePreviewModalProps) {
   const { t } = useTranslation(['tasks', 'common']);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   if (!image) return null;
 
@@ -26,7 +28,7 @@ export function ImagePreviewModal({ open, onOpenChange, image }: ImagePreviewMod
         {/* Overlay with dark background and backdrop blur */}
         <DialogPrimitive.Overlay
           className={cn(
-            'fixed inset-0 z-50 bg-black/80 backdrop-blur-sm',
+            'forge-glass-task-overlay fixed inset-0 z-50 bg-foreground/30 backdrop-blur-sm',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
           )}
@@ -34,25 +36,38 @@ export function ImagePreviewModal({ open, onOpenChange, image }: ImagePreviewMod
 
         {/* Content container */}
         <DialogPrimitive.Content
+          onOpenAutoFocus={() => {
+            returnFocusRef.current = document.activeElement instanceof HTMLElement
+              ? document.activeElement
+              : null;
+          }}
+          onCloseAutoFocus={(event) => {
+            if (returnFocusRef.current?.isConnected) {
+              event.preventDefault();
+              returnFocusRef.current.focus();
+            }
+          }}
           className={cn(
-            'fixed inset-8 z-50 flex flex-col items-center justify-center',
+            'forge-glass-task-modal fixed left-1/2 top-1/2 z-50 flex flex-col',
+            '-translate-x-1/2 -translate-y-1/2 w-[calc(100vw-80px)] max-w-5xl h-[min(800px,calc(100dvh-80px))]',
+            'overflow-hidden rounded-2xl border border-border bg-card shadow-xl',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-            'duration-200'
+            'duration-150 motion-reduce:animate-none'
           )}
         >
           {/* Header with title and close button */}
-          <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4">
-            <DialogPrimitive.Title className="text-lg font-medium text-white truncate max-w-[calc(100%-60px)]">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3">
+            <DialogPrimitive.Title className="text-sm font-medium text-foreground truncate">
               {image.filename}
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
               className={cn(
-                'rounded-lg p-2',
-                'text-white/70 hover:text-white',
-                'hover:bg-white/10 transition-colors',
-                'focus:outline-none focus:ring-2 focus:ring-white/50',
+                'rounded-[10px] p-2',
+                'text-muted-foreground hover:text-foreground',
+                'hover:bg-muted transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 'disabled:pointer-events-none'
               )}
               aria-label={t('tasks:imagePreview.close')}
@@ -63,25 +78,25 @@ export function ImagePreviewModal({ open, onOpenChange, image }: ImagePreviewMod
           </div>
 
           {/* Image display */}
-          <div className="flex flex-col items-center justify-center w-full h-full p-8 gap-4">
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center bg-muted/30 p-6 gap-3">
             {imageSrc ? (
               <>
                 <img
                   src={imageSrc}
                   alt={image.filename}
-                  className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                  className="min-h-0 max-w-full max-h-full object-contain rounded-lg"
                 />
                 {/* Show indicator when displaying thumbnail fallback */}
                 {isThumbnailFallback && (
-                  <div className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm">
-                    <p className="text-xs text-white/70">{t('tasks:imagePreview.lowResolution')}</p>
+                  <div className="shrink-0 rounded-lg border border-border bg-card px-3 py-1">
+                    <p className="text-xs text-muted-foreground">{t('tasks:imagePreview.lowResolution')}</p>
                   </div>
                 )}
               </>
             ) : (
               // Fallback when no image data is available
-              <div className="flex flex-col items-center justify-center text-white/50">
-                <ImageIcon className="h-24 w-24 mb-4" />
+              <div className="flex flex-col items-center justify-center text-muted-foreground">
+                <ImageIcon className="h-12 w-12 mb-3" />
                 <p className="text-sm">{t('tasks:imagePreview.unavailable')}</p>
               </div>
             )}

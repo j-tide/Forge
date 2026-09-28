@@ -155,6 +155,9 @@ export interface TaskDraft {
   referencedFiles: ReferencedFile[];
   requireReviewBeforeCoding?: boolean;
   fastMode?: boolean;
+  // Absent in older drafts: keep the existing project default and isolation.
+  baseBranch?: string;
+  useWorktree?: boolean;
   pushNewBranches?: boolean;
   savedAt: Date;
 }

@@ -1,9 +1,9 @@
 /**
  * TaskModalLayout - Shared layout component for large task modals
  *
- * Provides consistent styling matching TaskDetailModal exactly:
- * - Full-height modal (95vw width, near full height)
- * - Positioned 16px from top (same as TaskDetailModal)
+ * Provides a readable task editor with persistent actions:
+ * - Centered desktop panel with a bounded reading width
+ * - Scrollable content inside the window at smaller sizes
  * - Header with title, description, and close button
  * - Scrollable body content
  * - Footer with action buttons
@@ -14,7 +14,7 @@ import { X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '../../lib/utils';
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 
 interface TaskModalLayoutProps {
   /** Whether the modal is open */
@@ -49,6 +49,7 @@ export function TaskModalLayout({
   disabled = false
 }: TaskModalLayoutProps) {
   const { t } = useTranslation('common');
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   const handleClose = () => {
     if (!disabled) {
@@ -62,34 +63,46 @@ export function TaskModalLayout({
         {/* Semi-transparent overlay */}
         <DialogPrimitive.Overlay
           className={cn(
-            'forge-glass-task-overlay fixed inset-0 z-50 bg-background/70 backdrop-blur-sm',
+            'forge-glass-task-overlay fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
           )}
         />
 
-        {/* Full-height modal content - matches TaskDetailModal exactly */}
+        {/* Bounded editor: the form scrolls while its actions remain visible. */}
         <DialogPrimitive.Content
+          onOpenAutoFocus={() => {
+            returnFocusRef.current = document.activeElement instanceof HTMLElement
+              ? document.activeElement
+              : null;
+          }}
+          onCloseAutoFocus={(event) => {
+            const target = returnFocusRef.current;
+            if (target?.isConnected) {
+              event.preventDefault();
+              target.focus();
+            }
+          }}
           className={cn(
-            'forge-glass-task-modal fixed left-[50%] top-4 z-50',
-            'translate-x-[-50%]',
-            'w-[95vw] max-w-5xl h-[calc(100vh-32px)]',
+            'forge-glass-task-modal fixed left-1/2 top-1/2 z-50',
+            '-translate-x-1/2 -translate-y-1/2',
+            'w-[calc(100vw-48px)] max-w-6xl h-[min(860px,calc(100dvh-48px))]',
             'rounded-2xl border border-border bg-card',
-            'shadow-2xl overflow-hidden flex flex-col',
+            'shadow-xl overflow-hidden flex flex-col',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-            'duration-200'
+            'duration-150 motion-reduce:animate-none'
           )}
         >
           <div className="flex h-full min-h-0 overflow-hidden">
             {/* Main content area */}
             <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
               {/* Header */}
-              <div className="forge-glass-task-modal-header shrink-0 border-b border-border px-5 py-4 sm:px-6 sm:py-5">
+              <div className="forge-glass-task-modal-header shrink-0 border-b border-border px-6 py-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <DialogPrimitive.Title className="text-xl font-semibold leading-tight text-foreground">
+                    <DialogPrimitive.Title className="text-lg font-semibold leading-tight text-foreground">
                       {title}
                     </DialogPrimitive.Title>
                     {description && (
@@ -102,7 +115,7 @@ export function TaskModalLayout({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="hover:bg-muted transition-colors shrink-0"
+                      className="h-8 w-8 rounded-[10px] hover:bg-muted transition-colors shrink-0"
                       disabled={disabled}
                     >
                       <X className="h-5 w-5" />
@@ -114,20 +127,20 @@ export function TaskModalLayout({
 
               {/* Scrollable body */}
               <ScrollArea className="forge-glass-task-modal-body min-h-0 flex-1">
-                <div className="p-5 sm:p-6">
+                <div className="@container p-6">
                   {children}
                 </div>
               </ScrollArea>
 
               {/* Footer */}
-              <div className="forge-glass-task-modal-footer shrink-0 border-t border-border bg-muted/30 px-5 py-4 sm:px-6">
+              <div className="forge-glass-task-modal-footer shrink-0 border-t border-border bg-background/80 px-6 py-3">
                 {footer}
               </div>
             </div>
 
             {/* Optional sidebar */}
             {sidebar && sidebarOpen && (
-              <div className="forge-glass-task-modal-sidebar w-72 flex-shrink-0 overflow-hidden border-l border-border xl:w-80">
+              <div className="forge-glass-task-modal-sidebar w-64 max-w-[35%] flex-shrink-0 overflow-hidden border-l border-border xl:w-72">
                 {sidebar}
               </div>
             )}
