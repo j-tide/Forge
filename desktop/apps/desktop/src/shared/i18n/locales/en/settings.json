@@ -1,4 +1,17 @@
 {
+  "accessibility": {
+    "title": "Comfort",
+    "reduceMotion": {
+      "label": "Reduce motion",
+      "description": "Use less movement and shorter transitions."
+    },
+    "reduceTransparency": {
+      "label": "Reduce transparency",
+      "description": "Use solid surfaces for easier reading."
+    },
+    "systemPreference": "Your system accessibility preferences are always respected."
+  },
+  "appTitle": "Application settings",
   "title": "Settings",
   "tabs": {
     "app": "App Settings",
@@ -31,7 +44,7 @@
     },
     "accounts": {
       "title": "Accounts",
-      "description": "Claude accounts & API endpoints"
+      "description": "AI accounts and API endpoints"
     },
     "updates": {
       "title": "About",
@@ -356,6 +369,7 @@
   },
   "projectSections": {
     "general": {
+      "descriptionWithProject": "Configure the agent and notifications for {{projectName}}.",
       "title": "General",
       "description": "Auto-Build and agent config",
       "useClaudeMd": "Use CLAUDE.md",
@@ -410,7 +424,7 @@
     "label": "Agent Profile",
     "title": "Default Agent Profile",
     "sectionDescription": "Select a preset configuration for model and thinking level",
-    "profilesInfo": "Agent profiles provide preset configurations for Claude model and thinking level. When you create a new task, these settings will be used as defaults. You can always override them in the task creation wizard.",
+    "profilesInfo": "Agent profiles provide model and thinking presets for the selected provider. New tasks use these defaults, which you can adjust in the task creation wizard.",
     "custom": "Custom",
     "customConfiguration": "Custom Configuration",
     "customDescription": "Choose model & thinking level",
@@ -512,6 +526,24 @@
       "refresh": "Refresh",
       "loading": "Loading models...",
       "ollamaNotAvailable": "Connect Ollama in Account Settings to manage models"
+    },
+    "presets": {
+      "auto": {
+        "name": "Auto (Optimized)",
+        "description": "Uses the selected provider’s recommended models and thinking levels across all phases"
+      },
+      "complex": {
+        "name": "Complex Tasks",
+        "description": "For intricate, multi-step implementations requiring deep analysis"
+      },
+      "balanced": {
+        "name": "Balanced",
+        "description": "A balance of speed and quality for most tasks"
+      },
+      "quick": {
+        "name": "Quick Edits",
+        "description": "Fast iterations for simple changes and quick fixes"
+      }
     }
   },
   "workspace": {
@@ -602,7 +634,7 @@
   },
   "accounts": {
     "title": "Accounts",
-    "description": "Manage Claude accounts and API endpoints",
+    "description": "Manage AI accounts and API endpoints",
     "tabs": {
       "claudeCode": "Claude Code",
       "customEndpoints": "Custom Endpoints"
@@ -874,6 +906,11 @@
     "helpText": "When reporting bugs, click \"Copy Debug Info\" to get system information and recent errors that help us diagnose the issue."
   },
   "projectSettings": {
+    "integrationAutoSave": "Connection settings save as you edit. Any save failure appears on this page.",
+    "integrationMixedSave": "Connection settings save as you edit. Use “Save project settings” for project preferences.",
+    "title": "Project settings",
+    "save": "Save project settings",
+    "saveFailed": "Could not save project settings.",
     "noProjectSelected": {
       "title": "No Project Selected",
       "description": "Select a project from the sidebar to configure its settings."
@@ -976,7 +1013,9 @@
       "createAnthropicKey": "Create Anthropic API Key",
       "openai": "This looks like an OpenAI API. You'll need an API key.",
       "createOpenaiKey": "Create OpenAI API Key"
-    }
+    },
+    "errorIdRequired": "Use a name containing letters or numbers to create a server ID.",
+    "errorSaveFailed": "The server could not be saved. Your entries are retained. Please try again."
   },
   "terminalFonts": {
     "title": "Terminal Fonts",

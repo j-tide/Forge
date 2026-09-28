@@ -116,6 +116,8 @@
     "lockColumn": "锁定列宽",
     "unlockColumn": "解锁列宽",
     "columnLocked": "列宽已锁定",
+    "scrollLeft": "向左查看看板列",
+    "scrollRight": "向右查看看板列",
     "expandAll": "展开所有列"
   },
   "queue": {
@@ -226,6 +228,8 @@
       "baseBranchLabel": "基准分支（可选）",
       "useProjectDefault": "使用项目默认分支",
       "useProjectDefaultWithBranch": "使用项目默认分支（{{branch}}）",
+      "branchUnavailable": "保存的基准分支“{{branch}}”当前不可用。请先选择可用分支，再创建任务。",
+      "branchLoadFailed": "无法验证 Git 分支。请重新打开表单，确认分支后再创建任务。",
       "searchBranches": "搜索分支…",
       "noBranchesFound": "未找到分支",
       "helpText": "指定创建此任务工作树时使用的基准分支。留空则使用项目配置的默认分支。",
@@ -236,7 +240,9 @@
     },
     "errors": {
       "createFailed": "任务创建失败，请重试。",
-      "startFailed": "任务启动失败"
+      "startFailed": "任务启动失败",
+      "fileReferenceUnavailable": "此文件已不在项目内，请重新选择。",
+      "tooManyReferences": "每个任务最多引用 {{count}} 个文件。"
     }
   },
   "feedback": {

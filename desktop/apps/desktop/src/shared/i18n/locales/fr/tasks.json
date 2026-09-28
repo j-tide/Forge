@@ -116,6 +116,8 @@
     "lockColumn": "Verrouiller la largeur de la colonne",
     "unlockColumn": "Déverrouiller la largeur de la colonne",
     "columnLocked": "La largeur de la colonne est verrouillée",
+    "scrollLeft": "Faire défiler les colonnes vers la gauche",
+    "scrollRight": "Faire défiler les colonnes vers la droite",
     "expandAll": "Développer toutes les colonnes"
   },
   "queue": {
@@ -215,6 +217,8 @@
       "baseBranchLabel": "Branche de base (optionnel)",
       "useProjectDefault": "Utiliser la branche par défaut du projet",
       "useProjectDefaultWithBranch": "Utiliser la branche par défaut du projet ({{branch}})",
+      "branchUnavailable": "La branche de base enregistrée « {{branch}} » n’est plus disponible. Choisissez une branche disponible avant de créer cette tâche.",
+      "branchLoadFailed": "Impossible de vérifier les branches Git. Rouvrez ce formulaire et réessayez avant de créer la tâche.",
       "searchBranches": "Rechercher des branches...",
       "noBranchesFound": "Aucune branche trouvée",
       "helpText": "Remplacez la branche à partir de laquelle le worktree de cette tâche sera créé. Laissez vide pour utiliser la branche par défaut configurée du projet.",
@@ -225,7 +229,9 @@
     },
     "errors": {
       "createFailed": "Échec de la création de la tâche. Veuillez réessayer.",
-      "startFailed": "Échec du démarrage de la tâche"
+      "startFailed": "Échec du démarrage de la tâche",
+      "fileReferenceUnavailable": "Ce fichier n’est plus disponible dans le projet. Sélectionnez-le à nouveau.",
+      "tooManyReferences": "Une tâche peut référencer jusqu’à {{count}} fichiers."
     }
   },
   "feedback": {
@@ -340,14 +346,14 @@
     }
   },
   "deleteDialog": {
-    "title": "Supprimer la t\u00e2che",
-    "confirmMessage": "\u00cates-vous s\u00fbr de vouloir supprimer",
-    "destructiveWarning": "Cette action est irr\u00e9versible. Tous les fichiers de t\u00e2che, y compris la sp\u00e9cification, le plan d'impl\u00e9mentation et tout code g\u00e9n\u00e9r\u00e9 seront d\u00e9finitivement supprim\u00e9s du projet.",
-    "checkingChanges": "V\u00e9rification des changements non valid\u00e9s...",
-    "uncommittedChanges": "Le worktree de cette t\u00e2che contient {{count}} fichier(s) non valid\u00e9(s)",
-    "uncommittedChangesHint": "Ces changements n'ont pas \u00e9t\u00e9 valid\u00e9s ni fusionn\u00e9s. La suppression de cette t\u00e2che supprimera d\u00e9finitivement tout le travail non valid\u00e9 dans le worktree.",
+    "title": "Supprimer la tâche",
+    "confirmMessage": "Êtes-vous sûr de vouloir supprimer",
+    "destructiveWarning": "Cette action est irréversible. Tous les fichiers de tâche, y compris la spécification, le plan d'implémentation et tout code généré seront définitivement supprimés du projet.",
+    "checkingChanges": "Vérification des changements non validés...",
+    "uncommittedChanges": "Le worktree de cette tâche contient {{count}} fichier(s) non validé(s)",
+    "uncommittedChangesHint": "Ces changements n'ont pas été validés ni fusionnés. La suppression de cette tâche supprimera définitivement tout le travail non validé dans le worktree.",
     "cancel": "Annuler",
-    "deletePermanently": "Supprimer d\u00e9finitivement",
+    "deletePermanently": "Supprimer définitivement",
     "deleting": "Suppression..."
   },
   "referenceImages": {

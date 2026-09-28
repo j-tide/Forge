@@ -1,4 +1,17 @@
 {
+  "accessibility": {
+    "title": "Confort",
+    "reduceMotion": {
+      "label": "Réduire les animations",
+      "description": "Limiter les mouvements et raccourcir les transitions."
+    },
+    "reduceTransparency": {
+      "label": "Réduire la transparence",
+      "description": "Utiliser des surfaces opaques pour faciliter la lecture."
+    },
+    "systemPreference": "Les préférences d’accessibilité du système sont toujours respectées."
+  },
+  "appTitle": "Paramètres de l’application",
   "title": "Paramètres",
   "tabs": {
     "app": "Paramètres de l'app",
@@ -31,7 +44,7 @@
     },
     "accounts": {
       "title": "Comptes",
-      "description": "Comptes Claude & endpoints API"
+      "description": "Comptes IA et points de terminaison API"
     },
     "updates": {
       "title": "À propos",
@@ -356,6 +369,7 @@
   },
   "projectSections": {
     "general": {
+      "descriptionWithProject": "Configurer l’agent et les notifications de {{projectName}}.",
       "title": "Général",
       "description": "Auto-Build et configuration de l'agent",
       "useClaudeMd": "Utiliser CLAUDE.md",
@@ -410,7 +424,7 @@
     "label": "Profil d'agent",
     "title": "Profil d'agent par défaut",
     "sectionDescription": "Sélectionnez une configuration prédéfinie pour le modèle et le niveau de réflexion",
-    "profilesInfo": "Les profils d'agent fournissent des configurations prédéfinies pour le modèle Claude et le niveau de réflexion. Quand vous créez une nouvelle tâche, ces paramètres seront utilisés par défaut. Vous pouvez toujours les modifier dans l'assistant de création de tâche.",
+    "profilesInfo": "Les profils proposent des modèles et des niveaux de réflexion pour le fournisseur sélectionné. Les nouvelles tâches utilisent ces valeurs, modifiables dans l’assistant de création.",
     "custom": "Personnalisé",
     "customConfiguration": "Configuration personnalisée",
     "customDescription": "Choisir le modèle et le niveau de réflexion",
@@ -512,6 +526,24 @@
       "refresh": "Actualiser",
       "loading": "Chargement des modèles...",
       "ollamaNotAvailable": "Connectez Ollama dans les paramètres de compte pour gérer les modèles"
+    },
+    "presets": {
+      "auto": {
+        "name": "Automatique (optimisé)",
+        "description": "Utilise les modèles et niveaux de réflexion recommandés par le fournisseur à chaque étape"
+      },
+      "complex": {
+        "name": "Tâches complexes",
+        "description": "Pour les tâches complexes à plusieurs étapes nécessitant une analyse approfondie"
+      },
+      "balanced": {
+        "name": "Équilibré",
+        "description": "Un équilibre entre rapidité et qualité pour la plupart des tâches"
+      },
+      "quick": {
+        "name": "Modifications rapides",
+        "description": "Pour les ajustements simples et les corrections rapides"
+      }
     }
   },
   "workspace": {
@@ -602,7 +634,7 @@
   },
   "accounts": {
     "title": "Comptes",
-    "description": "Gérer les comptes Claude et les endpoints API",
+    "description": "Gérer les comptes IA et les points de terminaison API",
     "tabs": {
       "claudeCode": "Claude Code",
       "customEndpoints": "Endpoints personnalisés"
@@ -874,6 +906,11 @@
     "helpText": "Lors du signalement de bugs, cliquez sur \"Copier les infos de débogage\" pour obtenir les informations système et les erreurs récentes qui nous aident à diagnostiquer le problème."
   },
   "projectSettings": {
+    "integrationAutoSave": "Les réglages de connexion sont enregistrés à chaque modification. Tout échec s’affiche sur cette page.",
+    "integrationMixedSave": "Les réglages de connexion sont enregistrés à chaque modification. Utilisez « Enregistrer les paramètres du projet » pour les préférences du projet.",
+    "title": "Paramètres du projet",
+    "save": "Enregistrer les paramètres du projet",
+    "saveFailed": "Impossible d’enregistrer les paramètres du projet.",
     "noProjectSelected": {
       "title": "Aucun projet sélectionné",
       "description": "Sélectionnez un projet dans la barre latérale pour configurer ses paramètres."
@@ -976,7 +1013,9 @@
       "createAnthropicKey": "Créer une clé API Anthropic",
       "openai": "Ceci ressemble à une API OpenAI. Vous aurez besoin d'une clé API.",
       "createOpenaiKey": "Créer une clé API OpenAI"
-    }
+    },
+    "errorIdRequired": "Utilisez un nom contenant des lettres ou des chiffres pour créer un identifiant.",
+    "errorSaveFailed": "Le serveur n’a pas été enregistré. Vos saisies sont conservées. Réessayez."
   },
   "terminalFonts": {
     "title": "Polices de Terminal",

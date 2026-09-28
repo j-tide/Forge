@@ -1,4 +1,17 @@
 {
+  "accessibility": {
+    "title": "阅读与动效",
+    "reduceMotion": {
+      "label": "减少动效",
+      "description": "减少移动动画，让界面切换更直接。"
+    },
+    "reduceTransparency": {
+      "label": "减少透明度",
+      "description": "使用实色面板，让文字更易阅读。"
+    },
+    "systemPreference": "始终遵循系统的辅助功能偏好。"
+  },
+  "appTitle": "应用设置",
   "title": "设置",
   "tabs": {
     "app": "应用设置",
@@ -31,7 +44,7 @@
     },
     "accounts": {
       "title": "账户",
-      "description": "Claude 账户与 API 端点"
+      "description": "AI 账户与 API 端点"
     },
     "updates": {
       "title": "关于",
@@ -356,6 +369,7 @@
   },
   "projectSections": {
     "general": {
+      "descriptionWithProject": "配置 {{projectName}} 的智能体与通知。",
       "title": "常规",
       "description": "自动构建与智能体配置",
       "useClaudeMd": "使用 CLAUDE.md",
@@ -410,7 +424,7 @@
     "label": "智能体配置",
     "title": "默认智能体配置",
     "sectionDescription": "选择模型与思考深度的预设配置",
-    "profilesInfo": "智能体配置提供 Claude 模型与思考深度的预设。创建新任务时，会默认使用这些设置。你可以在任务创建向导中单独调整。",
+    "profilesInfo": "智能体配置提供当前服务商的模型与思考深度预设。新建任务默认使用这些设置，也可在创建向导中单独调整。",
     "custom": "自定义",
     "customConfiguration": "自定义配置",
     "customDescription": "选择模型与思考深度",
@@ -512,6 +526,24 @@
       "refresh": "刷新",
       "loading": "正在加载模型…",
       "ollamaNotAvailable": "请在“账户”设置中连接 Ollama，以管理模型"
+    },
+    "presets": {
+      "auto": {
+        "name": "自动（优化）",
+        "description": "各阶段使用当前服务商推荐的模型与思考深度"
+      },
+      "complex": {
+        "name": "复杂任务",
+        "description": "适合需要深入分析的复杂、多步骤任务"
+      },
+      "balanced": {
+        "name": "均衡",
+        "description": "兼顾速度与质量，适合大多数任务"
+      },
+      "quick": {
+        "name": "快速修改",
+        "description": "适合简单调整与快速修复"
+      }
     }
   },
   "workspace": {
@@ -602,7 +634,7 @@
   },
   "accounts": {
     "title": "账户",
-    "description": "管理 Claude 账户与 API 端点",
+    "description": "管理 AI 账户与 API 端点",
     "tabs": {
       "claudeCode": "Claude Code",
       "customEndpoints": "自定义端点"
@@ -874,6 +906,11 @@
     "helpText": "报告问题时，可点击“复制调试信息”获取系统信息与最近错误，帮助我们排查问题。"
   },
   "projectSettings": {
+    "integrationAutoSave": "连接选项更改后立即保存，保存失败会在此页显示。",
+    "integrationMixedSave": "连接选项更改后立即保存；项目偏好需点击“保存项目设置”。",
+    "title": "项目设置",
+    "save": "保存项目设置",
+    "saveFailed": "无法保存项目设置。",
     "noProjectSelected": {
       "title": "尚未选择项目",
       "description": "请从侧栏选择一个项目，以配置项目设置。"
@@ -976,7 +1013,9 @@
       "createAnthropicKey": "创建 Anthropic API 密钥",
       "openai": "这可能是 OpenAI API，需要 API 密钥。",
       "createOpenaiKey": "创建 OpenAI API 密钥"
-    }
+    },
+    "errorIdRequired": "服务器名称须包含字母或数字，以生成有效 ID。",
+    "errorSaveFailed": "服务器未保存，已保留填写内容。请重试。"
   },
   "terminalFonts": {
     "title": "终端字体",

@@ -116,6 +116,8 @@
     "lockColumn": "Lock column width",
     "unlockColumn": "Unlock column width",
     "columnLocked": "Column width is locked",
+    "scrollLeft": "Scroll columns left",
+    "scrollRight": "Scroll columns right",
     "expandAll": "Expand all columns"
   },
   "queue": {
@@ -226,6 +228,8 @@
       "baseBranchLabel": "Base Branch (optional)",
       "useProjectDefault": "Use project default",
       "useProjectDefaultWithBranch": "Use project default ({{branch}})",
+      "branchUnavailable": "The saved base branch “{{branch}}” is no longer available. Choose an available branch before creating this task.",
+      "branchLoadFailed": "Could not verify Git branches. Reopen this form and try again before creating the task.",
       "searchBranches": "Search branches...",
       "noBranchesFound": "No branches found",
       "helpText": "Override the branch this task's worktree will be created from. Leave empty to use the project's configured default branch.",
@@ -236,7 +240,9 @@
     },
     "errors": {
       "createFailed": "Failed to create task. Please try again.",
-      "startFailed": "Failed to start task"
+      "startFailed": "Failed to start task",
+      "fileReferenceUnavailable": "This file is no longer available inside the project. Choose it again.",
+      "tooManyReferences": "A task can reference up to {{count}} files."
     }
   },
   "feedback": {
