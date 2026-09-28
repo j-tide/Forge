@@ -25,6 +25,7 @@ vi.mock('react-i18next', () => ({
         'common:usage.usageBreakdown': 'Usage Breakdown',
         'common:usage.unlimited': 'Unlimited',
         'common:usage.unlimitedApiKey': 'Unlimited (API Key)',
+        'common:usage.billingPayPerUse': 'Pay-per-use',
         'common:usage.noUsageMonitoring': 'Usage monitoring not available',
         'common:usage.subscriptionBadge': 'Subscription',
         'common:usage.subscriptionLimitsApply': 'Rate limits apply',
@@ -178,6 +179,53 @@ describe('UsageIndicator', () => {
       onAllProfilesUsageUpdated: vi.fn(),
       setQueueOrder: vi.fn(),
     };
+  });
+
+  it('does not show a success or unlimited usage badge without an account', () => {
+    vi.mocked(useSettingsStore).mockReturnValue(createStoreMock({
+      providerAccounts: [],
+      globalPriorityOrder: [],
+    }));
+    const { container } = render(<UsageIndicator />);
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText('Unlimited')).not.toBeInTheDocument();
+  });
+
+  it('does not attach the legacy Claude reauthentication warning to GLM', async () => {
+    vi.mocked(useSettingsStore).mockReturnValue(createStoreMock({
+      providerAccounts: [{ id: 'glm-account', provider: 'zai', name: 'GLM', authType: 'api-key', billingModel: 'subscription', apiKey: 'test-key', createdAt: 1, updatedAt: 1 }],
+      globalPriorityOrder: ['glm-account'],
+    }));
+    window.electronAPI.requestUsageUpdate = vi.fn().mockResolvedValue({ success: false });
+    window.electronAPI.requestAllProfilesUsage = vi.fn().mockResolvedValue({ success: true, data: { allProfiles: [
+      { profileId: 'legacy-claude', profileName: 'Claude', isActive: true, needsReauthentication: true },
+    ] } });
+    render(<UsageIndicator />);
+    expect(await screen.findByRole('button', { name: 'Usage data unavailable' })).toBeInTheDocument();
+    expect(screen.queryByText('!')).not.toBeInTheDocument();
+  });
+
+  it('shows billing mode and unknown monitoring rather than invented unlimited quota', async () => {
+    vi.mocked(useSettingsStore).mockReturnValue(createStoreMock());
+    render(<UsageIndicator />);
+    expect(screen.getByText('Pay-per-use')).toBeInTheDocument();
+    expect(screen.queryByText('Unlimited')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'common:usage.usageStatusAriaLabel' }));
+    expect(await screen.findByText('Usage monitoring not available')).toBeInTheDocument();
+    expect(screen.queryByText('∞')).not.toBeInTheDocument();
+  });
+
+  it('still shows an authentication warning for the actual active account', async () => {
+    vi.mocked(useSettingsStore).mockReturnValue(createStoreMock({
+      providerAccounts: crossProviderMonitoredAccounts,
+      globalPriorityOrder: ['account-anthropic-active'],
+    }));
+    window.electronAPI.requestUsageUpdate = vi.fn().mockResolvedValue({ success: false });
+    window.electronAPI.requestAllProfilesUsage = vi.fn().mockResolvedValue({ success: true, data: { allProfiles: [
+      { profileId: 'account-anthropic-active', isActive: true, needsReauthentication: true },
+    ] } });
+    render(<UsageIndicator />);
+    expect(await screen.findByText('!')).toBeInTheDocument();
   });
 
   describe('when cross-provider mode is enabled', () => {

@@ -8,7 +8,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AuthStatusIndicator } from './AuthStatusIndicator';
 import { useSettingsStore } from '../stores/settings-store';
 import type { ProviderAccount } from '../../shared/types/provider-account';
@@ -138,6 +138,27 @@ describe('AuthStatusIndicator', () => {
       onUsageUpdated: vi.fn(() => vi.fn()),
       requestUsageUpdate: vi.fn().mockResolvedValue({ success: false, data: null })
     };
+  });
+
+  it('opens account settings when the provider badge is clicked', () => {
+    vi.mocked(useSettingsStore).mockReturnValue(createStoreMock() as any);
+    const openSettings = vi.fn();
+    window.addEventListener('open-app-settings', openSettings);
+    render(<AuthStatusIndicator />);
+    fireEvent.click(screen.getByRole('button', { name: /authentication: anthropic/i }));
+    expect(openSettings).toHaveBeenCalledTimes(1);
+    expect((openSettings.mock.calls[0][0] as CustomEvent).detail).toBe('accounts');
+    window.removeEventListener('open-app-settings', openSettings);
+  });
+
+  it('ignores a usage warning belonging to another provider account', async () => {
+    vi.mocked(useSettingsStore).mockReturnValue(createStoreMock({ globalPriorityOrder: ['account-google'] }) as any);
+    window.electronAPI.requestUsageUpdate = vi.fn().mockResolvedValue({ success: true, data: {
+      profileId: 'account-anthropic', sessionPercent: 99, weeklyPercent: 100,
+    } });
+    const { container } = render(<AuthStatusIndicator />);
+    await waitFor(() => expect(window.electronAPI.requestUsageUpdate).toHaveBeenCalled());
+    expect(container.querySelector('.text-red-500')).toBeNull();
   });
 
   describe('when Anthropic OAuth is the active account', () => {

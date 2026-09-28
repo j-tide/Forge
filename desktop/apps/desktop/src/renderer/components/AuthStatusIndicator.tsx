@@ -18,6 +18,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../stores/settings-store';
 import { useActiveProvider } from '../hooks/useActiveProvider';
+import { usageMatchesAccount } from '../lib/usage-account';
 import { formatTimeRemaining, localizeUsageWindowLabel, hasHardcodedText } from '../../shared/utils/format-time';
 import type { ClaudeUsageSnapshot } from '../../shared/types/agent';
 
@@ -54,6 +55,7 @@ const PROVIDER_I18N_KEYS: Record<string, string> = {
 export function AuthStatusIndicator() {
   const { providerAccounts, settings } = useSettingsStore();
   const { t } = useTranslation(['common', 'uiShellAuth']);
+  const { account: activeAccount } = useActiveProvider();
 
   // Track usage data for warning badge
   const [usage, setUsage] = useState<ClaudeUsageSnapshot | null>(null);
@@ -61,7 +63,11 @@ export function AuthStatusIndicator() {
 
   // Listen for usage updates
   useEffect(() => {
+    let live = true;
+    setUsage(null);
+    setIsLoadingUsage(true);
     const unsubscribe = window.electronAPI.onUsageUpdated((snapshot: ClaudeUsageSnapshot) => {
+      if (!live || !usageMatchesAccount(snapshot.profileId, activeAccount)) return;
       setUsage(snapshot);
       setIsLoadingUsage(false);
     });
@@ -69,7 +75,7 @@ export function AuthStatusIndicator() {
     // Request initial usage
     window.electronAPI.requestUsageUpdate()
       .then((result) => {
-        if (result.success && result.data) {
+        if (live && result.success && result.data && usageMatchesAccount(result.data.profileId, activeAccount)) {
           setUsage(result.data);
         }
       })
@@ -77,13 +83,14 @@ export function AuthStatusIndicator() {
         console.warn('[AuthStatusIndicator] Failed to fetch usage:', error);
       })
       .finally(() => {
-        setIsLoadingUsage(false);
+        if (live) setIsLoadingUsage(false);
       });
 
     return () => {
+      live = false;
       unsubscribe();
     };
-  }, []);
+  }, [activeAccount]);
 
   // Determine if usage warning badge should be shown
   const shouldShowUsageWarning = usage && !isLoadingUsage && (
@@ -101,7 +108,6 @@ export function AuthStatusIndicator() {
       (hasHardcodedText(usage?.sessionResetTime) ? undefined : usage?.sessionResetTime))
     : (hasHardcodedText(usage?.sessionResetTime) ? undefined : usage?.sessionResetTime);
 
-  const { account: activeAccount } = useActiveProvider();
 
   const isCrossProviderMode = settings.customMixedProfileActive && !!settings.customMixedPhaseConfig;
   const crossProviderList = isCrossProviderMode
@@ -167,6 +173,7 @@ export function AuthStatusIndicator() {
             <button
               type="button"
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border transition-all hover:opacity-80 ${badgeColor}`}
+              onClick={() => window.dispatchEvent(new CustomEvent('open-app-settings', { detail: 'accounts' }))}
               aria-label={t('common:usage.authenticationAriaLabel', { provider: badgeLabel })}
             >
               <Icon className="h-3.5 w-3.5" />

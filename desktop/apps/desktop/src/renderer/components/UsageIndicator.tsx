@@ -9,7 +9,7 @@
  * - Anthropic OAuth (subscription): shows session/weekly usage bars
  * - Non-Anthropic subscription accounts (e.g. OpenAI Codex OAuth): shows "Subscription" badge
  *   with a note that rate limits apply but monitoring is not yet available
- * - Pay-per-use / API key providers: shows "Unlimited" badge
+ * - Pay-per-use / API key providers: shows billing mode without claiming a quota
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -31,6 +31,7 @@ import type { ClaudeUsageSnapshot, ProfileUsageSummary } from '../../shared/type
 import type { AppSection } from './settings/AppSettings';
 import { useSettingsStore, saveSettings } from '../stores/settings-store';
 import { useActiveProvider } from '../hooks/useActiveProvider';
+import { usageMatchesAccount } from '../lib/usage-account';
 import type { ProviderAccount, BuiltinProvider } from '../../shared/types/provider-account';
 
 /**
@@ -746,8 +747,14 @@ export function UsageIndicator() {
     : (hasHardcodedText(usage?.weeklyResetTime) ? undefined : usage?.weeklyResetTime);
 
   useEffect(() => {
+    let live = true;
+    setUsage(null);
+    setIsAvailable(false);
+    setIsLoading(true);
+    setActiveProfileNeedsReauth(false);
     // Listen for usage updates from main process
     const unsubscribe = window.electronAPI.onUsageUpdated((snapshot: ClaudeUsageSnapshot) => {
+      if (!live || !usageMatchesAccount(snapshot.profileId, activeAccount)) return;
       setUsage(snapshot);
       setIsAvailable(true);
       setIsLoading(false);
@@ -755,50 +762,56 @@ export function UsageIndicator() {
 
     // Listen for all profiles usage updates (for multi-profile display)
     const unsubscribeAllProfiles = window.electronAPI.onAllProfilesUsageUpdated?.((allProfilesUsage) => {
+      if (!live) return;
       // Filter out the active profile - we only want to show "other" profiles
-      const nonActiveProfiles = allProfilesUsage.allProfiles.filter(p => !p.isActive);
+      const nonActiveProfiles = allProfilesUsage.allProfiles.filter(p => !usageMatchesAccount(p.profileId, activeAccount));
       setOtherProfiles(nonActiveProfiles);
       // Track if active profile needs re-auth
-      const activeProfile = allProfilesUsage.allProfiles.find(p => p.isActive);
+      const activeProfile = allProfilesUsage.allProfiles.find(p => usageMatchesAccount(p.profileId, activeAccount));
       setActiveProfileNeedsReauth(activeProfile?.needsReauthentication ?? false);
     });
 
     // Request initial usage on mount
     window.electronAPI.requestUsageUpdate().then((result) => {
+      if (!live) return;
       setIsLoading(false);
-      if (result.success && result.data) {
+      if (result.success && result.data && usageMatchesAccount(result.data.profileId, activeAccount)) {
         setUsage(result.data);
         setIsAvailable(true);
       } else {
         setIsAvailable(false);
       }
     }).catch(() => {
+      if (!live) return;
       setIsLoading(false);
       setIsAvailable(false);
     });
 
     // Request all profiles usage immediately on mount (so other accounts show right away)
     window.electronAPI.requestAllProfilesUsage?.().then((result) => {
-      if (result.success && result.data) {
-        const nonActiveProfiles = result.data.allProfiles.filter(p => !p.isActive);
+      if (live && result.success && result.data) {
+        const nonActiveProfiles = result.data.allProfiles.filter(p => !usageMatchesAccount(p.profileId, activeAccount));
         setOtherProfiles(nonActiveProfiles);
         // Track if active profile needs re-auth (even if main usage is unavailable)
-        const activeProfile = result.data.allProfiles.find(p => p.isActive);
-        if (activeProfile?.needsReauthentication) {
-          setActiveProfileNeedsReauth(true);
-        }
+        const activeProfile = result.data.allProfiles.find(p => usageMatchesAccount(p.profileId, activeAccount));
+        setActiveProfileNeedsReauth(activeProfile?.needsReauthentication ?? false);
       }
     }).catch(() => {
       // Silently ignore
     });
 
     return () => {
+      live = false;
       unsubscribe();
       unsubscribeAllProfiles?.();
     };
-  }, []);
+  }, [activeAccount]);
 
   // Show loading state - only for Anthropic OAuth accounts awaiting usage data
+  // Authentication already provides the add-account entry. Without an account,
+  // there is no usage information and no basis for an "Unlimited" claim.
+  if (!activeAccount) return null;
+
   if (isLoading && hasUsageMonitoring) {
     return (
       <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border bg-muted/50 text-muted-foreground">
@@ -885,7 +898,7 @@ export function UsageIndicator() {
                           </span>
                           <button
                             onClick={(e) => handleSwapAccount(e, account.id)}
-                            className="text-[9px] px-1.5 py-0.5 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded transition-colors ml-auto"
+                            className="shrink-0 whitespace-nowrap text-[9px] px-1.5 py-0.5 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded transition-colors ml-auto"
                           >
                             {t('common:usage.swap')}
                           </button>
@@ -922,8 +935,8 @@ export function UsageIndicator() {
                             {t('common:usage.subscriptionBadge')}
                           </span>
                         ) : (
-                          <span className="text-[9px] text-green-500">
-                            {t('common:usage.unlimited')}
+                          <span className="text-[9px] text-muted-foreground">
+                            {t('common:usage.billingPayPerUse')}
                           </span>
                         )}
                       </div>
@@ -940,20 +953,20 @@ export function UsageIndicator() {
     );
   }
 
-  // For pay-per-use / API key providers (no rate limits), show "Unlimited" badge
+  // Unmonitored accounts show their billing mode; rate limits are unknown.
   if (!hasUsageMonitoring && !hasSubscriptionLimits) {
     return (
       <Popover open={isOpen} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <button
-            className="flex items-center gap-1 px-2 py-1.5 rounded-md border transition-all hover:opacity-80 text-green-500 bg-green-500/10 border-green-500/20"
+            className="flex items-center gap-1 px-2 py-1.5 rounded-md border transition-colors hover:bg-muted text-muted-foreground bg-muted/50 border-border"
             aria-label={t('common:usage.usageStatusAriaLabel')}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             onClick={handleTriggerClick}
           >
             <Activity className="h-3.5 w-3.5" />
-            <span className="text-xs font-semibold">{t('common:usage.unlimited')}</span>
+            <span className="text-xs font-semibold">{t('common:usage.billingPayPerUse')}</span>
           </button>
         </PopoverTrigger>
         <PopoverContent
@@ -970,9 +983,9 @@ export function UsageIndicator() {
             </div>
             <div className="flex items-center justify-center py-4">
               <div className="text-center space-y-1">
-                <span className="text-2xl font-bold text-green-500">&#8734;</span>
+                <Activity className="mx-auto h-5 w-5 text-muted-foreground" />
                 <p className="text-xs text-muted-foreground">
-                  {t('common:usage.unlimitedApiKey')}
+                  {t('common:usage.noUsageMonitoring')}
                 </p>
               </div>
             </div>
@@ -1014,7 +1027,7 @@ export function UsageIndicator() {
                           </span>
                           <button
                             onClick={(e) => handleSwapAccount(e, account.id)}
-                            className="text-[9px] px-1.5 py-0.5 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded transition-colors ml-auto"
+                            className="shrink-0 whitespace-nowrap text-[9px] px-1.5 py-0.5 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded transition-colors ml-auto"
                           >
                             {t('common:usage.swap')}
                           </button>
@@ -1047,8 +1060,8 @@ export function UsageIndicator() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-[9px] text-green-500">
-                            {t('common:usage.unlimited')}
+                          <span className="text-[9px] text-muted-foreground">
+                            {t('common:usage.billingPayPerUse')}
                           </span>
                         )}
                       </div>
@@ -1185,7 +1198,7 @@ export function UsageIndicator() {
                           </span>
                           <button
                             onClick={(e) => handleSwapAccount(e, account.id)}
-                            className="text-[9px] px-1.5 py-0.5 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded transition-colors ml-auto"
+                            className="shrink-0 whitespace-nowrap text-[9px] px-1.5 py-0.5 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded transition-colors ml-auto"
                           >
                             {t('common:usage.swap')}
                           </button>
@@ -1234,8 +1247,8 @@ export function UsageIndicator() {
                             {t('common:usage.subscriptionBadge')}
                           </span>
                         ) : (
-                          <span className="text-[9px] text-green-500">
-                            {t('common:usage.unlimited')}
+                          <span className="text-[9px] text-muted-foreground">
+                            {t('common:usage.billingPayPerUse')}
                           </span>
                         )}
                       </div>
@@ -1482,7 +1495,7 @@ export function UsageIndicator() {
                         </span>
                         <button
                           onClick={(e) => handleSwapAccount(e, account.id)}
-                          className="text-[9px] px-1.5 py-0.5 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded transition-colors ml-auto"
+                          className="shrink-0 whitespace-nowrap text-[9px] px-1.5 py-0.5 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded transition-colors ml-auto"
                         >
                           {t('common:usage.swap')}
                         </button>
@@ -1532,8 +1545,8 @@ export function UsageIndicator() {
                           {t('common:usage.subscriptionBadge')}
                         </span>
                       ) : (
-                        <span className="text-[9px] text-green-500">
-                          {t('common:usage.unlimited')}
+                        <span className="text-[9px] text-muted-foreground">
+                          {t('common:usage.billingPayPerUse')}
                         </span>
                       )}
                     </div>
