@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef, useId, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useViewState } from '../contexts/ViewStateContext';
 import {
@@ -67,6 +67,8 @@ function getVisualColumn(status: TaskStatus): typeof TASK_STATUS_COLUMNS[number]
 
 interface KanbanBoardProps {
   tasks: Task[];
+  /** Active project identity, including when its board is empty. */
+  projectId?: string;
   onTaskClick: (task: Task) => void;
   onNewTaskClick?: () => void;
   onRefresh?: () => void;
@@ -100,6 +102,7 @@ interface DroppableColumnProps {
   isResizing?: boolean;
   onResizeStart?: (startX: number) => void;
   onResizeEnd?: () => void;
+  onResizeByKeyboard?: (width: number) => void;
   // Lock props
   isLocked?: boolean;
   onToggleLocked?: () => void;
@@ -158,6 +161,7 @@ function droppableColumnPropsAreEqual(
   if (prevProps.isResizing !== nextProps.isResizing) return false;
   if (prevProps.onResizeStart !== nextProps.onResizeStart) return false;
   if (prevProps.onResizeEnd !== nextProps.onResizeEnd) return false;
+  if (prevProps.onResizeByKeyboard !== nextProps.onResizeByKeyboard) return false;
   if (prevProps.isLocked !== nextProps.isLocked) return false;
   if (prevProps.onToggleLocked !== nextProps.onToggleLocked) return false;
 
@@ -188,49 +192,49 @@ const getEmptyStateContent = (status: TaskStatus, t: (key: string) => string): {
   switch (status) {
     case 'backlog':
       return {
-        icon: <Inbox className="h-6 w-6 text-muted-foreground/50" />,
+        icon: <Inbox className="h-6 w-6 text-muted-foreground" />,
         message: t('kanban.emptyBacklog'),
         subtext: t('kanban.emptyBacklogHint')
       };
     case 'queue':
       return {
-        icon: <Loader2 className="h-6 w-6 text-muted-foreground/50" />,
+        icon: <Loader2 className="h-6 w-6 text-muted-foreground" />,
         message: t('kanban.emptyQueue'),
         subtext: t('kanban.emptyQueueHint')
       };
     case 'in_progress':
       return {
-        icon: <Loader2 className="h-6 w-6 text-muted-foreground/50" />,
+        icon: <Loader2 className="h-6 w-6 text-muted-foreground" />,
         message: t('kanban.emptyInProgress'),
         subtext: t('kanban.emptyInProgressHint')
       };
     case 'ai_review':
       return {
-        icon: <Eye className="h-6 w-6 text-muted-foreground/50" />,
+        icon: <Eye className="h-6 w-6 text-muted-foreground" />,
         message: t('kanban.emptyAiReview'),
         subtext: t('kanban.emptyAiReviewHint')
       };
     case 'human_review':
       return {
-        icon: <Eye className="h-6 w-6 text-muted-foreground/50" />,
+        icon: <Eye className="h-6 w-6 text-muted-foreground" />,
         message: t('kanban.emptyHumanReview'),
         subtext: t('kanban.emptyHumanReviewHint')
       };
     case 'done':
       return {
-        icon: <CheckCircle2 className="h-6 w-6 text-muted-foreground/50" />,
+        icon: <CheckCircle2 className="h-6 w-6 text-muted-foreground" />,
         message: t('kanban.emptyDone'),
         subtext: t('kanban.emptyDoneHint')
       };
     default:
       return {
-        icon: <Inbox className="h-6 w-6 text-muted-foreground/50" />,
+        icon: <Inbox className="h-6 w-6 text-muted-foreground" />,
         message: t('kanban.emptyDefault')
       };
   }
 };
 
-const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskClick, onStatusChange, isOver, onAddClick, onArchiveAll, onQueueSettings, onQueueAll, maxParallelTasks, archivedCount, showArchived, onToggleArchived, selectedTaskIds, onSelectAll, onDeselectAll, onToggleSelect, isCollapsed, onToggleCollapsed, columnWidth, isResizing, onResizeStart, onResizeEnd, isLocked, onToggleLocked }: DroppableColumnProps) {
+const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskClick, onStatusChange, isOver, onAddClick, onArchiveAll, onQueueSettings, onQueueAll, maxParallelTasks, archivedCount, showArchived, onToggleArchived, selectedTaskIds, onSelectAll, onDeselectAll, onToggleSelect, isCollapsed, onToggleCollapsed, columnWidth, isResizing, onResizeStart, onResizeEnd, onResizeByKeyboard, isLocked, onToggleLocked }: DroppableColumnProps) {
   const { t } = useTranslation(['tasks', 'common']);
   const { setNodeRef } = useDroppable({
     id: status
@@ -297,33 +301,14 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
       <SortableTaskCard
         key={task.id}
         task={task}
-        onClick={onClickHandlers.get(task.id)!}
+        onClick={onClickHandlers.get(task.id) ?? (() => onTaskClick(task))}
         onStatusChange={onStatusChangeHandlers.get(task.id)}
         isSelectable={isSelectable}
         isSelected={isSelectable ? selectedTaskIds?.has(task.id) : undefined}
         onToggleSelect={onToggleSelectHandlers?.get(task.id)}
       />
     ));
-  }, [tasks, onClickHandlers, onStatusChangeHandlers, onToggleSelectHandlers, selectedTaskIds]);
-
-  const getColumnBorderColor = (): string => {
-    switch (status) {
-      case 'backlog':
-        return 'column-backlog';
-      case 'queue':
-        return 'column-queue';
-      case 'in_progress':
-        return 'column-in-progress';
-      case 'ai_review':
-        return 'column-ai-review';
-      case 'human_review':
-        return 'column-human-review';
-      case 'done':
-        return 'column-done';
-      default:
-        return 'border-t-muted-foreground/30';
-    }
-  };
+  }, [tasks, onClickHandlers, onStatusChangeHandlers, onToggleSelectHandlers, selectedTaskIds, onTaskClick]);
 
   const emptyState = getEmptyStateContent(status, t);
 
@@ -333,9 +318,7 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
       <div
         ref={setNodeRef}
         className={cn(
-          'forge-glass-board-column flex flex-col rounded-xl border border-border/70 bg-linear-to-b from-secondary/30 to-transparent backdrop-blur-sm transition-all duration-200',
-          getColumnBorderColor(),
-          'border-t-2',
+          'forge-glass-board-column flex flex-col rounded-xl border border-border bg-muted/40 transition-colors duration-150',
           isOver && 'drop-zone-highlight'
         )}
         data-status={status}
@@ -372,7 +355,7 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
             <span className="column-count-badge">
               {tasks.length}
             </span>
-            <h2 className="font-semibold text-sm text-foreground">
+            <h2 className="truncate text-sm font-semibold text-foreground">
               {t(TASK_STATUS_LABELS[status])}
             </h2>
           </div>
@@ -389,10 +372,8 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
       <div
         ref={setNodeRef}
         className={cn(
-          'forge-glass-board-column flex flex-1 flex-col rounded-xl border border-border/70 bg-linear-to-b from-secondary/30 to-transparent backdrop-blur-sm transition-all duration-200',
+          'forge-glass-board-column flex flex-1 flex-col rounded-xl border border-border bg-muted/40 transition-colors duration-150',
           !columnWidth && 'min-w-80 max-w-[30rem]',
-          getColumnBorderColor(),
-          'border-t-2',
           isOver && 'drop-zone-highlight'
         )}
         data-status={status}
@@ -400,8 +381,8 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
         data-empty={tasks.length === 0}
       >
         {/* Column header - enhanced styling */}
-        <div className="flex items-center justify-between border-b border-border/70 p-4">
-        <div className="flex items-center gap-2.5">
+        <div className="flex min-h-12 items-center justify-between gap-2 border-b border-border/70 px-3 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
           {/* Collapse button */}
           {onToggleCollapsed && (
             <Tooltip delayDuration={200}>
@@ -440,7 +421,7 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
               </TooltipContent>
             </Tooltip>
           )}
-          <h2 className="font-semibold text-sm text-foreground">
+          <h2 className="truncate text-sm font-semibold text-foreground">
             {t(TASK_STATUS_LABELS[status])}
           </h2>
           {status === 'in_progress' && maxParallelTasks ? (
@@ -491,6 +472,7 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
                   className="h-7 w-7 transition-colors hover:bg-info/10 hover:text-info"
                   onClick={onQueueAll}
                   title={t('queue.queueAll')}
+                  aria-label={t('queue.queueAll')}
                 >
                   <ListPlus className="h-4 w-4" />
                 </Button>
@@ -515,6 +497,7 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
               className="h-7 w-7 transition-colors hover:bg-info/10 hover:text-info"
               onClick={onQueueSettings}
               title={t('kanban.queueSettings')}
+              aria-label={t('kanban.queueSettings')}
             >
               <Settings className="h-4 w-4" />
             </Button>
@@ -562,16 +545,16 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
 
       {/* Task list */}
       <div className="flex-1 min-h-0">
-        <ScrollArea className="h-full px-3 pb-3 pt-2">
+        <ScrollArea className="h-full px-2.5 pb-2.5 pt-2.5">
           <SortableContext
             items={taskIds}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-3 min-h-[120px]">
+            <div className="space-y-2 min-h-24">
               {tasks.length === 0 ? (
                 <div
                   className={cn(
-                    'forge-glass-board-empty empty-column-dropzone flex flex-col items-center justify-center px-3 py-6 text-center',
+                    'forge-glass-board-empty empty-column-dropzone flex flex-col items-center justify-center px-3 py-5 text-center',
                     isOver && 'active'
                   )}
                 >
@@ -585,11 +568,11 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
                   ) : (
                     <>
                       {emptyState.icon}
-                      <span className="mt-2 text-sm font-medium text-muted-foreground/70">
+                      <span className="mt-2 text-sm font-medium text-muted-foreground">
                         {emptyState.message}
                       </span>
                       {emptyState.subtext && (
-                        <span className="mt-0.5 text-xs text-muted-foreground/50">
+                        <span className="mt-0.5 text-xs text-muted-foreground">
                           {emptyState.subtext}
                         </span>
                       )}
@@ -607,10 +590,19 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
 
       {/* Resize handle on right edge */}
       {onResizeStart && onResizeEnd && (
+        // biome-ignore lint/a11y/useSemanticElements: Adjustable window-splitter widget with a nested pointer hit area, not a static thematic break.
         <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={`${t(TASK_STATUS_LABELS[status])}: ${t('kanban.resizeColumn')}`}
+          aria-valuenow={columnWidth ?? DEFAULT_COLUMN_WIDTH}
+          aria-valuemin={MIN_COLUMN_WIDTH}
+          aria-valuemax={MAX_COLUMN_WIDTH}
+          aria-disabled={isLocked}
+          tabIndex={isLocked ? -1 : 0}
           className={cn(
             "absolute right-0 top-0 bottom-0 w-1 touch-none z-10",
-            "transition-colors duration-150",
+            "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             isLocked
               ? "cursor-not-allowed bg-transparent"
               : "cursor-col-resize hover:bg-primary/40",
@@ -630,7 +622,22 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
               onResizeStart(e.touches[0].clientX);
             }
           }}
-          title={isLocked ? t('kanban.columnLocked') : undefined}
+          onKeyDown={(event) => {
+            if (isLocked || !onResizeByKeyboard) return;
+            const currentWidth = columnWidth ?? DEFAULT_COLUMN_WIDTH;
+            const widths: Record<string, number> = {
+              ArrowLeft: currentWidth - BASE_FONT_SIZE,
+              ArrowRight: currentWidth + BASE_FONT_SIZE,
+              Home: MIN_COLUMN_WIDTH,
+              End: MAX_COLUMN_WIDTH,
+            };
+            const width = widths[event.key];
+            if (width === undefined) return;
+            event.preventDefault();
+            event.stopPropagation();
+            onResizeByKeyboard(Math.max(MIN_COLUMN_WIDTH, Math.min(MAX_COLUMN_WIDTH, width)));
+          }}
+          title={isLocked ? t('kanban.columnLocked') : t('kanban.resizeColumn')}
         >
           {/* Wider invisible hit area for easier grabbing */}
           <div className="absolute inset-y-0 -left-1 -right-1" />
@@ -640,12 +647,36 @@ const DroppableColumn = memo(function DroppableColumn({ status, tasks, onTaskCli
   );
 }, droppableColumnPropsAreEqual);
 
-export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isRefreshing }: KanbanBoardProps) {
-  const { t } = useTranslation(['tasks', 'dialogs', 'common']);
+export function KanbanBoard({ tasks, projectId: activeProjectId, onTaskClick, onNewTaskClick, onRefresh, isRefreshing }: KanbanBoardProps) {
+  const { t } = useTranslation(['tasks', 'dialogs', 'common', 'navigation']);
   const { toast } = useToast();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [overColumnId, setOverColumnId] = useState<string | null>(null);
   const { showArchived, toggleShowArchived } = useViewState();
+  const boardColumnsRef = useRef<HTMLElement>(null);
+  const boardColumnsId = useId();
+  const [horizontalScroll, setHorizontalScroll] = useState({ left: false, right: false });
+
+  const updateHorizontalScroll = useCallback(() => {
+    const columns = boardColumnsRef.current;
+    if (!columns) return;
+    const maximum = Math.max(0, columns.scrollWidth - columns.clientWidth);
+    const position = Math.max(0, Math.min(maximum, columns.scrollLeft));
+    // Allow fractional-pixel layout and platform scroll rounding at the edges.
+    const next = { left: position > 1, right: maximum - position > 1 };
+    setHorizontalScroll((previous) => previous.left === next.left && previous.right === next.right ? previous : next);
+  }, []);
+
+  const scrollColumns = useCallback((direction: -1 | 1) => {
+    const columns = boardColumnsRef.current;
+    if (!columns) return;
+    const maximum = Math.max(0, columns.scrollWidth - columns.clientWidth);
+    const left = Math.max(0, Math.min(maximum, columns.scrollLeft + direction * columns.clientWidth * 0.8));
+    const reduceMotion = document.documentElement.getAttribute('data-reduce-motion') === 'true'
+      || (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    columns.scrollTo({ left, behavior: reduceMotion ? 'instant' : 'smooth' });
+    updateHorizontalScroll();
+  }, [updateHorizontalScroll]);
 
   // Project store for queue settings
   const projects = useProjectStore((state) => state.projects);
@@ -666,10 +697,28 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
   // Capture projectId at resize start to avoid stale closure if project changes during resize
   const resizeProjectIdRef = useRef<string | null>(null);
 
-  // Get projectId from first task
-  const projectId = tasks[0]?.projectId;
+  // Keep empty boards connected to their project. Older callers can still
+  // derive it from the task list until they provide the explicit identity.
+  const projectId = activeProjectId ?? tasks[0]?.projectId;
   const project = projectId ? projects.find((p) => p.id === projectId) : undefined;
   const maxParallelTasks = project?.settings?.maxParallelTasks ?? DEFAULT_MAX_PARALLEL_TASKS;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Column preference and project changes can replace observed DOM nodes; reconnect after those layout changes.
+  useEffect(() => {
+    const columns = boardColumnsRef.current;
+    if (!columns) return;
+    updateHorizontalScroll();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateHorizontalScroll);
+    observer?.observe(columns);
+    // Child widths change when a column is resized or collapsed, without
+    // necessarily changing the scroll viewport's own width.
+    for (const column of columns.children) observer?.observe(column);
+    window.addEventListener('resize', updateHorizontalScroll);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', updateHorizontalScroll);
+    };
+  }, [columnPreferences, projectId, updateHorizontalScroll]);
 
   // Queue settings modal state
   const [showQueueSettings, setShowQueueSettings] = useState(false);
@@ -902,8 +951,6 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
   }, [selectedTaskIds, deselectAllTasks, toast, t]);
 
   const handleArchiveAll = async () => {
-    // Get projectId from the first task (all tasks should have the same projectId)
-    const projectId = tasks[0]?.projectId;
     if (!projectId) {
       console.error('[KanbanBoard] No projectId found');
       return;
@@ -969,7 +1016,6 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
       newStatus = 'queue';
     }
 
-    const oldStatus = task?.status;
     const result = await persistTaskStatus(taskId, newStatus);
 
     if (!result.success) {
@@ -1272,6 +1318,12 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
     resizeProjectIdRef.current = null;
   }, [resizingColumn, saveKanbanPreferences]);
 
+  const handleResizeByKeyboard = useCallback((status: typeof TASK_STATUS_COLUMNS[number], width: number) => {
+    if (columnPreferences?.[status]?.isLocked) return;
+    setColumnWidth(status, width);
+    if (projectId) saveKanbanPreferences(projectId);
+  }, [columnPreferences, projectId, saveKanbanPreferences, setColumnWidth]);
+
   // Document-level event listeners for resize dragging
   useEffect(() => {
     if (!resizingColumn) return;
@@ -1433,10 +1485,10 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
   };
 
   return (
-    <div className="forge-glass-board flex h-full flex-col" data-empty={tasks.length === 0}>
+    <div className="forge-glass-board flex h-full min-h-0 flex-col" data-empty={tasks.length === 0}>
       {/* Kanban header with refresh button and expand all */}
-      {(onRefresh || collapsedColumnCount >= 3) && (
-        <div className="flex items-center justify-between px-6 pt-4 pb-2">
+      {(onRefresh || collapsedColumnCount >= 3 || horizontalScroll.left || horizontalScroll.right) && (
+        <div className="flex items-center justify-between px-5 pt-3 pb-1">
           <div className="flex items-center gap-2">
             {/* Expand All button - appears when 3+ columns are collapsed */}
             {collapsedColumnCount >= 3 && (
@@ -1452,6 +1504,44 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
             )}
           </div>
           <div className="flex items-center gap-2">
+            {(horizontalScroll.left || horizontalScroll.right) && (
+              <div className="flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-8"
+                      aria-label={t('kanban.scrollLeft')}
+                      aria-controls={boardColumnsId}
+                      disabled={!horizontalScroll.left}
+                      onClick={() => scrollColumns(-1)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('kanban.scrollLeft')}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-8"
+                      aria-label={t('kanban.scrollRight')}
+                      aria-controls={boardColumnsId}
+                      disabled={!horizontalScroll.right}
+                      onClick={() => scrollColumns(1)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('kanban.scrollRight')}</TooltipContent>
+                </Tooltip>
+              </div>
+            )}
             {onRefresh && (
               <Button
                 variant="ghost"
@@ -1475,10 +1565,13 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className={cn(
-          'forge-glass-board-columns flex flex-1 gap-4 overflow-x-auto p-6',
-          tasks.length === 0 && 'items-start'
-        )}>
+        <section
+          ref={boardColumnsRef}
+          id={boardColumnsId}
+          aria-label={t('navigation:items.kanban')}
+          onScroll={updateHorizontalScroll}
+          className="forge-glass-board-columns flex min-h-0 flex-1 gap-3 overflow-x-auto p-5 pt-3"
+        >
           {TASK_STATUS_COLUMNS.map((status) => (
             <DroppableColumn
               key={status}
@@ -1510,17 +1603,18 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
               isResizing={resizingColumn === status}
               onResizeStart={(startX) => handleResizeStart(status, startX)}
               onResizeEnd={handleResizeEnd}
+              onResizeByKeyboard={(width) => handleResizeByKeyboard(status, width)}
               isLocked={columnPreferences?.[status]?.isLocked}
               onToggleLocked={() => handleToggleColumnLocked(status)}
             />
           ))}
-        </div>
+        </section>
 
         {/* Drag overlay - enhanced visual feedback */}
         <DragOverlay>
           {activeTask ? (
             <div className="drag-overlay-card">
-              <TaskCard task={activeTask} onClick={() => {}} />
+              <TaskCard task={activeTask} onClick={() => { /* The preview is not interactive while dragging. */ }} />
             </div>
           ) : null}
         </DragOverlay>
@@ -1528,7 +1622,7 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
 
       {selectedTaskIds.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-border bg-card shadow-lg backdrop-blur-sm">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-card shadow-lg">
             <span className="text-sm font-medium text-foreground">
               {t('kanban.selectedCountOther', { count: selectedTaskIds.size })}
             </span>
@@ -1579,7 +1673,7 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
 
           {/* Task List Preview */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">{t('kanban.tasksToDelete')}</label>
+            <p className="text-sm font-medium">{t('kanban.tasksToDelete')}</p>
             <ScrollArea className="h-32 rounded-md border border-border p-2">
               <div className="space-y-1">
                 {selectedTasks.map((task, idx) => (

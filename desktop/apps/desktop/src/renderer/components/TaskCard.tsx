@@ -16,8 +16,6 @@ import {
 import { cn, formatRelativeTime, sanitizeMarkdownForDisplay } from '../lib/utils';
 import { PhaseProgressIndicator } from './PhaseProgressIndicator';
 import {
-  TASK_CATEGORY_COLORS,
-  TASK_COMPLEXITY_COLORS,
   TASK_IMPACT_COLORS,
   TASK_PRIORITY_COLORS,
   EXECUTION_PHASE_BADGE_COLORS,
@@ -78,6 +76,9 @@ function taskCardPropsAreEqual(prevProps: TaskCardProps, nextProps: TaskCardProp
 
   // Check selectable props first (cheap comparison)
   if (
+    prevProps.onClick !== nextProps.onClick ||
+    prevProps.onStatusChange !== nextProps.onStatusChange ||
+    prevProps.onToggleSelect !== nextProps.onToggleSelect ||
     prevProps.isSelectable !== nextProps.isSelectable ||
     prevProps.isSelected !== nextProps.isSelected
   ) {
@@ -323,19 +324,21 @@ export const TaskCard = memo(function TaskCard({
   const reviewReasonInfo = task.status === 'human_review' ? getReviewReasonLabel(effectiveReviewReason) : null;
 
   const isArchived = !!task.metadata?.archivedAt;
+  const MetadataCategoryIcon = task.metadata?.category ? CategoryIcon[task.metadata.category] : null;
 
   return (
     <Card
       className={cn(
-        'card-surface task-card-enhanced cursor-pointer',
-        isRunning && !isStuck && 'ring-2 ring-primary border-primary task-running-pulse',
-        isStuck && 'ring-2 ring-warning border-warning task-stuck-pulse',
+        'task-card-enhanced cursor-pointer rounded-xl border border-border bg-card shadow-sm transition-[border-color,box-shadow,background-color] duration-150 hover:border-ring/40',
+        isRunning && !isStuck && 'border-primary/60 ring-1 ring-primary/15',
+        isStuck && 'border-warning/60 ring-1 ring-warning/15',
         isArchived && 'opacity-60 hover:opacity-80',
-        isSelectable && isSelected && 'ring-2 ring-ring border-ring bg-accent/10'
+        isSelectable && isSelected && 'ring-2 ring-ring/50 border-ring bg-accent/30'
       )}
+      data-task-id={task.id}
       onClick={onClick}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-3.5">
         <div className={isSelectable ? 'flex gap-3' : undefined}>
           {/* Checkbox for selectable mode - stops event propagation */}
           {isSelectable && (
@@ -351,16 +354,29 @@ export const TaskCard = memo(function TaskCard({
 
           <div className={isSelectable ? 'flex-1 min-w-0' : undefined}>
             {/* Title - full width, no wrapper */}
-            <h3
-              className="font-semibold text-sm text-foreground line-clamp-2 leading-snug"
-              title={displayTitle}
-            >
-              {displayTitle}
+            <h3 className="text-sm font-semibold leading-snug text-foreground">
+              <button
+                type="button"
+                className="block w-full rounded-sm text-left line-clamp-2 hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                title={displayTitle}
+                onPointerDown={(event) => event.stopPropagation()}
+                onKeyDown={(event) => {
+                  // Native button activation opens details. Do not also let the
+                  // sortable wrapper's KeyboardSensor start a drag.
+                  if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+                }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onClick();
+                }}
+              >
+                {displayTitle}
+              </button>
             </h3>
 
         {/* Description - sanitized to handle markdown content (memoized) */}
         {sanitizedDescription && (
-          <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
+          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground line-clamp-2">
             {sanitizedDescription}
           </p>
         )}
@@ -372,9 +388,9 @@ export const TaskCard = memo(function TaskCard({
             {isStuck && (
               <Badge
                 variant="outline"
-                className="text-[10px] px-1.5 py-0.5 flex items-center gap-1 bg-warning/10 text-warning border-warning/30 badge-priority-urgent"
+                className="text-xs px-1.5 py-0.5 flex items-center gap-1 bg-warning/10 text-warning border-warning/30 badge-priority-urgent"
               >
-                <AlertTriangle className="h-2.5 w-2.5" />
+                <AlertTriangle className="h-3 w-3" />
                 {t('labels.stuck')}
               </Badge>
             )}
@@ -382,9 +398,9 @@ export const TaskCard = memo(function TaskCard({
             {isIncomplete && !isStuck && (
               <Badge
                 variant="outline"
-                className="text-[10px] px-1.5 py-0.5 flex items-center gap-1 bg-orange-500/10 text-orange-400 border-orange-500/30"
+                className="text-xs px-1.5 py-0.5 flex items-center gap-1 bg-warning/10 text-warning border-warning/30"
               >
-                <AlertTriangle className="h-2.5 w-2.5" />
+                <AlertTriangle className="h-3 w-3" />
                 {t('labels.incomplete')}
               </Badge>
             )}
@@ -392,9 +408,9 @@ export const TaskCard = memo(function TaskCard({
             {task.metadata?.archivedAt && (
               <Badge
                 variant="outline"
-                className="text-[10px] px-1.5 py-0.5 flex items-center gap-1 bg-muted text-muted-foreground border-border"
+                className="text-xs px-1.5 py-0.5 flex items-center gap-1 bg-muted text-muted-foreground border-border"
               >
-                <Archive className="h-2.5 w-2.5" />
+                <Archive className="h-3 w-3" />
                 {t('status.archived')}
               </Badge>
             )}
@@ -403,11 +419,11 @@ export const TaskCard = memo(function TaskCard({
               <Badge
                 variant="outline"
                 className={cn(
-                  'text-[10px] px-1.5 py-0.5 flex items-center gap-1',
+                  'text-xs px-1.5 py-0.5 flex items-center gap-1',
                   EXECUTION_PHASE_BADGE_COLORS[executionPhase]
                 )}
               >
-                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                <Loader2 className="h-3 w-3 animate-spin" />
                 {uiT(`phases.${executionPhase}`)}
               </Badge>
             )}
@@ -416,14 +432,14 @@ export const TaskCard = memo(function TaskCard({
                task.status === 'done' ? (
                     <Badge
                       variant={getStatusBadgeVariant(task.status)}
-                      className="text-[10px] px-1.5 py-0.5"
+                      className="text-xs px-1.5 py-0.5"
                     >
                       {getStatusLabel(task.status)}
                     </Badge>
                   ) : (
                    <Badge
                      variant={isStuck ? 'warning' : isIncomplete ? 'warning' : getStatusBadgeVariant(task.status)}
-                     className="text-[10px] px-1.5 py-0.5"
+                     className="text-xs px-1.5 py-0.5"
                    >
                      {isStuck ? t('labels.needsRecovery') : isIncomplete ? t('labels.needsResume') : getStatusLabel(task.status)}
                    </Badge>
@@ -433,7 +449,7 @@ export const TaskCard = memo(function TaskCard({
             {reviewReasonInfo && !isStuck && !isIncomplete && (
               <Badge
                 variant={reviewReasonInfo.variant}
-                className="text-[10px] px-1.5 py-0.5"
+                className="text-xs px-1.5 py-0.5"
               >
                 {reviewReasonInfo.label}
               </Badge>
@@ -442,9 +458,9 @@ export const TaskCard = memo(function TaskCard({
             {task.metadata?.fastMode && (
               <Badge
                 variant="outline"
-                className="text-[10px] px-1.5 py-0.5 flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                className="text-xs px-1.5 py-0.5 flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
               >
-                <Zap className="h-2.5 w-2.5" />
+                <Zap className="h-3 w-3" />
                 {t('metadata.fastMode')}
               </Badge>
             )}
@@ -452,14 +468,9 @@ export const TaskCard = memo(function TaskCard({
             {task.metadata?.category && (
               <Badge
                 variant="outline"
-                className={cn('text-[10px] px-1.5 py-0', TASK_CATEGORY_COLORS[task.metadata.category])}
+                className="text-xs px-1.5 py-0 text-muted-foreground border-border bg-secondary/50"
               >
-                {CategoryIcon[task.metadata.category] && (
-                  (() => {
-                    const Icon = CategoryIcon[task.metadata.category!];
-                    return <Icon className="h-2.5 w-2.5 mr-0.5" />;
-                  })()
-                )}
+                {MetadataCategoryIcon && <MetadataCategoryIcon className="h-3 w-3 mr-0.5" />}
                 {uiT(`category.${task.metadata.category}`)}
               </Badge>
             )}
@@ -467,7 +478,7 @@ export const TaskCard = memo(function TaskCard({
             {task.metadata?.impact && (task.metadata.impact === 'high' || task.metadata.impact === 'critical') && (
               <Badge
                 variant="outline"
-                className={cn('text-[10px] px-1.5 py-0', TASK_IMPACT_COLORS[task.metadata.impact])}
+                className={cn('text-xs px-1.5 py-0', TASK_IMPACT_COLORS[task.metadata.impact])}
               >
                 {t(`tasks:form.classification.values.impact.${task.metadata.impact}`)}
               </Badge>
@@ -476,7 +487,7 @@ export const TaskCard = memo(function TaskCard({
             {task.metadata?.complexity && (
               <Badge
                 variant="outline"
-                className={cn('text-[10px] px-1.5 py-0', TASK_COMPLEXITY_COLORS[task.metadata.complexity])}
+                className="text-xs px-1.5 py-0 text-muted-foreground border-border bg-secondary/50"
               >
                 {t(`tasks:form.classification.values.complexity.${task.metadata.complexity}`)}
               </Badge>
@@ -485,7 +496,7 @@ export const TaskCard = memo(function TaskCard({
             {task.metadata?.priority && (task.metadata.priority === 'urgent' || task.metadata.priority === 'high') && (
               <Badge
                 variant="outline"
-                className={cn('text-[10px] px-1.5 py-0', TASK_PRIORITY_COLORS[task.metadata.priority])}
+                className={cn('text-xs px-1.5 py-0', TASK_PRIORITY_COLORS[task.metadata.priority])}
               >
                 {t(`tasks:form.classification.values.priority.${task.metadata.priority}`)}
               </Badge>
@@ -494,7 +505,7 @@ export const TaskCard = memo(function TaskCard({
             {task.metadata?.securitySeverity && (
               <Badge
                 variant="outline"
-                className={cn('text-[10px] px-1.5 py-0', TASK_IMPACT_COLORS[task.metadata.securitySeverity])}
+                className={cn('text-xs px-1.5 py-0', TASK_IMPACT_COLORS[task.metadata.securitySeverity])}
               >
                 {task.metadata.securitySeverity} {t('metadata.severity')}
               </Badge>
@@ -504,7 +515,7 @@ export const TaskCard = memo(function TaskCard({
 
         {/* Progress section - Phase-aware with animations */}
         {(task.subtasks.length > 0 || hasActiveExecution || isRunning || isStuck) && (
-          <div className="mt-4">
+          <div className="mt-3">
             <PhaseProgressIndicator
               phase={executionPhase}
               subtasks={task.subtasks}
@@ -516,7 +527,7 @@ export const TaskCard = memo(function TaskCard({
         )}
 
         {/* Footer */}
-        <div className="mt-4 flex items-center justify-between">
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/60 pt-2.5">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
             <span>{relativeTime}</span>
@@ -563,6 +574,7 @@ export const TaskCard = memo(function TaskCard({
                     className="h-7 px-2 cursor-pointer"
                     onClick={handleViewPR}
                     title={t('tooltips.viewPR')}
+                    aria-label={t('tooltips.viewPR')}
                   >
                     <GitPullRequest className="h-3 w-3" />
                   </Button>
@@ -574,6 +586,7 @@ export const TaskCard = memo(function TaskCard({
                     className="h-7 px-2 cursor-pointer"
                     onClick={handleArchive}
                     title={t('tooltips.archiveTask')}
+                    aria-label={t('tooltips.archiveTask')}
                   >
                     <Archive className="h-3 w-3" />
                   </Button>
@@ -586,6 +599,7 @@ export const TaskCard = memo(function TaskCard({
                 className="h-7 px-2.5 hover:bg-muted-foreground/10"
                 onClick={handleArchive}
                 title={t('tooltips.archiveTask')}
+                aria-label={t('tooltips.archiveTask')}
               >
                 <Archive className="mr-1.5 h-3 w-3" />
                 {t('actions.archive')}

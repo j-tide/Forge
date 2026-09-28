@@ -1,7 +1,9 @@
 {
   "hero": {
-    "title": "Welcome to Forge",
-    "subtitle": "Explore the desktop task workflow in this preview"
+    "title": "Start with a project",
+    "subtitle": "Open a code project, turn ideas into tasks, and follow the work in one place.",
+    "returningTitle": "Pick up where you left off",
+    "eyebrow": "YOUR WORKSPACE"
   },
   "actions": {
     "newProject": "New Project",
@@ -10,7 +12,7 @@
   "recentProjects": {
     "title": "Recent Projects",
     "empty": "No projects yet",
-    "emptyDescription": "Create a new project or open an existing one to get started",
+    "emptyDescription": "Your projects will appear here after you open a folder.",
     "openFolder": "Open Folder",
     "openProjectAriaLabel": "Open project {{name}}"
   }

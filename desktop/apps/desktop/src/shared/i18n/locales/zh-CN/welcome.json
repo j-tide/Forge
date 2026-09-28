@@ -1,7 +1,9 @@
 {
   "hero": {
-    "title": "欢迎使用 Forge",
-    "subtitle": "在此预览版中体验桌面任务工作流"
+    "title": "从一个项目开始",
+    "subtitle": "打开代码项目，把想法变成任务，在这里查看每一步进展。",
+    "returningTitle": "继续你的工作",
+    "eyebrow": "你的工作区"
   },
   "actions": {
     "newProject": "新建项目",
@@ -10,7 +12,7 @@
   "recentProjects": {
     "title": "最近的项目",
     "empty": "还没有项目",
-    "emptyDescription": "新建项目或打开已有项目，即可开始使用",
+    "emptyDescription": "打开项目文件夹后，可在这里快速继续工作。",
     "openFolder": "打开文件夹",
     "openProjectAriaLabel": "打开项目 {{name}}"
   }

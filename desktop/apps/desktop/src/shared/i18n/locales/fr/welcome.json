@@ -1,7 +1,9 @@
 {
   "hero": {
-    "title": "Bienvenue dans Forge",
-    "subtitle": "Explorez le parcours des tâches dans cette préversion"
+    "title": "Commencez par un projet",
+    "subtitle": "Ouvrez un projet, transformez vos idées en tâches et suivez leur progression au même endroit.",
+    "returningTitle": "Reprenez votre travail",
+    "eyebrow": "VOTRE ESPACE DE TRAVAIL"
   },
   "actions": {
     "newProject": "Nouveau projet",
@@ -10,7 +12,7 @@
   "recentProjects": {
     "title": "Projets récents",
     "empty": "Aucun projet",
-    "emptyDescription": "Créez un nouveau projet ou ouvrez-en un existant pour commencer",
+    "emptyDescription": "Vos projets apparaîtront ici après l’ouverture d’un dossier.",
     "openFolder": "Ouvrir le dossier",
     "openProjectAriaLabel": "Ouvrir le projet {{name}}"
   }
