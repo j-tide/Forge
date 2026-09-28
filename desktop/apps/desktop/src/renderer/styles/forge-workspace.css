@@ -1,0 +1,253 @@
+/* Forge workspace: one material system, two accessible color modes.
+   Glass belongs to chrome. Reading, code and form surfaces stay opaque. */
+:root[data-theme="forge-glass"] {
+  color-scheme: light;
+  --background: #f5f6f8;
+  --foreground: #242b38;
+  --card: #ffffff;
+  --card-foreground: var(--foreground);
+  --primary: #293346;
+  --primary-foreground: #ffffff;
+  --secondary: #eef0f4;
+  --secondary-foreground: #353e4e;
+  --muted: #eef1f5;
+  --muted-foreground: #606b7d;
+  --accent: #e8eef9;
+  --accent-foreground: #355c9d;
+  --destructive: #b1384d;
+  --destructive-foreground: #ffffff;
+  --border: #dce1e8;
+  --input: #ccd3de;
+  --ring: #426fd0;
+  --sidebar: #eff2f7;
+  --sidebar-foreground: var(--foreground);
+  --popover: #ffffff;
+  --popover-foreground: var(--foreground);
+  --success: #277458;
+  --success-foreground: #ffffff;
+  --success-light: #e4f2eb;
+  --warning: #956119;
+  --warning-foreground: #ffffff;
+  --warning-light: #faf0db;
+  --info: #3568b3;
+  --info-foreground: #ffffff;
+  --info-light: #e7effc;
+  --error: var(--destructive);
+  --error-light: #fae8ec;
+  --radius: 12px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+  --shadow-sm: 0 1px 3px rgb(29 43 66 / 6%);
+  --shadow-md: 0 4px 16px rgb(29 43 66 / 6%);
+  --shadow-lg: 0 10px 34px rgb(29 43 66 / 10%);
+  --shadow-xl: 0 24px 70px rgb(20 30 49 / 18%);
+  --shadow-focus: 0 0 0 3px rgb(66 111 208 / 20%);
+  --forge-glass-shell: rgb(245 247 251 / 92%);
+  --forge-glass-panel: var(--card);
+  --forge-glass-reading: var(--card);
+  --forge-glass-border: var(--border);
+  --forge-glass-backdrop: rgb(29 39 56 / 30%);
+  --forge-glass-inner-highlight: inset 0 1px 0 rgb(255 255 255 / 65%);
+  --forge-glass-ease: cubic-bezier(.2, .7, .2, 1);
+  --forge-motion-fast: 140ms;
+  --forge-motion-normal: 200ms;
+  --forge-shell-blur: 18px;
+  --forge-column: #edf0f5;
+}
+
+:root[data-theme="forge-glass"].dark {
+  color-scheme: dark;
+  --background: #171a20;
+  --foreground: #edf0f5;
+  --card: #22262e;
+  --primary: #dce6f8;
+  --primary-foreground: #202b3e;
+  --secondary: #2b303a;
+  --secondary-foreground: #e2e6ee;
+  --muted: #242a34;
+  --muted-foreground: #a4aebe;
+  --accent: #2b3a53;
+  --accent-foreground: #b4cdf8;
+  --destructive: #f09bab;
+  --destructive-foreground: #371821;
+  --border: #363d48;
+  --input: #465060;
+  --ring: #9ebbf3;
+  --sidebar: #1d222b;
+  --popover: #292e38;
+  --success: #8acdb1;
+  --success-foreground: #142c23;
+  --success-light: #223c32;
+  --warning: #e8c38b;
+  --warning-foreground: #382715;
+  --warning-light: #3d3224;
+  --info: #9ebbf3;
+  --info-foreground: #1c2b43;
+  --error-light: #422a32;
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 12%);
+  --shadow-md: 0 4px 16px rgb(0 0 0 / 15%);
+  --shadow-lg: 0 10px 34px rgb(0 0 0 / 23%);
+  --shadow-xl: 0 24px 70px rgb(0 0 0 / 38%);
+  --shadow-focus: 0 0 0 3px rgb(158 187 243 / 23%);
+  --forge-glass-shell: rgb(30 35 44 / 94%);
+  --forge-glass-backdrop: rgb(5 8 14 / 54%);
+  --forge-glass-inner-highlight: inset 0 1px 0 rgb(255 255 255 / 4%);
+  --forge-column: #1e232c;
+}
+
+:root[data-theme="forge-glass"] body {
+  background: var(--background);
+  text-rendering: optimizeLegibility;
+}
+
+:root[data-theme="forge-glass"] .forge-workspace-app {
+  background: var(--background);
+}
+
+:root[data-theme="forge-glass"] :is(.forge-glass-sidebar, .forge-glass-project-tabs) {
+  background: var(--forge-glass-shell);
+  border-color: var(--border);
+  -webkit-backdrop-filter: blur(var(--forge-shell-blur));
+  backdrop-filter: blur(var(--forge-shell-blur));
+}
+
+:root[data-theme="forge-glass"] .forge-glass-sidebar-nav-item {
+  border-radius: var(--radius-md);
+  color: var(--muted-foreground);
+  transition: color var(--forge-motion-fast), background-color var(--forge-motion-fast);
+}
+
+:root[data-theme="forge-glass"] .forge-glass-sidebar-nav-item:hover {
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+:root[data-theme="forge-glass"] .forge-glass-sidebar-nav-item[data-active="true"] {
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: 600;
+}
+
+:root[data-theme="forge-glass"] :is(.forge-button, .forge-input, .forge-select, .forge-textarea) {
+  border-radius: var(--radius-md);
+}
+
+:root[data-theme="forge-glass"] :is(.forge-input, .forge-select, .forge-textarea) {
+  border-color: var(--input);
+  background: var(--card);
+}
+
+:root[data-theme="forge-glass"] :is(.forge-card, .card-surface, .surface-elevated, .forge-glass-welcome-projects) {
+  background: var(--card);
+  border-color: var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:root[data-theme="forge-glass"] .forge-glass-board {
+  background: var(--background);
+}
+
+:root[data-theme="forge-glass"] .forge-glass-board-column {
+  background: var(--forge-column);
+  border-color: var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:root[data-theme="forge-glass"] .forge-glass-board-empty {
+  background: transparent;
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:root[data-theme="forge-glass"] .task-card-enhanced:hover {
+  border-color: var(--input);
+  box-shadow: var(--shadow-sm);
+  transform: none;
+}
+
+:root[data-theme="forge-glass"] .task-running-pulse {
+  animation: none;
+  border-color: var(--info);
+}
+
+:root[data-theme="forge-glass"] :is(.forge-dialog-overlay, .forge-glass-task-overlay) {
+  background: var(--forge-glass-backdrop);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+:root[data-theme="forge-glass"] :is(.forge-dialog, .forge-fullscreen-dialog, .forge-glass-task-modal) {
+  background: var(--card);
+  border-color: var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:root[data-theme="forge-glass"] :is(.forge-glass-task-modal-header, .forge-glass-task-modal-footer) {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+:root[data-theme="forge-glass"] .forge-glass-task-modal-sidebar {
+  background: var(--background);
+  border-color: var(--border);
+}
+
+:root[data-theme="forge-glass"] :is(.forge-glass-welcome, .forge-settings-page) {
+  animation: forge-page-in var(--forge-motion-normal) var(--forge-glass-ease) both;
+}
+
+@keyframes forge-page-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* No hidden interaction depends on blur or animation. User and OS settings
+   apply equally to overlays, chrome, scrolling and inherited components. */
+:root[data-reduce-transparency="true"] {
+  --forge-glass-shell: var(--sidebar);
+  --forge-shell-blur: 0px;
+}
+:root[data-reduce-transparency="true"] :is(.forge-dialog-overlay, .forge-glass-task-overlay) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root[data-reduce-motion="true"] *,
+:root[data-reduce-motion="true"] *::before,
+:root[data-reduce-motion="true"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root[data-theme="forge-glass"] {
+    --forge-glass-shell: var(--sidebar);
+    --forge-shell-blur: 0px;
+  }
+  :root[data-theme="forge-glass"] :is(.forge-dialog-overlay, .forge-glass-task-overlay) {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

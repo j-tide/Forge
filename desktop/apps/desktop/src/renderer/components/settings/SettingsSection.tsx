@@ -12,12 +12,12 @@ interface SettingsSectionProps {
  */
 export function SettingsSection({ title, description, children }: SettingsSectionProps) {
   return (
-    <div className="space-y-6">
+    <div className="forge-settings-section space-y-5">
       <div>
-        <h3 className="text-lg font-semibold text-foreground mb-1">{title}</h3>
+        <h3 className="text-xl font-semibold tracking-tight text-foreground mb-2">{title}</h3>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
-      <Separator />
+      <Separator className="bg-border/70" />
       {children}
     </div>
   );

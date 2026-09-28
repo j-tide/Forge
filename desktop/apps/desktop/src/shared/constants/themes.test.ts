@@ -11,9 +11,9 @@ describe('Forge Glass theme defaults', () => {
       'default', 'dusk', 'lime', 'ocean', 'retro', 'neo', 'forest', 'forge-glass'
     ]));
     expect(COLOR_THEMES.find(({ id }) => id === 'forge-glass')?.previewColors).toMatchObject({
-      bg: '#E7EDF7',
+      bg: '#F5F6F8',
       accent: '#426FD0',
-      darkBg: '#172337'
+      darkBg: '#171A20'
     });
   });
 

@@ -63,9 +63,10 @@ export function ThemeSelector({ settings, onSettingsChange }: ThemeSelectorProps
           {(['system', 'light', 'dark'] as const).map((mode) => (
             <button
               key={mode}
+              aria-pressed={currentMode === mode}
               onClick={() => handleModeChange(mode)}
               className={cn(
-                'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all',
+                'flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-colors',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 currentMode === mode
                   ? 'border-primary bg-primary/5'
@@ -80,10 +81,10 @@ export function ThemeSelector({ settings, onSettingsChange }: ThemeSelectorProps
       </div>
 
       {/* Color Theme Grid */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium text-foreground">{i18n.t('uiSettings:text015')}</Label>
-        <p className="text-sm text-muted-foreground">{i18n.t('uiSettings:text016')}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+      <details className="rounded-lg border border-border bg-card p-4">
+        <summary className="cursor-pointer text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{i18n.t('uiSettings:text015')} · {i18n.t(`uiSettings:themes.${currentColorTheme}.name`, { defaultValue: currentColorTheme })}</summary>
+        <p className="mt-3 text-sm text-muted-foreground">{i18n.t('uiSettings:text016')}</p>
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {COLOR_THEMES.map((theme) => {
             const isSelected = currentColorTheme === theme.id;
             const bgColor = isDark ? theme.previewColors.darkBg : theme.previewColors.bg;
@@ -94,6 +95,7 @@ export function ThemeSelector({ settings, onSettingsChange }: ThemeSelectorProps
             return (
               <button
                 key={theme.id}
+                aria-pressed={isSelected}
                 onClick={() => handleColorThemeChange(theme.id)}
                 className={cn(
                   'relative flex flex-col p-4 rounded-lg border-2 text-left transition-all',
@@ -135,7 +137,7 @@ export function ThemeSelector({ settings, onSettingsChange }: ThemeSelectorProps
             );
           })}
         </div>
-      </div>
+      </details>
     </div>
   );
 }

@@ -31,6 +31,8 @@ export const UI_SCALE_STEP = 5;
 export const DEFAULT_APP_SETTINGS = {
   theme: 'light' as const,
   colorTheme: 'forge-glass' as const,
+  reduceMotion: false,
+  reduceTransparency: false,
   defaultModel: 'opus',
   agentFramework: 'forge',
   pythonPath: undefined as string | undefined,

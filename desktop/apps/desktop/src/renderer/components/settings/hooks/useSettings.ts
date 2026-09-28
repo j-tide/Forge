@@ -24,10 +24,14 @@ export function useSettings() {
     theme: AppSettings['theme'];
     colorTheme: AppSettings['colorTheme'];
     uiScale: number;
+    reduceMotion: boolean;
+    reduceTransparency: boolean;
   }>({
     theme: currentSettings.theme,
     colorTheme: currentSettings.colorTheme,
-    uiScale: currentSettings.uiScale ?? UI_SCALE_DEFAULT
+    uiScale: currentSettings.uiScale ?? UI_SCALE_DEFAULT,
+    reduceMotion: currentSettings.reduceMotion === true,
+    reduceTransparency: currentSettings.reduceTransparency === true,
   });
 
   // Merge only changed store fields so an immediately saved language choice
@@ -43,17 +47,22 @@ export function useSettings() {
 
   // Load settings on mount
   useEffect(() => {
-    loadSettingsFromStore();
+    // Preview changes also update the store. Capture the persisted baseline once
+    // after loading, rather than recapturing it each time a preview changes.
+    let active = true;
+    loadSettingsFromStore().then(() => {
+      if (!active) return;
+      const loaded = useSettingsStore.getState().settings;
+      originalThemeRef.current = {
+        theme: loaded.theme,
+        colorTheme: loaded.colorTheme,
+        uiScale: loaded.uiScale ?? UI_SCALE_DEFAULT,
+        reduceMotion: loaded.reduceMotion === true,
+        reduceTransparency: loaded.reduceTransparency === true,
+      };
+    });
+    return () => { active = false; };
   }, []);
-
-  // Capture original theme/scale when store values change (for revert on cancel)
-  useEffect(() => {
-    originalThemeRef.current = {
-      theme: currentSettings.theme,
-      colorTheme: currentSettings.colorTheme,
-      uiScale: currentSettings.uiScale ?? UI_SCALE_DEFAULT
-    };
-  }, [currentSettings.colorTheme, currentSettings.theme, currentSettings.uiScale]);
 
   const saveSettings = async () => {
     setIsSaving(true);
@@ -105,7 +114,9 @@ export function useSettings() {
     updateStoreSettings({
       theme: original.theme,
       colorTheme: original.colorTheme,
-      uiScale: original.uiScale
+      uiScale: original.uiScale,
+      reduceMotion: original.reduceMotion,
+      reduceTransparency: original.reduceTransparency,
     });
   }, [updateStoreSettings]);
 
@@ -117,9 +128,11 @@ export function useSettings() {
     originalThemeRef.current = {
       theme: settings.theme,
       colorTheme: settings.colorTheme,
-      uiScale: settings.uiScale ?? UI_SCALE_DEFAULT
+      uiScale: settings.uiScale ?? UI_SCALE_DEFAULT,
+      reduceMotion: settings.reduceMotion === true,
+      reduceTransparency: settings.reduceTransparency === true,
     };
-  }, [settings.theme, settings.colorTheme, settings.uiScale]);
+  }, [settings.theme, settings.colorTheme, settings.uiScale, settings.reduceMotion, settings.reduceTransparency]);
 
   return {
     settings,

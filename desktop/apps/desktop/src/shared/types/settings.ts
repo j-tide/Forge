@@ -262,6 +262,9 @@ export type MixedFeatureConfig = Record<keyof FeatureModelConfig, MixedPhaseEntr
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   colorTheme?: ColorTheme;
+  /** User appearance preferences, combined with OS accessibility preferences. */
+  reduceMotion?: boolean;
+  reduceTransparency?: boolean;
   defaultModel: string;
   agentFramework: string;
   pythonPath?: string;
@@ -362,5 +365,4 @@ export interface AppSettings {
 
 // GPU acceleration mode for terminal WebGL rendering
 export type GpuAcceleration = 'auto' | 'on' | 'off';
-
 

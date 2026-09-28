@@ -61,10 +61,10 @@ export const COLOR_THEMES: ColorThemeDefinition[] = [
     name: 'Forge Glass',
     description: 'Silver and pale blue frosted workspace',
     previewColors: {
-      bg: '#E7EDF7',
+      bg: '#F5F6F8',
       accent: '#426FD0',
-      darkBg: '#172337',
-      darkAccent: '#9AB9F2'
+      darkBg: '#171A20',
+      darkAccent: '#9EBBF3'
     }
   }
 ];

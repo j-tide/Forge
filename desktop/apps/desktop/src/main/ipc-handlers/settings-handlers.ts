@@ -434,6 +434,11 @@ export function registerSettingsHandlers(
         if (settings.language !== undefined && !isSupportedLanguage(settings.language)) {
           return { success: false, error: nativeText('language.unsupported') };
         }
+        for (const key of ['reduceMotion', 'reduceTransparency'] as const) {
+          if (settings[key] !== undefined && typeof settings[key] !== 'boolean') {
+            return { success: false, error: `Invalid appearance preference: ${key}` };
+          }
+        }
         // Load current settings using shared helper
         const savedSettings = readSettingsFile();
         const currentSettings = { ...DEFAULT_APP_SETTINGS, ...savedSettings };

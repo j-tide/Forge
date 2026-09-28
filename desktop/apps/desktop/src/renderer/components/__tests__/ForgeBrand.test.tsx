@@ -44,13 +44,13 @@ describe('Forge visual identity', () => {
     }
   });
 
-  it('brands the welcome screen without replacing project actions', () => {
+  it('keeps the welcome screen focused on working project actions', () => {
     const onOpenProject = vi.fn();
-    const { container } = render(
+    render(
       <WelcomeScreen projects={[]} onNewProject={vi.fn()} onOpenProject={onOpenProject} onSelectProject={vi.fn()} />
     );
-    expect(screen.getByRole('heading', { name: 'Welcome to Forge' })).not.toBeNull();
-    expect(container.querySelector<HTMLElement>('.forge-brand-mark')?.style.width).toBe('48px');
+    expect(screen.getByRole('heading', { name: 'Start with a project' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'New Project' })).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Open Project' }));
     expect(onOpenProject).toHaveBeenCalledOnce();
   });
