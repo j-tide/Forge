@@ -3015,7 +3015,8 @@ export function registerWorktreeHandlers(
         const worktreePath = findTaskWorktree(project.path, task.specId);
         if (!worktreePath) {
           debug('No worktree found for spec:', task.specId);
-          return { success: false, error: nativeText('ipc.noWorktreeFoundForThisTask') };
+          const error = nativeText('ipc.noWorktreeFoundForThisTask');
+          return { success: false, error, data: { success: false, error, code: 'no-worktree' } };
         }
         debug('Worktree path:', worktreePath);
 

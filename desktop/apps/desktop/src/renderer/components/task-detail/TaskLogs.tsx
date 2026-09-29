@@ -414,6 +414,8 @@ function LogEntry({ entry }: LogEntryProps) {
           {hasDetail && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
+              aria-label={uiT(isExpanded ? 'logs.hideOutput' : 'logs.showOutput')}
+              aria-expanded={isExpanded}
               className={cn(
                 'flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded shrink-0',
                 'text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors',

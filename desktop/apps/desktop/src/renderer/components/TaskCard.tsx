@@ -134,6 +134,9 @@ export const TaskCard = memo(function TaskCard({
   const { toast } = useToast();
   const [isStuck, setIsStuck] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const recoveringRef = useRef(false);
+  const archivingRef = useRef(false);
   const stuckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const isRunning = task.status === 'in_progress';
@@ -245,20 +248,62 @@ export const TaskCard = memo(function TaskCard({
 
   const handleRecover = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (recoveringRef.current) return;
+    recoveringRef.current = true;
     setIsRecovering(true);
-    // Auto-restart the task after recovery (no need to click Start again)
-    const result = await recoverStuckTask(task.id, { autoRestart: true });
-    if (result.success) {
-      setIsStuck(false);
+    try {
+      const result = await recoverStuckTask(task.id, { autoRestart: true });
+      if (result.success) {
+        setIsStuck(false);
+        if (result.autoRestarted === false) {
+          toast({
+            title: uiT('notifications.taskRecovered'),
+            description: result.message,
+            variant: 'default',
+          });
+        }
+      } else {
+        toast({
+          title: uiT('errors.recoverFailed'),
+          description: result.message || uiT('errors.recoverFailed'),
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: uiT('errors.recoverFailed'),
+        description: error instanceof Error ? error.message : uiT('errors.recoverFailed'),
+        variant: 'destructive',
+      });
+    } finally {
+      recoveringRef.current = false;
+      setIsRecovering(false);
     }
-    setIsRecovering(false);
   };
 
   const handleArchive = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const result = await archiveTasks(task.projectId, [task.id]);
-    if (!result.success) {
-      console.error('[TaskCard] Failed to archive task:', task.id, result.error);
+    if (archivingRef.current) return;
+    archivingRef.current = true;
+    setIsArchiving(true);
+    try {
+      const result = await archiveTasks(task.projectId, [task.id]);
+      if (!result.success) {
+        toast({
+          title: t('tasks:kanban.archiveFailed'),
+          description: result.error || t('tasks:kanban.archiveFailed'),
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: t('tasks:kanban.archiveFailed'),
+        description: error instanceof Error ? error.message : t('tasks:kanban.archiveFailed'),
+        variant: 'destructive',
+      });
+    } finally {
+      archivingRef.current = false;
+      setIsArchiving(false);
     }
   };
 
@@ -585,10 +630,12 @@ export const TaskCard = memo(function TaskCard({
                     size="sm"
                     className="h-7 px-2 cursor-pointer"
                     onClick={handleArchive}
+                    disabled={isArchiving}
+                    aria-busy={isArchiving}
                     title={t('tooltips.archiveTask')}
                     aria-label={t('tooltips.archiveTask')}
                   >
-                    <Archive className="h-3 w-3" />
+                    {isArchiving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Archive className="h-3 w-3" />}
                   </Button>
                 )}
               </div>
@@ -598,10 +645,12 @@ export const TaskCard = memo(function TaskCard({
                 size="sm"
                 className="h-7 px-2.5 hover:bg-muted-foreground/10"
                 onClick={handleArchive}
+                disabled={isArchiving}
+                aria-busy={isArchiving}
                 title={t('tooltips.archiveTask')}
                 aria-label={t('tooltips.archiveTask')}
               >
-                <Archive className="mr-1.5 h-3 w-3" />
+                {isArchiving ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <Archive className="mr-1.5 h-3 w-3" />}
                 {t('actions.archive')}
               </Button>
             ) : (task.status === 'backlog' || task.status === 'in_progress') && (

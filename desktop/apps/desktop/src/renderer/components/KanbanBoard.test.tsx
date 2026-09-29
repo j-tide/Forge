@@ -16,12 +16,16 @@ const mocks = vi.hoisted(() => ({
   columnPreferences: null as Record<string, { width: number; isCollapsed: boolean; isLocked: boolean }> | null,
   updateProjectSettings: vi.fn().mockResolvedValue(true),
   unregister: vi.fn(),
+  toast: vi.fn(),
+  translate: vi.fn((key: string) => key),
+  archiveTasks: vi.fn(),
+  persistTaskStatus: vi.fn(),
 }));
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
+  useTranslation: () => ({ t: mocks.translate, i18n: { language: 'en' } }),
 }));
-vi.mock('../hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
+vi.mock('../hooks/use-toast', () => ({ useToast: () => ({ toast: mocks.toast }) }));
 vi.mock('../stores/project-store', () => ({
   useProjectStore: (selector: (state: unknown) => unknown) => selector({ projects: [
     { id: 'empty-project', settings: { maxParallelTasks: 4 } },
@@ -54,9 +58,9 @@ vi.mock('../stores/task-store', () => {
   };
   return {
     useTaskStore: Object.assign((selector: (value: unknown) => unknown) => selector(state), { getState: () => state }),
-    persistTaskStatus: vi.fn(),
+    persistTaskStatus: mocks.persistTaskStatus,
     forceCompleteTask: vi.fn(),
-    archiveTasks: vi.fn(),
+    archiveTasks: mocks.archiveTasks,
     deleteTasks: vi.fn(),
     isQueueAtCapacity: vi.fn(),
     DEFAULT_MAX_PARALLEL_TASKS: 3,
@@ -75,6 +79,53 @@ beforeEach(() => {
   cleanup();
   vi.clearAllMocks();
   mocks.columnPreferences = null;
+  mocks.archiveTasks.mockReset();
+  mocks.persistTaskStatus.mockReset();
+});
+
+const actionTask = (id: string, status: Task['status']): Task => ({
+  id, specId: id, projectId: 'empty-project', title: id, description: '', status,
+  subtasks: [], logs: [], createdAt: new Date(), updatedAt: new Date(),
+});
+
+describe('KanbanBoard bulk action results', () => {
+  it('shows archive failure and leaves tasks available to retry', async () => {
+    mocks.archiveTasks.mockResolvedValueOnce({ success: false, error: 'Storage unavailable' }).mockResolvedValueOnce({ success: true });
+    render(board({ tasks: [actionTask('done-1', 'done')], projectId: 'empty-project' }));
+    const archive = screen.getByRole('button', { name: 'tooltips.archiveAllDone' });
+    fireEvent.click(archive);
+    await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith({ title: 'kanban.archiveFailed', description: 'Storage unavailable', variant: 'destructive' }));
+    expect(screen.getByText('done-1')).toBeInTheDocument();
+    fireEvent.click(archive);
+    await waitFor(() => expect(mocks.archiveTasks).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mocks.toast).toHaveBeenLastCalledWith({ title: 'kanban.archiveSuccess' }));
+  });
+
+  it('reports partial queue failures instead of a success message', async () => {
+    mocks.persistTaskStatus.mockResolvedValueOnce({ success: true }).mockResolvedValueOnce({ success: false });
+    render(board({ tasks: [actionTask('first', 'backlog'), actionTask('second', 'backlog')], projectId: 'empty-project' }));
+    fireEvent.click(screen.getByRole('button', { name: 'queue.queueAll' }));
+    await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith({ title: 'queue.queueAllFailed', description: 'queue.queueAllResult', variant: 'destructive' }));
+    expect(mocks.translate).toHaveBeenCalledWith('queue.queueAllResult', { completed: 1, failed: 1 });
+    expect(mocks.persistTaskStatus).toHaveBeenNthCalledWith(1, 'first', 'queue');
+    expect(mocks.persistTaskStatus).toHaveBeenNthCalledWith(2, 'second', 'queue');
+    expect(mocks.toast).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'queue.queueAllSuccess' }));
+  });
+
+  it('counts transport rejection as failure and continues remaining queue moves', async () => {
+    mocks.persistTaskStatus.mockRejectedValueOnce(new Error('IPC unavailable')).mockResolvedValueOnce({ success: true });
+    render(board({ tasks: [actionTask('first', 'backlog'), actionTask('second', 'backlog')], projectId: 'empty-project' }));
+    fireEvent.click(screen.getByRole('button', { name: 'queue.queueAll' }));
+    await waitFor(() => expect(mocks.translate).toHaveBeenCalledWith('queue.queueAllResult', { completed: 1, failed: 1 }));
+    expect(mocks.persistTaskStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports complete queue failure with zero completed tasks', async () => {
+    mocks.persistTaskStatus.mockResolvedValue({ success: false });
+    render(board({ tasks: [actionTask('first', 'backlog')], projectId: 'empty-project' }));
+    fireEvent.click(screen.getByRole('button', { name: 'queue.queueAll' }));
+    await waitFor(() => expect(mocks.translate).toHaveBeenCalledWith('queue.queueAllResult', { completed: 0, failed: 1 }));
+  });
 });
 
 describe('KanbanBoard active project identity', () => {

@@ -33,6 +33,7 @@ function sortableTaskCardPropsAreEqual(
 }
 
 export const SortableTaskCard = memo(function SortableTaskCard({ task, onClick, onStatusChange, isSelectable, isSelected, onToggleSelect }: SortableTaskCardProps) {
+  const isDragDisabled = task.status === 'in_progress';
   const {
     attributes,
     listeners,
@@ -43,7 +44,7 @@ export const SortableTaskCard = memo(function SortableTaskCard({ task, onClick, 
     isOver
   } = useSortable({
     id: task.id,
-    disabled: task.status === 'in_progress' // Prevent dragging tasks that are currently running or stuck
+    disabled: isDragDisabled // Prevent dragging tasks that are currently running or stuck
   });
 
   const style = {
@@ -58,6 +59,8 @@ export const SortableTaskCard = memo(function SortableTaskCard({ task, onClick, 
     onClick();
   }, [onClick]);
 
+  // Disabled draggable semantics also disable descendant actions for assistive
+  // technology. Keep the wrapper plain while the hook still prevents dragging.
   return (
     <div
       ref={setNodeRef}
@@ -67,8 +70,8 @@ export const SortableTaskCard = memo(function SortableTaskCard({ task, onClick, 
         isDragging && 'dragging-placeholder opacity-40 scale-[0.98]',
         isOver && !isDragging && 'ring-2 ring-primary/30 ring-offset-2 ring-offset-background rounded-xl'
       )}
-      {...attributes}
-      {...listeners}
+      {...(isDragDisabled ? {} : attributes)}
+      {...(isDragDisabled ? {} : listeners)}
     >
       <TaskCard
         task={task}

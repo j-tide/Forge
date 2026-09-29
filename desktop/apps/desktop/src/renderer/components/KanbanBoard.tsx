@@ -961,7 +961,13 @@ export function KanbanBoard({ tasks, projectId: activeProjectId, onTaskClick, on
 
     const result = await archiveTasks(projectId, doneTaskIds);
     if (!result.success) {
-      console.error('[KanbanBoard] Failed to archive tasks:', result.error);
+      toast({
+        title: t('kanban.archiveFailed'),
+        description: result.error || t('common:errors.unknownError'),
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: t('kanban.archiveSuccess', { count: doneTaskIds.length }) });
     }
   };
 
@@ -1080,12 +1086,17 @@ export function KanbanBoard({ tasks, projectId: activeProjectId, onTaskClick, on
     if (backlogTasks.length === 0) return;
 
     let movedCount = 0;
+    let failedCount = 0;
     for (const task of backlogTasks) {
-      const result = await persistTaskStatus(task.id, 'queue');
-      if (result.success) {
-        movedCount++;
-      } else {
-        console.error(`[Queue] Failed to move task ${task.id} to queue:`, result.error);
+      try {
+        const result = await persistTaskStatus(task.id, 'queue');
+        if (result.success) {
+          movedCount++;
+        } else {
+          failedCount++;
+        }
+      } catch {
+        failedCount++;
       }
     }
 
@@ -1093,8 +1104,9 @@ export function KanbanBoard({ tasks, projectId: activeProjectId, onTaskClick, on
     await processQueue();
 
     toast({
-      title: t('queue.queueAllSuccess', { count: movedCount }),
-      variant: 'default'
+      title: failedCount > 0 ? t('queue.queueAllFailed') : t('queue.queueAllSuccess', { count: movedCount }),
+      ...(failedCount > 0 && { description: t('queue.queueAllResult', { completed: movedCount, failed: failedCount }) }),
+      variant: failedCount > 0 ? 'destructive' : 'default',
     });
   };
 

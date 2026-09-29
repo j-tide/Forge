@@ -30,10 +30,10 @@ import { useTaskStore } from '../stores/task-store';
  * Check if an error message indicates a worktree-related issue (missing worktree, no branch, etc.)
  * This is used to show 'skipped' status instead of 'error' for tasks without worktrees.
  *
- * TODO: This string-based error detection is brittle. The API should ideally return typed error codes
- * instead of relying on message parsing which may break with i18n or message changes.
+ * Prefer the locale-independent result code. Keep message detection for older runtimes.
  */
-function isWorktreeRelatedError(errorMsg: string): boolean {
+function isWorktreeRelatedError(errorMsg: string, code?: WorktreeCreatePRResult['code']): boolean {
+  if (code === 'no-worktree') return true;
   const lowerMsg = errorMsg.toLowerCase();
   return lowerMsg.includes('worktree') ||
          lowerMsg.includes('no branch') ||
@@ -80,6 +80,8 @@ export function BulkPRDialog({
   const [taskResults, setTaskResults] = useState<TaskPRResult[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const isCancelledRef = useRef(false);
+  const operationRef = useRef(0);
+  const isCreatingRef = useRef(false);
 
   const prevOpenRef = useRef(open);
 
@@ -88,12 +90,19 @@ export function BulkPRDialog({
     const wasOpen = prevOpenRef.current;
     prevOpenRef.current = open;
 
+    if (!open && wasOpen) {
+      isCancelledRef.current = true;
+      operationRef.current += 1;
+      isCreatingRef.current = false;
+    }
     if (open && !wasOpen) {
       setTargetBranch('');
       setIsDraft(false);
       setStep('options');
       setCurrentIndex(0);
       isCancelledRef.current = false;
+      operationRef.current += 1;
+      isCreatingRef.current = false;
       setTaskResults(tasks.map(task => ({
         taskId: task.id,
         taskTitle: task.title,
@@ -101,6 +110,11 @@ export function BulkPRDialog({
       })));
     }
   }, [open, tasks]);
+
+  useEffect(() => () => {
+    isCancelledRef.current = true;
+    operationRef.current += 1;
+  }, []);
 
   // Validation
   const validateBranchName = useCallback((branch: string): string | null => {
@@ -110,8 +124,10 @@ export function BulkPRDialog({
     }
     return null;
   }, [t]);
+  const branchError = validateBranchName(targetBranch);
 
   const handleCreatePRs = useCallback(async () => {
+    if (isCreatingRef.current) return;
     const branchError = validateBranchName(targetBranch);
     if (branchError) {
       return;
@@ -119,6 +135,9 @@ export function BulkPRDialog({
 
     setStep('creating');
     isCancelledRef.current = false;
+    isCreatingRef.current = true;
+    const operation = ++operationRef.current;
+    const isCancelled = () => isCancelledRef.current || operationRef.current !== operation;
 
     const results: TaskPRResult[] = tasks.map(task => ({
       taskId: task.id,
@@ -128,7 +147,7 @@ export function BulkPRDialog({
     setTaskResults(results);
 
     for (let i = 0; i < tasks.length; i++) {
-      if (isCancelledRef.current) break;
+      if (isCancelled()) break;
 
       setCurrentIndex(i);
 
@@ -142,17 +161,18 @@ export function BulkPRDialog({
           draft: isDraft
         });
 
-        if (isCancelledRef.current) break;
+        if (isCancelled()) break;
 
         if (prResult?.success && prResult.data) {
           const data = prResult.data;
+          const noWorktree = !data.success && isWorktreeRelatedError(data.error || '', data.code);
           setTaskResults(prev => prev.map((r, idx) =>
             idx === i ? {
               ...r,
-              status: data.success ? 'success' as const : 'error' as const,
+              status: data.success ? 'success' as const : noWorktree ? 'skipped' as const : 'error' as const,
               result: data,
               alreadyExists: data.alreadyExists,
-              error: data.success ? undefined : (data.error || t('taskReview:pr.errors.unknown'))
+              error: data.success ? undefined : noWorktree ? t('taskReview:bulkPR.noWorktree') : (data.error || t('taskReview:pr.errors.unknown'))
             } : r
           ));
 
@@ -166,18 +186,19 @@ export function BulkPRDialog({
           }
         } else {
           const errorMsg = prResult?.error || '';
+          const noWorktree = isWorktreeRelatedError(errorMsg, prResult?.data?.code);
           setTaskResults(prev => prev.map((r, idx) =>
             idx === i ? {
               ...r,
-              status: isWorktreeRelatedError(errorMsg) ? 'skipped' as const : 'error' as const,
-              error: isWorktreeRelatedError(errorMsg)
+              status: noWorktree ? 'skipped' as const : 'error' as const,
+              error: noWorktree
                 ? t('taskReview:bulkPR.noWorktree')
                 : (prResult?.error || t('taskReview:pr.errors.unknown'))
             } : r
           ));
         }
       } catch (err) {
-        if (isCancelledRef.current) break;
+        if (isCancelled()) break;
 
         const errorMsg = err instanceof Error ? err.message : '';
         setTaskResults(prev => prev.map((r, idx) =>
@@ -192,13 +213,18 @@ export function BulkPRDialog({
       }
     }
 
-    if (!isCancelledRef.current) {
+    if (!isCancelled()) {
+      isCreatingRef.current = false;
       setStep('results');
     }
   }, [tasks, targetBranch, isDraft, t, validateBranchName]);
 
   const handleClose = () => {
+    // A dispatched PR request may still finish; prevent subsequent requests and
+    // ignore its result if this dialog closes or begins a newer operation.
     isCancelledRef.current = true;
+    operationRef.current += 1;
+    isCreatingRef.current = false;
     if (step === 'results' && onComplete) {
       onComplete();
     }
@@ -219,7 +245,10 @@ export function BulkPRDialog({
   const progress = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (nextOpen) onOpenChange(true);
+      else handleClose();
+    }}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -266,10 +295,17 @@ export function BulkPRDialog({
                   value={targetBranch}
                   onChange={(e) => setTargetBranch(e.target.value)}
                   placeholder="main"
+                  aria-invalid={!!branchError}
+                  aria-describedby={branchError ? 'bulkTargetBranchError' : 'bulkTargetBranchHint'}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p id="bulkTargetBranchHint" className="text-xs text-muted-foreground">
                   {t('taskReview:bulkPR.targetBranchHint')}
                 </p>
+                {branchError && (
+                  <p id="bulkTargetBranchError" role="alert" className="text-xs text-destructive">
+                    {branchError}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
@@ -288,7 +324,7 @@ export function BulkPRDialog({
               <Button variant="outline" onClick={handleClose}>
                 {t('common:buttons.cancel')}
               </Button>
-              <Button onClick={handleCreatePRs} disabled={tasks.length === 0 || step !== 'options'}>
+              <Button onClick={handleCreatePRs} disabled={tasks.length === 0 || !!branchError || step !== 'options'}>
                 <GitPullRequest className="mr-2 h-4 w-4" />
                 {t('taskReview:bulkPR.createAll', { count: tasks.length })}
               </Button>

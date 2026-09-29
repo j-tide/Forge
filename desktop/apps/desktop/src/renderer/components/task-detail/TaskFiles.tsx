@@ -34,7 +34,7 @@ function getFileIcon(filename: string) {
 }
 
 export function TaskFiles({ task }: TaskFilesProps) {
-  const { t } = useTranslation(['tasks', 'common']);
+  const { t } = useTranslation(['tasks', 'common', 'uiTasks']);
   const { settings } = useSettingsStore();
 
   // State for file listing
@@ -48,18 +48,30 @@ export function TaskFiles({ task }: TaskFilesProps) {
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [contentError, setContentError] = useState<string | null>(null);
 
+  // Opening the IDE is an explicit user action with its own pending/error state.
+  const [isOpeningIDE, setIsOpeningIDE] = useState(false);
+  const [openIDEError, setOpenIDEError] = useState<string | null>(null);
+
   // Ref for keyboard navigation
   const fileListRef = useRef<HTMLDivElement>(null);
+  const filesRequestRef = useRef(0);
+  const contentRequestRef = useRef(0);
+  const ideRequestRef = useRef(0);
+  const specsPathRef = useRef(task.specsPath);
+  const selectedFileRef = useRef<string | null>(null);
+  const openingIDERef = useRef(false);
 
   // Load files from spec directory
   const loadFiles = useCallback(async () => {
     if (!task.specsPath) return;
 
+    const request = ++filesRequestRef.current;
     setIsLoadingFiles(true);
     setFilesError(null);
 
     try {
       const result = await window.electronAPI.listDirectory(task.specsPath);
+      if (request !== filesRequestRef.current || task.specsPath !== specsPathRef.current) return;
       if (!result.success || !result.data) {
         throw new Error(result.error || t('tasks:files.errorLoading'));
       }
@@ -77,15 +89,28 @@ export function TaskFiles({ task }: TaskFilesProps) {
       });
 
       setFiles(filteredFiles);
+      if (selectedFileRef.current && !filteredFiles.some(file => file.path === selectedFileRef.current)) {
+        ++contentRequestRef.current;
+        selectedFileRef.current = null;
+        setSelectedFile(null);
+        setFileContent(null);
+        setContentError(null);
+        setIsLoadingContent(false);
+      }
     } catch (err) {
-      setFilesError(err instanceof Error ? err.message : t('common:errors.unknownError'));
+      if (request === filesRequestRef.current) {
+        setFilesError(err instanceof Error && err.message ? err.message : t('tasks:files.errorLoading'));
+      }
     } finally {
-      setIsLoadingFiles(false);
+      if (request === filesRequestRef.current) setIsLoadingFiles(false);
     }
   }, [task.specsPath, t]);
 
   // Load file content
   const loadFileContent = useCallback(async (filePath: string) => {
+    const specsPath = task.specsPath;
+    const request = ++contentRequestRef.current;
+    selectedFileRef.current = filePath;
     setSelectedFile(filePath);
     setIsLoadingContent(true);
     setContentError(null);
@@ -93,23 +118,44 @@ export function TaskFiles({ task }: TaskFilesProps) {
 
     try {
       const result = await window.electronAPI.readFile(filePath);
+      if (request !== contentRequestRef.current || specsPath !== specsPathRef.current) return;
       if (!result.success || result.data === undefined) {
         throw new Error(result.error || t('tasks:files.errorLoadingContent'));
       }
       setFileContent(result.data);
     } catch (err) {
-      setContentError(err instanceof Error ? err.message : t('common:errors.unknownError'));
+      if (request === contentRequestRef.current) {
+        setContentError(err instanceof Error && err.message ? err.message : t('tasks:files.errorLoadingContent'));
+      }
     } finally {
-      setIsLoadingContent(false);
+      if (request === contentRequestRef.current) setIsLoadingContent(false);
     }
-  }, [t]);
+  }, [task.specsPath, t]);
 
   // Reset state when task.specsPath changes
   useEffect(() => {
+    specsPathRef.current = task.specsPath;
+    ++filesRequestRef.current;
+    ++contentRequestRef.current;
+    ++ideRequestRef.current;
+    selectedFileRef.current = null;
+    openingIDERef.current = false;
+    setFiles([]);
+    setFilesError(null);
+    setIsLoadingFiles(false);
     setSelectedFile(null);
     setFileContent(null);
     setContentError(null);
-  }, []);
+    setIsLoadingContent(false);
+    setIsOpeningIDE(false);
+    setOpenIDEError(null);
+    return () => {
+      ++filesRequestRef.current;
+      ++contentRequestRef.current;
+      ++ideRequestRef.current;
+      openingIDERef.current = false;
+    };
+  }, [task.specsPath]);
 
   // Load files on mount and when specsPath changes
   useEffect(() => {
@@ -121,28 +167,41 @@ export function TaskFiles({ task }: TaskFilesProps) {
     if (files.length > 0 && selectedFile === null) {
       loadFileContent(files[0].path);
     }
-    // Only run when files change, not on selectedFile changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files, loadFileContent, selectedFile]);
 
   // Open spec directory in IDE
   const handleOpenInIDE = useCallback(async () => {
-    if (!settings.preferredIDE || !task.specsPath) return;
+    if (!settings.preferredIDE || !task.specsPath || openingIDERef.current) return;
 
+    const request = ++ideRequestRef.current;
+    openingIDERef.current = true;
+    setIsOpeningIDE(true);
+    setOpenIDEError(null);
     try {
-      await window.electronAPI.worktreeOpenInIDE(
+      const result = await window.electronAPI.worktreeOpenInIDE(
         task.specsPath,
         settings.preferredIDE,
         settings.customIDEPath
       );
+      if (request !== ideRequestRef.current || task.specsPath !== specsPathRef.current) return;
+      if (!result.success || result.data?.opened !== true) {
+        setOpenIDEError(result.error || t('uiTasks:errors.openIDEFailed'));
+      }
     } catch (err) {
-      console.error('Failed to open in IDE:', err);
+      if (request === ideRequestRef.current) {
+        setOpenIDEError(err instanceof Error && err.message ? err.message : t('uiTasks:errors.openIDEFailed'));
+      }
+    } finally {
+      if (request === ideRequestRef.current) {
+        openingIDERef.current = false;
+        setIsOpeningIDE(false);
+      }
     }
-  }, [settings.preferredIDE, settings.customIDEPath, task.specsPath]);
+  }, [settings.preferredIDE, settings.customIDEPath, task.specsPath, t]);
 
   // Keyboard navigation for file list
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (files.length === 0) return;
+    if (files.length === 0 || isLoadingFiles || filesError) return;
 
     const currentIndex = selectedFile
       ? files.findIndex(f => f.path === selectedFile)
@@ -170,7 +229,7 @@ export function TaskFiles({ task }: TaskFilesProps) {
         loadFileContent(files[files.length - 1].path);
         break;
     }
-  }, [files, selectedFile, loadFileContent]);
+  }, [files, selectedFile, loadFileContent, isLoadingFiles, filesError]);
 
   // Handle no specsPath
   if (!task.specsPath) {
@@ -212,7 +271,10 @@ export function TaskFiles({ task }: TaskFilesProps) {
         <div className="h-full flex items-center justify-center">
           <div className="text-center">
             <AlertCircle className="h-8 w-8 mx-auto mb-2 text-destructive" />
-            <p className="text-sm text-destructive mb-2">{t('tasks:files.errorLoadingContent')}</p>
+            <div role="alert" className="text-sm text-destructive mb-2">
+              <p>{t('tasks:files.errorLoadingContent')}</p>
+              {contentError !== t('tasks:files.errorLoadingContent') && <p className="text-xs mt-1">{contentError}</p>}
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -275,6 +337,7 @@ export function TaskFiles({ task }: TaskFilesProps) {
             className="h-6 w-6"
             onClick={loadFiles}
             disabled={isLoadingFiles}
+            aria-label={t('common:buttons.refresh')}
           >
             <RefreshCw className={cn("h-3 w-3", isLoadingFiles && "animate-spin")} />
           </Button>
@@ -295,7 +358,10 @@ export function TaskFiles({ task }: TaskFilesProps) {
             ) : filesError ? (
               <div className="text-center py-4">
                 <AlertCircle className="h-5 w-5 mx-auto mb-2 text-destructive" />
-                <p className="text-xs text-destructive mb-2">{t('tasks:files.errorLoading')}</p>
+                <div role="alert" className="text-xs text-destructive mb-2">
+                  <p>{t('tasks:files.errorLoading')}</p>
+                  {filesError !== t('tasks:files.errorLoading') && <p className="mt-1">{filesError}</p>}
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
@@ -354,8 +420,11 @@ export function TaskFiles({ task }: TaskFilesProps) {
                     size="icon"
                     className="h-7 w-7"
                     onClick={handleOpenInIDE}
+                    aria-label={t('tasks:files.openInIDE')}
+                    aria-busy={isOpeningIDE}
+                    disabled={isOpeningIDE}
                   >
-                    <ExternalLink className="h-4 w-4" />
+                    {isOpeningIDE ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -365,6 +434,7 @@ export function TaskFiles({ task }: TaskFilesProps) {
             )}
           </div>
         )}
+        {openIDEError && <p role="alert" className="px-4 py-2 text-sm text-destructive">{openIDEError}</p>}
         <ScrollArea className="flex-1">
           {renderContent()}
         </ScrollArea>

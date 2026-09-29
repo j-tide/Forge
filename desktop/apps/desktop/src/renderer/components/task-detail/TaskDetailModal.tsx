@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useToast } from '../../hooks/use-toast';
@@ -83,14 +83,69 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
   const { t: uiT } = useTranslation('uiTasks');
   const { toast } = useToast();
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const resumePendingRef = useRef(false);
+  const resumeRequestIdRef = useRef(0);
+  const [isResumingPausedTask, setIsResumingPausedTask] = useState(false);
+  const [resumeRequestedTaskId, setResumeRequestedTaskId] = useState<string | null>(null);
+  const [resumeError, setResumeError] = useState<{ taskId: string; message: string } | null>(null);
   const state = useTaskDetail({ task });
   const activeProject = useProjectStore(s => s.getActiveProject());
   const showFilesTab = isFilesTabEnabled();
   const progressPercent = calculateProgress(task.subtasks);
   const completedSubtasks = task.subtasks.filter(s => s.status === 'completed').length;
   const totalSubtasks = task.subtasks.length;
+  const executionPhase = task.executionProgress?.phase;
+  const isPaused = executionPhase === 'rate_limit_paused' || executionPhase === 'auth_failure_paused';
+  const isAwaitingResume = resumeRequestedTaskId === task.id;
+  const resumeIdentityRef = useRef({ taskId: task.id, phase: executionPhase });
+
+  // A new execution phase starts a new pause episode and invalidates any late reply from the old one.
+  useEffect(() => {
+    const previous = resumeIdentityRef.current;
+    if (previous.taskId === task.id && previous.phase === executionPhase) return;
+    resumeIdentityRef.current = { taskId: task.id, phase: executionPhase };
+    resumeRequestIdRef.current += 1;
+    resumePendingRef.current = false;
+    setIsResumingPausedTask(false);
+    setResumeRequestedTaskId(null);
+    setResumeError(null);
+  }, [task.id, executionPhase]);
 
   // Event Handlers
+  const handleResumePausedTask = async () => {
+    if (!isPaused || state.isStuck || resumePendingRef.current || isAwaitingResume) return;
+    const requestId = ++resumeRequestIdRef.current;
+    resumePendingRef.current = true;
+    setIsResumingPausedTask(true);
+    try {
+      const result = await window.electronAPI.resumePausedTask(task.id);
+      if (resumeRequestIdRef.current !== requestId) return;
+      if (result.success) {
+        setResumeRequestedTaskId(task.id);
+        setResumeError(null);
+        toast({
+          title: uiT('notifications.taskResumeRequested'),
+          description: uiT('notifications.taskResumePending'),
+          variant: 'default',
+        });
+      } else {
+        const message = result.error || uiT('errors.resumeFailed');
+        setResumeError({ taskId: task.id, message });
+        toast({ title: uiT('errors.resumeFailed'), description: message, variant: 'destructive' });
+      }
+    } catch (error) {
+      if (resumeRequestIdRef.current !== requestId) return;
+      const message = error instanceof Error && error.message ? error.message : uiT('errors.resumeFailed');
+      setResumeError({ taskId: task.id, message });
+      toast({ title: uiT('errors.resumeFailed'), description: message, variant: 'destructive' });
+    } finally {
+      if (resumeRequestIdRef.current === requestId) {
+        resumePendingRef.current = false;
+        setIsResumingPausedTask(false);
+      }
+    }
+  };
+
   const handleStartStop = async () => {
     if (state.isRunning && !state.isStuck) {
       stopTask(task.id);
@@ -100,7 +155,7 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
         const isValid = await state.reloadPlanForIncompleteTask();
         if (!isValid) {
           toast({
-            title: 'Cannot Resume Task',
+            title: uiT('errors.cannotResume'),
             description: uiT('errors.planLoadFailed'),
             variant: 'destructive',
             duration: 5000,
@@ -122,25 +177,65 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
   };
 
   const handleRecover = async () => {
+    if (state.isRecovering) return;
     state.setIsRecovering(true);
-    const result = await recoverStuckTask(task.id, { autoRestart: true });
-    if (result.success) {
-      state.setIsStuck(false);
-      state.setHasCheckedRunning(false);
+    try {
+      const result = await recoverStuckTask(task.id, { autoRestart: true });
+      if (result.success) {
+        state.setIsStuck(false);
+        state.setHasCheckedRunning(false);
+        if (result.autoRestarted === false) {
+          toast({
+            title: uiT('notifications.taskRecovered'),
+            description: result.message,
+            variant: 'default',
+          });
+        }
+      } else {
+        toast({
+          title: uiT('errors.recoverFailed'),
+          description: result.message || uiT('errors.recoverFailed'),
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: uiT('errors.recoverFailed'),
+        description: error instanceof Error ? error.message : uiT('errors.recoverFailed'),
+        variant: 'destructive',
+      });
+    } finally {
+      state.setIsRecovering(false);
     }
-    state.setIsRecovering(false);
   };
 
   const handleReject = async () => {
     // Allow submission if there's text feedback OR images attached
-    if (!state.feedback.trim() && state.feedbackImages.length === 0) {
+    if (state.isSubmitting || (!state.feedback.trim() && state.feedbackImages.length === 0)) {
       return;
     }
     state.setIsSubmitting(true);
-    await submitReview(task.id, false, state.feedback, state.feedbackImages);
-    state.setIsSubmitting(false);
-    state.setFeedback('');
-    state.setFeedbackImages([]);
+    try {
+      const success = await submitReview(task.id, false, state.feedback, state.feedbackImages);
+      if (success) {
+        state.setFeedback('');
+        state.setFeedbackImages([]);
+      } else {
+        toast({
+          title: uiT('errors.reviewFailed'),
+          description: uiT('errors.reviewRetry'),
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: uiT('errors.reviewFailed'),
+        description: error instanceof Error ? error.message : uiT('errors.reviewRetry'),
+        variant: 'destructive',
+      });
+    } finally {
+      state.setIsSubmitting(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -187,16 +282,26 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
   };
 
   const handleDiscard = async () => {
+    if (state.isDiscarding) return;
     state.setIsDiscarding(true);
     state.setWorkspaceError(null);
-    const result = await window.electronAPI.discardWorktree(task.id);
-    if (result.success && result.data?.success) {
-      state.setShowDiscardDialog(false);
-      onOpenChange(false);
-    } else {
-      state.setWorkspaceError(result.data?.message || result.error || uiT('errors.discardFailed'));
+    try {
+      const result = await window.electronAPI.discardWorktree(task.id);
+      if (result.success && result.data?.success) {
+        state.setShowDiscardDialog(false);
+        onOpenChange(false);
+      } else {
+        const message = result.data?.message || result.error || uiT('errors.discardFailed');
+        state.setWorkspaceError(message);
+        toast({ title: uiT('errors.discardFailed'), description: message, variant: 'destructive' });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : uiT('errors.discardFailed');
+      state.setWorkspaceError(message);
+      toast({ title: uiT('errors.discardFailed'), description: message, variant: 'destructive' });
+    } finally {
+      state.setIsDiscarding(false);
     }
-    state.setIsDiscarding(false);
   };
 
   const handleCreatePR = async (options: WorktreeCreatePROptions) => {
@@ -225,7 +330,7 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
 
   const handleClose = () => {
     // Show toast notification if task is running
-    if (state.isRunning && !state.isStuck) {
+    if (state.isRunning && !state.isStuck && !isPaused) {
       toast({
         title: t('tasks:notifications.backgroundTaskTitle'),
         description: t('tasks:notifications.backgroundTaskDescription'),
@@ -252,6 +357,27 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
 
   // Render primary action button based on state
   const renderPrimaryAction = () => {
+    if (isPaused && !state.isStuck) {
+      return (
+        <div className="flex flex-col items-end gap-2 max-w-sm">
+          <Button
+            onClick={handleResumePausedTask}
+            disabled={isResumingPausedTask || isAwaitingResume}
+            aria-busy={isResumingPausedTask}
+          >
+            {isResumingPausedTask ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{uiT('actions.resumingPausedTask')}</>
+            ) : (
+              <><Play className="mr-2 h-4 w-4" />{uiT(isAwaitingResume ? 'actions.awaitingResume' : 'actions.resumePausedTask')}</>
+            )}
+          </Button>
+          {resumeError?.taskId === task.id && (
+            <p role="alert" className="text-sm text-destructive">{resumeError.message}</p>
+          )}
+        </div>
+      );
+    }
+
     if (state.isStuck) {
       return (
         <Button

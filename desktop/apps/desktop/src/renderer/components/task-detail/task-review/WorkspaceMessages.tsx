@@ -48,12 +48,19 @@ export function NoWorkspaceMessage({ task, onClose }: NoWorkspaceMessageProps) {
     if (!task) return;
 
     setIsMarkingDone(true);
+    setError(null);
+    setNotice(null);
     try {
-      await persistTaskStatus(task.id, 'done');
+      const result = await persistTaskStatus(task.id, 'done');
+      if (!result.success) {
+        setError(result.error || t('taskReview:stagedSuccess.errors.failedToMarkAsDone'));
+        return;
+      }
       // Auto-close modal after marking as done
       onClose?.();
     } catch (err) {
       console.error('Error marking task as done:', err);
+      setError(err instanceof Error && err.message ? err.message : t('taskReview:stagedSuccess.errors.failedToMarkAsDone'));
     } finally {
       setIsMarkingDone(false);
     }
@@ -136,7 +143,7 @@ export function NoWorkspaceMessage({ task, onClose }: NoWorkspaceMessageProps) {
       )}
 
       {error && (
-        <p className="text-xs text-destructive mt-2">{error}</p>
+        <p role="alert" className="text-xs text-destructive mt-2">{error}</p>
       )}
       {notice && (
         <p className="text-xs text-muted-foreground mt-2">{notice}</p>

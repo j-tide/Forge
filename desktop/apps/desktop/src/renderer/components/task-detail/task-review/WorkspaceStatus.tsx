@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import {
   GitBranch,
   FileCode,
@@ -110,11 +110,15 @@ export function WorkspaceStatus({
   onSwitchToTerminals,
   onOpenInbuiltTerminal
 }: WorkspaceStatusProps) {
-  const { t } = useTranslation(['taskReview', 'common', 'tasks']);
+  const { t } = useTranslation(['taskReview', 'common', 'tasks', 'native']);
   const { t: uiT } = useTranslation('uiTasks');
+  const stageOnlyNoticeId = useId();
   const { settings } = useSettingsStore();
   const preferredIDE = settings.preferredIDE || 'vscode';
   const preferredTerminal = settings.preferredTerminal || 'system';
+  const [openPending, setOpenPending] = useState<'ide' | 'terminal' | null>(null);
+  const [openError, setOpenError] = useState<'ide' | 'terminal' | null>(null);
+  const openInFlightRef = useRef(false);
 
   // Merge progress state
   const [mergeProgress, setMergeProgress] = useState<MergeProgress | null>(null);
@@ -228,31 +232,26 @@ export function WorkspaceStatus({
     };
   }, []);
 
-  const handleOpenInIDE = async () => {
-    if (!worktreeStatus.worktreePath) return;
+  const handleOpenWorkspace = async (target: 'ide' | 'terminal') => {
+    if (!worktreeStatus.worktreePath || openInFlightRef.current) return;
+    openInFlightRef.current = true;
+    setOpenPending(target);
+    setOpenError(null);
     try {
-      await window.electronAPI.worktreeOpenInIDE(
-        worktreeStatus.worktreePath,
-        preferredIDE,
-        settings.customIDEPath
-      );
-    } catch (err) {
-      console.error('Failed to open in IDE:', err);
+      const result = target === 'ide'
+        ? await window.electronAPI.worktreeOpenInIDE(worktreeStatus.worktreePath, preferredIDE, settings.customIDEPath)
+        : await window.electronAPI.worktreeOpenInTerminal(worktreeStatus.worktreePath, preferredTerminal, settings.customTerminalPath);
+      if (!result.success || result.data?.opened === false) setOpenError(target);
+    } catch {
+      setOpenError(target);
+    } finally {
+      openInFlightRef.current = false;
+      setOpenPending(null);
     }
   };
 
-  const handleOpenInTerminal = async () => {
-    if (!worktreeStatus.worktreePath) return;
-    try {
-      await window.electronAPI.worktreeOpenInTerminal(
-        worktreeStatus.worktreePath,
-        preferredTerminal,
-        settings.customTerminalPath
-      );
-    } catch (err) {
-      console.error('Failed to open in terminal:', err);
-    }
-  };
+  const handleOpenInIDE = () => handleOpenWorkspace('ide');
+  const handleOpenInTerminal = () => handleOpenWorkspace('terminal');
 
   const hasGitConflicts = mergePreview?.gitConflicts?.hasConflicts;
   const hasUncommittedChanges = mergePreview?.uncommittedChanges?.hasChanges;
@@ -344,18 +343,22 @@ export function WorkspaceStatus({
               variant="outline"
               size="sm"
               onClick={handleOpenInIDE}
+              disabled={openPending !== null}
+              aria-busy={openPending === 'ide'}
               className="h-7 px-2 text-xs"
             >
-              <Code className="h-3.5 w-3.5 mr-1" />
+              {openPending === 'ide' ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Code className="h-3.5 w-3.5 mr-1" />}
               {uiT('review.openIn', { app: IDE_LABELS[preferredIDE] })}
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={handleOpenInTerminal}
+              disabled={openPending !== null}
+              aria-busy={openPending === 'terminal'}
               className="h-7 px-2 text-xs"
             >
-              <Terminal className="h-3.5 w-3.5 mr-1" />
+              {openPending === 'terminal' ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Terminal className="h-3.5 w-3.5 mr-1" />}
               {uiT('review.openIn', { app: TERMINAL_LABELS[preferredTerminal] === 'Terminal' ? uiT('review.terminal') : TERMINAL_LABELS[preferredTerminal] })}
             </Button>
           </div>
@@ -364,6 +367,17 @@ export function WorkspaceStatus({
 
       {/* Status/Warnings Section */}
       <div className="px-4 py-3 space-y-3">
+        {openError && (
+          <div role="alert" className="flex items-center gap-2 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20">
+            <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+            <p className="text-sm text-destructive flex-1">
+              {t(openError === 'ide' ? 'native:ipc.failedToOpenInIde' : 'native:ipc.failedToOpenInTerminal', { keySeparator: false })}
+            </p>
+            <Button variant="outline" size="sm" onClick={openError === 'ide' ? handleOpenInIDE : handleOpenInTerminal} disabled={openPending !== null}>
+              {t('common:buttons.retry')}
+            </Button>
+          </div>
+        )}
         {/* Workspace Error */}
         {workspaceError && (
           <div className="flex items-start gap-2 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20">
@@ -550,17 +564,25 @@ export function WorkspaceStatus({
       <div className="px-4 py-3 bg-muted/20 border-t border-border space-y-3">
         {/* Stage Only Option - only show after conflicts have been checked (not for already_merged/superseded) */}
         {mergePreview && !isAlreadyMerged && !isSuperseded && (
-          <label className="inline-flex items-center gap-2.5 text-sm cursor-pointer select-none px-3 py-2 rounded-lg border border-border bg-background/50 hover:bg-background/80 transition-colors">
-            <Checkbox
-              checked={stageOnly}
-              onCheckedChange={(checked) => onStageOnlyChange(checked === true)}
-              className="border-muted-foreground/50 data-[state=checked]:border-primary"
-            />
-            <span className={cn(
-              "transition-colors",
-              stageOnly ? "text-foreground" : "text-muted-foreground"
-            )}>{t('taskReview:merge.status.stageOnly')}</span>
-          </label>
+          <div className="space-y-2">
+            <label className="inline-flex items-center gap-2.5 text-sm cursor-pointer select-none px-3 py-2 rounded-lg border border-border bg-background/50 hover:bg-background/80 transition-colors">
+              <Checkbox
+                checked={stageOnly}
+                onCheckedChange={(checked) => onStageOnlyChange(checked === true)}
+                aria-describedby={stageOnly ? stageOnlyNoticeId : undefined}
+                className="border-muted-foreground/50 data-[state=checked]:border-primary"
+              />
+              <span className={cn(
+                "transition-colors",
+                stageOnly ? "text-foreground" : "text-muted-foreground"
+              )}>{t('taskReview:merge.status.stageOnly')}</span>
+            </label>
+            {stageOnly && (
+              <p id={stageOnlyNoticeId} className="text-xs text-muted-foreground">
+                {t('taskReview:merge.status.stageOnlyModelNotice')}
+              </p>
+            )}
+          </div>
         )}
 
         {/* Primary Actions */}
