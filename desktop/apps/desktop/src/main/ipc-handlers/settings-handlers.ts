@@ -21,11 +21,13 @@ import type { BrowserWindow } from 'electron';
 import { getSettingsPath, readSettingsFile } from '../settings-utils';
 import { resetMemoryService } from './context/memory-service-factory';
 import { configureTools, getToolPath, getToolInfo, isPathFromWrongPlatform, preWarmToolCache } from '../cli-tool-manager';
-import type { ProviderAccount } from '../../shared/types/provider-account';
+import type { ProviderAccount, ProviderConnectionConfig, ProviderConnectionTestResult } from '../../shared/types/provider-account';
 import type { APIProfile } from '../../shared/types/profile';
 import type { ClaudeProfile } from '../../shared/types/agent';
 import { loadProfilesFile } from '../utils/profile-manager';
 import { loadProfileStore } from '../claude-profile/profile-storage';
+import { detectProviderEnvironment, testProviderConnection } from '../ai/providers/connection-test';
+import { validateProviderBaseUrl } from '../../shared/utils/provider-url-validation';
 
 const settingsPath = getSettingsPath();
 
@@ -894,6 +896,18 @@ export function registerSettingsHandlers(
 
   const genAccountId = () => `pa_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
+  function validateAccountBaseUrl(account: Pick<ProviderAccount, 'provider' | 'baseUrl' | 'apiKey'>): 'invalid-url' | 'insecure-url' | undefined {
+    const required = ['ollama', 'azure', 'openai-compatible'].includes(account.provider);
+    if (account.baseUrl === undefined || (typeof account.baseUrl === 'string' && !account.baseUrl.trim())) {
+      return required ? 'invalid-url' : undefined;
+    }
+    if (typeof account.baseUrl !== 'string') return 'invalid-url';
+    const validation = validateProviderBaseUrl(account.baseUrl, {
+      apiKey: typeof account.apiKey === 'string' ? account.apiKey.trim() : undefined,
+    });
+    return validation.valid ? undefined : validation.code;
+  }
+
   /** Read providerAccounts array from settings.json */
   function readProviderAccounts(): ProviderAccount[] {
     const settings = readSettingsFile();
@@ -928,6 +942,8 @@ export function registerSettingsHandlers(
     IPC_CHANNELS.PROVIDER_ACCOUNTS_SAVE,
     async (_event, account: Omit<ProviderAccount, 'id' | 'createdAt' | 'updatedAt'>): Promise<IPCResult<ProviderAccount>> => {
       try {
+        const urlError = validateAccountBaseUrl(account);
+        if (urlError) return { success: false, error: urlError };
         const settings = readSettingsFile() ?? {};
         const accounts: ProviderAccount[] = (settings.providerAccounts as ProviderAccount[] | undefined) ?? [];
 
@@ -986,6 +1002,8 @@ export function registerSettingsHandlers(
           id, // prevent id override
           updatedAt: Date.now(),
         };
+        const urlError = validateAccountBaseUrl(updated);
+        if (urlError) return { success: false, error: urlError };
         accounts[index] = updated;
         writeProviderAccounts(accounts);
         console.warn('[PROVIDER_ACCOUNTS_UPDATE] Updated account:', id);
@@ -1096,9 +1114,8 @@ export function registerSettingsHandlers(
   // TEST CONNECTION for a provider account
   ipcMain.handle(
     IPC_CHANNELS.PROVIDER_ACCOUNTS_TEST_CONNECTION,
-    async (_event, _provider: string, _config: { apiKey?: string; baseUrl?: string; region?: string }): Promise<IPCResult<{ success: boolean; error?: string }>> => {
-      // Basic stub - connection testing can be enhanced later per-provider
-      return { success: true, data: { success: true } };
+    async (_event, provider: string, config: ProviderConnectionConfig): Promise<IPCResult<ProviderConnectionTestResult>> => {
+      return { success: true, data: await testProviderConnection(provider, config) };
     }
   );
 
@@ -1107,23 +1124,7 @@ export function registerSettingsHandlers(
     IPC_CHANNELS.PROVIDER_ACCOUNTS_CHECK_ENV,
     async (): Promise<IPCResult<Record<string, boolean>>> => {
       try {
-        const envMap: Record<string, boolean> = {};
-        const envVarMapping: Record<string, string> = {
-          ANTHROPIC_API_KEY: 'anthropic',
-          OPENAI_API_KEY: 'openai',
-          GOOGLE_GENERATIVE_AI_API_KEY: 'google',
-          MISTRAL_API_KEY: 'mistral',
-          GROQ_API_KEY: 'groq',
-          XAI_API_KEY: 'xai',
-          AWS_ACCESS_KEY_ID: 'amazon-bedrock',
-          AZURE_OPENAI_API_KEY: 'azure',
-        };
-        for (const [envVar, provider] of Object.entries(envVarMapping)) {
-          if (process.env[envVar]) {
-            envMap[provider] = true;
-          }
-        }
-        return { success: true, data: envMap };
+        return { success: true, data: detectProviderEnvironment() };
       } catch (error) {
         console.error('[PROVIDER_ACCOUNTS_CHECK_ENV] Error:', error);
         return { success: false, error: error instanceof Error ? error.message : 'Failed to check env credentials' };

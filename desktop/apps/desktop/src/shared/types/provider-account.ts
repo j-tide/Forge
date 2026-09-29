@@ -11,6 +11,37 @@ export type BuiltinProvider =
 
 export type BillingModel = 'subscription' | 'pay-per-use';
 
+/** A test uses draft fields; saving an account is never required first. */
+export interface ProviderConnectionConfig {
+  apiKey?: string;
+  baseUrl?: string;
+  region?: string;
+  authType?: 'oauth' | 'api-key';
+  billingModel?: BillingModel;
+  claudeProfileId?: string;
+  accountId?: string;
+  /** Model tests are explicit because they can consume quota or incur charges. */
+  mode?: 'connection' | 'model';
+  model?: string;
+}
+
+export type ProviderConnectionCode =
+  | 'unsupported-provider' | 'oauth-reauth' | 'aws-unsupported' | 'missing-key'
+  | 'invalid-key' | 'model-unsupported' | 'zai-needs-model' | 'missing-url'
+  | 'invalid-url' | 'insecure-url' | 'invalid-model' | 'invalid-config'
+  | 'auth' | 'quota' | 'unsupported-endpoint' | 'redirect' | 'rejected-request'
+  | 'http' | 'unexpected-response' | 'cancelled' | 'timeout' | 'network'
+  | 'model-verified' | 'endpoint-reachable' | 'metadata-verified';
+
+export interface ProviderConnectionTestResult {
+  success: boolean;
+  /** Stable status for renderer localization; provider content is never returned. */
+  code?: ProviderConnectionCode;
+  status?: number;
+  error?: string;
+  message?: string;
+}
+
 /** A user-defined model for custom endpoints */
 export interface CustomModel {
   id: string;

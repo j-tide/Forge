@@ -22,6 +22,8 @@ import type { LanguageModel } from 'ai';
 import type { ProviderV3 } from '@ai-sdk/provider';
 
 import { type ProviderConfig, SupportedProvider } from './types';
+import { isZaiAnthropicEndpoint, zaiAnthropicBaseURL, ZAI_GENERAL_API } from './zai-endpoint';
+import { azureSdkBaseURL } from './azure-endpoint';
 
 // =============================================================================
 // Registry Types
@@ -62,7 +64,7 @@ function createProviderSDKInstance(
       return createAmazonBedrock({ region: config.region ?? 'us-east-1', apiKey });
 
     case SupportedProvider.Azure:
-      return createAzure({ apiKey, baseURL, headers });
+      return createAzure({ apiKey, baseURL: azureSdkBaseURL(baseURL), headers });
 
     case SupportedProvider.Mistral:
       return createMistral({ apiKey, baseURL, headers });
@@ -79,10 +81,18 @@ function createProviderSDKInstance(
       });
 
     case SupportedProvider.ZAI:
+      if (baseURL && isZaiAnthropicEndpoint(baseURL)) {
+        return createAnthropic({
+          authToken: apiKey,
+          baseURL: zaiAnthropicBaseURL(baseURL),
+          headers,
+          name: 'zai.anthropic',
+        });
+      }
       return createOpenAICompatible({
         name: 'zai',
         apiKey,
-        baseURL: baseURL ?? 'https://api.z.ai/api/paas/v4',
+        baseURL: baseURL ?? ZAI_GENERAL_API,
         headers,
       });
 

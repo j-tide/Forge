@@ -9,11 +9,15 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
+  Loader2,
+  Wifi,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { cn } from '../../lib/utils';
 import type { ProviderAccount } from '@shared/types/provider-account';
+import { useProviderConnectionTest } from './useProviderConnectionTest';
+import { ProviderConnectionModelSelect, ProviderConnectionStatus } from './ProviderConnectionStatus';
 
 interface ProviderAccountCardProps {
   account: ProviderAccount;
@@ -68,6 +72,25 @@ function UsageBar({ percent, icon: Icon, tooltipKey }: {
 export function ProviderAccountCard({ account, onEdit, onDelete, onReauth }: ProviderAccountCardProps) {
   const { t } = useTranslation('settings');
   const [showKey, setShowKey] = useState(false);
+  const [testModel, setTestModel] = useState('glm-5');
+  const connection = useProviderConnectionTest(JSON.stringify({
+    id: account.id, provider: account.provider, apiKey: account.apiKey,
+    baseUrl: account.baseUrl, region: account.region, authType: account.authType,
+    billingModel: account.billingModel, claudeProfileId: account.claudeProfileId,
+    updatedAt: account.updatedAt, testModel,
+  }));
+  const testLabel = t(account.provider === 'zai' ? 'providers.connection.testModelAccount' : 'providers.connection.testAccount', { name: account.name });
+  const handleTest = () => connection.test(account.provider, {
+    accountId: account.id,
+    apiKey: account.apiKey,
+    baseUrl: account.baseUrl,
+    region: account.region,
+    authType: account.authType,
+    billingModel: account.billingModel,
+    claudeProfileId: account.claudeProfileId,
+    mode: account.provider === 'zai' ? 'model' : 'connection',
+    model: account.provider === 'zai' ? testModel : undefined,
+  });
 
   const isOAuth = account.authType === 'oauth';
   const isCodex = isOAuth && account.provider === 'openai';
@@ -172,9 +195,27 @@ export function ProviderAccountCard({ account, onEdit, onDelete, onReauth }: Pro
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleTest}
+                disabled={connection.isTesting}
+                aria-label={connection.isTesting ? t('providers.connection.testing') : testLabel}
+                className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+              >
+                {connection.isTesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wifi className="h-3 w-3" />}
+                <span>{t(connection.isTesting ? 'providers.connection.testing' : account.provider === 'zai' ? 'providers.connection.testModel' : 'providers.connection.test')}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{testLabel}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => onEdit(account)}
+                aria-label={t('providers.card.edit')}
                 className="h-7 w-7 text-muted-foreground hover:text-foreground"
               >
                 <Pencil className="h-3 w-3" />
@@ -189,6 +230,7 @@ export function ProviderAccountCard({ account, onEdit, onDelete, onReauth }: Pro
                   variant="ghost"
                   size="icon"
                   onClick={() => onReauth(account)}
+                  aria-label={t('providers.card.reauth')}
                   className="h-7 w-7 text-muted-foreground hover:text-foreground"
                 >
                   <RefreshCw className="h-3 w-3" />
@@ -203,6 +245,7 @@ export function ProviderAccountCard({ account, onEdit, onDelete, onReauth }: Pro
                 variant="ghost"
                 size="icon"
                 onClick={() => onDelete(account.id)}
+                aria-label={t('providers.card.delete')}
                 className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
               >
                 <Trash2 className="h-3 w-3" />
@@ -212,6 +255,13 @@ export function ProviderAccountCard({ account, onEdit, onDelete, onReauth }: Pro
           </Tooltip>
         </div>
       </div>
+      {account.provider === 'zai' && (
+        <div className="mt-3 space-y-2 border-t border-border pt-3">
+          <ProviderConnectionModelSelect value={testModel} onChange={setTestModel} />
+          <p className="text-xs text-muted-foreground">{t('providers.connection.modelDescription', { model: testModel })}</p>
+        </div>
+      )}
+      {connection.result && <div className="mt-3"><ProviderConnectionStatus result={connection.result} /></div>}
     </div>
   );
 }

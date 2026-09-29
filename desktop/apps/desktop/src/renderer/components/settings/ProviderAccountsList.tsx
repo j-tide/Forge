@@ -97,6 +97,7 @@ export function ProviderAccountsList() {
       open: true,
       provider: account.provider,
       authType: account.authType,
+      billingModel: account.billingModel,
       editAccount: account,
     });
   };
@@ -171,6 +172,12 @@ export function ProviderAccountsList() {
           description: result.error ?? t('accounts.toast.tryAgain'),
         });
       }
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: t('providers.toast.deleteFailed'),
+        description: t('accounts.toast.tryAgain'),
+      });
     } finally {
       setIsDeleting(false);
       setDeleteTarget(null);
@@ -187,6 +194,7 @@ export function ProviderAccountsList() {
 
   return (
     <div className="space-y-5">
+      <p className="text-xs text-muted-foreground">{t('providers.section.persistenceDescription')}</p>
       {categories.map(({ key, label, providers: categoryProviders }) => {
         if (categoryProviders.length === 0) return null;
         return (
@@ -199,7 +207,7 @@ export function ProviderAccountsList() {
             </div>
             {categoryProviders.map((providerInfo) => {
               const accounts = accountsByProvider.get(providerInfo.id) ?? [];
-              const envDetected = providerInfo.envVars.some(v => envCredentials?.[v]);
+              const envDetected = !!envCredentials?.[providerInfo.id] || providerInfo.envVars.some(v => envCredentials?.[v]);
               return (
                 <ProviderSection
                   key={providerInfo.id}

@@ -1,7 +1,7 @@
 import i18n from '../../../shared/i18n';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, CheckCircle2, AlertCircle, Terminal, Plus, X } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, Terminal, Plus, X, Wifi } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,10 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useSettingsStore } from '../../stores/settings-store';
 import { useToast } from '../../hooks/use-toast';
+import { useProviderConnectionTest } from './useProviderConnectionTest';
+import { ProviderConnectionModelSelect, ProviderConnectionStatus } from './ProviderConnectionStatus';
 import type { BillingModel, BuiltinProvider, CustomModel, ProviderAccount } from '@shared/types/provider-account';
+import { validateProviderBaseUrl } from '@shared/utils/provider-url-validation';
 
 const AWS_REGIONS = [
   'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2',
@@ -49,6 +52,7 @@ export function AddAccountDialog({
   const { toast } = useToast();
 
   const isEditing = !!editAccount;
+  const billingModel = billingModelOverride ?? editAccount?.billingModel ?? (authType === 'oauth' ? 'subscription' : 'pay-per-use');
 
   // Form state
   const [name, setName] = useState('');
@@ -56,11 +60,13 @@ export function AddAccountDialog({
   const [baseUrl, setBaseUrl] = useState('');
   const [region, setRegion] = useState('us-east-1');
   const [isSaving, setIsSaving] = useState(false);
+  const [testModel, setTestModel] = useState('glm-5');
 
   // Custom models for openai-compatible endpoints
   const [customModels, setCustomModels] = useState<CustomModel[]>([]);
   const [newModelId, setNewModelId] = useState('');
   const [newModelLabel, setNewModelLabel] = useState('');
+  const duplicateModel = customModels.some(model => model.id === newModelId.trim());
 
   // OAuth subprocess state
   const [oauthStatus, setOauthStatus] = useState<OAuthStatus>('idle');
@@ -76,6 +82,11 @@ export function AddAccountDialog({
   const [fallbackTerminalId, setFallbackTerminalId] = useState<string | null>(null);
   const [fallbackConfigDir, setFallbackConfigDir] = useState<string | null>(null);
 
+  const connection = useProviderConnectionTest(JSON.stringify({
+    open, provider, authType, billingModel, name, apiKey, baseUrl, region,
+    customModels, oauthProfileId, oauthStatus, accountId: editAccount?.id, testModel,
+  }));
+
   // Reset form when dialog opens/editAccount changes
   useEffect(() => {
     if (open) {
@@ -90,7 +101,7 @@ export function AddAccountDialog({
         setApiKey('');
         setBaseUrl(
           provider === 'ollama' ? 'http://localhost:11434'
-          : provider === 'zai' && billingModelOverride === 'subscription' ? 'https://api.z.ai/api/anthropic'
+          : provider === 'zai' && billingModel === 'subscription' ? 'https://api.z.ai/api/anthropic'
           : provider === 'zai' ? 'https://api.z.ai/api/paas/v4'
           : ''
         );
@@ -99,6 +110,7 @@ export function AddAccountDialog({
       }
       setNewModelId('');
       setNewModelLabel('');
+      setTestModel('glm-5');
       // Reset OAuth state
       setOauthStatus('idle');
       setOauthEmail(null);
@@ -109,7 +121,7 @@ export function AddAccountDialog({
       setFallbackTerminalId(null);
       setFallbackConfigDir(null);
     }
-  }, [open, editAccount, provider, billingModelOverride]);
+  }, [open, editAccount, provider, billingModel]);
 
   // Parse DUPLICATE_EMAIL error from backend and show user-friendly toast
   const handleDuplicateEmailError = useCallback((error: string): boolean => {
@@ -167,6 +179,32 @@ export function AddAccountDialog({
   const needsBaseUrl = provider === 'ollama' || provider === 'azure' || provider === 'openai-compatible' || provider === 'zai' || (provider === 'anthropic' && authType === 'api-key');
   const needsRegion = provider === 'amazon-bedrock';
   const isBaseUrlRequired = provider === 'ollama' || provider === 'azure' || provider === 'openai-compatible';
+  const baseUrlValidation = needsBaseUrl && baseUrl.trim()
+    ? validateProviderBaseUrl(baseUrl, { apiKey: needsApiKey ? apiKey : undefined })
+    : null;
+  const baseUrlError = baseUrlValidation && !baseUrlValidation.valid
+    ? t(`providers.dialog.urlValidation.${baseUrlValidation.code}`)
+    : null;
+
+  const handleTestConnection = () => connection.test(provider, {
+    apiKey: needsApiKey ? apiKey.trim() : undefined,
+    baseUrl: needsBaseUrl && baseUrl.trim() ? baseUrl.trim() : undefined,
+    region: needsRegion ? region : undefined,
+    authType,
+    billingModel,
+    claudeProfileId: oauthProfileId ?? editAccount?.claudeProfileId,
+    accountId: editAccount?.id,
+    mode: provider === 'zai' ? 'model' : 'connection',
+    model: provider === 'zai' ? testModel : undefined,
+  });
+
+  const handleAddModel = () => {
+    const id = newModelId.trim();
+    if (!id || duplicateModel) return;
+    setCustomModels(previous => [...previous, { id, label: newModelLabel.trim() || id }]);
+    setNewModelId('');
+    setNewModelLabel('');
+  };
 
   // Auto-save for Anthropic OAuth on success (mirrors the Codex auto-save behavior)
   useEffect(() => {
@@ -221,6 +259,7 @@ export function AddAccountDialog({
     if (isOAuthOnly) return isEditing || oauthStatus === 'success';
     if (needsApiKey && !apiKey.trim()) return false;
     if (isBaseUrlRequired && !baseUrl.trim()) return false;
+    if (baseUrlError) return false;
     return true;
   };
 
@@ -409,7 +448,7 @@ export function AddAccountDialog({
         provider,
         name: name.trim(),
         authType,
-        billingModel: billingModelOverride ?? (authType === 'oauth' ? 'subscription' as const : 'pay-per-use' as const),
+        billingModel,
         apiKey: needsApiKey ? apiKey.trim() : undefined,
         baseUrl: needsBaseUrl && baseUrl.trim() ? baseUrl.trim() : undefined,
         region: needsRegion ? region : undefined,
@@ -448,13 +487,23 @@ export function AddAccountDialog({
           description: name.trim(),
         });
         onOpenChange(false);
-      } else if (result.error && !handleDuplicateEmailError(result.error)) {
-        toast({
-          variant: 'destructive',
-          title: t('providers.dialog.toast.error'),
-          description: result.error ?? t('accounts.toast.tryAgain'),
-        });
+      } else {
+        if (!result.error || !handleDuplicateEmailError(result.error)) {
+          toast({
+            variant: 'destructive',
+            title: t('providers.dialog.toast.error'),
+            description: result.error === 'invalid-url' || result.error === 'insecure-url'
+              ? t(`providers.dialog.urlValidation.${result.error}`)
+              : result.error ?? t('accounts.toast.tryAgain'),
+          });
+        }
       }
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: t('providers.dialog.toast.error'),
+        description: t('accounts.toast.tryAgain'),
+      });
     } finally {
       setIsSaving(false);
     }
@@ -472,7 +521,7 @@ export function AddAccountDialog({
       if (isAuthInProgress) return;
       onOpenChange(v);
     }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -480,12 +529,13 @@ export function AddAccountDialog({
               ? t('providers.dialog.codexOAuthDescription')
               : isOAuthOnly
                 ? t('providers.dialog.oauthDescription')
-                : provider === 'zai' && billingModelOverride === 'subscription'
+                : provider === 'zai' && billingModel === 'subscription'
                   ? t('providers.dialog.zaiCodingPlanDescription')
                   : provider === 'zai'
                     ? t('providers.dialog.zaiUsageBasedDescription')
                     : t('providers.dialog.apiKeyDescription')}
           </DialogDescription>
+          <p className="text-xs text-muted-foreground">{t('providers.dialog.persistenceDescription')}</p>
         </DialogHeader>
 
         {isOAuthOnly ? (
@@ -618,6 +668,8 @@ export function AddAccountDialog({
                 </Label>
                 <Input
                   id="account-baseurl"
+                  aria-invalid={!!baseUrlError}
+                  aria-describedby={baseUrlError ? 'account-baseurl-error' : undefined}
                   value={baseUrl}
                   onChange={(e) => setBaseUrl(e.target.value)}
                   placeholder={
@@ -625,13 +677,14 @@ export function AddAccountDialog({
                       ? 'http://localhost:11434'
                       : provider === 'anthropic'
                         ? 'https://api.anthropic.com'
-                        : provider === 'zai' && billingModelOverride === 'subscription'
+                        : provider === 'zai' && billingModel === 'subscription'
                           ? 'https://api.z.ai/api/anthropic'
                           : provider === 'zai'
                             ? 'https://api.z.ai/api/paas/v4'
                             : t('providers.dialog.placeholders.baseUrl')
                   }
                 />
+                {baseUrlError && <p id="account-baseurl-error" role="alert" className="text-xs text-destructive">{baseUrlError}</p>}
               </div>
             )}
 
@@ -673,6 +726,7 @@ export function AddAccountDialog({
                         <button
                           type="button"
                           onClick={() => setCustomModels(prev => prev.filter(m => m.id !== model.id))}
+                          aria-label={t('providers.dialog.removeModel', { name: model.label })}
                           className="ml-auto shrink-0 text-muted-foreground hover:text-destructive transition-colors"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -688,17 +742,14 @@ export function AddAccountDialog({
                     value={newModelId}
                     onChange={(e) => setNewModelId(e.target.value)}
                     placeholder={t('providers.dialog.placeholders.modelId')}
+                    aria-label={t('providers.dialog.fields.modelId')}
+                    aria-invalid={duplicateModel}
+                    aria-describedby={duplicateModel ? 'duplicate-model-error' : undefined}
                     className="flex-1 h-8 text-xs"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newModelId.trim()) {
                         e.preventDefault();
-                        const id = newModelId.trim();
-                        const label = newModelLabel.trim() || id;
-                        if (!customModels.some(m => m.id === id)) {
-                          setCustomModels(prev => [...prev, { id, label }]);
-                        }
-                        setNewModelId('');
-                        setNewModelLabel('');
+                        handleAddModel();
                       }
                     }}
                   />
@@ -706,17 +757,12 @@ export function AddAccountDialog({
                     value={newModelLabel}
                     onChange={(e) => setNewModelLabel(e.target.value)}
                     placeholder={t('providers.dialog.placeholders.modelLabel')}
+                    aria-label={t('providers.dialog.fields.modelLabel')}
                     className="w-28 h-8 text-xs"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newModelId.trim()) {
                         e.preventDefault();
-                        const id = newModelId.trim();
-                        const label = newModelLabel.trim() || id;
-                        if (!customModels.some(m => m.id === id)) {
-                          setCustomModels(prev => [...prev, { id, label }]);
-                        }
-                        setNewModelId('');
-                        setNewModelLabel('');
+                        handleAddModel();
                       }
                     }}
                   />
@@ -725,22 +771,39 @@ export function AddAccountDialog({
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 shrink-0"
-                    disabled={!newModelId.trim()}
-                    onClick={() => {
-                      const id = newModelId.trim();
-                      const label = newModelLabel.trim() || id;
-                      if (id && !customModels.some(m => m.id === id)) {
-                        setCustomModels(prev => [...prev, { id, label }]);
-                      }
-                      setNewModelId('');
-                      setNewModelLabel('');
-                    }}
+                    aria-label={t('providers.dialog.addModel')}
+                    disabled={!newModelId.trim() || duplicateModel}
+                    onClick={handleAddModel}
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
+                {duplicateModel && (
+                  <p id="duplicate-model-error" role="alert" className="text-xs text-destructive">
+                    {t('providers.dialog.duplicateModel')}
+                  </p>
+                )}
               </div>
             )}
+          </div>
+        )}
+
+        {(!isOAuthOnly || isEditing || oauthStatus === 'success') && (
+          <div className="space-y-3 border-t border-border pt-4">
+            {provider === 'zai' && <ProviderConnectionModelSelect value={testModel} onChange={setTestModel} />}
+            <p className="text-xs text-muted-foreground">
+              {t(provider === 'zai' ? 'providers.connection.modelDescription' : 'providers.connection.description', { model: testModel })}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleTestConnection}
+              disabled={connection.isTesting || isSaving || isAuthInProgress || !!baseUrlError || (needsApiKey && !apiKey.trim()) || (isBaseUrlRequired && !baseUrl.trim())}
+            >
+              {connection.isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wifi className="mr-2 h-4 w-4" />}
+              {t(connection.isTesting ? 'providers.connection.testing' : provider === 'zai' ? 'providers.connection.testModel' : 'providers.connection.test')}
+            </Button>
+            <ProviderConnectionStatus result={connection.result} />
           </div>
         )}
 

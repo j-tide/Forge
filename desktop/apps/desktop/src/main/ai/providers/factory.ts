@@ -23,6 +23,8 @@ import type { LanguageModel } from 'ai';
 import { MODEL_PROVIDER_MAP } from '../config/types';
 import { createOAuthProviderFetch } from './oauth-fetch';
 import { type ProviderConfig, SupportedProvider } from './types';
+import { isZaiAnthropicEndpoint, zaiAnthropicBaseURL, ZAI_GENERAL_API } from './zai-endpoint';
+import { azureSdkBaseURL } from './azure-endpoint';
 
 // =============================================================================
 // OAuth Token Detection
@@ -103,7 +105,7 @@ function createProviderInstance(config: ProviderConfig) {
     case SupportedProvider.Azure:
       return createAzure({
         apiKey,
-        baseURL,
+        baseURL: azureSdkBaseURL(baseURL),
         headers,
       });
 
@@ -134,10 +136,18 @@ function createProviderInstance(config: ProviderConfig) {
       });
 
     case SupportedProvider.ZAI:
+      if (baseURL && isZaiAnthropicEndpoint(baseURL)) {
+        return createAnthropic({
+          authToken: apiKey,
+          baseURL: zaiAnthropicBaseURL(baseURL),
+          headers,
+          name: 'zai.anthropic',
+        });
+      }
       return createOpenAICompatible({
         name: 'zai',
         apiKey,
-        baseURL: baseURL ?? 'https://api.z.ai/api/paas/v4',
+        baseURL: baseURL ?? ZAI_GENERAL_API,
         headers,
       });
 
