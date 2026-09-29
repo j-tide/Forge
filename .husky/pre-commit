@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+
+# Optional local hook; Git configuration is never changed by this script.
+# Keep versioning and publication explicit.
+cd "$(git rev-parse --show-toplevel)"
+npm exec -- lint-staged
+npm run typecheck

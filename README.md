@@ -1,12 +1,12 @@
 # Forge
 
-<img src="desktop/apps/desktop/resources/icon-256.png" alt="Forge 标志" width="72" height="72" />
+<img src="resources/icon-256.png" alt="Forge 标志" width="72" height="72" />
 
 **围绕代码项目组织任务、配置模型并查看开发活动的 AI 桌面工作台。**
 
 **简体中文** / [English](README.en.md)
 
-本仓库的应用与开发工程位于 [`desktop/`](desktop/README.md)，使用 **Electron + React + TypeScript** 和独立 npm workspace。
+本仓库是单一 **Electron + React + TypeScript** 桌面应用，使用根目录的 npm 工程；源码位于 `src/`。
 
 ## 当前版本
 
@@ -55,20 +55,19 @@ Main 注册项目、任务、终端与设置等 IPC；Agent Worker 编排模型�
 
 | 亮色 | 暗色 |
 | --- | --- |
-| ![亮色首页](desktop/docs/screenshots/0.1.0-preview.5/home-light-1440.png) | ![暗色首页](desktop/docs/screenshots/0.1.0-preview.5/home-dark-1440.png) |
-| ![亮色新任务](desktop/docs/screenshots/0.1.0-preview.5/new-task-light-1440.png) | ![暗色新任务](desktop/docs/screenshots/0.1.0-preview.5/new-task-dark-1440.png) |
+| ![亮色首页](docs/screenshots/0.1.0-preview.5/home-light-1440.png) | ![暗色首页](docs/screenshots/0.1.0-preview.5/home-dark-1440.png) |
+| ![亮色新任务](docs/screenshots/0.1.0-preview.5/new-task-light-1440.png) | ![暗色新任务](docs/screenshots/0.1.0-preview.5/new-task-dark-1440.png) |
 
-截图来自实际 `.5` Electron 编译代码，使用独立测试项目，没有在线 Agent 执行；[来源与摘要](desktop/docs/screenshots/0.1.0-preview.5/screenshots.json)。
+截图来自实际 `.5` Electron 编译代码，使用独立测试项目，没有在线 Agent 执行；[来源与摘要](docs/screenshots/0.1.0-preview.5/screenshots.json)。
 
 ## 源码开发
 
 使用 **Node.js 24+、npm 10+、Git**。macOS 原生构建需要 Xcode Command Line Tools。
 
 ```sh
-cd desktop
 npm ci --ignore-scripts
 node node_modules/electron/install.js
-npm --workspace apps/desktop run postinstall
+npm run postinstall
 npm run dev
 ```
 
@@ -89,10 +88,10 @@ npm run test:i18n:desktop
 npm run preview:open
 ```
 
-开发与检查均在 `desktop/` 执行，使用本目录的 `package-lock.json`。界面测试使用独立数据目录；类型检查和单元测试不能代替真实在线运行或目标平台验收。
+开发与检查均在仓库根执行，使用根目录的 `package-lock.json`；[开发目录说明](docs/development.md)。运行 UI 检查需同时隔离 HOME 与应用数据，保护真实账户和配置；类型检查和单元测试不能代替真实在线运行或目标平台验收。
 
 ## 文档与来源
 
-[操作说明](desktop/README.md) · [实施状态](desktop/docs/implementation-status.md) · [版本验证](desktop/docs/releases/0.1.0-preview.5.md) · [打包与发布](desktop/RELEASE.md)
+[操作说明](docs/user-guide.md) · [实施状态](docs/implementation-status.md) · [版本验证](docs/releases/0.1.0-preview.5.md) · [打包与发布](docs/releasing.md)
 
-Forge 基于 [Aperant](https://github.com/AndyMik90/Aperant) `v2.8.0-beta.6`，按 [AGPL-3.0](desktop/LICENSE) 提供衍生源码。原作者、版权、导入来源与修改记录保留在 [UPSTREAM.md](desktop/UPSTREAM.md)，发布页提供对应源码。
+Forge 基于 [Aperant](https://github.com/AndyMik90/Aperant) `v2.8.0-beta.6`，按 [AGPL-3.0](LICENSE) 提供衍生源码。原作者、版权、导入来源与修改记录保留在 [UPSTREAM.md](UPSTREAM.md)，发布页提供对应源码。

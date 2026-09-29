@@ -1,12 +1,12 @@
 # Forge
 
-<img src="desktop/apps/desktop/resources/icon-256.png" alt="Forge logo" width="72" height="72" />
+<img src="resources/icon-256.png" alt="Forge logo" width="72" height="72" />
 
 **An AI desktop workspace for organizing coding tasks, configuring models, and following development activity.**
 
 [简体中文](README.md) / **English**
 
-The application and development workspace live in [`desktop/`](desktop/README.md), built with **Electron + React + TypeScript** and an independent npm workspace.
+This repository is a single **Electron + React + TypeScript** desktop application. Its npm project is at the repository root, with application source in `src/`.
 
 ## Current release
 
@@ -55,20 +55,19 @@ Main registers project, task, terminal, and settings IPC. Agent Workers orchestr
 
 | Light | Dark |
 | --- | --- |
-| ![Light home](desktop/docs/screenshots/0.1.0-preview.5/home-light-1440.png) | ![Dark home](desktop/docs/screenshots/0.1.0-preview.5/home-dark-1440.png) |
-| ![Light new task](desktop/docs/screenshots/0.1.0-preview.5/new-task-light-1440.png) | ![Dark new task](desktop/docs/screenshots/0.1.0-preview.5/new-task-dark-1440.png) |
+| ![Light home](docs/screenshots/0.1.0-preview.5/home-light-1440.png) | ![Dark home](docs/screenshots/0.1.0-preview.5/home-dark-1440.png) |
+| ![Light new task](docs/screenshots/0.1.0-preview.5/new-task-light-1440.png) | ![Dark new task](docs/screenshots/0.1.0-preview.5/new-task-dark-1440.png) |
 
-These screenshots come from the actual `.5` Electron build using isolated test projects, with no online Agent execution. [Provenance and checksums](desktop/docs/screenshots/0.1.0-preview.5/screenshots.json).
+These screenshots come from the actual `.5` Electron build using isolated test projects, with no online Agent execution. [Provenance and checksums](docs/screenshots/0.1.0-preview.5/screenshots.json).
 
 ## Development
 
 Use **Node.js 24+, npm 10+, and Git**. Native builds on macOS need Xcode Command Line Tools.
 
 ```sh
-cd desktop
 npm ci --ignore-scripts
 node node_modules/electron/install.js
-npm --workspace apps/desktop run postinstall
+npm run postinstall
 npm run dev
 ```
 
@@ -89,10 +88,10 @@ npm run test:i18n:desktop
 npm run preview:open
 ```
 
-Run development and checks inside `desktop/` using its `package-lock.json`. UI tests use isolated data directories; type checks and unit tests do not replace actual online execution or target-platform acceptance.
+Run development and checks at the repository root using its `package-lock.json`; see the [development layout](docs/development.md). UI checks need both an isolated HOME and isolated application data to protect real accounts and settings; type checks and unit tests do not replace actual online execution or target-platform acceptance.
 
 ## Documentation and provenance
 
-[Usage](desktop/README.md) · [Implementation status](desktop/docs/implementation-status.md) · [Release verification](desktop/docs/releases/0.1.0-preview.5.md) · [Packaging and release](desktop/RELEASE.md)
+[Usage](docs/user-guide.md) · [Implementation status](docs/implementation-status.md) · [Release verification](docs/releases/0.1.0-preview.5.md) · [Packaging and release](docs/releasing.md)
 
-Forge is derived from [Aperant](https://github.com/AndyMik90/Aperant) `v2.8.0-beta.6` under [AGPL-3.0](desktop/LICENSE). Original authorship, copyright, import provenance, and modification records are preserved in [UPSTREAM.md](desktop/UPSTREAM.md). Corresponding source is available with the release.
+Forge is derived from [Aperant](https://github.com/AndyMik90/Aperant) `v2.8.0-beta.6` under [AGPL-3.0](LICENSE). Original authorship, copyright, import provenance, and modification records are preserved in [UPSTREAM.md](UPSTREAM.md). Corresponding source is available with the release.
