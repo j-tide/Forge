@@ -1,5 +1,34 @@
 # Forge 实施状态
 
+## 2026-09-28 · Desktop 全入口控件与失败恢复走查（本地未发布）
+
+按用户要求逐页、逐控件实际走查 `desktop/` 衍生预览，并修复测试入口、异步反馈、持久化与恢复缺口。修复、按版本区分的验证结论和未验边界记录于本节，原始实窗证据保留在 `desktop/output/playwright/`。本轮未提交、推送或发布，未改依赖、契约基线、Task / Test 状态或 Python Host；原 README 和图示工作区修改保留。
+
+- 账户草稿、编辑和已保存卡片提供真实测试按钮，替换固定成功 stub；补端点校验、环境凭据检测、费用 / 配额说明与失败重试。跨服务商选择准确保留 provider，补 AI Naming；Ollama 远端配置、模型列表、记忆 embedding / reranker 使用同一实际端点。
+- 三种集成显式启用 / 关闭正确保存与重读，旧配置默认兼容；GitHub / Linear 既有 IPC 读取在关闭时阻止凭据与 CLI 回退。7 个开关关联标签与描述，20 次实际点击通过，其中 6 个持久字段保存 ACK 通过，push preference 仅未保存编辑回退；新增 56 项真实文件回归，计入最终全量。
+- 向导完成先保存再退出，失败保留动作并可重试；无项目创建任务继续正常项目入口；Git 与 Forge 初始化顺序正确，不重叠 focus trap。补齐标签、键盘控制和原生目录异常反馈。
+- 洞察提供复制、再生成、停止与失败重试；请求绑定项目 / 会话 / request，停止确认等待执行、工具及子进程关闭；图片和思考参数进入真实 SDK。建议转换真实持久化为 backlog 任务，重载及重试去重；历史批量操作只保留失败项，256px 侧栏按钮可实际点击。
+- 截图完整 PNG data URL 规范化为预览 URL 与 SDK 原始 data，修复二次前缀和超限附加；洞察补正常放大、关闭、Escape 与范围切换。实窗是明确标注的合成 PNG；OAuth / 暂存同样仅条件消息夹具，不代表 OS 权限、认证或实际 Stage 通过。
+- 修正任务 Git 配置的 `pushNewBranches` 被执行管理器忽略：新建任务明确保存 true / false，既有任务级选择覆盖项目默认，旧任务仍沿用项目设置。只传递既有选项，运行入口回归以隔离的认证 / 工作树 / worker 替身验证；最终构建正常创建两个 backlog 任务，项目默认 false 时 On / Off 分别真实保存 true / false，15 次专项操作通过、执行入口调用 0，不调用真实模型或远端。
+- 主计划文件保存失败不推进任务 actor / 成功事件；任务审查失败保留文字和图片，暂停继续只发送 RESUME 并等待真实状态。运行任务禁拖仍能操作；文件、IDE、Terminal、归档、批量 PR 的失败、pending 与重试反馈真实有效。想法可归档恢复并保持持久任务链接，路线图转换显示实际 planned / backlog。
+- 终端历史恢复先确认新会话，失败保留当前 ID 与 DOM，键盘可重排；修复各处复制的异步假成功。加入共享保护后的复制检查恢复操作前剪贴板完整格式与内容；早期两轮终端夹具未保存原剪贴板，至少三次实际写入，本轮开始前内容无法还原，本报告明确披露；早期字体 / 调试设置只做文本恢复，未验证丰富格式完整保留。“仅暂存”补充 AI 提交说明可能消耗模型用量的可见提示，实际暂存 / 合并没有在本轮执行。
+- 用户允许最小在线请求：仅一次 Z.AI 模型测试，`max_tokens=1`，真实 UI → Main → 网络 → UI 通过；临时凭据已删除，原设置 SHA-256 保持 `2c2b32e58d812ad585a4a7836e647031f8c4a3527749151ff1b1e5421e8150be`。其余模型协议用明确标注的 loopback SDK 或失败夹具，不能作为线上执行验收。
+
+- 终端初始恢复失败不再因普通重绘重复请求，单终端 Retry 正常等待与解锁；项目标签生产键盘 sensor 可重排并保持焦点。终端两主题 24 项文字对比度通过，亮色错误条正文从 3.24:1 修复为 5.34:1，暗色 7.39:1；修复前失败和最终截图都保留。
+- 质量检查：336 Vitest 文件 / 5762 tests + 10 Node 检查通过；终端 7 项定向与 24 项实窗颜色复验通过，任务选择又补 14 项实际表单 / 管理器回归后重新跑全量，各定向计数不另加。typecheck / lint / i18n / build 通过；lint 774 既有 warnings / 5 infos，i18n 36 namespaces / 5373 strings 无 error / warning。设置成功记录 2791 操作 / 2156 点击（含账户最后专项 426 / 350），工作区 18 scopes / 1135 操作，条件 38 控件组 / 741 操作；各轮构建保留，不作为 unique 按钮数或全最终版本的验收。
+- 最终本地包 `desktop/apps/desktop/dist/ux-audit-unreleased/mac-arm64/Forge.app`；2026-09-29 00:15:05（UTC+08:00）隔离启动验证通过，ASAR SHA-256 `206a9d69bc16fce6784f3e724b26d832ae59de7b1312f53326071422ca4cd20a`。15 个构建文件、4 图标及 LICENSE / UPSTREAM 一致；ad-hoc deep / strict 签名通过，应用 PID 已退出、临时 HOME 已删除、原设置 hash 不变。源码 1043 文件快照及最新构建摘要在 `desktop/output/playwright/full-ux/build-info-final.json`；最后任务创建专项与包装使用最新构建，较早终端实窗另有 hash，Terminal 代码与 CSS 不变。根 `pnpm desktop:open` 优先打开本轮未发布包。
+
+一次性走查报告和重复中间摘要已按用户要求清理；[设置控件摘要](../desktop/output/playwright/settings-controls/final-coverage-summary.json)、[工作区摘要](../desktop/output/playwright/workspace-controls-coverage-summary.json)、[条件控件摘要](../desktop/output/playwright/conditional-controls-cumulative-final.json)与[构建及包装摘要](../desktop/output/playwright/full-ux/build-info-final.json)保留，旧失败与脚本定位错误日志保留。外部 OAuth、安装 / 下载、真实模型 Task / Roadmap / Idea / Changelog 闭环、远端 PR / 发布、其他平台、正式签名 / 公证与 Python Host 集成仍未验；另外确认活跃 Agent worker 未接通项目 `.env` / MCP override 配置链，未扩改 Node 调度器，需按已有 Python Host 接入路线实现及验收。P7/P8 后置和正式发布门禁不变。
+
+## 2026-09-28 · README 核心亮点、系统架构与任务数据流
+
+根据用户反馈重新围绕 Forge 的项目特色组织中英文 README：任务契约与版本审批、Planner / Developer / Reviewer 分工及 Verifier 服务、快照绑定验收、隔离工作区、运行配置冻结和有来源的项目记忆。补充五类持久记录、简化 CSV 导出契约示例、角色交接与 quick / standard / strict 对照。两份文档全部移除 `details` / `summary`，截图与正文直接展开；首屏展示系统架构，不再以空项目首页作为主视觉。
+
+- 新增 `docs/assets/readme/` 中的系统架构和任务证据流图：中英文各有浅 / 深色 SVG，共 8 份，另保留 4 份 JSON 源规格、维护说明及生成样式的 Archify MIT 声明。图中标明当前衍生桌面的待接入路径，Codex 实证与 Claude 待验、人工批准 / 显式启动 / 最终接受的区别；图示不是新产品验收证据。
+- 四份图示规格及对应 HTML 均通过 Archify `showcase` 的 9/9 检查，0 errors / 0 warnings；1440×900、1600×1000、1920×1080、2048×1320 浏览器检查通过。供 README 使用的 SVG 另行增大字号，执行文字边界检查并实际目视核查。图示收据、哈希及截图位于本地 `output/playwright/readme-architecture/` 和 `output/playwright/readme-task-flow/`，静态 SVG 不冒称为原 HTML 的同一验证对象。
+- 文档检查：中英文各 47 处本地路径 / 锚点有效；4 组 shell 代码块语法、18 条命令及跨语言来源链接一致，4 个发布下载资产与 GitHub 回读一致。GitHub Markdown API 渲染后用 Playwright 检查桌面 / 390px 窄屏、语言导航和暗色图片选择，无页面横向溢出、缺图或折叠区；整页预览保存在本地 `output/playwright/readme-preview/`。
+- 事实审查根据生产 Python 模块与 ADR 修正了 Verifier 身份、Delivery 引用、失败返工不产生快照、Standard 规划继续与首次 Review / Verify 显式启动等表述。只更新文档与图示，未调用在线模型、未修改运行代码、依赖或用户数据；不将原 Forge 历史安装验收移记为当前 preview.4。`git diff --check` 通过，本次未提交、推送或发布。
+
 ## 2026-09-28 · 开源首页重写与中英文文档
 
 按用户要求重设计根 README，并采用用户选择的「中文首页 + 英文版」。`README.md` 与新增 `README.en.md` 同步产品定位、真实截图、功能入口、安装与上手、当前状态、本地开发、仓库结构、贡献方式和文档导航。保留当前衍生桌面尚未接入 Python Host、在线任务与平台未验、预发布签名状态，以及桌面限定的 AGPL 与 Aperant 上游归属；没有新增产品验收结论。
@@ -22,7 +51,7 @@
 
 ## 2026-09-28 · 桌面 UI / UX 重设计与全页面走查（本地未发布）
 
-本轮按用户反馈检查 `desktop/` 的实际 React / Electron 界面，修复项目配置误入应用设置、顶部弹层被遮挡，并继续核查导航、键盘、表单、错误反馈和跨项目数据。没有恢复手机 / 远程，没有提交、推送或发布。详细覆盖与证据在 [桌面 UI / UX 走查](desktop-ui-ux-audit.md)。
+本轮按用户反馈检查 `desktop/` 的实际 React / Electron 界面，修复项目配置误入应用设置、顶部弹层被遮挡，并继续核查导航、键盘、表单、错误反馈和跨项目数据。没有恢复手机 / 远程，没有提交、推送或发布。覆盖与验证结论保留在本节，原始实窗证据位于 `desktop/output/playwright/workspace-redesign/`。
 
 - **项目范围修复**：项目标签的配置按钮打开独立“项目设置”，显示当前项目名；全局入口打开“应用设置”。GitHub / GitLab 项目深链保留范围，保存项目设置不写全局偏好，保存失败保留输入；设置页内拦截冲突快捷键并恢复关闭后的焦点。
 - **弹层和输入**：Tooltip、子菜单、模型及仓库 / 分支搜索使用 Portal，长 Popover 受窗口高度限制；实际滚轮可达末项，切换按钮不换行。`@文件` 补全跟随输入框定位，中文与完整相对路径能真实保存，非法路径拒绝；Escape、嵌套浮层和返回焦点复验通过。

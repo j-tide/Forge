@@ -89,7 +89,7 @@ git status --short
 
 ## STEP 2 — Select Next Task
 
-当前 Desktop 里程碑先读取 `docs/implementation-status.md` 与 `docs/desktop-ui-ux-audit.md`，结合已有 ADR 找第一个缺少真实实现、用户入口、Python Host 运行或当前版本验收证据的缺口。原 PDF 功能表已按用户授权清理；UI 走查只能证明其列明的界面与本地服务，不替代完整业务验收。优先检查自定义 Workflow 修正后复验、知识/记忆进入实际 Run、Profile/模型/插件对新 Run 的作用、安装版与源码一致性；沿已有权威 Task/Test 映射补齐，保留原 DONE 历史状态及新的缺口说明。一个缺口真实验证后继续下一个。P7/P8 手机/远程新增工作当前不选。
+当前 Desktop 里程碑先读取 `docs/implementation-status.md` 及其中保留的原始验证证据，结合已有 ADR 找第一个缺少真实实现、用户入口、Python Host 运行或当前版本验收证据的缺口。原 PDF 功能表已按用户授权清理；UI 走查只能证明其列明的界面与本地服务，不替代完整业务验收。优先检查自定义 Workflow 修正后复验、知识/记忆进入实际 Run、Profile/模型/插件对新 Run 的作用、安装版与源码一致性；沿已有权威 Task/Test 映射补齐，保留原 DONE 历史状态及新的缺口说明。一个缺口真实验证后继续下一个。P7/P8 手机/远程新增工作当前不选。
 
 桌面缺口清零且用户以后恢复远程排期时，才按 Playbook 寻找：
 

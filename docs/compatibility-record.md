@@ -4,7 +4,7 @@
 
 `forge-0.1.0-preview.4-9864843c064e` / macOS arm64 / INTERNAL / ADHOC / UNNOTARIZED。独立 Desktop 版本及 npm lock 同步 `.4`，根 Python / pnpm 版本保持；`versions.lock.json.desktopPreview` 明确独立工作区。依赖版本不变：Electron 40.0.0、React 19.2.4、TypeScript 5.9.3、Vite 7.3.1、electron-vite 5.0.0、motion 12.36.0；无新增依赖或 install script。
 
-本次 `.4` Desktop 5057 tests、lint / typecheck / build / i18n、双主题全页面、语言重启、Portal / 实际滚轮 / 文件引用通过。根 frozen install / contracts / task-map / lint / typecheck / test（含 build）/ Python Host Desktop smoke、Python Ruff / mypy / 286 passed / 1 skipped 通过。DMG 和 ZIP 完整性通过，实际 DMG 挂载 `.app` 的版本 / 编译资源 / 图标 / 许可证 / 来源一致，启动后签名验证通过；用户设置 / 项目 / API Profile 摘要未变。完整结果及摘要见 [preview.4](../desktop/docs/releases/0.1.0-preview.4.md) 和 [UI 走查](desktop-ui-ux-audit.md)。
+本次 `.4` Desktop 5057 tests、lint / typecheck / build / i18n、双主题全页面、语言重启、Portal / 实际滚轮 / 文件引用通过。根 frozen install / contracts / task-map / lint / typecheck / test（含 build）/ Python Host Desktop smoke、Python Ruff / mypy / 286 passed / 1 skipped 通过。DMG 和 ZIP 完整性通过，实际 DMG 挂载 `.app` 的版本 / 编译资源 / 图标 / 许可证 / 来源一致，启动后签名验证通过；用户设置 / 项目 / API Profile 摘要未变。完整结果及摘要见 [preview.4](../desktop/docs/releases/0.1.0-preview.4.md) 和 [实施状态](implementation-status.md)。
 
 本次模型调用 0。生产 npm audit 仍 33 项（10 high / 9 moderate / 14 low），797 条既有 lint warnings / 5 infos 保留，未声明已修复。Python Host 接入此衍生 Desktop、完整任务 / Planner / Review / Verify / Owner 业务、Claude、Windows x64、macOS Intel、各平台 DPI / 辅助技术、Developer ID、公证、正式更新仍 UNVERIFIED / BLOCKED。内部预览发布不改变正式产品门禁，手机与远程继续后置。旧版本记录和旧包摘要保留在下方。
 
@@ -14,7 +14,7 @@
 
 独立 npm lint / typecheck / test / build / i18n 通过：283 Vitest 文件 / 5057 tests；36 namespaces / 5224 strings 无 i18n 错误。lint 仍有 797 条既有 warnings 和 5 infos，不声称零警告。真实 Electron 双主题全页面 QA 60 条记录 / 70 张截图；项目设置只保存项目偏好，重启恢复、Portal 弹层、键盘与文件补全真实读回通过。无认证账户时不会显示假的无限额度；无密钥 UI fixture 不证明 provider 可用。
 
-[本地 .app](../desktop/apps/desktop/dist/ui-redesign-unreleased/mac-arm64/Forge.app) 的 `app.asar` SHA-256：`70c0c93c2593b16fd6cad1d6e2f113f831ca4897744a59f1e1e463728423fe13`。8 份编译资源、4 份原生图标及 LICENSE / UPSTREAM 逐字节与构建核对，真实 packaged 启动及随后 ad-hoc deep / strict 签名验证通过。只读安装态检查前后现有设置、项目与 API Profile 摘要一致，没有关闭正在使用的旧 Forge。普通打开须先正常退出旧应用；发布的旧 DMG / ZIP 没有被覆盖。完整证据见 [UI / UX 报告](desktop-ui-ux-audit.md)。
+[本地 .app](../desktop/apps/desktop/dist/ui-redesign-unreleased/mac-arm64/Forge.app) 的 `app.asar` SHA-256：`70c0c93c2593b16fd6cad1d6e2f113f831ca4897744a59f1e1e463728423fe13`。8 份编译资源、4 份原生图标及 LICENSE / UPSTREAM 逐字节与构建核对，真实 packaged 启动及随后 ad-hoc deep / strict 签名验证通过。只读安装态检查前后现有设置、项目与 API Profile 摘要一致，没有关闭正在使用的旧 Forge。普通打开须先正常退出旧应用；发布的旧 DMG / ZIP 没有被覆盖。验证结论及原始证据位置见 [实施状态](implementation-status.md)。
 
 该验证限于界面和受影响本地服务，不新增 Forge Python Host 集成、真实在线执行器或完整任务交付证据。本轮在线模型调用 0。Windows x64、macOS Intel、系统 DPI / 辅助技术、Claude、Developer ID、公证、正式更新、衍生版 Python Core 集成及完整安装业务验收仍 **UNVERIFIED / BLOCKED**，沿用原记录。33 项继承生产依赖 audit 风险未宣称关闭；手机 / 远程后置，未放宽写入或权限安全。未提交、推送或发布。
 
