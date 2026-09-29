@@ -1,0 +1,274 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "From a request to a traceable delivery",
+    "locale": "en",
+    "quality_profile": "showcase"
+  },
+  "nodes": [
+    {
+      "id": "intent",
+      "type": "frontend",
+      "label": "Request + context",
+      "sublabel": "Natural language & project",
+      "tag": "01",
+      "width": 180,
+      "height": 94,
+      "lane": "definition",
+      "col": 0
+    },
+    {
+      "id": "contract",
+      "type": "backend",
+      "label": "Editable contract",
+      "sublabel": "Clarify scope and criteria",
+      "tag": "02 · TaskContract",
+      "width": 180,
+      "height": 94,
+      "lane": "definition",
+      "col": 1
+    },
+    {
+      "id": "approve",
+      "type": "security",
+      "label": "Human approval",
+      "sublabel": "revision + scopeHash",
+      "tag": "03 · Approve",
+      "width": 180,
+      "height": 94,
+      "lane": "definition",
+      "col": 2
+    },
+    {
+      "id": "todo",
+      "type": "database",
+      "label": "TODO",
+      "sublabel": "No automatic start",
+      "tag": "04",
+      "width": 180,
+      "height": 94,
+      "lane": "definition",
+      "col": 3
+    },
+    {
+      "id": "start",
+      "type": "security",
+      "label": "Explicit start",
+      "sublabel": "Freeze config & plugins",
+      "tag": "05 · Start",
+      "width": 180,
+      "height": 94,
+      "lane": "execution",
+      "col": 3
+    },
+    {
+      "id": "develop",
+      "type": "backend",
+      "label": "Plan + develop",
+      "sublabel": "Isolated development",
+      "tag": "06 · Develop",
+      "width": 180,
+      "height": 94,
+      "lane": "execution",
+      "col": 2
+    },
+    {
+      "id": "snapshot",
+      "type": "database",
+      "label": "Code snapshot",
+      "sublabel": "Immutable code version",
+      "tag": "07 · CodeSnapshot",
+      "width": 180,
+      "height": 94,
+      "lane": "execution",
+      "col": 1
+    },
+    {
+      "id": "checks",
+      "type": "backend",
+      "label": "Review + Verify",
+      "sublabel": "Read-only / real commands",
+      "tag": "08 · Explicit actions",
+      "width": 180,
+      "height": 94,
+      "lane": "execution",
+      "col": 0
+    },
+    {
+      "id": "reports",
+      "type": "database",
+      "label": "Bound reports",
+      "sublabel": "Review / Verify reports",
+      "tag": "09 · Reports",
+      "width": 180,
+      "height": 94,
+      "lane": "evidence",
+      "col": 0
+    },
+    {
+      "id": "matrix",
+      "type": "database",
+      "label": "Acceptance matrix",
+      "sublabel": "Evidence for each criterion",
+      "tag": "10 · AC Matrix",
+      "width": 180,
+      "height": 94,
+      "lane": "evidence",
+      "col": 1
+    },
+    {
+      "id": "accept",
+      "type": "security",
+      "label": "Human acceptance",
+      "sublabel": "Check current evidence",
+      "tag": "11 · Accept",
+      "width": 180,
+      "height": 94,
+      "lane": "evidence",
+      "col": 2
+    },
+    {
+      "id": "delivery",
+      "type": "database",
+      "label": "Delivery record",
+      "sublabel": "Done ≠ merge / deploy",
+      "tag": "12 · Delivery",
+      "width": 180,
+      "height": 94,
+      "lane": "evidence",
+      "col": 3
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "One version, one chain of evidence",
+      "items": [
+        "Contract revision → RunConfig → Snapshot → Reports → Delivery",
+        "Review and Verify are explicit, separate actions bound to the same snapshot."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Bounded rework, fresh evidence",
+      "items": [
+        "quick goes straight to development; standard plans first; strict requires Plan approval.",
+        "Workflow and Run budgets bound rework. A new snapshot needs new evidence."
+      ]
+    }
+  ],
+  "lanes": [
+    {
+      "id": "definition",
+      "label": "Define and approve"
+    },
+    {
+      "id": "execution",
+      "label": "Develop and freeze"
+    },
+    {
+      "id": "evidence",
+      "label": "Verify and deliver"
+    }
+  ],
+  "edges": [
+    {
+      "id": "intent-contract",
+      "from": "intent",
+      "to": "contract",
+      "label": "contract",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "contract-approve",
+      "from": "contract",
+      "to": "approve",
+      "label": "revision",
+      "variant": "security",
+      "role": "main"
+    },
+    {
+      "id": "approve-todo",
+      "from": "approve",
+      "to": "todo",
+      "label": "approval",
+      "variant": "security",
+      "role": "main"
+    },
+    {
+      "id": "todo-start",
+      "from": "todo",
+      "to": "start",
+      "label": "start",
+      "variant": "security",
+      "role": "main"
+    },
+    {
+      "id": "start-develop",
+      "from": "start",
+      "to": "develop",
+      "label": "config",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "develop-snapshot",
+      "from": "develop",
+      "to": "snapshot",
+      "label": "code",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "snapshot-checks",
+      "from": "snapshot",
+      "to": "checks",
+      "label": "explicit",
+      "variant": "emphasis",
+      "role": "main",
+      "route": "straight"
+    },
+    {
+      "id": "checks-reports",
+      "from": "checks",
+      "to": "reports",
+      "label": "snapshot",
+      "variant": "emphasis",
+      "role": "main",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "straight",
+      "labelAt": [
+        182,
+        362
+      ]
+    },
+    {
+      "id": "reports-matrix",
+      "from": "reports",
+      "to": "matrix",
+      "label": "evidence",
+      "variant": "emphasis",
+      "role": "main",
+      "route": "straight"
+    },
+    {
+      "id": "matrix-accept",
+      "from": "matrix",
+      "to": "accept",
+      "label": "accept",
+      "variant": "security",
+      "role": "main"
+    },
+    {
+      "id": "accept-delivery",
+      "from": "accept",
+      "to": "delivery",
+      "label": "decision",
+      "variant": "security",
+      "role": "main"
+    }
+  ]
+}

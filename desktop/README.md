@@ -81,7 +81,7 @@ macOS 界面检查使用独立临时数据目录；Linux CI 检查静态类型�
 
 ## 截图与验证
 
-[版本说明](docs/releases/0.1.0-preview.4.md)记录实际检查、安装包摘要与未验项目。[当前 UI / UX 走查](../docs/desktop-ui-ux-audit.md)记录修复及历史复现。
+[版本说明](docs/releases/0.1.0-preview.4.md)记录实际检查、安装包摘要与未验项目。[实施状态](../docs/implementation-status.md)记录本地修复、验证结论及未验项。
 
 | 亮色 | 暗色 |
 | --- | --- |

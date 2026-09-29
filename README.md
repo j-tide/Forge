@@ -1,128 +1,233 @@
 <div align="center">
 
-<img src="desktop/apps/desktop/resources/icon-256.png" alt="Forge 标志" width="96" height="96" />
+<img src="desktop/apps/desktop/resources/icon-256.png" alt="Forge 标志" width="64" height="64" />
 
 # Forge
 
-**面向 AI 编程的开源桌面工作台**
+### 从想法，到有证据的交付。
 
-围绕代码项目，组织任务、配置 Agent、查看开发过程与代码变化。
+任务契约 · Agent 分工 · 代码快照 · 人工验收
 
-[![Preview](https://img.shields.io/badge/preview-0.1.0--preview.4-476b9b?style=flat-square)](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.4) [![macOS Apple Silicon](https://img.shields.io/badge/macOS-Apple_Silicon-64748b?style=flat-square)](#下载安装) [![Desktop CI](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml/badge.svg)](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml) [![Desktop License](https://img.shields.io/badge/desktop_license-AGPL--3.0-64748b?style=flat-square)](desktop/LICENSE)
+[![Preview](https://img.shields.io/badge/desktop-0.1.0--preview.4-476b9b?style=flat-square)](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.4) [![Python Core](https://img.shields.io/badge/core-Python_3.12%2B-3776AB?style=flat-square)](python/) [![Desktop CI](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml/badge.svg)](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml) [![Desktop License](https://img.shields.io/badge/desktop_license-AGPL--3.0-64748b?style=flat-square)](desktop/LICENSE)
 
-[**下载预览版**](#下载安装) · [功能](#功能概览) · [快速上手](#快速上手) · [开发](#本地开发) · [参与贡献](#参与贡献)
+[**核心亮点**](#核心亮点) · [系统架构](#系统架构) · [数据流](#从需求到交付数据如何流动) · [桌面预览](#桌面预览) · [开始使用](#开始使用)
 
 **简体中文** / [English](README.en.md)
 
 </div>
 
+Forge 是面向 **可审查交付** 的开源 AI 编程工作台。自然语言先形成可编辑的任务契约，再由规划、开发、审查与验证协作完成工作；完整流程串联运行配置、上下文、代码快照和检查结果。**你掌握任务批准、开始执行、最终接受与合并的决定。**
+
+> **当前进展**：Forge 由独立的 **Python Core** 和 **Desktop** 组成。下述交付流程已有 Core 实现及原 Forge 桌面的版本限定验证记录；当前发布的 `desktop/` 衍生预览正在整合中，**尚未接入 Python Host**。[查看验证范围](#项目进展)。
+
+## 系统架构
+
+**界面负责交互，Core 掌握状态，插件提供执行能力。** Forge 将任务生命周期与具体模型、执行器和桌面界面分开，使审批、权限和证据遵循同一套规则。
+
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="desktop/docs/screenshots/0.1.0-preview.4/home-dark-1440.png" />
-  <img src="desktop/docs/screenshots/0.1.0-preview.4/home-light-1440.png" alt="Forge 桌面首页，展示项目入口、任务导航与磨砂玻璃界面" width="100%" />
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/architecture.zh-CN.dark.svg" />
+  <img src="docs/assets/readme/architecture.zh-CN.light.svg" alt="Forge 系统架构：桌面入口、Python Host 业务核心、插件与执行器、状态和代码存储；衍生桌面到 Host 的待接入路径单独标注" width="100%" />
 </picture>
 
-<p align="center"><sub>真实 Electron 界面 · 亮色与暗色主题 · 中文 / English</sub></p>
+[查看架构大图](docs/assets/readme/architecture.zh-CN.light.svg) · [图示源文件](docs/assets/readme/architecture.zh-CN.json)
 
-Forge 将项目、任务、模型配置和开发活动放在同一个桌面应用中。你可以从本地 Git 项目开始，为任务补充文件与图片上下文，设置各阶段的 Agent，并在任务详情、终端和工作树中查看开发过程。
+图中区分原 Forge 桌面的已有运行路径与当前衍生桌面的待接入路径。Python Host 边界源于 [ADR 0029](docs/decisions/0029-python-core-runtime-architecture.md)，桌面整合路线见 [ADR 0087](docs/decisions/0087-aperant-derived-desktop-base.md)。
 
-> [!NOTE]
-> Forge 目前处于 **预览阶段**。`0.1.0-preview.4` 已验证 macOS Apple Silicon 的界面、本地交互与安装包启动；当前衍生桌面**尚未接入 Forge Python Host**，完整在线任务闭环仍待验收。具体范围见[项目状态](#项目状态)。
+| 层次 | 负责什么 | 关键边界 |
+| --- | --- | --- |
+| **Desktop / Client** | 项目、看板、任务详情、配置与证据展示。 | 最终集成中，Renderer 通过受限桥接访问 Host；Main 负责系统集成与 Host 生命周期。 |
+| **Python Host / Core** | 任务契约、审批、工作流、Run 调度、上下文、审查、验证与交付。 | 统一决定业务状态，通过有版本的 JSON-RPC over stdio 与桌面通信。 |
+| **Plugins / Executors** | 接入模型、执行器与受控工具能力。 | 通过公开 Python API 注册能力；插件不能直接修改 Core 状态或生成有效的人类审批。 |
+| **Persistence / Workspace** | SQLite 状态、Git 工作树、代码快照、报告与交付记录。 | 保存版本和来源关系；同一工作区只允许一个写入者。 |
 
-## 功能概览
+## 核心亮点
 
-| 能力 | 在 Forge 中做什么 |
+### 01 · 先把需求说清楚，再让 Agent 动手
+
+Forge 将自然语言整理为 **Task Contract**：目标、验收标准、允许修改的范围、明确排除的事项，以及仍需澄清的问题。你可以编辑和修订契约，再批准对应版本。
+
+批准绑定任务版本与范围摘要；任务进入待办后，由你另行开始执行。需求发生变化时，旧审批不会悄悄成为新任务的授权。
+
+### 02 · 让规划、开发、审查与验证各司其职
+
+**Planner** 产出结构化计划，**Developer** 在隔离工作树修改代码，**Reviewer** 面向固定快照进行独立只读审查，**Verifier** 运行已批准的项目检查命令。
+
+Planner、Developer、Reviewer 拥有各自的 Profile、模型和能力要求；Workflow 明确阶段顺序与门禁。审查意见和失败检查可以形成返工交接，保留问题来源，并受到轮次、尝试次数和运行预算约束。
+
+### 03 · 每条验收标准，都能追到对应证据
+
+代码产出被固化为 **CodeSnapshot**。Review、Verify 和逐条验收决定，都关联同一任务版本与代码快照。验收矩阵区分已验证、失败、待人工检查、未验证和明确接受的风险。
+
+最终交付记录串起运行、计划、代码快照、审查与检查报告，以及人的接受决定，可以沿引用查看配置与代码差异。代码或验收依据变化后，旧结论不能推进新版本。
+
+### 04 · 隔离修改，也认真处理停止与中断
+
+开发使用独立 **Git worktree** 和固定基线，工作区租约保证单一写入者。取消运行时，Host 确认所属进程退出后才释放租约；无法确认的中断保留隔离状态、Diff 和诊断记录。
+
+这让“在哪里改、谁在改、是否真的停下”都成为系统状态。任务标记为 **Done** 后，合并仍需要单独决定。
+
+### 05 · 流程可以升级，运行中的任务保持原样
+
+已发布的 Workflow、Agent Profile、插件版本、模型和预算被固定在 **RunConfig** 中。后续调整配置不会改写已有运行；历史任务仍能回看当时采用的流程与参数。
+
+当前支持经过校验的 `quick`、`standard`、`strict` 线性流程。工作流画布和配置用于表达流程，是否允许执行由 Core 检查。
+
+### 06 · 项目记忆有出处，也能被纠正
+
+项目知识保留原文位置、版本与哈希；记忆从候选开始，经过人工确认才参与上下文。内容按项目与环境隔离，支持冲突处理、过期、替换和撤销。
+
+运行使用的资料来源会被冻结，之后仍能查看来源是否失效。项目经验可以辅助执行，验收依据始终来自批准的任务契约。
+
+## 从需求到交付，数据如何流动
+
+下面展示 **Python Core 的任务与证据链**。每个阶段接收有明确来源的输入，并产出可持久保存的记录；图示不代表当前桌面预览已接通整条链路。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/task-flow.zh-CN.dark.svg" />
+  <img src="docs/assets/readme/task-flow.zh-CN.light.svg" alt="Forge 任务数据流：需求形成 Task Contract，人工批准和显式开始后冻结运行配置，规划产出计划，开发产出代码快照，审查和验证形成验收证据，最终人工接受并记录交付；失败走有限返工" width="100%" />
+</picture>
+
+[查看数据流大图](docs/assets/readme/task-flow.zh-CN.light.svg) · [图示源文件](docs/assets/readme/task-flow.zh-CN.json)
+
+### 贯穿全程的五份记录
+
+| 记录 | 固定了什么 | 解决的问题 |
+| --- | --- | --- |
+| **Task Contract** | 目标、范围、验收标准、版本及批准依据。 | 这次究竟要完成什么？ |
+| **RunConfig + ContextBundle** | 流程、角色、模型、预算、命令预设及知识来源。 | Agent 当时按什么规则、参考什么资料执行？ |
+| **CodeSnapshot** | 某次开发产出的固定代码版本与差异。 | 这份审查或检查针对哪一版代码？ |
+| **Review / Verify / Acceptance** | 审查问题、真实命令结果及逐项验收决定。 | 有哪些证据支持接受，哪些要求仍未验证？ |
+| **Delivery Record** | 被接受的快照、关联报告、风险和人工决定。 | 最终交付了什么，由谁依据什么接受？ |
+
+**返工启动新的运行，开发成功后生成新快照。** 系统保留失败原因与原始证据；新代码需要对应的新检查，不能借用旧版本的“通过”。达到限制时，流程停止并留下待处理原因。
+
+### 一个具体例子：为订单页面增加 CSV 导出
+
+下面是任务契约的**简化字段示意**，用来说明如何把一句需求变成可检查的目标；它不是完整的导入文件，也不代表已经运行过这个示例。
+
+```yaml
+title: 为订单页面增加 CSV 导出
+goal: 让用户导出当前筛选范围内的订单
+scope:
+  - 订单列表页面及导出服务
+  - 对应的自动化测试
+outOfScope:
+  - 修改订单数据库结构
+  - 更改其他页面的交互
+acceptance:
+  - id: AC-1
+    statement: 导出结果与当前筛选条件一致
+    method: automated
+    required: true
+  - id: AC-2
+    statement: 中文、逗号和换行字段正确转义
+    method: automated
+    required: true
+  - id: AC-3
+    statement: 空结果和导出失败有明确反馈
+    method: manual
+    required: true
+```
+
+Planner 根据边界制定计划；Developer 实现；Reviewer 检查代码快照；Verifier 执行已批准的检查。你可以逐项查看 AC-1 至 AC-3 的证据，选择接受或退回。**接受交付、合并代码、发布应用是三个独立决定。**
+
+## Agent 分工与工作流
+
+### 职责明确，结果可交接
+
+| 角色 / 服务 | 输入 | 产出与权限 |
+| --- | --- | --- |
+| **Refiner · 需求整理** | 用户消息与允许使用的项目上下文。 | 可编辑契约、澄清问题；不直接开始开发。 |
+| **Planner · 规划** | 已批准契约、固定 Git 基线与阶段上下文。 | 带版本与来源的 Plan Artifact；只读规划。 |
+| **Developer · 开发** | 契约，以及适用的计划或返工反馈。 | 隔离工作树中的代码变更和开发交接。 |
+| **Reviewer · 审查** | 固定快照、Diff 与独立审查上下文。 | 结构化问题与审查结论；使用只读副本。 |
+| **Verifier · 项目检查服务** | 固定快照与已批准的命令预设。 | 命令退出状态与报告；它是执行检查的服务，不是模型自述。 |
+| **Owner · 人** | 任务、计划或交付证据。 | 批准、开始、退回、风险决定与最终接受。 |
+
+### 三种流程，保留明确的验收门禁
+
+| 流程 | 阶段 | 适合的任务 |
+| --- | --- | --- |
+| **Quick** | Develop → Review → Verify → 人工验收 | 范围明确的小修改，省略独立规划阶段。 |
+| **Standard** | Plan → Develop → Review → Verify → 人工验收 | 需要先整理实施步骤的功能开发与重构。 |
+| **Strict** | Plan → **人工确认计划** → Develop → Review → Verify → 人工验收 | 希望先批准实施方案，再允许代码修改的任务。 |
+
+阶段顺序定义交接关系，具体推进受 Host 门禁控制。Standard 在计划成功后自动继续 Developer；Strict 先等待计划批准。Review、Verify 首次启动仍为显式操作，返工后的相应复核由受控返工链触发，最终接受始终由人决定。
+
+原 Forge 安装版已有 Standard 的真实 Codex 完整路径证据，Strict 完整路径仍未验收。定义见[流程预设](python/src/forge/workflow_presets/)，运行边界见 [ADR 0067](docs/decisions/0067-published-linear-workflow-runtime-and-retrieval-freeze.md)。
+
+## 桌面预览
+
+当前桌面围绕项目组织任务、模型配置、终端与工作树。银灰亮色与石墨暗色共用紧凑布局，支持中文 / English、键盘操作、减少动效与透明度。
+
+### 描述需求，配置一次任务
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="desktop/docs/screenshots/0.1.0-preview.4/new-task-dark-1440.png" />
+  <img src="desktop/docs/screenshots/0.1.0-preview.4/new-task-light-1440.png" alt="Forge 当前预览版新建任务界面：需求描述、文件与图片上下文、阶段模型和 Git 选项" width="100%" />
+</picture>
+
+### 在同一个工作台里管理项目与偏好
+
+| 项目设置 | English / 暗色界面 |
 | --- | --- |
-| **项目与任务** | 打开本地代码项目，通过看板组织任务，在详情中查看进度、子任务、日志与文件。 |
-| **需求与上下文** | 用自然语言描述目标，通过 `@` 引用项目文件、添加参考图片，并保存任务配置。 |
-| **Agent 与模型** | 为需求整理、规划、开发和质量审查分别选择模型，管理服务商认证与执行参数。 |
-| **终端与工作树** | 在工作台中查看命令活动、任务工作树与代码变化，检查基准分支及审阅、推送选项。 |
-| **项目探索** | 通过项目洞察、路线图、创意探索、上下文与 MCP 概览访问项目分析和工具配置。 |
-| **界面与偏好** | 即时切换中文 / English、亮色 / 暗色；保留语言与主题偏好，支持键盘操作、减少动效与透明度。 |
+| ![Forge 项目设置](desktop/docs/screenshots/0.1.0-preview.4/project-settings-general-light.png) | ![Forge 英文暗色语言设置](desktop/docs/screenshots/0.1.0-preview.4/settings-language-en-dark-1440.png) |
 
-以上为当前桌面的功能入口；在线模型、执行器及外部工具需要各自的认证和配置，验证范围见下方状态说明。
+这些是 `0.1.0-preview.4` 的真实 Electron 截图，项目与任务使用隔离 UI 测试数据，未在截图过程中执行在线 Agent。[截图来源与摘要](desktop/docs/screenshots/0.1.0-preview.4/screenshots.json)。
 
-<details>
-<summary><strong>查看任务创建与语言设置</strong></summary>
+## 开始使用
 
-<br />
+### 下载桌面预览
 
-| 描述需求并配置任务 | 切换语言与主题 |
-| --- | --- |
-| ![Forge 新建任务：需求、参考图片与阶段配置](desktop/docs/screenshots/0.1.0-preview.4/new-task-light-1440.png) | ![Forge 英文暗色界面中的语言设置](desktop/docs/screenshots/0.1.0-preview.4/settings-language-en-dark-1440.png) |
-
-截图来自 `0.1.0-preview.4` 的真实 Electron 窗口。标有「UI 测试」的项目与任务为隔离测试数据；这些画面未执行在线 Agent。来源与文件摘要见[截图记录](desktop/docs/screenshots/0.1.0-preview.4/screenshots.json)。
-
-</details>
-
-## 下载安装
-
-当前预览版本：**0.1.0-preview.4**。提供 **macOS Apple Silicon（M 系列芯片）** 安装包。
+当前版本 **0.1.0-preview.4**，提供 **macOS Apple Silicon（M 系列芯片）** 安装包。
 
 | 下载 | 用途 |
 | --- | --- |
 | [**macOS DMG**](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/Forge-0.1.0-preview.4-darwin-arm64-INTERNAL.dmg) | 打开后将 `Forge.app` 拖入 Applications。 |
 | [macOS ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/Forge-0.1.0-preview.4-darwin-arm64-INTERNAL.zip) | 解压后打开 `Forge.app`。 |
 | [对应源码](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/Forge-0.1.0-preview.4-source.tar.gz) | 与发布 tag 对应的完整源码。 |
-| [SHA256SUMS](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/SHA256SUMS) | 核对下载文件的 SHA-256 摘要。 |
+| [SHA256SUMS](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/SHA256SUMS) | 核对下载文件摘要。 |
 
-下载后核对校验摘要，正常退出旧版 Forge，再从 Finder 打开新版。版本改动、构建信息与已知问题见[发布说明](desktop/docs/releases/0.1.0-preview.4.md)；历史版本见 [Releases](https://github.com/j-tide/Forge/releases)。
+安装包为 **INTERNAL / ADHOC / UNNOTARIZED** 预发布，使用 ad-hoc 签名，尚未完成 Developer ID 签名与公证。核对下载摘要后正常退出旧版，再从 Finder 打开新版；遵循 macOS 的安全提示，无需全局关闭 Gatekeeper。
 
-> [!IMPORTANT]
-> 当前安装包为 **INTERNAL / ADHOC / UNNOTARIZED** 预发布，使用 ad-hoc 签名，尚未完成 Developer ID 签名与公证。请遵循 macOS 的安全提示；无需全局关闭 Gatekeeper。
+### 第一次使用
 
-## 快速上手
+1. **打开项目**：选择本地 Git 目录，按提示完成初始化；首次试用建议使用测试仓库。
+2. **配置模型**：在「设置 → 账户」配置自己的认证，在「智能体设置」选择阶段模型；需要 CLI 时配置可执行程序路径。
+3. **创建任务**：描述目标，引用文件或添加图片，检查基准分支、工作树、审阅与推送选项后保存。
+4. **明确开始**：创建后在看板点击「开始」；通过任务详情、终端和工作树检查活动。当前预览的完整在线链路仍待验收。
 
-使用项目功能需要 **Git**；调用模型需要你自己的有效认证和网络连接，部分执行器还需要安装相应 CLI。首次试用建议使用测试仓库。
+项目功能需要 **Git**，模型调用需要有效认证与网络；部分执行器需要对应 CLI。更多入口和数据目录说明见[桌面文档](desktop/README.md)。
 
-1. **打开项目** — 在首页选择本地代码目录，按提示完成项目初始化。
-2. **配置模型** — 在「设置 → 账户」配置认证，到「智能体设置」选择各阶段的服务商与模型；需要 CLI 时在「路径」中配置。
-3. **创建任务** — 点击「新建任务」，描述目标、引用相关文件，检查基准分支、工作树及审阅、推送选项后保存。
-4. **明确开始** — 创建任务后，在看板中点击「开始」才进入执行。开始前确认模型配置与执行选项。
-5. **查看过程** — 打开任务详情查看进度、日志和文件；结合「智能体终端」与「工作树」检查开发活动和代码变化。
+## 项目进展
 
-项目标签旁的配置按钮管理当前项目；左下角「设置」管理应用偏好。更完整的入口说明见[桌面使用与开发文档](desktop/README.md#操作入口)。
+| 范围 | 已有实现与证据 | 当前边界 |
+| --- | --- | --- |
+| **Python Core 交付链** | 任务契约、角色分工、隔离执行、快照审查、命令验证、人工验收和交付记录。原 Forge macOS arm64 安装版有真实 Codex Standard 路径记录。 | 证据属于对应历史构建；不代表当前衍生预览已打通，也不代表全部验收用例通过。 |
+| **当前衍生 Desktop** | 亮暗界面、本地任务保存、项目设置、键盘与偏好重启恢复；DMG 安装启动和包内一致性检查。 | 尚未接入 Forge Python Host，完整在线任务闭环待验。 |
+| **执行器与扩展** | Codex 真实路径、公开 Python 插件 API、能力与权限校验。 | Claude 完整路径、外部 MCP 和第三方集成仍待相应验收。 |
+| **分发与平台** | macOS Apple Silicon 内部预览；Linux CI 静态检查、单元测试与构建。 | Windows、Intel Mac 实机、正式签名、公证与签名更新待验。 |
+| **手机与远程** | 保留已有代码与历史记录。 | 新增开发后置，远程网络入口默认关闭。 |
 
-## 项目状态
-
-Forge 当前优先完成桌面体验、Python Host 集成与安装态验收。以下状态对应 **0.1.0-preview.4**，测试记录随版本保留。
-
-| 范围 | 当前状态 |
-| --- | --- |
-| macOS Apple Silicon 桌面 | 已验证亮暗界面、项目设置、任务本地保存、键盘操作及语言 / 主题重启恢复。 |
-| macOS 安装包 | DMG 挂载启动、包内资源一致性与 ad-hoc 签名检查通过；正式签名、公证与签名更新待验。 |
-| Forge Python Host | 仓库内已有独立实现；当前 `desktop/` 衍生应用尚未接入。 |
-| 在线任务与外部集成 | 当前版本的完整 Agent 任务闭环、Claude、外部 MCP 与第三方集成仍待验收。 |
-| 其他平台 | Windows、macOS Intel 尚未完成实机验证；Linux CI 覆盖静态检查、单元测试与构建。 |
-| 手机与远程协作 | 新增开发后置，远程网络入口默认关闭。 |
-
-本版仍有已记录的依赖审计风险，详情见[发布说明中的未关闭风险](desktop/docs/releases/0.1.0-preview.4.md#未关闭风险)。完整进度与验收证据见[实施记录](docs/implementation-status.md)。
+下一步重点是 **新桌面与 Core 的真实接入、桌面功能逐项验收，以及安装版交付链验证**。已知依赖审计风险见[发布说明](desktop/docs/releases/0.1.0-preview.4.md#未关闭风险)；进度和版本限定证据见[实施记录](docs/implementation-status.md)。
 
 ## 本地开发
 
-### 运行桌面应用
+### Desktop · Electron + React + TypeScript
 
-当前桌面源码位于 `desktop/`，使用 **Electron + React + TypeScript** 和独立 npm workspace。
-
-前置条件：**Node.js 24+、npm 10+、Git**。macOS 原生模块构建需要 Xcode Command Line Tools；原生依赖的其他要求见[桌面开发文档](desktop/README.md#源码开发)。
+前置条件：**Node.js 24+、npm 10+、Git**。macOS 原生构建需要 Xcode Command Line Tools。
 
 ```sh
 git clone https://github.com/j-tide/Forge.git
 cd Forge/desktop
 
-# 安装锁定依赖
 npm ci --ignore-scripts
-
-# 安装 Electron 运行时并准备原生模块
 node node_modules/electron/install.js
 npm --workspace apps/desktop run postinstall
-
-# 启动开发环境
 npm run dev
 ```
 
-### 检查与构建
-
-以下命令均在 `desktop/` 执行，与[桌面 CI](.github/workflows/desktop-quality.yml) 的检查项目对应：
+在 `desktop/` 执行检查和构建：
 
 ```sh
 npm run check:i18n
@@ -132,7 +237,7 @@ npm test
 npm run build
 ```
 
-涉及桌面交互的修改，还需在 macOS 运行真实 Electron 回归：
+修改界面交互后，在 macOS 执行实际 Electron 回归。测试使用隔离数据，不调用在线模型：
 
 ```sh
 npm run test:ui:desktop
@@ -141,63 +246,49 @@ npm run test:files:desktop
 npm run test:i18n:desktop
 ```
 
-这些界面检查使用独立测试数据，不调用在线模型。打包步骤见[发布开发说明](desktop/RELEASE.md)。
+### Core · Python + asyncio + Pydantic + SQLite
+
+Python 使用 **3.12+** 和 uv。仓库根的独立 pnpm 工程要求 **Node.js `>=22.13.0 <23`、pnpm `12.3.4`**；与 `desktop/` 使用不同的 Node 要求和锁文件。切换到对应环境后，在仓库根执行：
+
+```sh
+pnpm install --frozen-lockfile
+pnpm py:check          # 同步依赖，运行 Ruff、mypy 与 pytest
+pnpm dev:python-host   # 独立启动 stdio Host
+```
+
+Host 标准输出用于协议通信。独立启动 Host 不会自动接通衍生桌面。工具版本见 [versions.lock.json](versions.lock.json)。
 
 ### 仓库结构
 
 ```text
 Forge/
-├── desktop/       # 当前衍生桌面：Electron + React，独立 npm workspace
-├── python/        # Forge Python Host / Core 与 Python 测试
-├── apps/          # 原 Forge 桌面与 Vue UI；旧 Node Host 作为迁移对照
-├── packages/      # 公开契约、客户端、共享 UI、校验器与迁移对照代码
-├── plugins/       # 原 TypeScript 插件迁移对照
-├── tests/         # 原 Forge 集成测试与验收夹具
-└── docs/          # 架构决策、实施记录与验收证据
+├── desktop/              # 当前衍生桌面，独立 npm workspace
+├── python/src/forge/     # 任务、工作流、执行、上下文、证据与插件 Core
+├── python/tests/         # Python Core 测试
+├── apps/                 # 原 Forge 桌面 / Vue UI；旧 Node Host 对照
+├── packages/             # 公开契约、客户端、共享 UI 与校验器
+├── plugins/              # 原 TypeScript 插件迁移对照
+├── tests/                # 集成测试与验收夹具
+└── docs/                 # 架构决策、图示、实施记录与验证证据
 ```
 
-已批准的目标架构由 **Python Host** 统一管理任务、审批、执行与证据，桌面通过有版本的 **JSON-RPC over stdio** 通信。当前衍生桌面的集成工作仍待完成；架构与迁移边界见 [ADR 0029](docs/decisions/0029-python-core-runtime-architecture.md) 和 [ADR 0087](docs/decisions/0087-aperant-derived-desktop-base.md)。
+## 深入阅读与参与贡献
 
-<details>
-<summary><strong>开发 Python Host 与原 Forge 工程</strong></summary>
-
-仓库根目录使用独立的 pnpm 工程：Node.js `>=22.13.0 <23`、pnpm `12.3.4`。Python 使用 `3.12+` 和 uv；工具版本记录在 [versions.lock.json](versions.lock.json)。根目录与 `desktop/` 使用不同的 Node 要求和锁文件，请在对应环境中执行命令。
-
-在仓库根目录运行：
-
-```sh
-pnpm install --frozen-lockfile
-pnpm py:check          # 同步 Python 依赖，运行 Ruff、mypy 与 pytest
-pnpm dev:python-host   # 独立启动 stdio Host
-```
-
-Host 的标准输出用于协议通信。上述命令不会将当前衍生桌面连接到 Host。模块入口与迁移记录见 [Python 模块清单](docs/python-core-module-inventory.md)和[迁移计划](docs/forge-python-core-migration-plan.md)。
-
-</details>
-
-## 参与贡献
-
-欢迎问题反馈、文档改进、翻译和代码贡献。
-
-- **报告问题**：通过 [Issues](https://github.com/j-tide/Forge/issues) 提供版本、操作系统、复现步骤和预期结果；日志与截图请先移除密钥及个人信息。
-- **提出功能**：说明使用场景与预期行为。涉及架构、权限或产品状态的变更，先讨论方案并记录架构决策。
-- **提交改进**：保持每个 PR 聚焦一个问题，附上实际验证结果；界面修改附上截图，未验证的平台如实说明。
-
-修改前请阅读 [AGENTS.md](AGENTS.md)。桌面与根工程分别执行对应检查；保留已有用户数据、许可证和来源声明。
-
-## 文档导航
-
-| 文档 | 内容 |
+| 你想了解 | 从这里开始 |
 | --- | --- |
-| [桌面使用与开发](desktop/README.md) | 操作入口、配置、数据目录与本地开发。 |
-| [版本说明](desktop/docs/releases/0.1.0-preview.4.md) | 本版变更、截图、安装包摘要与已知问题。 |
-| [桌面 UI / UX 走查](docs/desktop-ui-ux-audit.md) | 界面、交互、键盘操作与修复记录。 |
-| [Python Core 迁移计划](docs/forge-python-core-migration-plan.md) | 独立业务 Runtime 的迁移步骤与验证边界。 |
-| [架构决策](docs/decisions/) | 技术路线、状态、权限与安全规则。 |
-| [实施记录](docs/implementation-status.md) | 各版本的实际进度、检查结果与未验项目。 |
+| 任务契约如何定义 | [Task Contract 模型](python/src/forge/drafts.py) · [审批与待办](docs/decisions/0014-task-approval-and-atomic-todo.md) |
+| 一次运行如何保持一致 | [RunConfig](python/src/forge/run_config.py) · [发布工作流与上下文冻结](docs/decisions/0067-published-linear-workflow-runtime-and-retrieval-freeze.md) |
+| 交付结论如何形成 | [验收矩阵](python/src/forge/acceptance_matrix.py) · [最终人工接受](docs/decisions/0042-snapshot-bound-final-human-acceptance.md) |
+| 扩展能力如何接入 | [插件开发](docs/plugin-authoring.md) · [公开 Python API](python/src/forge/plugin_api.py) |
+| 桌面如何运行与构建 | [桌面文档](desktop/README.md) · [打包说明](desktop/RELEASE.md) |
+| 已验证到哪一步 | [版本说明](desktop/docs/releases/0.1.0-preview.4.md) · [实施记录](docs/implementation-status.md) |
+
+欢迎文档、翻译、界面和 Core 贡献。通过 [Issues](https://github.com/j-tide/Forge/issues) 提交使用场景或可复现的问题；PR 聚焦一个改进，附真实验证结果，界面修改附截图。日志与截图请移除密钥和个人信息。
+
+修改前阅读 [AGENTS.md](AGENTS.md)。涉及架构、权限或产品状态的变更先讨论方案；桌面与根工程分别执行对应检查，并保留用户数据、版权与来源声明。
 
 ## 致谢与许可证
 
-Forge 的当前桌面基于 [Aperant](https://github.com/AndyMik90/Aperant) **`v2.8.0-beta.6`** 衍生开发，采用 [GNU AGPL-3.0](desktop/LICENSE)。感谢 AndyMik90 与上游贡献者；原作者的版权、许可与来源声明保留。Forge 由本项目独立维护。
+当前桌面基于 [Aperant](https://github.com/AndyMik90/Aperant) **`v2.8.0-beta.6`** 衍生开发，采用 [GNU AGPL-3.0](desktop/LICENSE)。感谢 AndyMik90 与上游贡献者；原版权、许可证和来源声明保留，Forge 由本项目独立维护。
 
-导入版本、原始提交与修改记录见 [UPSTREAM.md](desktop/UPSTREAM.md)。发布页提供与版本对应的完整源码；其他目录的许可边界遵循各自声明与 [ADR 0087](docs/decisions/0087-aperant-derived-desktop-base.md)。
+导入版本、原始提交与修改记录见 [UPSTREAM.md](desktop/UPSTREAM.md)。发布页提供对应完整源码；其他目录的许可边界遵循各自声明与 [ADR 0087](docs/decisions/0087-aperant-derived-desktop-base.md)。
