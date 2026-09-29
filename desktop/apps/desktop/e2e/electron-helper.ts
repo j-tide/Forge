@@ -2,8 +2,13 @@
  * Helper utilities for Electron E2E tests
  * Provides utilities for launching and interacting with the Electron app
  */
-import { _electron as electron, ElectronApplication, Page } from '@playwright/test';
+import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import path from 'path';
+
+const testProfiles = new WeakMap<ElectronApplication, string>();
 
 export interface ElectronTestContext {
   app: ElectronApplication;
@@ -15,25 +20,41 @@ export interface ElectronTestContext {
  */
 export async function launchElectronApp(): Promise<ElectronTestContext> {
   // Path to the built Electron app
-  const appPath = path.join(__dirname, '..');
+  const appPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const userDataDir = await mkdtemp(path.join(path.resolve(tmpdir()), 'forge-ui-e2e-'));
+  let app: ElectronApplication | undefined;
 
-  const app = await electron.launch({
-    args: [appPath],
-    env: {
-      ...process.env,
-      NODE_ENV: 'test',
-      // Use test-specific user data directory
-      ELECTRON_USER_DATA_PATH: '/tmp/forge-ui-e2e'
+  try {
+    app = await electron.launch({
+      args: [appPath],
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        FORGE_GLASS_PREVIEW_USER_DATA_DIR: userDataDir
+      }
+    });
+    testProfiles.set(app, userDataDir);
+
+    // Wait for the main window to open
+    const page = await app.firstWindow();
+
+    // Wait for the app to be ready
+    await page.waitForLoadState('domcontentloaded');
+
+    return { app, page };
+  } catch (error) {
+    // A failed window/readiness wait still leaves a launched process to close.
+    if (app) {
+      try {
+        await closeElectronApp(app);
+      } catch (closeError) {
+        throw new AggregateError([error, closeError], 'Electron startup and cleanup failed');
+      }
+    } else {
+      await rm(userDataDir, { recursive: true, force: true });
     }
-  });
-
-  // Wait for the main window to open
-  const page = await app.firstWindow();
-
-  // Wait for the app to be ready
-  await page.waitForLoadState('domcontentloaded');
-
-  return { app, page };
+    throw error;
+  }
 }
 
 /**
@@ -41,6 +62,12 @@ export async function launchElectronApp(): Promise<ElectronTestContext> {
  */
 export async function closeElectronApp(app: ElectronApplication): Promise<void> {
   await app.close();
+  const userDataDir = testProfiles.get(app);
+  if (userDataDir) {
+    // Keep the profile if close fails; an active app must retain its data.
+    await rm(userDataDir, { recursive: true, force: true });
+    testProfiles.delete(app);
+  }
 }
 
 /**

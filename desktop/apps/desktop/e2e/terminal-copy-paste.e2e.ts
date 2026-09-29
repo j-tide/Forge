@@ -7,44 +7,14 @@
  *
  * To run: npx playwright test terminal-copy-paste.e2e.ts --config=e2e/playwright.config.ts
  */
-import { test, expect, _electron as electron, ElectronApplication, Page } from '@playwright/test';
-import { mkdirSync, rmSync, existsSync } from 'fs';
-import path from 'path';
-import * as os from 'os';
-
-// Global Navigator declaration for clipboard
-declare global {
-  interface Navigator {
-    clipboard: {
-      readText(): Promise<string>;
-      writeText(text: string): Promise<void>;
-    };
-  }
-}
-
-// Test data directory
-const TEST_DATA_DIR = path.join(os.tmpdir(), 'forge-terminal-e2e');
+import { test, expect, type ElectronApplication, type Page } from '@playwright/test';
+import { launchElectronApp, closeElectronApp } from './electron-helper';
 
 // Determine platform for platform-specific tests
 const platform = process.platform;
 const isMac = platform === 'darwin';
 const isWindows = platform === 'win32';
 const isLinux = platform === 'linux';
-
-// Setup test environment
-function setupTestEnvironment(): void {
-  if (existsSync(TEST_DATA_DIR)) {
-    rmSync(TEST_DATA_DIR, { recursive: true, force: true });
-  }
-  mkdirSync(TEST_DATA_DIR, { recursive: true });
-}
-
-// Cleanup test environment
-function cleanupTestEnvironment(): void {
-  if (existsSync(TEST_DATA_DIR)) {
-    rmSync(TEST_DATA_DIR, { recursive: true, force: true });
-  }
-}
 
 // Helper to get platform-specific copy shortcut
 function getCopyShortcutKey(): string {
@@ -61,26 +31,15 @@ function shouldRunForPlatform(testPlatform: 'all' | 'windows' | 'linux' | 'mac')
 }
 
 test.describe('Terminal Copy/Paste Flows', () => {
-  let app: ElectronApplication;
+  let app: ElectronApplication | undefined;
   let window: Page;
   let isAppReady = false;
 
-  test.beforeAll(async () => {
-    setupTestEnvironment();
-  });
-
-  test.afterAll(async () => {
-    cleanupTestEnvironment();
-  });
-
   test.beforeEach(async () => {
-    // Launch Electron app
-    const appPath = path.join(__dirname, '..');
-    app = await electron.launch({ args: [appPath] });
-
-    window = await app.firstWindow({
-      timeout: 15000
-    });
+    isAppReady = false;
+    const context = await launchElectronApp();
+    app = context.app;
+    window = context.page;
 
     // Wait for app to be ready
     try {
@@ -94,7 +53,8 @@ test.describe('Terminal Copy/Paste Flows', () => {
 
   test.afterEach(async () => {
     if (app) {
-      await app.close();
+      await closeElectronApp(app);
+      app = undefined;
     }
   });
 

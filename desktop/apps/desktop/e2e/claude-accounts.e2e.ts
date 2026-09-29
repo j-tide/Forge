@@ -7,10 +7,11 @@
  *
  * To run: npx playwright test claude-accounts.spec.ts --config=e2e/playwright.config.ts
  */
-import { test, expect, _electron as electron, ElectronApplication, Page } from '@playwright/test';
+import { test, expect, type ElectronApplication, type Page } from '@playwright/test';
 import { mkdirSync, rmSync, existsSync, writeFileSync, readFileSync, mkdtempSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
+import { launchElectronApp, closeElectronApp } from './electron-helper';
 
 // Test data directory - use secure temp directory with random suffix
 let TEST_DATA_DIR: string;
@@ -470,16 +471,9 @@ test.describe.skip('Claude Account UI Tests (Electron)', () => {
   test.skip('should launch Electron app', async () => {
     test.skip(!process.env.ELECTRON_PATH, 'Electron not available in CI');
 
-    const appPath = path.join(__dirname, '..');
-    app = await electron.launch({
-      args: [appPath],
-      env: {
-        ...process.env,
-        NODE_ENV: 'test'
-      }
-    });
-    page = await app.firstWindow();
-    await page.waitForLoadState('domcontentloaded');
+    const context = await launchElectronApp();
+    app = context.app;
+    page = context.page;
 
     expect(await page.title()).toBeDefined();
   });
@@ -519,7 +513,7 @@ test.describe.skip('Claude Account UI Tests (Electron)', () => {
 
   test.afterAll(async () => {
     if (app) {
-      await app.close();
+      await closeElectronApp(app);
     }
   });
 });
