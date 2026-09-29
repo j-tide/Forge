@@ -1,99 +1,91 @@
-# Forge
+<div align="center">
+  <img src="resources/icon-256.png" alt="Forge" width="88" height="88" />
+  <h1>Forge</h1>
+  <p><strong>From an idea to a development process you can follow.</strong></p>
+  <p>Task board · Models by phase · Code review · Integrated terminals</p>
+  <p>
+    <a href="https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.6">Download preview</a> ·
+    <a href="docs/user-guide.md">User guide (Chinese)</a> ·
+    <a href="docs/development.md">Development docs (Chinese)</a> ·
+    <a href="README.md">简体中文</a>
+  </p>
+</div>
 
-<img src="resources/icon-256.png" alt="Forge logo" width="72" height="72" />
+Forge is an AI development desktop app for code projects. Open a Git repository, describe the work, choose models for each phase, and follow tasks on a board. Read execution logs and review code changes alongside your projects, terminals, and development tools.
 
-**An AI desktop workspace for organizing coding tasks, configuring models, and following development activity.**
-
-[简体中文](README.md) / **English**
-
-This repository is a single **Electron + React + TypeScript** desktop application. Its npm project is at the repository root, with application source in `src/`.
-
-## Current release
-
-[**0.1.0-preview.6 · macOS Apple Silicon**](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.6) is an **INTERNAL / ADHOC / UNNOTARIZED** prerelease. It removes the former Forge implementation, reorganizes the retained Aperant-derived desktop into a single root npm application, and corrects runtime-resource and packaging paths.
-
-| Download | Purpose |
+| Silver light | Graphite dark |
 | --- | --- |
-| [DMG](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.dmg) | Open it and drag `Forge.app` into Applications. |
-| [ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.zip) | Extract and open the application. |
-| [Corresponding source](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-source.tar.gz) | Complete source matching the release tag. |
-| [SHA256SUMS](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/SHA256SUMS) | Verify the downloaded files. |
+| ![Forge light workspace](docs/screenshots/0.1.0-preview.6/home-light-1440.png) | ![Forge dark workspace](docs/screenshots/0.1.0-preview.6/home-dark-1440.png) |
 
-Save your work and quit any running Forge instance before installing. This build is not notarized; follow macOS security prompts.
+## What you can do
 
-## Features
+- **Turn requirements into tasks.** Describe a goal, attach reference images, or mention project files with `@`. Keep unfinished descriptions as drafts.
+- **Choose models by phase.** Configure models and thinking levels for specification, planning, coding, and quality review. Account settings include explicit connection tests to help identify authentication or connection problems before starting.
+- **Follow work on a task board.** Track planning, queued work, development, AI review, human review, and completion. Creating a task and starting it are separate actions.
+- **Review changes beside the task.** Inspect subtasks, logs, files, and code diffs; leave feedback and use the Git action controls to handle changes.
+- **Keep development tools close.** Use integrated terminals and inspect Git worktrees. Project settings and application settings manage project configuration and global preferences separately.
+- **Explore the project.** Open Insights, Ideation, Roadmap, Changelog, and Context. MCP overview and local memory management are also available in the workspace.
+- **Make the workspace comfortable.** Switch themes and languages, adjust fonts, or reduce motion and transparency. Preferences persist once saved; language changes save immediately.
 
-| Feature | Entry point |
+| Describe work and configure phases | Inspect task details |
 | --- | --- |
-| Projects and tasks | Open a code directory, create tasks on the board, and inspect subtasks, logs, files, and review results; start execution separately after creation. |
-| Models and accounts | Configure providers and phase models in application settings, explicitly test connections, and retry with visible errors. |
-| Project settings | Use the configuration button beside the project tab for the current project, and application settings for global preferences. |
-| Development workspace | Inspect Git branches, worktrees, and file changes; use the integrated terminal and task execution/push options. |
-| Project tools | Access Insights, Ideas, Roadmap, Context, Memory, and MCP configuration. |
-| Appearance and language | Silver light and graphite dark themes, Chinese/English, reduced transparency and motion; preferences survive restart. |
+| ![New task: requirements, reference images, phase models, and Git options](docs/screenshots/0.1.0-preview.6/new-task-light-1440.png) | ![Task details: overview, subtasks, logs, and files](docs/screenshots/0.1.0-preview.6/task-detail-light.png) |
 
-Model calls require valid provider credentials, network access, and authorization for applicable costs. The [release verification record](docs/releases/0.1.0-preview.6.md) lists source checks, local UI, persistence, and installation-package results separately; **complete online Agent workflows, external OAuth, every model and tool, additional platforms, and macOS notarization still require verification**. The active Agent Worker is not yet wired to the project `.env`/MCP override configuration chain or fully integrated with the new libSQL memory service; the presence of a settings page does not prove that execution path is active.
+Screenshots show the actual preview.6 app with local example tasks. [Screenshot provenance](docs/screenshots/0.1.0-preview.6/screenshots.json).
 
-## Runtime architecture
+## Download and install
 
-```mermaid
-flowchart LR
-    UI["React desktop workspace"] <--> Bridge["Preload · electronAPI"]
-    Bridge <-->|Electron IPC| Main["Electron Main · application services"]
-    Main <-->|worker_threads / events| Worker["TypeScript Agent Worker<br/>Spec → Planning → Coding → QA"]
-    Worker <-->|AI SDK| Models["Model providers and account authentication"]
-    Main <--> Workspace["Git · files · PTY"]
-    Worker <--> Workspace
-    Main <--> Files["Settings · projects · task JSON"]
-    Worker <--> Files
-    Main <--> Memory["Local libSQL memory database"]
-```
+The current version is **[0.1.0-preview.6](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.6)**, with installation packages for **macOS Apple Silicon (M-series chips)**.
 
-Main registers project, task, terminal, and settings IPC. Agent Workers orchestrate model sessions, use built-in tools and MCP, and return logs and state events. Task files live in the project’s `.forge-glass-preview/`; settings and local memory use the isolated `Forge Glass Preview` user-data directory. Tasks can use Git worktrees; the current implementation falls back to the project directory if creation fails.
+**[Download DMG](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.dmg)** · [Download ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.zip) · [Checksums](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/SHA256SUMS)
 
-The former Vue desktop, Python/TypeScript cores, Node Host, and plugins have been removed. The current application uses the desktop path above. Application ID `dev.iamzjt.forgeglasspreview`, the user-data directory, and project-data identity remain stable; this reorganization does not migrate or delete real user settings, accounts, projects, tasks, or databases.
+Open the DMG and drag `Forge.app` into Applications, or extract the ZIP and open the app. Save your work and quit the existing instance before upgrading.
 
-## Interface
+This internal preview is not notarized; follow macOS security prompts. Complete online workflows and additional platforms are still being verified. See the [current release's known limitations](docs/releases/0.1.0-preview.6.md#未关闭风险) before use.
 
-| Light | Dark |
-| --- | --- |
-| ![Light home](docs/screenshots/0.1.0-preview.6/home-light-1440.png) | ![Dark home](docs/screenshots/0.1.0-preview.6/home-dark-1440.png) |
-| ![Light new task](docs/screenshots/0.1.0-preview.6/new-task-light-1440.png) | ![Dark new task](docs/screenshots/0.1.0-preview.6/new-task-dark-1440.png) |
+## Start your first task
 
-These screenshots come from the actual `.6` Electron build using isolated test projects, with no online Agent execution. [Provenance and checksums](docs/screenshots/0.1.0-preview.6/screenshots.json).
+1. **Open a project.** Click **Open Project** and select a Git repository with at least one commit. Follow the prompts to initialize its Forge project data.
+2. **Connect a model provider.** Open **Settings → Accounts**, configure and save the required authentication, then use the available test controls. Choose phase models in **Agent Settings**.
+3. **Describe the goal.** Click **New Task**, enter requirements, add images or file references if needed, and check phase models, the base branch, and review options before creating the task.
+4. **Start and follow the work.** Click **Start** on the task card or in its details. Follow subtasks, logs, and files; inspect code diffs and leave feedback during human review.
 
-## Development
+Model calls use your own provider accounts and may incur charges. Connection tests cover different checks depending on the provider; a successful connection does not prove complete task execution. See the [user guide (Chinese)](docs/user-guide.md) for setup details and common questions.
 
-Use **Node.js 24+, npm 10+, and Git**. Native builds on macOS need Xcode Command Line Tools.
+## Run from source
+
+Forge uses **Electron + React + TypeScript** in a single npm project. You need **Node.js 24+, npm 10+, and Git**. Native builds on macOS need Xcode Command Line Tools.
 
 ```sh
+git clone https://github.com/j-tide/Forge.git
+cd Forge
 npm ci --ignore-scripts
 node node_modules/electron/install.js
 npm run postinstall
 npm run dev
 ```
 
-```sh
-npm run check:i18n
-npm run lint
-npm run typecheck
-npm test
-npm run build
+Source is organized by runtime responsibility:
 
-# Check actual Electron local interactions on macOS
-npm run test:ui:desktop
-npm run test:overlays:desktop
-npm run test:files:desktop
-npm run test:i18n:desktop
-
-# Open a locally built installation package on macOS
-npm run preview:open
+```text
+src/main/       Application services, Agents, Git, and terminals
+src/preload/    Desktop API bridge
+src/renderer/   React interface
+src/shared/     Types, localization, and shared logic
+resources/      Icons and platform assets
+prompts/        Runtime prompts
+scripts/        Build, launch, and check tools
+tests/          Tooling, UI, and end-to-end checks
+docs/           Usage, development, and release documentation
 ```
 
-Run development and checks at the repository root using its `package-lock.json`; see the [development layout](docs/development.md). UI checks need both an isolated HOME and isolated application data to protect real accounts and settings; type checks and unit tests do not replace actual online execution or target-platform acceptance.
+[Development setup and checks (Chinese)](docs/development.md) · [Contributing](CONTRIBUTING.md) · [Report an issue](https://github.com/j-tide/Forge/issues)
 
-## Documentation and provenance
+## Documentation and license
 
-[Usage](docs/user-guide.md) · [Implementation status](docs/implementation-status.md) · [Release verification](docs/releases/0.1.0-preview.6.md) · [Packaging and release](docs/releasing.md)
+- [User guide (Chinese)](docs/user-guide.md): account setup, task actions, and common questions.
+- [Development docs (Chinese)](docs/development.md): source entry points, runtime structure, and local checks.
+- [Release notes (Chinese)](docs/releases/0.1.0-preview.6.md): changes, verification results, and known limitations.
+- [Implementation status (Chinese)](docs/implementation-status.md): current progress and remaining work.
 
-Forge is derived from [Aperant](https://github.com/AndyMik90/Aperant) `v2.8.0-beta.6` under [AGPL-3.0](LICENSE). Original authorship, copyright, import provenance, and modification records are preserved in [UPSTREAM.md](UPSTREAM.md). Corresponding source is available with the release.
+Forge is derived from [Aperant](https://github.com/AndyMik90/Aperant) `v2.8.0-beta.6` and released under [AGPL-3.0](LICENSE). Thanks to the upstream authors and contributors. Original copyright, provenance, and modification records are preserved in [UPSTREAM.md](UPSTREAM.md). The release includes [complete source corresponding to the installation packages](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-source.tar.gz).

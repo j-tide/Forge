@@ -1,99 +1,91 @@
-# Forge
+<div align="center">
+  <img src="resources/icon-256.png" alt="Forge" width="88" height="88" />
+  <h1>Forge</h1>
+  <p><strong>从一个需求，到看得见的开发过程。</strong></p>
+  <p>任务看板 · 阶段模型 · 代码审阅 · 集成终端</p>
+  <p>
+    <a href="https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.6">下载预览版</a> ·
+    <a href="docs/user-guide.md">使用指南</a> ·
+    <a href="docs/development.md">开发文档</a> ·
+    <a href="README.en.md">English</a>
+  </p>
+</div>
 
-<img src="resources/icon-256.png" alt="Forge 标志" width="72" height="72" />
+Forge 是面向代码项目的 AI 开发桌面应用。打开 Git 项目，描述你想完成的工作，为不同阶段选择模型，然后在看板中跟踪任务、阅读执行日志和审阅代码变化。项目、任务、终端与开发工具集中在同一个工作台里。
 
-**围绕代码项目组织任务、配置模型并查看开发活动的 AI 桌面工作台。**
-
-**简体中文** / [English](README.en.md)
-
-本仓库是单一 **Electron + React + TypeScript** 桌面应用，使用根目录的 npm 工程；源码位于 `src/`。
-
-## 当前版本
-
-[**0.1.0-preview.6 · macOS Apple Silicon**](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.6) 为 **INTERNAL / ADHOC / UNNOTARIZED** 预发布。本版删除旧 Forge 实现，将保留的 Aperant 衍生桌面整理为根目录单一 npm 工程，并修正运行资源与打包路径。
-
-| 下载 | 用途 |
+| 银灰亮色 | 石墨暗色 |
 | --- | --- |
-| [DMG](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.dmg) | 打开后将 `Forge.app` 拖入 Applications。 |
-| [ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.zip) | 解压后打开应用。 |
-| [对应源码](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-source.tar.gz) | 与发布 tag 对应的完整源码。 |
-| [SHA256SUMS](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/SHA256SUMS) | 核对下载文件摘要。 |
+| ![Forge 亮色工作台](docs/screenshots/0.1.0-preview.6/home-light-1440.png) | ![Forge 暗色工作台](docs/screenshots/0.1.0-preview.6/home-dark-1440.png) |
 
-安装前保存工作并正常退出正在运行的 Forge。此包尚未公证，请遵循 macOS 自身安全提示。
+## 能用 Forge 做什么
 
-## 能做什么
+- **把需求整理成任务。** 用自然语言描述目标，附上参考图片或通过 `@` 引用项目文件；未写完的内容可以保留为草稿。
+- **为每个阶段选模型。** 分别配置需求整理、规划、开发和质量审查的模型与思考强度。账户配置提供显式连接测试，方便在开工前发现认证或连接问题。
+- **在看板上跟踪进度。** 从规划、排队和开发，到 AI 审查、人工审查与完成，任务状态集中呈现；创建与开始执行是两个独立操作。
+- **在任务旁审阅代码。** 详情中查看子任务、日志、文件和代码差异，提交反馈，并通过 Git 操作入口处理变更。
+- **随时回到开发现场。** 使用集成终端，查看 Git 工作树；项目设置与应用设置各自管理项目配置和全局偏好。
+- **围绕项目继续探索。** 项目洞察、创意探索、路线图、更新日志和上下文提供不同的项目入口，MCP 概览与本地记忆管理也在工作台内。
+- **按自己的习惯阅读。** 切换亮暗主题与中英文，调整字体，减少动效或透明度；偏好在保存后保留，语言选择即时保存。
 
-| 功能 | 正常入口 |
+| 描述需求与配置阶段 | 查看任务详情 |
 | --- | --- |
-| 项目与任务 | 打开代码目录，在看板创建任务、查看子任务、日志、文件和审阅结果；创建后另行开始执行。 |
-| 模型与账户 | 应用设置配置服务商与阶段模型，显式测试连接；错误结果提供原因和重试。 |
-| 项目设置 | 项目标签旁的配置入口管理当前项目，应用设置管理全局偏好。 |
-| 开发工作区 | 查看 Git 分支、工作树与文件变化，使用集成终端；按任务配置执行与推送选项。 |
-| 项目工具 | 使用洞察、想法、路线图、上下文、记忆和 MCP 配置入口。 |
-| 外观与语言 | 银灰亮色／石墨暗色、中英文、减少透明度与动效，偏好在重启后保留。 |
+| ![新建任务：需求、参考图片、阶段模型与 Git 选项](docs/screenshots/0.1.0-preview.6/new-task-light-1440.png) | ![任务详情：概览、子任务、日志与文件](docs/screenshots/0.1.0-preview.6/task-detail-light.png) |
 
-模型调用需要所选服务商的有效认证、网络和相应费用授权。[本版验证记录](docs/releases/0.1.0-preview.6.md)分别列出源码检查、本地 UI、持久化与安装包结果；**完整在线 Agent 流程、外部 OAuth、全部模型与工具、额外平台及 macOS 公证仍待验证**。活跃 Agent Worker 的项目 `.env`／MCP override 配置链尚未接通，新 libSQL 记忆服务也未完整接入 Worker；配置页面存在不代表该执行路径已生效。
+截图取自 preview.6 的实际应用，任务内容为本地界面示例；[截图来源](docs/screenshots/0.1.0-preview.6/screenshots.json)。
 
-## 实际运行结构
+## 下载与安装
 
-```mermaid
-flowchart LR
-    UI["React 桌面工作台"] <--> Bridge["Preload · electronAPI"]
-    Bridge <-->|Electron IPC| Main["Electron Main · 应用服务"]
-    Main <-->|worker_threads / 事件| Worker["TypeScript Agent Worker<br/>规格 → 规划 → 编码 → QA"]
-    Worker <-->|AI SDK| Models["模型服务与账户认证"]
-    Main <--> Workspace["Git · 文件 · PTY"]
-    Worker <--> Workspace
-    Main <--> Files["设置 · 项目 · 任务 JSON"]
-    Worker <--> Files
-    Main <--> Memory["本地 libSQL 记忆库"]
-```
+当前版本为 **[0.1.0-preview.6](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.6)**，提供 **macOS Apple Silicon（M 系列芯片）** 安装包。
 
-Main 注册项目、任务、终端与设置等 IPC；Agent Worker 编排模型会话，调用内置工具及 MCP，并回传日志和状态。任务文件保存在项目的 `.forge-glass-preview/`，设置与本地记忆使用隔离的 `Forge Glass Preview` 用户数据目录。任务可使用 Git worktree；当前创建失败时会回退项目目录。
+**[下载 DMG](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.dmg)** · [下载 ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.zip) · [校验文件](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/SHA256SUMS)
 
-旧 Vue 桌面、Python／TypeScript Core、Node Host 与插件已删除；当前工程只保留上述桌面链路。应用 ID `dev.iamzjt.forgeglasspreview`、用户数据目录及项目数据身份保持不变，结构整理不迁移或删除真实用户设置、账户、项目、任务及数据库。
+打开 DMG，将 `Forge.app` 拖入 Applications；也可以解压 ZIP 后打开应用。升级前保存工作并正常退出旧实例。
 
-## 界面
+这是尚未公证的内部预览包，请遵循 macOS 安全提示。完整在线流程及其他平台仍在验证中，使用前可查看[当前版本的已知限制](docs/releases/0.1.0-preview.6.md#未关闭风险)。
 
-| 亮色 | 暗色 |
-| --- | --- |
-| ![亮色首页](docs/screenshots/0.1.0-preview.6/home-light-1440.png) | ![暗色首页](docs/screenshots/0.1.0-preview.6/home-dark-1440.png) |
-| ![亮色新任务](docs/screenshots/0.1.0-preview.6/new-task-light-1440.png) | ![暗色新任务](docs/screenshots/0.1.0-preview.6/new-task-dark-1440.png) |
+## 开始第一个任务
 
-截图来自实际 `.6` Electron 编译代码，使用独立测试项目，没有在线 Agent 执行；[来源与摘要](docs/screenshots/0.1.0-preview.6/screenshots.json)。
+1. **打开项目。** 首页点击「打开项目」，选择已有至少一次提交的 Git 仓库，按提示初始化 Forge 项目数据。
+2. **连接模型。** 左下角「设置」→「账户」，配置所选服务商的认证并保存，使用可用的测试入口检查连接；再到「智能体设置」选择阶段模型。
+3. **描述目标。** 点击「新建任务」，填写需求，按需添加图片或文件引用，确认阶段模型、基准分支及审查选项，然后创建任务。
+4. **开始并跟踪。** 在任务卡片或详情中点击「开始」。通过子任务、日志与文件查看进度，到人工审查阶段检查代码差异并给出反馈。
 
-## 源码开发
+模型调用使用你自己的服务商账户，可能产生相应费用。不同服务商的连接测试范围不同，连接成功不等于完整任务执行成功。更详细的配置、操作与常见问题见[使用指南](docs/user-guide.md)。
 
-使用 **Node.js 24+、npm 10+、Git**。macOS 原生构建需要 Xcode Command Line Tools。
+## 从源码运行
+
+技术栈为 **Electron + React + TypeScript**，使用单一 npm 工程。需要 **Node.js 24+、npm 10+、Git**；macOS 原生依赖构建需要 Xcode Command Line Tools。
 
 ```sh
+git clone https://github.com/j-tide/Forge.git
+cd Forge
 npm ci --ignore-scripts
 node node_modules/electron/install.js
 npm run postinstall
 npm run dev
 ```
 
-```sh
-npm run check:i18n
-npm run lint
-npm run typecheck
-npm test
-npm run build
+代码按运行职责组织：
 
-# 在 macOS 上检查真实 Electron 本地交互
-npm run test:ui:desktop
-npm run test:overlays:desktop
-npm run test:files:desktop
-npm run test:i18n:desktop
-
-# 在 macOS 上正常打开本地已构建应用
-npm run preview:open
+```text
+src/main/       应用服务、Agent、Git 与终端
+src/preload/    桌面 API 桥接
+src/renderer/   React 界面
+src/shared/     类型、国际化与共享逻辑
+resources/      图标与平台资源
+prompts/        运行时提示词
+scripts/        构建、启动与检查工具
+tests/          工具、UI 与端到端检查
+docs/           使用、开发与发布文档
 ```
 
-开发与检查均在仓库根执行，使用根目录的 `package-lock.json`；[开发目录说明](docs/development.md)。运行 UI 检查需同时隔离 HOME 与应用数据，保护真实账户和配置；类型检查和单元测试不能代替真实在线运行或目标平台验收。
+[开发入口与检查命令](docs/development.md) · [贡献指南](CONTRIBUTING.md) · [反馈问题](https://github.com/j-tide/Forge/issues)
 
-## 文档与来源
+## 文档与开源许可
 
-[操作说明](docs/user-guide.md) · [实施状态](docs/implementation-status.md) · [版本验证](docs/releases/0.1.0-preview.6.md) · [打包与发布](docs/releasing.md)
+- [使用指南](docs/user-guide.md)：账户配置、任务操作与常见问题。
+- [开发文档](docs/development.md)：源码入口、运行结构与本地检查。
+- [版本说明](docs/releases/0.1.0-preview.6.md)：本版改动、验证结果与已知限制。
+- [实施记录](docs/implementation-status.md)：当前进展与待完成事项。
 
-Forge 基于 [Aperant](https://github.com/AndyMik90/Aperant) `v2.8.0-beta.6`，按 [AGPL-3.0](LICENSE) 提供衍生源码。原作者、版权、导入来源与修改记录保留在 [UPSTREAM.md](UPSTREAM.md)，发布页提供对应源码。
+Forge 基于 [Aperant](https://github.com/AndyMik90/Aperant) `v2.8.0-beta.6`，以 [AGPL-3.0](LICENSE) 开源。感谢上游作者与贡献者；原作者版权、来源和修改记录见 [UPSTREAM.md](UPSTREAM.md)。发布页提供[与安装包对应的完整源码](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-source.tar.gz)。
