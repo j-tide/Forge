@@ -15,6 +15,10 @@ const QWEN3_RERANKER_MODEL = 'qwen3-reranker:0.6b';
 
 export type RerankerProvider = 'ollama' | 'cohere' | 'none';
 
+export interface RerankerConfig {
+  ollamaBaseUrl?: string;
+}
+
 export interface RerankerCandidate {
   memoryId: string;
   content: string;
@@ -27,9 +31,11 @@ export interface RerankerResult {
 
 export class Reranker {
   private provider: RerankerProvider;
+  private readonly ollamaBaseUrl: string;
 
-  constructor(provider?: RerankerProvider) {
+  constructor(provider?: RerankerProvider, config?: RerankerConfig) {
     this.provider = provider ?? 'none';
+    this.ollamaBaseUrl = config?.ollamaBaseUrl?.trim().replace(/\/+$/, '') || OLLAMA_BASE_URL;
   }
 
   /**
@@ -39,7 +45,7 @@ export class Reranker {
   async initialize(): Promise<void> {
     // Check Ollama for Qwen3-Reranker-0.6B
     try {
-      const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`, {
+      const response = await fetch(`${this.ollamaBaseUrl}/api/tags`, {
         signal: AbortSignal.timeout(2000),
       });
       if (response.ok) {
@@ -125,7 +131,7 @@ export class Reranker {
       candidates.map(async (candidate, fallbackRank) => {
         try {
           const prompt = buildQwen3RerankerPrompt(query, candidate.content);
-          const response = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
+          const response = await fetch(`${this.ollamaBaseUrl}/api/embeddings`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model: QWEN3_RERANKER_MODEL, prompt }),

@@ -5,6 +5,7 @@ import { Download, Check, Loader2, RefreshCw, Package } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 import { useDownloadStore } from '../../stores/download-store';
+import { useActiveProvider } from '../../hooks/useActiveProvider';
 
 interface InstalledModel {
   name: string;
@@ -44,6 +45,8 @@ function formatSize(bytes: number): string {
  */
 export function OllamaModelManager() {
   const { t } = useTranslation('settings');
+  const { orderedAccounts } = useActiveProvider();
+  const ollamaBaseUrl = orderedAccounts.find((account) => account.provider === 'ollama')?.baseUrl;
 
   const [installedModels, setInstalledModels] = useState<InstalledModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,7 +60,7 @@ export function OllamaModelManager() {
   const fetchModels = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     try {
-      const result = await window.electronAPI.listOllamaModels();
+      const result = await window.electronAPI.listOllamaModels(ollamaBaseUrl);
       if (signal?.aborted) return;
 
       if (result?.success && Array.isArray(result?.data?.models)) {
@@ -80,7 +83,7 @@ export function OllamaModelManager() {
         setIsLoading(false);
       }
     }
-  }, []);
+  }, [ollamaBaseUrl]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -109,7 +112,7 @@ export function OllamaModelManager() {
     startDownload(modelName);
 
     try {
-      const result = await window.electronAPI.pullOllamaModel(modelName);
+      const result = await window.electronAPI.pullOllamaModel(modelName, ollamaBaseUrl);
       if (result?.success) {
         completeDownload(modelName);
         // Refresh installed list after successful download
@@ -141,6 +144,10 @@ export function OllamaModelManager() {
             defaultValue: 'Connect Ollama in Account Settings to manage models',
           })}
         </p>
+        <Button variant="outline" size="sm" onClick={() => fetchModels()} className="mt-3">
+          <RefreshCw className="h-3.5 w-3.5 mr-1" />
+          {t('agentProfile.ollamaModels.refresh', { defaultValue: 'Refresh' })}
+        </Button>
       </div>
     );
   }
@@ -263,6 +270,7 @@ export function OllamaModelManager() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDownload(model.name)}
+                      aria-label={`${t('agentProfile.ollamaModels.download', { defaultValue: 'Download' })} ${model.name} (${model.size})`}
                       disabled={isCurrentlyDownloading}
                       className="shrink-0 ml-3"
                     >

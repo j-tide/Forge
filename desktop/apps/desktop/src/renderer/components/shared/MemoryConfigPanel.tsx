@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database, Info } from 'lucide-react';
 import { Label } from '../ui/label';
@@ -58,6 +59,7 @@ interface MemoryConfigPanelProps {
 export function MemoryConfigPanel({ config, onChange, disabled = false }: MemoryConfigPanelProps) {
   const { t } = useTranslation('onboarding');
   const { t: tShared } = useTranslation('uiShellShared');
+  const controlId = useId();
 
   return (
     <div className="space-y-6">
@@ -66,13 +68,14 @@ export function MemoryConfigPanel({ config, onChange, disabled = false }: Memory
         <div className="flex items-center gap-3">
           <Database className="h-5 w-5 text-muted-foreground" />
           <div>
-            <Label className="font-medium text-foreground">{t('memory.enableMemory')}</Label>
+            <Label htmlFor={`${controlId}-enabled`} className="font-medium text-foreground">{t('memory.enableMemory')}</Label>
             <p className="text-xs text-muted-foreground">
               {t('memory.enableMemoryDescription')}
             </p>
           </div>
         </div>
         <Switch
+          id={`${controlId}-enabled`}
           checked={config.enabled}
           onCheckedChange={(checked) => onChange({ enabled: checked })}
           disabled={disabled}
@@ -98,7 +101,7 @@ export function MemoryConfigPanel({ config, onChange, disabled = false }: Memory
 
           {/* Embedding Provider Selection */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-foreground">{t('memory.embeddingProvider')}</Label>
+            <Label htmlFor={`${controlId}-provider`} className="text-sm font-medium text-foreground">{t('memory.embeddingProvider')}</Label>
             <p className="text-xs text-muted-foreground">
               {t('memory.embeddingProviderDescription')}
             </p>
@@ -107,7 +110,7 @@ export function MemoryConfigPanel({ config, onChange, disabled = false }: Memory
               onValueChange={(value: MemoryEmbeddingProvider) => onChange({ embeddingProvider: value })}
               disabled={disabled}
             >
-              <SelectTrigger>
+              <SelectTrigger id={`${controlId}-provider`}>
                 <SelectValue placeholder={t('memory.selectEmbeddingModel')} />
               </SelectTrigger>
               <SelectContent>
@@ -123,21 +126,23 @@ export function MemoryConfigPanel({ config, onChange, disabled = false }: Memory
           {/* OpenAI */}
           {config.embeddingProvider === 'openai' && (
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">{t('memory.openaiApiKey')}</Label>
+              <Label htmlFor={`${controlId}-openai-key`} className="text-sm font-medium text-foreground">{t('memory.openaiApiKey')}</Label>
               <p className="text-xs text-muted-foreground">{t('memory.openaiApiKeyDescription')}</p>
               <PasswordInput
+                id={`${controlId}-openai-key`}
+                disabled={disabled}
                 value={config.openaiApiKey}
                 onChange={(value) => onChange({ openaiApiKey: value })}
                 placeholder="sk-..."
               />
               <div className="space-y-1 mt-2">
-                <Label className="text-xs text-muted-foreground">{t('memory.embeddingModel')}</Label>
+                <Label htmlFor={`${controlId}-openai-model`} className="text-xs text-muted-foreground">{t('memory.embeddingModel')}</Label>
                 <Select
                   value={config.openaiEmbeddingModel || 'text-embedding-3-small'}
                   onValueChange={(value) => onChange({ openaiEmbeddingModel: value })}
                   disabled={disabled}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id={`${controlId}-openai-model`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -163,17 +168,20 @@ export function MemoryConfigPanel({ config, onChange, disabled = false }: Memory
           {/* Voyage AI */}
           {config.embeddingProvider === 'voyage' && (
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">{t('memory.voyageApiKey')}</Label>
+              <Label htmlFor={`${controlId}-voyage-key`} className="text-sm font-medium text-foreground">{t('memory.voyageApiKey')}</Label>
               <p className="text-xs text-muted-foreground">{t('memory.voyageApiKeyDescription')}</p>
               <PasswordInput
+                id={`${controlId}-voyage-key`}
+                disabled={disabled}
                 value={config.voyageApiKey}
                 onChange={(value) => onChange({ voyageApiKey: value })}
                 placeholder="pa-..."
               />
               <div className="space-y-1 mt-2">
-                <Label className="text-xs text-muted-foreground">{t('memory.embeddingModel')}</Label>
+                <Label htmlFor={`${controlId}-voyage-model`} className="text-xs text-muted-foreground">{t('memory.embeddingModel')}</Label>
                 <Input
                   placeholder="voyage-3"
+                  id={`${controlId}-voyage-model`}
                   value={config.voyageEmbeddingModel}
                   onChange={(e) => onChange({ voyageEmbeddingModel: e.target.value })}
                   disabled={disabled}
@@ -196,21 +204,23 @@ export function MemoryConfigPanel({ config, onChange, disabled = false }: Memory
           {/* Google AI */}
           {config.embeddingProvider === 'google' && (
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">{t('memory.googleApiKey')}</Label>
+              <Label htmlFor={`${controlId}-google-key`} className="text-sm font-medium text-foreground">{t('memory.googleApiKey')}</Label>
               <p className="text-xs text-muted-foreground">{t('memory.googleApiKeyDescription')}</p>
               <PasswordInput
+                id={`${controlId}-google-key`}
+                disabled={disabled}
                 value={config.googleApiKey}
                 onChange={(value) => onChange({ googleApiKey: value })}
                 placeholder="AIza..."
               />
               <div className="space-y-1 mt-2">
-                <Label className="text-xs text-muted-foreground">{t('memory.embeddingModel')}</Label>
+                <Label htmlFor={`${controlId}-google-model`} className="text-xs text-muted-foreground">{t('memory.embeddingModel')}</Label>
                 <Select
                   value={config.googleEmbeddingModel || 'gemini-embedding-001'}
                   onValueChange={(value) => onChange({ googleEmbeddingModel: value })}
                   disabled={disabled}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id={`${controlId}-google-model`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -238,17 +248,20 @@ export function MemoryConfigPanel({ config, onChange, disabled = false }: Memory
             <div className="space-y-3">
               <Label className="text-sm font-medium text-foreground">{t('memory.azureConfig')}</Label>
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">{t('memory.azureApiKey')}</Label>
+                <Label htmlFor={`${controlId}-azure-key`} className="text-xs text-muted-foreground">{t('memory.azureApiKey')}</Label>
                 <PasswordInput
+                  id={`${controlId}-azure-key`}
+                  disabled={disabled}
                   value={config.azureOpenaiApiKey}
                   onChange={(value) => onChange({ azureOpenaiApiKey: value })}
                   placeholder={tShared('azureApiKey')}
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">{t('memory.azureBaseUrl')}</Label>
+                <Label htmlFor={`${controlId}-azure-url`} className="text-xs text-muted-foreground">{t('memory.azureBaseUrl')}</Label>
                 <Input
                   placeholder="https://your-resource.openai.azure.com"
+                  id={`${controlId}-azure-url`}
                   value={config.azureOpenaiBaseUrl}
                   onChange={(e) => onChange({ azureOpenaiBaseUrl: e.target.value })}
                   className="font-mono text-sm"
@@ -256,9 +269,10 @@ export function MemoryConfigPanel({ config, onChange, disabled = false }: Memory
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">{t('memory.azureEmbeddingDeployment')}</Label>
+                <Label htmlFor={`${controlId}-azure-deployment`} className="text-xs text-muted-foreground">{t('memory.azureEmbeddingDeployment')}</Label>
                 <Input
                   placeholder="text-embedding-ada-002"
+                  id={`${controlId}-azure-deployment`}
                   value={config.azureOpenaiEmbeddingDeployment}
                   onChange={(e) => onChange({ azureOpenaiEmbeddingDeployment: e.target.value })}
                   className="font-mono text-sm"
@@ -273,23 +287,24 @@ export function MemoryConfigPanel({ config, onChange, disabled = false }: Memory
             <div className="space-y-4">
               <Label className="text-sm font-medium text-foreground">{t('memory.ollamaConfig')}</Label>
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">{t('memory.baseUrl')}</Label>
+                <Label htmlFor={`${controlId}-ollama-url`} className="text-xs text-muted-foreground">{t('memory.baseUrl')}</Label>
                 <Input
                   placeholder="http://localhost:11434"
+                  id={`${controlId}-ollama-url`}
                   value={config.ollamaBaseUrl}
                   onChange={(e) => onChange({ ollamaBaseUrl: e.target.value })}
                   disabled={disabled}
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">{t('memory.embeddingModel')}</Label>
+              <fieldset className="space-y-2 min-w-0 border-0 p-0">
+                <legend className="text-xs text-muted-foreground">{t('memory.embeddingModel')}</legend>
                 <OllamaModelSelector
                   selectedModel={config.ollamaEmbeddingModel}
                   baseUrl={config.ollamaBaseUrl}
                   onModelSelect={(model, dim) => onChange({ ollamaEmbeddingModel: model, ollamaEmbeddingDim: dim })}
                   disabled={disabled}
                 />
-              </div>
+              </fieldset>
             </div>
           )}
 

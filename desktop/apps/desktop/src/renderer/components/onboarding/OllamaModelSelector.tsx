@@ -140,22 +140,26 @@ export function OllamaModelSelector({
     setOllamaState('checking');
 
     try {
-      // First check if Ollama is installed (binary exists)
-      const installResult = await window.electronAPI.checkOllamaInstalled();
-      if (abortSignal?.aborted) return;
-
-      if (!installResult?.success || !installResult?.data?.installed) {
-        setOllamaState('not-installed');
-        setIsLoading(false);
-        return;
-      }
-
-      // Ollama is installed, now check if it's running
+      // A reachable endpoint works even when this machine has no Ollama binary.
       const statusResult = await window.electronAPI.checkOllamaStatus(baseUrl);
       if (abortSignal?.aborted) return;
 
       if (!statusResult?.success || !statusResult?.data?.running) {
-        setOllamaState('not-running');
+        let isLocalEndpoint = !baseUrl;
+        try {
+          const hostname = new URL(baseUrl || 'http://localhost:11434').hostname;
+          isLocalEndpoint = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+        } catch {
+          // Invalid custom endpoints are unavailable; installing locally cannot fix them.
+        }
+        if (isLocalEndpoint) {
+          const installResult = await window.electronAPI.checkOllamaInstalled();
+          if (abortSignal?.aborted) return;
+          setOllamaState(installResult?.success && installResult?.data?.installed ? 'not-running' : 'not-installed');
+        } else {
+          setOllamaState('not-running');
+          setError(statusResult?.error || statusResult?.data?.message || tm('testFailed'));
+        }
         setIsLoading(false);
         return;
       }
@@ -276,7 +280,7 @@ export function OllamaModelSelector({
      setError(null);
 
      try {
-       const result = await window.electronAPI.pullOllamaModel(modelName);
+       const result = await window.electronAPI.pullOllamaModel(modelName, baseUrl);
        if (result?.success) {
          completeDownload(modelName);
          // Refresh the model list
@@ -413,7 +417,7 @@ export function OllamaModelSelector({
               {t('ollama.notRunning.title')}
             </p>
             <p className="text-sm text-warning/80 mt-1">
-              {t('ollama.notRunning.description')}
+              {error || t('ollama.notRunning.description')}
             </p>
             <Button
               variant="outline"
@@ -459,10 +463,15 @@ export function OllamaModelSelector({
                  isSelected && 'border-primary bg-primary/5',
                  !model.installed && 'bg-muted/30'
                )}
-               onClick={() => handleSelect(model)}
              >
                <div className="flex items-center justify-between p-3">
-                 <div className="flex items-center gap-3">
+                 <button
+                   type="button"
+                   className="flex flex-1 items-center gap-3 text-left rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                   disabled={!model.installed || disabled}
+                   aria-pressed={isSelected}
+                   onClick={() => handleSelect(model)}
+                 >
                    {/* Selection/Status indicator */}
                    <div
                      className={cn(
@@ -506,7 +515,7 @@ export function OllamaModelSelector({
                      </div>
                      <p className="text-xs text-muted-foreground">{tm(model.description)}</p>
                    </div>
-                 </div>
+                 </button>
 
                  {/* Download button for non-installed models */}
                  {!model.installed && (
@@ -517,6 +526,7 @@ export function OllamaModelSelector({
                        e.stopPropagation();
                        handleDownload(model.name);
                      }}
+                     aria-label={`${tm('download')} ${model.name}${model.size_estimate ? ` (${model.size_estimate})` : ''}`}
                      disabled={isCurrentlyDownloading || disabled}
                      className="shrink-0"
                    >

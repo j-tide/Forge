@@ -16,6 +16,7 @@ import { readSettingsFile } from '../../settings-utils';
 let _instance: MemoryServiceImpl | null = null;
 let _initPromise: Promise<MemoryServiceImpl> | null = null;
 let _embeddingProvider: string | null = null;
+let _generation = 0;
 
 function buildEmbeddingConfig(): EmbeddingConfig | undefined {
   const settings = readSettingsFile();
@@ -43,18 +44,31 @@ function buildEmbeddingConfig(): EmbeddingConfig | undefined {
 export async function getMemoryService(): Promise<MemoryServiceImpl> {
   if (_instance) return _instance;
   if (_initPromise) return _initPromise;
+  const generation = _generation;
 
   _initPromise = (async () => {
     const db = await getMemoryClient();
-    const embeddingService = new EmbeddingService(db, buildEmbeddingConfig());
+    const embeddingConfig = buildEmbeddingConfig();
+    const embeddingService = new EmbeddingService(db, embeddingConfig);
     await embeddingService.initialize();
-    _embeddingProvider = embeddingService.getProvider();
-    const reranker = new Reranker();
+    const reranker = new Reranker(undefined, { ollamaBaseUrl: embeddingConfig?.ollamaBaseUrl });
     await reranker.initialize();
     const pipeline = new RetrievalPipeline(db, embeddingService, reranker);
-    _instance = new MemoryServiceImpl(db, embeddingService, pipeline);
-    return _instance;
-  })();
+    const instance = new MemoryServiceImpl(db, embeddingService, pipeline);
+    // Settings may change while endpoint discovery is still in flight.
+    if (generation === _generation) {
+      _instance = instance;
+      _embeddingProvider = embeddingService.getProvider();
+    }
+    return instance;
+  })().catch((error: unknown) => {
+    // A transient failure must not make every later UI retry reuse a rejected promise.
+    if (generation === _generation) {
+      _initPromise = null;
+      _embeddingProvider = null;
+    }
+    throw error;
+  });
 
   return _initPromise;
 }
@@ -71,6 +85,7 @@ export function getEmbeddingProvider(): string | null {
  * Reset the singleton (e.g. for tests or after closing the DB).
  */
 export function resetMemoryService(): void {
+  _generation += 1;
   _instance = null;
   _initPromise = null;
   _embeddingProvider = null;
