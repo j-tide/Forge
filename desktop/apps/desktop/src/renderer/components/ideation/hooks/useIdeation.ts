@@ -18,7 +18,7 @@ import {
 } from '../../../stores/ideation-store';
 import { loadTasks } from '../../../stores/task-store';
 import { useIdeationAuth } from './useIdeationAuth';
-import type { Idea, IdeationType } from '../../../../shared/types';
+import type { Idea, IdeationStatus, IdeationType } from '../../../../shared/types';
 import { ALL_IDEATION_TYPES } from '../constants';
 
 interface UseIdeationOptions {
@@ -42,7 +42,13 @@ export function useIdeation(projectId: string, options: UseIdeationOptions = {})
   const selectAllIdeas = useIdeationStore((state) => state.selectAllIdeas);
   const clearSelection = useIdeationStore((state) => state.clearSelection);
 
-  const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
+  const [selectedIdeaKey, setSelectedIdeaKey] = useState<{ projectId: string; id: string } | null>(null);
+  const selectedIdea = selectedIdeaKey?.projectId === projectId && session?.projectId === projectId
+    ? session.ideas.find((idea) => idea.id === selectedIdeaKey.id) ?? null
+    : null;
+  const setSelectedIdea = useCallback((idea: Idea | null) => {
+    setSelectedIdeaKey(idea ? { projectId, id: idea.id } : null);
+  }, [projectId]);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [showDismissed, setShowDismissed] = useState(false);
@@ -52,6 +58,11 @@ export function useIdeation(projectId: string, options: UseIdeationOptions = {})
   const [convertingIdeas, setConvertingIdeas] = useState<Set<string>>(new Set());
   // Ref for synchronous tracking - prevents race condition from stale React state closure
   const convertingIdeaRef = useRef<Set<string>>(new Set());
+  const mutatingIdeaRef = useRef<Set<string>>(new Set());
+  const [pendingMutations, setPendingMutations] = useState<Set<string>>(new Set());
+  const [ideaActionFailure, setIdeaActionFailure] = useState<{ projectId: string; ideaId: string; message: string } | null>(null);
+  const projectRef = useRef(projectId);
+  projectRef.current = projectId;
 
   const { hasToken, isLoading: isCheckingToken } = useIdeationAuth();
 
@@ -132,7 +143,7 @@ export function useIdeation(projectId: string, options: UseIdeationOptions = {})
   const handleConvertToTask = async (idea: Idea) => {
     // Guard: use ref for synchronous check to prevent race condition from stale state closure
     // React state is captured at render time, so rapid clicks would both see empty set
-    if (convertingIdeaRef.current.has(idea.id)) {
+    if (idea.taskId || idea.status === 'archived' || idea.status === 'dismissed' || idea.status === 'converted' || convertingIdeaRef.current.has(idea.id) || mutatingIdeaRef.current.has(`${projectId}:${idea.id}`)) {
       return;
     }
 
@@ -142,6 +153,7 @@ export function useIdeation(projectId: string, options: UseIdeationOptions = {})
 
     try {
       const result = await window.electronAPI.convertIdeaToTask(projectId, idea.id);
+      if (projectRef.current !== projectId || useIdeationStore.getState().session?.projectId !== projectId) return;
       if (result.success && result.data) {
         // Store the taskId on the idea so we can navigate to it later
         useIdeationStore.getState().setIdeaTaskId(idea.id, result.data.id);
@@ -178,12 +190,37 @@ export function useIdeation(projectId: string, options: UseIdeationOptions = {})
     [onGoToTask]
   );
 
-  const handleDismiss = async (idea: Idea) => {
-    const result = await window.electronAPI.dismissIdea(projectId, idea.id);
-    if (result.success) {
-      useIdeationStore.getState().dismissIdea(idea.id);
+  const mutateIdea = async (idea: Idea, action: 'dismiss' | 'restore'): Promise<boolean> => {
+    const requestKey = `${projectId}:${idea.id}`;
+    if (mutatingIdeaRef.current.has(requestKey) || convertingIdeaRef.current.has(idea.id)) return false;
+    if (useIdeationStore.getState().session?.projectId !== projectId) return false;
+    const status: IdeationStatus = action === 'dismiss' ? 'dismissed' : idea.taskId ? 'converted' : 'draft';
+    mutatingIdeaRef.current.add(requestKey);
+    setPendingMutations(new Set(mutatingIdeaRef.current));
+    setIdeaActionFailure(null);
+    try {
+      const result = action === 'dismiss'
+        ? await window.electronAPI.dismissIdea(projectId, idea.id)
+        : await window.electronAPI.updateIdeaStatus(projectId, idea.id, status);
+      if (projectRef.current !== projectId || useIdeationStore.getState().session?.projectId !== projectId) return false;
+      if (!result.success) throw new Error(result.error || t(`uiIdeaDetails:actions.${action}Failed`));
+      useIdeationStore.getState().updateIdeaStatus(idea.id, status);
+      return true;
+    } catch (error) {
+      if (projectRef.current === projectId) {
+        const message = error instanceof Error ? error.message : t(`uiIdeaDetails:actions.${action}Failed`);
+        setIdeaActionFailure({ projectId, ideaId: idea.id, message });
+        toast({ variant: 'destructive', title: t(`uiIdeaDetails:actions.${action}Failed`), description: message });
+      }
+      return false;
+    } finally {
+      mutatingIdeaRef.current.delete(requestKey);
+      setPendingMutations(new Set(mutatingIdeaRef.current));
     }
   };
+
+  const handleDismiss = (idea: Idea) => mutateIdea(idea, 'dismiss');
+  const handleRestore = (idea: Idea) => mutateIdea(idea, 'restore');
 
   const toggleIdeationType = (type: IdeationType) => {
     const currentTypes = config.enabledTypes;
@@ -259,6 +296,8 @@ export function useIdeation(projectId: string, options: UseIdeationOptions = {})
     archivedIdeas,
     selectedIds,
     convertingIdeas,
+    updatingIdeas: new Set(Array.from(pendingMutations).filter((key) => key.startsWith(`${projectId}:`)).map((key) => key.slice(projectId.length + 1))),
+    ideaActionError: ideaActionFailure?.projectId === projectId && ideaActionFailure.ideaId === selectedIdea?.id ? ideaActionFailure.message : null,
 
     // Actions
     setSelectedIdea,
@@ -281,6 +320,7 @@ export function useIdeation(projectId: string, options: UseIdeationOptions = {})
     handleConvertToTask,
     handleGoToTask,
     handleDismiss,
+    handleRestore,
     toggleIdeationType,
     toggleSelectIdea,
     clearSelection,

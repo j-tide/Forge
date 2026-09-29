@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ExternalLink, Play, X } from 'lucide-react';
+import { ExternalLink, Loader2, Play, RotateCcw, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
@@ -39,10 +39,13 @@ interface IdeaCardProps {
   onConvert: (idea: Idea) => void;
   onGoToTask?: (taskId: string) => void;
   onDismiss: (idea: Idea) => void;
+  onRestore?: (idea: Idea) => void;
   onToggleSelect: (ideaId: string) => void;
+  isUpdating?: boolean;
+  isConverting?: boolean;
 }
 
-export function IdeaCard({ idea, isSelected, onClick, onConvert, onGoToTask, onDismiss, onToggleSelect }: IdeaCardProps) {
+export function IdeaCard({ idea, isSelected, onClick, onConvert, onGoToTask, onDismiss, onRestore, onToggleSelect, isUpdating, isConverting }: IdeaCardProps) {
   const { t } = useTranslation(['common', 'uiIdeaDetails', 'uiKnowledgeIdeas']);
   const isDismissed = idea.status === 'dismissed';
   const isArchived = idea.status === 'archived';
@@ -58,16 +61,11 @@ export function IdeaCard({ idea, isSelected, onClick, onConvert, onGoToTask, onD
     >
       <div className="flex items-start gap-3">
         {/* Selection checkbox */}
-        <div
-          className="pt-0.5"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleSelect(idea.id);
-          }}
-        >
+        <div className="pt-0.5">
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onToggleSelect(idea.id)}
+            onClick={(event) => event.stopPropagation()}
             className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
             aria-label={t('accessibility.selectIdeaAriaLabel', { title: idea.title })}
           />
@@ -117,12 +115,14 @@ export function IdeaCard({ idea, isSelected, onClick, onConvert, onGoToTask, onD
             )}
           </div>
           <h3 className={`font-medium ${isInactive ? 'line-through' : ''}`}>
-            {idea.title}
+            <button type="button" className="text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={(event) => { event.stopPropagation(); onClick(); }}>
+              {idea.title}
+            </button>
           </h3>
           <p className="text-sm text-muted-foreground line-clamp-2">{idea.description}</p>
           </div>
           {/* Action buttons */}
-          {!isInactive && !isConverted && (
+          {!isInactive && !isConverted && !idea.taskId && (
             <div className="flex items-center gap-1 ml-2">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -135,8 +135,9 @@ export function IdeaCard({ idea, isSelected, onClick, onConvert, onGoToTask, onD
                       onConvert(idea);
                     }}
                     aria-label={t('accessibility.convertToTaskAriaLabel')}
+                    disabled={isUpdating || isConverting}
                   >
-                    <Play className="h-4 w-4" />
+                    {isConverting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{t('accessibility.convertToTaskAriaLabel')}</TooltipContent>
@@ -152,6 +153,7 @@ export function IdeaCard({ idea, isSelected, onClick, onConvert, onGoToTask, onD
                       onDismiss(idea);
                     }}
                     aria-label={t('accessibility.dismissAriaLabel')}
+                    disabled={isUpdating || isConverting}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -159,6 +161,11 @@ export function IdeaCard({ idea, isSelected, onClick, onConvert, onGoToTask, onD
                 <TooltipContent>{t('accessibility.dismissAriaLabel')}</TooltipContent>
               </Tooltip>
             </div>
+          )}
+          {isInactive && onRestore && (
+            <Button variant="ghost" size="sm" className="h-8 w-8 ml-2 p-0" aria-label={t('uiIdeaDetails:actions.restore')} disabled={isUpdating || isConverting} onClick={(event) => { event.stopPropagation(); onRestore(idea); }}>
+              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+            </Button>
           )}
           {/* Archived ideas show link to task */}
           {isArchived && idea.taskId && onGoToTask && (
@@ -171,7 +178,7 @@ export function IdeaCard({ idea, isSelected, onClick, onConvert, onGoToTask, onD
                     className="h-8 w-8 p-0 text-primary"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onGoToTask(idea.taskId!);
+                      if (idea.taskId) onGoToTask(idea.taskId);
                     }}
                     aria-label={t('accessibility.goToTaskAriaLabel')}
                   >
@@ -193,7 +200,7 @@ export function IdeaCard({ idea, isSelected, onClick, onConvert, onGoToTask, onD
                     className="h-8 w-8 p-0 text-primary"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onGoToTask(idea.taskId!);
+                      if (idea.taskId) onGoToTask(idea.taskId);
                     }}
                     aria-label={t('accessibility.goToTaskAriaLabel')}
                   >

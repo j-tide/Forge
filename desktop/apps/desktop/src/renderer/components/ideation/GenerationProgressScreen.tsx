@@ -33,6 +33,10 @@ interface GenerationProgressScreenProps {
   onConvert: (idea: Idea) => void;
   onGoToTask?: (taskId: string) => void;
   onDismiss: (idea: Idea) => void;
+  onRestore?: (idea: Idea) => void;
+  updatingIdeas?: Set<string>;
+  convertingIdeas?: Set<string>;
+  ideaActionError?: string | null;
   onStop: () => void | Promise<void>;
 }
 
@@ -47,6 +51,10 @@ export function GenerationProgressScreen({
   onConvert,
   onGoToTask,
   onDismiss,
+  onRestore,
+  updatingIdeas,
+  convertingIdeas,
+  ideaActionError,
   onStop
 }: GenerationProgressScreenProps) {
   const { t } = useTranslation('uiKnowledgeIdeas');
@@ -263,6 +271,10 @@ export function GenerationProgressScreen({
           onConvert={onConvert}
           onGoToTask={onGoToTask}
           onDismiss={onDismiss}
+          onRestore={onRestore}
+          isUpdating={updatingIdeas?.has(selectedIdea.id)}
+          isConverting={convertingIdeas?.has(selectedIdea.id)}
+          actionError={ideaActionError}
         />
       )}
     </div>

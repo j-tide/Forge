@@ -56,6 +56,7 @@ function validateEnabledTypes(rawTypes: unknown): IdeationType[] {
 export function transformIdeaFromSnakeCase(idea: RawIdea): Idea {
   const status = (idea.status || 'draft') as IdeationStatus;
   const createdAt = idea.created_at ? new Date(idea.created_at) : new Date();
+  const taskId = idea.linked_task_id || (typeof idea.taskId === 'string' ? idea.taskId : undefined);
 
   if (idea.type === 'code_improvements') {
     return {
@@ -66,6 +67,7 @@ export function transformIdeaFromSnakeCase(idea: RawIdea): Idea {
       rationale: idea.rationale,
       status,
       createdAt,
+      taskId,
       buildsUpon: idea.builds_upon || idea.buildsUpon || [],
       estimatedEffort: idea.estimated_effort || idea.estimatedEffort || 'small',
       affectedFiles: idea.affected_files || idea.affectedFiles || [],
@@ -81,6 +83,7 @@ export function transformIdeaFromSnakeCase(idea: RawIdea): Idea {
       rationale: idea.rationale,
       status,
       createdAt,
+      taskId,
       category: idea.category || 'usability',
       affectedComponents: idea.affected_components || idea.affectedComponents || [],
       screenshots: idea.screenshots || [],
@@ -97,6 +100,7 @@ export function transformIdeaFromSnakeCase(idea: RawIdea): Idea {
       rationale: idea.rationale,
       status,
       createdAt,
+      taskId,
       category: idea.category || 'readme',
       targetAudience: idea.target_audience || idea.targetAudience || 'developers',
       affectedAreas: idea.affected_areas || idea.affectedAreas || [],
@@ -114,6 +118,7 @@ export function transformIdeaFromSnakeCase(idea: RawIdea): Idea {
       rationale: idea.rationale,
       status,
       createdAt,
+      taskId,
       category: idea.category || 'configuration',
       severity: idea.severity || 'medium',
       affectedFiles: idea.affected_files || idea.affectedFiles || [],
@@ -132,6 +137,7 @@ export function transformIdeaFromSnakeCase(idea: RawIdea): Idea {
       rationale: idea.rationale,
       status,
       createdAt,
+      taskId,
       category: idea.category || 'runtime',
       impact: idea.impact || 'medium',
       affectedAreas: idea.affected_areas || idea.affectedAreas || [],
@@ -150,6 +156,7 @@ export function transformIdeaFromSnakeCase(idea: RawIdea): Idea {
       rationale: idea.rationale,
       status,
       createdAt,
+      taskId,
       category: idea.category || 'code_smells',
       severity: idea.severity || 'minor',
       affectedFiles: idea.affected_files || idea.affectedFiles || [],
@@ -173,6 +180,7 @@ export function transformIdeaFromSnakeCase(idea: RawIdea): Idea {
     rationale: idea.rationale,
     status,
     createdAt,
+    taskId,
     buildsUpon: [],
     estimatedEffort: 'small',
     affectedFiles: [],

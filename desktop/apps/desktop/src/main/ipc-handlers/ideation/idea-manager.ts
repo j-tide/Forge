@@ -123,10 +123,10 @@ export async function dismissAllIdeas(
   }
 
   try {
-    // Dismiss all ideas that are not already dismissed or converted
+    // Archived ideas, including converted task links, are retained just as in the renderer.
     let dismissedCount = 0;
     ideation.ideas?.forEach((idea) => {
-      if (idea.status !== 'dismissed' && idea.status !== 'converted') {
+      if (idea.status !== 'dismissed' && idea.status !== 'converted' && idea.status !== 'archived') {
         idea.status = 'dismissed';
         dismissedCount++;
       }

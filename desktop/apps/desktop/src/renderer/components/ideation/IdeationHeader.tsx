@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Lightbulb, Eye, EyeOff, Settings2, Plus, Trash2, RefreshCw, CheckSquare, X } from 'lucide-react';
+import { Archive, Lightbulb, Eye, EyeOff, Settings2, Plus, Trash2, RefreshCw, CheckSquare, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -11,6 +11,8 @@ interface IdeationHeaderProps {
   totalIdeas: number;
   ideaCountByType: Record<string, number>;
   showDismissed: boolean;
+  showArchived?: boolean;
+  onToggleShowArchived?: () => void;
   selectedCount: number;
   onToggleShowDismissed: () => void;
   onOpenConfig: () => void;
@@ -28,6 +30,8 @@ export function IdeationHeader({
   totalIdeas,
   ideaCountByType,
   showDismissed,
+  showArchived,
+  onToggleShowArchived,
   selectedCount,
   onToggleShowDismissed,
   onOpenConfig,
@@ -42,6 +46,7 @@ export function IdeationHeader({
 }: IdeationHeaderProps) {
   const { t } = useTranslation('common');
   const { t: ti } = useTranslation('uiKnowledgeIdeas');
+  const { t: td } = useTranslation('uiIdeaDetails');
   const hasSelection = selectedCount > 0;
   return (
     <div className="shrink-0 border-b border-border p-4 bg-card/50">
@@ -112,6 +117,7 @@ export function IdeationHeader({
                 variant={showDismissed ? 'secondary' : 'outline'}
                 size="icon"
                 onClick={onToggleShowDismissed}
+                aria-pressed={showDismissed}
                 aria-label={showDismissed ? t('accessibility.hideDismissedAriaLabel') : t('accessibility.showDismissedAriaLabel')}
               >
                 {showDismissed ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -121,6 +127,16 @@ export function IdeationHeader({
               {showDismissed ? t('accessibility.hideDismissedAriaLabel') : t('accessibility.showDismissedAriaLabel')}
             </TooltipContent>
           </Tooltip>
+          {onToggleShowArchived && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant={showArchived ? 'secondary' : 'outline'} size="icon" onClick={onToggleShowArchived} aria-pressed={showArchived} aria-label={td(showArchived ? 'actions.hideArchived' : 'actions.showArchived')}>
+                  <Archive className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{td(showArchived ? 'actions.hideArchived' : 'actions.showArchived')}</TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

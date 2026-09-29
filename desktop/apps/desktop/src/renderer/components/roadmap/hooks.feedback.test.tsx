@@ -1,10 +1,13 @@
 /** @vitest-environment jsdom */
-import { act, cleanup, renderHook } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useFeatureActions, useFeatureDelete, useRoadmapSave } from './hooks';
 import { resetActors, useRoadmapStore } from '../../stores/roadmap-store';
 import { useTaskStore } from '../../stores/task-store';
 import type { Roadmap, RoadmapFeature, Task } from '../../../shared/types';
+import { RoadmapKanbanView } from '../RoadmapKanbanView';
+import { TooltipProvider } from '../ui/tooltip';
 
 const feature: RoadmapFeature = {
   id: 'feature-1', title: 'A feature', description: 'User requirement', rationale: 'Useful',
@@ -112,6 +115,25 @@ describe('Roadmap persistence feedback', () => {
 });
 
 describe('Feature to task feedback', () => {
+  it('renders a converted feature in Planned while the new task waits in backlog', async () => {
+    useRoadmapStore.getState().setRoadmap({ ...roadmap, features: [{ ...feature, status: 'under_review' }] });
+    function Board() {
+      const current = useRoadmapStore((state) => state.roadmap);
+      const { convertFeatureToSpec } = useFeatureActions();
+      if (!current) return null;
+      return <TooltipProvider><RoadmapKanbanView roadmap={current} onFeatureClick={vi.fn()} onConvertToSpec={(item) => void convertFeatureToSpec('project-a', item, null, vi.fn())} /></TooltipProvider>;
+    }
+    render(<Board />);
+    fireEvent.click(screen.getByRole('button', { name: 'Build' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Task' })).toBeInTheDocument());
+    const planned = screen.getByRole('heading', { name: 'Planned' }).closest('.min-w-80');
+    const running = screen.getByRole('heading', { name: 'In Progress' }).closest('.min-w-80');
+    expect(planned).not.toBeNull();
+    expect(running).not.toBeNull();
+    expect(within(planned as HTMLElement).getByText('A feature')).toBeInTheDocument();
+    expect(within(running as HTMLElement).queryByText('A feature')).not.toBeInTheDocument();
+    expect(useTaskStore.getState().tasks[0].status).toBe('backlog');
+  });
   it('reports conversion failure without fabricating a linked task', async () => {
     vi.mocked(window.electronAPI.convertFeatureToSpec).mockResolvedValue({ success: false, error: 'Task creation rejected' });
     const selected = vi.fn();
@@ -129,7 +151,9 @@ describe('Feature to task feedback', () => {
     await act(async () => { expect(await result.current.convertFeatureToSpec('project-a', feature, feature, selected)).toBe(true); });
     expect(useTaskStore.getState().tasks).toEqual([task]);
     expect(useRoadmapStore.getState().roadmap?.features[0].linkedSpecId).toBe(task.specId);
-    expect(selected).toHaveBeenCalledWith(expect.objectContaining({ linkedSpecId: task.specId }));
+    expect(useRoadmapStore.getState().roadmap?.features[0].status).toBe('planned');
+    expect(selected).toHaveBeenCalledWith(expect.objectContaining({ linkedSpecId: task.specId, status: 'planned' }));
+    expect(useTaskStore.getState().tasks[0].status).toBe('backlog');
   });
 
   it('keeps a late conversion from adding project A tasks into project B', async () => {

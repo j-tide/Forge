@@ -53,7 +53,6 @@ export function useFeatureActions() {
   const activeProjectId = useRoadmapStore((state) => state.currentProjectId);
   const [failure, setFailure] = useState<{ projectId: string; message: string } | null>(null);
   const [pendingProjectId, setPendingProjectId] = useState<string | null>(null);
-  const updateFeatureLinkedSpec = useRoadmapStore((state) => state.updateFeatureLinkedSpec);
   const addTask = useTaskStore((state) => state.addTask);
 
   const convertFeatureToSpec = async (
@@ -63,7 +62,8 @@ export function useFeatureActions() {
     setSelectedFeature: (feature: RoadmapFeature | null) => void
   ): Promise<boolean> => {
     const before = currentRoadmap(projectId);
-    if (!before || !before.features.some((item) => item.id === feature.id)) {
+    const sourceFeature = before?.features.find((item) => item.id === feature.id);
+    if (!before || !sourceFeature) {
       setFailure({ projectId, message: t('projectChanged') });
       return false;
     }
@@ -90,14 +90,20 @@ export function useFeatureActions() {
       // Add the created task to the task store so it appears in the kanban immediately
       addTask(result.data);
 
-      // Update the roadmap feature with the linked spec
-      updateFeatureLinkedSpec(feature.id, result.data.specId);
+      // Conversion persists a planned feature and a backlog task. Linking a
+      // task does not mean its execution has started.
+      const linkedFeature: RoadmapFeature = {
+        ...sourceFeature,
+        linkedSpecId: result.data.specId,
+        status: 'planned',
+      };
+      useRoadmapStore.getState().setRoadmap({
+        ...before,
+        features: before.features.map((item) => item.id === feature.id ? linkedFeature : item),
+        updatedAt: new Date(),
+      });
       if (selectedFeature?.id === feature.id) {
-        setSelectedFeature({
-          ...feature,
-          linkedSpecId: result.data.specId,
-          status: 'in_progress',
-        });
+        setSelectedFeature(linkedFeature);
       }
       return true;
     } catch (error) {

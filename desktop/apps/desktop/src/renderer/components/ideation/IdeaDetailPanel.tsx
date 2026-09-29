@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, ExternalLink, Lightbulb, Loader2, Play, X } from 'lucide-react';
+import { ChevronRight, ExternalLink, Lightbulb, Loader2, Play, RotateCcw, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import {
@@ -31,13 +31,18 @@ interface IdeaDetailPanelProps {
   onConvert: (idea: Idea) => void;
   onGoToTask?: (taskId: string) => void;
   onDismiss: (idea: Idea) => void;
+  onRestore?: (idea: Idea) => void;
   isConverting?: boolean;
+  isUpdating?: boolean;
+  actionError?: string | null;
 }
 
-export function IdeaDetailPanel({ idea, onClose, onConvert, onGoToTask, onDismiss, isConverting }: IdeaDetailPanelProps) {
+export function IdeaDetailPanel({ idea, onClose, onConvert, onGoToTask, onDismiss, onRestore, isConverting, isUpdating, actionError }: IdeaDetailPanelProps) {
   const { t } = useTranslation(['common', 'uiIdeaDetails', 'uiKnowledgeIdeas']);
   const isDismissed = idea.status === 'dismissed';
   const isConverted = idea.status === 'converted';
+  const isArchived = idea.status === 'archived';
+  const canConvert = !isDismissed && !isConverted && !isArchived && !idea.taskId;
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
 
@@ -113,9 +118,10 @@ export function IdeaDetailPanel({ idea, onClose, onConvert, onGoToTask, onDismis
       </div>
 
       {/* Actions */}
-      {!isDismissed && !isConverted && (
+      {actionError && <p role="alert" className="mx-4 mb-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{actionError}</p>}
+      {canConvert && (
         <div className="shrink-0 p-4 border-t border-border space-y-2">
-          <Button className="w-full" onClick={() => onConvert(idea)} disabled={isConverting}>
+          <Button className="w-full" onClick={() => onConvert(idea)} disabled={isConverting || isUpdating}>
             {isConverting ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
@@ -126,19 +132,25 @@ export function IdeaDetailPanel({ idea, onClose, onConvert, onGoToTask, onDismis
           <Button
             variant="outline"
             className="w-full"
-            onClick={() => {
-              onDismiss(idea);
-              onClose();
-            }}
+            onClick={() => onDismiss(idea)}
+            disabled={isConverting || isUpdating}
           >
             <X className="h-4 w-4 mr-2" />
             {t('common:ideation.dismissIdea')}
           </Button>
         </div>
       )}
-      {isConverted && idea.taskId && onGoToTask && (
+      {(isDismissed || isArchived) && onRestore && (
         <div className="shrink-0 p-4 border-t border-border">
-          <Button className="w-full" onClick={() => onGoToTask(idea.taskId!)}>
+          <Button variant="outline" className="w-full" onClick={() => onRestore(idea)} disabled={isUpdating || isConverting}>
+            {isUpdating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />}
+            {t('uiIdeaDetails:actions.restore')}
+          </Button>
+        </div>
+      )}
+      {idea.taskId && onGoToTask && (
+        <div className="shrink-0 p-4 border-t border-border">
+          <Button className="w-full" onClick={() => { if (idea.taskId) onGoToTask(idea.taskId); }}>
             <ExternalLink className="h-4 w-4 mr-2" />
             {t('common:ideation.goToTask')}
           </Button>

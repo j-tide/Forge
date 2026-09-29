@@ -19,7 +19,7 @@ interface IdeationProps {
 export function Ideation({ projectId, onGoToTask }: IdeationProps) {
   const { t } = useTranslation('uiKnowledgeIdeas');
   // Get showArchived from shared context for cross-page sync
-  const { showArchived } = useViewState();
+  const { showArchived, toggleShowArchived } = useViewState();
 
   // Pass showArchived directly to the hook to avoid render lag from useEffect sync
   const {
@@ -41,6 +41,8 @@ export function Ideation({ projectId, onGoToTask }: IdeationProps) {
     activeIdeas,
     selectedIds,
     convertingIdeas,
+    updatingIdeas,
+    ideaActionError,
     setSelectedIdea,
     setActiveTab,
     setShowConfigDialog,
@@ -60,6 +62,7 @@ export function Ideation({ projectId, onGoToTask }: IdeationProps) {
     handleConvertToTask,
     handleGoToTask,
     handleDismiss,
+    handleRestore,
     toggleIdeationType,
     toggleSelectIdea,
     clearSelection,
@@ -80,6 +83,10 @@ export function Ideation({ projectId, onGoToTask }: IdeationProps) {
         onConvert={handleConvertToTask}
         onGoToTask={handleGoToTask}
         onDismiss={handleDismiss}
+        onRestore={handleRestore}
+        updatingIdeas={updatingIdeas}
+        convertingIdeas={convertingIdeas}
+        ideaActionError={ideaActionError}
         onStop={handleStop}
       />
     );
@@ -122,6 +129,8 @@ export function Ideation({ projectId, onGoToTask }: IdeationProps) {
         totalIdeas={summary.totalIdeas}
         ideaCountByType={summary.byType}
         showDismissed={showDismissed}
+        showArchived={showArchived}
+        onToggleShowArchived={toggleShowArchived}
         selectedCount={selectedIds.size}
         onToggleShowDismissed={() => setShowDismissed(!showDismissed)}
         onOpenConfig={() => setShowConfigDialog(true)}
@@ -153,6 +162,9 @@ export function Ideation({ projectId, onGoToTask }: IdeationProps) {
                   onConvert={handleConvertToTask}
                   onGoToTask={handleGoToTask}
                   onDismiss={handleDismiss}
+                  onRestore={handleRestore}
+                  isUpdating={updatingIdeas.has(idea.id)}
+                  isConverting={convertingIdeas.has(idea.id)}
                   onToggleSelect={toggleSelectIdea}
                 />
               ))}
@@ -188,6 +200,9 @@ export function Ideation({ projectId, onGoToTask }: IdeationProps) {
                       onConvert={handleConvertToTask}
                       onGoToTask={handleGoToTask}
                       onDismiss={handleDismiss}
+                      onRestore={handleRestore}
+                      isUpdating={updatingIdeas.has(idea.id)}
+                      isConverting={convertingIdeas.has(idea.id)}
                       onToggleSelect={toggleSelectIdea}
                     />
                   ))}
@@ -206,7 +221,10 @@ export function Ideation({ projectId, onGoToTask }: IdeationProps) {
           onConvert={handleConvertToTask}
           onGoToTask={handleGoToTask}
           onDismiss={handleDismiss}
+          onRestore={handleRestore}
           isConverting={convertingIdeas.has(selectedIdea.id)}
+          isUpdating={updatingIdeas.has(selectedIdea.id)}
+          actionError={ideaActionError}
         />
       )}
 
