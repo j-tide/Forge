@@ -9,7 +9,7 @@ import { _electron as electron } from '@playwright/test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const data = await mkdtemp(path.join(tmpdir(), 'forge-overlay-ui-'));
-const output = path.join(root, 'output/playwright/overlay-audit');
+const output = process.env.FORGE_QA_OUTPUT_DIR ? path.resolve(process.env.FORGE_QA_OUTPUT_DIR) : path.join(root, 'output/playwright/overlay-audit');
 const executablePath = path.join(root, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
 const report = { recordedAt: new Date().toISOString(), platform: process.platform, arch: process.arch, modelRunsStarted: 0, accountFixture: 'Z.AI metadata only; no API key; not provider availability evidence', data, cases: [], sourceHashes: {} };
 await mkdir(output, { recursive: true });

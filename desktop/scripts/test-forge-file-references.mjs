@@ -9,7 +9,7 @@ import { _electron as electron } from '@playwright/test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 if (process.platform !== 'darwin') throw new Error('Native UI verification requires macOS; other platforms are unverified.');
-const output = path.join(root, 'output/playwright/file-autocomplete');
+const output = process.env.FORGE_QA_OUTPUT_DIR ? path.resolve(process.env.FORGE_QA_OUTPUT_DIR) : path.join(root, 'output/playwright/file-autocomplete');
 const data = await mkdtemp(path.join(os.tmpdir(), 'forge-file-autocomplete-'));
 const executablePath = path.join(root, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
 const report = { valid: false, platform: process.platform, arch: process.arch, recordedAt: new Date().toISOString(), modelCalls: 0, data, fixtures: [], cases: [], sourceHashes: {} };

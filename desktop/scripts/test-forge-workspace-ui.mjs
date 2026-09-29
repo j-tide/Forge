@@ -9,7 +9,7 @@ import { _electron as electron } from '@playwright/test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const data = await mkdtemp(path.join(tmpdir(), 'forge-workspace-ui-'));
-const output = path.join(root, 'output/playwright/workspace-redesign');
+const output = process.env.FORGE_QA_OUTPUT_DIR ? path.resolve(process.env.FORGE_QA_OUTPUT_DIR) : path.join(root, 'output/playwright/workspace-redesign');
 const executablePath = path.join(root, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
 const report = { recordedAt: new Date().toISOString(), platform: process.platform, arch: process.arch, modelCalls: 0, cases: [], data, screenshots: [], sourceHashes: {} };
 const settingsText = JSON.parse(await readFile(path.join(root, 'apps/desktop/src/shared/i18n/locales/zh-CN/settings.json'), 'utf8'));

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const data = await mkdtemp(path.join(tmpdir(), 'forge-language-qa-'));
-const output = path.join(root, 'output', 'playwright', 'localization');
+const output = process.env.FORGE_QA_OUTPUT_DIR ? path.resolve(process.env.FORGE_QA_OUTPUT_DIR) : path.join(root, 'output', 'playwright', 'localization');
 await mkdir(output, { recursive: true });
 const executablePath = path.join(root, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
 async function launch(profile) {
