@@ -1,0 +1,73 @@
+{
+  "version": "0.1.0-preview.5",
+  "platform": "darwin-arm64",
+  "source": "Real Electron running current compiled Desktop; isolated QA project/profile, no Agent execution",
+  "paidModelCallsDuringCapture": 0,
+  "sourceHashes": {
+    "out/main/index.js": "9c5e0bfa1b4f7c373878a05fee68a0dad8152bd1ae37d60a72c9e7f87de78286",
+    "out/preload/index.mjs": "fe915e111450873ff84621102205b6a2afe4765e4485707ba192686a739e14c1",
+    "out/renderer/index.html": "2142ce99a9720d6ae5119f43cfb8ae37077cf3ea4a17b3d424c9a81df64779ce",
+    "out/renderer/assets/AuthTerminal-DsJpcBfR.js": "677388392a728d2d354815deac48ff4aadf0dd67575999cc86eca05dc329acc0",
+    "out/renderer/assets/index-Cx27r-Sl.css": "b7f18fa7ea139fae336612361a11a6a3163def63bf3955545ce5d9447341a0a5",
+    "out/renderer/assets/index-Db1arfIe.js": "2c7d5fd641ea4f39f97a3fd7122c1aa6ff2fc33a5521dabaa39827dda7848367",
+    "out/renderer/assets/webgl-context-manager-DKpSQ2Ml.js": "110b3ddfe420d5d01bec3a3c44347cf27279bf6aef32ab4d80df89197b41b09b"
+  },
+  "screenshots": [
+    {
+      "file": "home-light-1440.png",
+      "source": "output/release-preview5/workspace/home-light-1440.png",
+      "sha256": "5616fa9ec2e1c978006fa7fa11d637e6c45257c7f16e327e12c257e0f5bb9c20",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "home-dark-1440.png",
+      "source": "output/release-preview5/workspace/home-dark-1440.png",
+      "sha256": "99e28e74cb8fc26f2c68f2324dd812278fb19c0b1eda45f9b50b30c3e8743850",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "new-task-light-1440.png",
+      "source": "output/release-preview5/workspace/new-task-light-1440.png",
+      "sha256": "c4bf76c943a823f7f5d7d9b3e18fa21635c6897ae35f2478c92309984f045066",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "new-task-dark-1440.png",
+      "source": "output/release-preview5/workspace/new-task-dark-1440.png",
+      "sha256": "15d5ba8d4af1bce3759e60966f20681e9ceb95131ed9d344c9ecde8435628f95",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "project-settings-general-light.png",
+      "source": "output/release-preview5/workspace/project-settings-general-light.png",
+      "sha256": "de3f0b1f9fed6d361284e2ec06d4ac28276403102567d4e56f3df3cd5c2f0176",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "settings-language-en-dark-1440.png",
+      "source": "output/release-preview5/localization/settings-language-en-dark-1440.png",
+      "sha256": "35036f1580cd3e32428b657a776572174a0d272e5236eb7e9fb634da7bc686d7",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "task-detail-light.png",
+      "source": "output/release-preview5/workspace/task-detail-light.png",
+      "sha256": "e0448c0825caf6c430b6568c270bd942d176aad940468a60fb353a7808ca7e7a",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "app-settings-accounts-light.png",
+      "source": "output/release-preview5/workspace/app-settings-accounts-light.png",
+      "sha256": "1c87387bb6c262a1460af9be8746bf901c425deb6d0d749ce36304710204df72",
+      "width": 1440,
+      "height": 900
+    }
+  ]
+}

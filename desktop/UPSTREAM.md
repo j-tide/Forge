@@ -10,7 +10,7 @@ Forge Glass Preview is a derivative of the Aperant desktop application. Renaming
 | Imported commit | `cba7a0270ec794a14ac71615bc6c48085807ede6` |
 | Original source tree | `c3c44dd2708574d045f2a8cbde9198315807abc9` |
 | Attributed import snapshot | [`85337af1936ea8a46fea0f026e0b2c661853953d`](https://github.com/j-tide/Forge/commit/85337af1936ea8a46fea0f026e0b2c661853953d) |
-| Modification dates | 2026-09-27 and 2026-09-28 |
+| Modification dates | 2026-09-27, 2026-09-28 and 2026-09-29 |
 | License | GNU Affero General Public License v3.0; see [LICENSE](LICENSE) |
 
 The original source and history remain available at the [upstream commit](https://github.com/AndyMik90/Aperant/commit/cba7a0270ec794a14ac71615bc6c48085807ede6). On 2026-09-28, the repository's public history replaced the imported upstream ancestry with the attributed source snapshot above. Its source tree is identical to the upstream tree. The snapshot author records the import operation, not original authorship of the code: AndyMik90 and the upstream contributors retain their authorship and copyright. Existing copyright and license notices remain in place, and `LICENSE` is preserved unchanged. The complete prior repository history is also retained in a verified local Git bundle.
@@ -76,3 +76,11 @@ This version releases the branding/profile-compatibility and original Logo chang
 - Removed user-authorized obsolete reference assets and unused documentation, retaining required test inputs in module fixtures. Original licenses, notices, runtime prompts and historical release artifacts remain.
 - This is an explicitly authorized Forge prerelease, not an Aperant-maintained release, not a completed Forge Python Host integration, and not evidence of full business or multi-executor acceptance. Corresponding source is supplied with the release. No automatic upstream publishing or updater was enabled.
 - New commits use the actual development/publication date. Previously rewritten synthetic Git dates and historical release evidence remain unchanged; no further history rewrite is part of this publication.
+
+## Forge control and workflow repairs — 0.1.0-preview.5 (2026-09-29)
+
+- Added real provider connection/model tests, bounded endpoint validation and visible failure/retry states. Ollama discovery and memory configuration use the configured service; explicit model selections retain their provider.
+- Corrected onboarding completion, project initialization ordering, persistent task options, failed-save handling, archive recovery and roadmap/task state projection. Improved keyboard controls and accessible names.
+- Added scoped Insights copy, regenerate, cancel and retry behavior, image normalization and idempotent suggested-task persistence. Terminal restoration waits for acknowledgments and retains current sessions after failure.
+- Added isolated UI/control regression tools and retained version-specific verification boundaries. Removed owner-authorized duplicate reports while retaining implementation history and original test evidence.
+- This remains an Aperant-derived, explicitly authorized Forge prerelease with corresponding source. The Forge Python Host and project Agent MCP configuration chain remain unintegrated; external authentication, complete online Agent execution and additional platforms are not claimed as accepted. Licenses, copyright, source attribution, disabled automatic publishing/updater channels and existing user-data identity remain unchanged.

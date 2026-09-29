@@ -8,7 +8,7 @@
 
 Task contracts · Agent roles · Code snapshots · Human acceptance
 
-[![Preview](https://img.shields.io/badge/desktop-0.1.0--preview.4-476b9b?style=flat-square)](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.4) [![Python Core](https://img.shields.io/badge/core-Python_3.12%2B-3776AB?style=flat-square)](python/) [![Desktop CI](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml/badge.svg)](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml) [![Desktop License](https://img.shields.io/badge/desktop_license-AGPL--3.0-64748b?style=flat-square)](desktop/LICENSE)
+[![Preview](https://img.shields.io/badge/desktop-0.1.0--preview.5-476b9b?style=flat-square)](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.5) [![Python Core](https://img.shields.io/badge/core-Python_3.12%2B-3776AB?style=flat-square)](python/) [![Desktop CI](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml/badge.svg)](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml) [![Desktop License](https://img.shields.io/badge/desktop_license-AGPL--3.0-64748b?style=flat-square)](desktop/LICENSE)
 
 [**Highlights**](#highlights) · [Architecture](#system-architecture) · [Data flow](#from-requirements-to-delivery-how-data-flows) · [Desktop preview](#desktop-preview) · [Get started](#get-started)
 
@@ -163,30 +163,30 @@ The current desktop organizes tasks, model configuration, terminals, and worktre
 ### Describe a requirement and configure a task
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="desktop/docs/screenshots/0.1.0-preview.4/new-task-dark-1440.png" />
-  <img src="desktop/docs/screenshots/0.1.0-preview.4/new-task-light-1440.png" alt="The current Forge preview's task creation screen: requirement description, file and image context, stage models, and Git options" width="100%" />
+  <source media="(prefers-color-scheme: dark)" srcset="desktop/docs/screenshots/0.1.0-preview.5/new-task-dark-1440.png" />
+  <img src="desktop/docs/screenshots/0.1.0-preview.5/new-task-light-1440.png" alt="The current Forge preview's task creation screen: requirement description, file and image context, stage models, and Git options" width="100%" />
 </picture>
 
 ### Manage projects and preferences in one workspace
 
 | Project settings | English / dark interface |
 | --- | --- |
-| ![Forge project settings](desktop/docs/screenshots/0.1.0-preview.4/project-settings-general-light.png) | ![Forge language settings in English and dark mode](desktop/docs/screenshots/0.1.0-preview.4/settings-language-en-dark-1440.png) |
+| ![Forge project settings](desktop/docs/screenshots/0.1.0-preview.5/project-settings-general-light.png) | ![Forge language settings in English and dark mode](desktop/docs/screenshots/0.1.0-preview.5/settings-language-en-dark-1440.png) |
 
-These are real Electron screenshots from `0.1.0-preview.4`. Projects and tasks use isolated UI test data; no online agents were run during capture. [Screenshot provenance and checksums](desktop/docs/screenshots/0.1.0-preview.4/screenshots.json).
+These are real Electron screenshots from `0.1.0-preview.5`. Projects and tasks use isolated UI test data; no online agents were run during capture. [Screenshot provenance and checksums](desktop/docs/screenshots/0.1.0-preview.5/screenshots.json).
 
 ## Get started
 
 ### Download the desktop preview
 
-The current version is **0.1.0-preview.4**, with packages for **macOS Apple Silicon (M-series chips)**.
+The current version is **0.1.0-preview.5**, with packages for **macOS Apple Silicon (M-series chips)**.
 
 | Download | Purpose |
 | --- | --- |
-| [**macOS DMG**](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/Forge-0.1.0-preview.4-darwin-arm64-INTERNAL.dmg) | Open it and drag `Forge.app` into Applications. |
-| [macOS ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/Forge-0.1.0-preview.4-darwin-arm64-INTERNAL.zip) | Extract it and open `Forge.app`. |
-| [Corresponding source](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/Forge-0.1.0-preview.4-source.tar.gz) | Complete source corresponding to the release tag. |
-| [SHA256SUMS](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/SHA256SUMS) | Verify download checksums. |
+| [**macOS DMG**](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/Forge-0.1.0-preview.5-darwin-arm64-INTERNAL.dmg) | Open it and drag `Forge.app` into Applications. |
+| [macOS ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/Forge-0.1.0-preview.5-darwin-arm64-INTERNAL.zip) | Extract it and open `Forge.app`. |
+| [Corresponding source](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/Forge-0.1.0-preview.5-source.tar.gz) | Complete source corresponding to the release tag. |
+| [SHA256SUMS](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/SHA256SUMS) | Verify download checksums. |
 
 These are **INTERNAL / ADHOC / UNNOTARIZED** prerelease packages, signed ad hoc without Developer ID signing or notarization. Verify the download checksum, quit the older version normally, and open the new version from Finder. Follow macOS security prompts; there is no need to disable Gatekeeper globally.
 
@@ -209,7 +209,7 @@ Project features require **Git**. Model calls require valid authentication and n
 | **Distribution and platforms** | Internal macOS Apple Silicon preview; Linux CI covers static checks, unit tests, and builds. | Windows and Intel Mac hardware, production signing, notarization, and signed updates remain unverified. |
 | **Mobile and remote access** | Existing code and historical records are retained. | New development is deferred; remote network entry points are disabled by default. |
 
-The next priorities are **connecting the new desktop to Core, verifying desktop features individually, and validating the delivery workflow in the installed app**. Known dependency audit risks are documented in the [release notes](desktop/docs/releases/0.1.0-preview.4.md#未关闭风险); progress and evidence tied to specific versions are in the [implementation record](docs/implementation-status.md).
+The next priorities are **connecting the new desktop to Core, verifying desktop features individually, and validating the delivery workflow in the installed app**. Known dependency audit risks are documented in the [release notes](desktop/docs/releases/0.1.0-preview.5.md#未关闭风险); progress and evidence tied to specific versions are in the [implementation record](docs/implementation-status.md).
 
 ## Local development
 
@@ -281,7 +281,7 @@ Forge/
 | How delivery decisions are formed | [Acceptance matrix](python/src/forge/acceptance_matrix.py) · [Final human acceptance](docs/decisions/0042-snapshot-bound-final-human-acceptance.md) |
 | How capabilities are extended | [Plugin authoring](docs/plugin-authoring.md) · [Public Python API](python/src/forge/plugin_api.py) |
 | How to run and build the desktop | [Desktop documentation](desktop/README.md) · [Packaging guide](desktop/RELEASE.md) |
-| What has been verified | [Release notes](desktop/docs/releases/0.1.0-preview.4.md) · [Implementation record](docs/implementation-status.md) |
+| What has been verified | [Release notes](desktop/docs/releases/0.1.0-preview.5.md) · [Implementation record](docs/implementation-status.md) |
 
 Documentation, translation, UI, and Core contributions are welcome. Open an [issue](https://github.com/j-tide/Forge/issues) with a use case or reproducible problem. Keep each PR focused on one improvement, include actual verification results, and add screenshots for UI changes. Remove credentials and personal information from logs and screenshots.
 

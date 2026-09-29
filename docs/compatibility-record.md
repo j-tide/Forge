@@ -1,5 +1,12 @@
 # Forge 版本与兼容性记录
 
+## 2026-09-29 · 0.1.0-preview.5 发布构建
+
+macOS arm64 · INTERNAL / ADHOC / UNNOTARIZED。Desktop package／npm lock／`versions.lock.json.desktopPreview` 同步 `.5`，根 Python／pnpm 版本保持0.0.1，依赖不变。Desktop 5762＋Node10测试、lint／typecheck／build／i18n与实际两主题／语言重启通过；原 Forge pnpm／Python独立检查通过。最终DMG只读挂载的 `.5` 包有资源／原生模块／偏好重启／签名一致性验证，用户文件摘要未变，应用与挂载已关闭。
+
+ASAR `b699edafc7257596098af48977e8bd5b4d761709721376fe31b86bf1d9c62f1b`。下载资产、准确检查与边界见 [preview.5](../desktop/docs/releases/0.1.0-preview.5.md)。生产依赖33风险（10 high／9 moderate／14 low）和774 lint warnings／5 infos保留；Python Host、Agent项目MCP路径、完整在线业务、Claude、其它平台、正式签名／公证仍未验或未接通。历史版本记录保留，不移用验收。
+
+
 ## 2026-09-28 · 0.1.0-preview.4 当前发布构建
 
 `forge-0.1.0-preview.4-9864843c064e` / macOS arm64 / INTERNAL / ADHOC / UNNOTARIZED。独立 Desktop 版本及 npm lock 同步 `.4`，根 Python / pnpm 版本保持；`versions.lock.json.desktopPreview` 明确独立工作区。依赖版本不变：Electron 40.0.0、React 19.2.4、TypeScript 5.9.3、Vite 7.3.1、electron-vite 5.0.0、motion 12.36.0；无新增依赖或 install script。

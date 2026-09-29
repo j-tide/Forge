@@ -4,9 +4,9 @@
 
 Forge 的桌面工作台：围绕代码项目组织任务、配置模型与智能体，查看开发活动、终端和文件变化。当前工程是独立的 **Electron + React + TypeScript** npm workspace；亮色与暗色使用同一套紧凑布局。
 
-## 当前版本：0.1.0-preview.4
+## 当前版本：0.1.0-preview.5
 
-[下载 macOS Apple Silicon 预览版](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.4)。发布页提供 DMG、ZIP、对应源码与 `SHA256SUMS`。
+[下载 macOS Apple Silicon 预览版](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.5)。发布页提供 DMG、ZIP、对应源码与 `SHA256SUMS`。
 
 本版重点改进：
 
@@ -21,12 +21,12 @@ Forge 的桌面工作台：围绕代码项目组织任务、配置模型与智�
 
 ## 安装与正常打开
 
-1. 从发布页下载 `Forge-0.1.0-preview.4-darwin-arm64-INTERNAL.dmg` 或 `.zip`，核对同页 `SHA256SUMS`。
+1. 从发布页下载 `Forge-0.1.0-preview.5-darwin-arm64-INTERNAL.dmg` 或 `.zip`，核对同页 `SHA256SUMS`。
 2. 打开 DMG，将 `Forge.app` 拖入自己的 Applications 文件夹；也可以解压 ZIP。
 3. 保存工作并**正常退出旧 Forge**，再从 Finder 打开新版。普通应用会常驻，自动化 smoke 才会结束自己的测试实例。
 4. 此包尚未公证，遵循 macOS 自身安全提示；不全局关闭 Gatekeeper。
 
-仓库本机构建路径为 `apps/desktop/dist/0.1.0-preview.4/mac-arm64/Forge.app`。在 `desktop/` 执行 `npm run preview:open`，或在仓库根执行 `pnpm desktop:open`，优先打开当前版本；可在命令后传入明确的 `.app` 路径。旧已发布包与未发布修复包保留，不覆盖其历史证据。
+仓库本机构建路径为 `apps/desktop/dist/0.1.0-preview.5/mac-arm64/Forge.app`。在 `desktop/` 执行 `npm run preview:open`，或在仓库根执行 `pnpm desktop:open`，优先打开当前版本；可在命令后传入明确的 `.app` 路径。旧已发布包与未发布修复包保留，不覆盖其历史证据。
 
 ## 操作入口
 
@@ -81,14 +81,14 @@ macOS 界面检查使用独立临时数据目录；Linux CI 检查静态类型�
 
 ## 截图与验证
 
-[版本说明](docs/releases/0.1.0-preview.4.md)记录实际检查、安装包摘要与未验项目。[实施状态](../docs/implementation-status.md)记录本地修复、验证结论及未验项。
+[版本说明](docs/releases/0.1.0-preview.5.md)记录实际检查、安装包摘要与未验项目。[实施状态](../docs/implementation-status.md)记录本地修复、验证结论及未验项。
 
 | 亮色 | 暗色 |
 | --- | --- |
-| ![亮色首页](docs/screenshots/0.1.0-preview.4/home-light-1440.png) | ![暗色首页](docs/screenshots/0.1.0-preview.4/home-dark-1440.png) |
-| ![亮色新任务](docs/screenshots/0.1.0-preview.4/new-task-light-1440.png) | ![暗色新任务](docs/screenshots/0.1.0-preview.4/new-task-dark-1440.png) |
+| ![亮色首页](docs/screenshots/0.1.0-preview.5/home-light-1440.png) | ![暗色首页](docs/screenshots/0.1.0-preview.5/home-dark-1440.png) |
+| ![亮色新任务](docs/screenshots/0.1.0-preview.5/new-task-light-1440.png) | ![暗色新任务](docs/screenshots/0.1.0-preview.5/new-task-dark-1440.png) |
 
-截图来自实际 `.4` 编译代码运行的 Electron。标有「UI 测试」的项目与任务是独立验收夹具，没有执行在线 Agent；完整来源与文件摘要见 [screenshots.json](docs/screenshots/0.1.0-preview.4/screenshots.json)。
+截图来自实际 `.5` 编译代码运行的 Electron。标有「UI 测试」的项目与任务是独立验收夹具，没有执行在线 Agent；完整来源与文件摘要见 [screenshots.json](docs/screenshots/0.1.0-preview.5/screenshots.json)。
 
 继承 production npm audit 风险仍为 **33 项：10 high、9 moderate、14 low、0 critical**。本版没有新增依赖，也未将这些风险标为解决。手机与远程新增开发继续后置。
 

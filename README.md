@@ -8,7 +8,7 @@
 
 任务契约 · Agent 分工 · 代码快照 · 人工验收
 
-[![Preview](https://img.shields.io/badge/desktop-0.1.0--preview.4-476b9b?style=flat-square)](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.4) [![Python Core](https://img.shields.io/badge/core-Python_3.12%2B-3776AB?style=flat-square)](python/) [![Desktop CI](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml/badge.svg)](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml) [![Desktop License](https://img.shields.io/badge/desktop_license-AGPL--3.0-64748b?style=flat-square)](desktop/LICENSE)
+[![Preview](https://img.shields.io/badge/desktop-0.1.0--preview.5-476b9b?style=flat-square)](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.5) [![Python Core](https://img.shields.io/badge/core-Python_3.12%2B-3776AB?style=flat-square)](python/) [![Desktop CI](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml/badge.svg)](https://github.com/j-tide/Forge/actions/workflows/desktop-quality.yml) [![Desktop License](https://img.shields.io/badge/desktop_license-AGPL--3.0-64748b?style=flat-square)](desktop/LICENSE)
 
 [**核心亮点**](#核心亮点) · [系统架构](#系统架构) · [数据流](#从需求到交付数据如何流动) · [桌面预览](#桌面预览) · [开始使用](#开始使用)
 
@@ -163,30 +163,30 @@ Planner 根据边界制定计划；Developer 实现；Reviewer 检查代码快�
 ### 描述需求，配置一次任务
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="desktop/docs/screenshots/0.1.0-preview.4/new-task-dark-1440.png" />
-  <img src="desktop/docs/screenshots/0.1.0-preview.4/new-task-light-1440.png" alt="Forge 当前预览版新建任务界面：需求描述、文件与图片上下文、阶段模型和 Git 选项" width="100%" />
+  <source media="(prefers-color-scheme: dark)" srcset="desktop/docs/screenshots/0.1.0-preview.5/new-task-dark-1440.png" />
+  <img src="desktop/docs/screenshots/0.1.0-preview.5/new-task-light-1440.png" alt="Forge 当前预览版新建任务界面：需求描述、文件与图片上下文、阶段模型和 Git 选项" width="100%" />
 </picture>
 
 ### 在同一个工作台里管理项目与偏好
 
 | 项目设置 | English / 暗色界面 |
 | --- | --- |
-| ![Forge 项目设置](desktop/docs/screenshots/0.1.0-preview.4/project-settings-general-light.png) | ![Forge 英文暗色语言设置](desktop/docs/screenshots/0.1.0-preview.4/settings-language-en-dark-1440.png) |
+| ![Forge 项目设置](desktop/docs/screenshots/0.1.0-preview.5/project-settings-general-light.png) | ![Forge 英文暗色语言设置](desktop/docs/screenshots/0.1.0-preview.5/settings-language-en-dark-1440.png) |
 
-这些是 `0.1.0-preview.4` 的真实 Electron 截图，项目与任务使用隔离 UI 测试数据，未在截图过程中执行在线 Agent。[截图来源与摘要](desktop/docs/screenshots/0.1.0-preview.4/screenshots.json)。
+这些是 `0.1.0-preview.5` 的真实 Electron 截图，项目与任务使用隔离 UI 测试数据，未在截图过程中执行在线 Agent。[截图来源与摘要](desktop/docs/screenshots/0.1.0-preview.5/screenshots.json)。
 
 ## 开始使用
 
 ### 下载桌面预览
 
-当前版本 **0.1.0-preview.4**，提供 **macOS Apple Silicon（M 系列芯片）** 安装包。
+当前版本 **0.1.0-preview.5**，提供 **macOS Apple Silicon（M 系列芯片）** 安装包。
 
 | 下载 | 用途 |
 | --- | --- |
-| [**macOS DMG**](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/Forge-0.1.0-preview.4-darwin-arm64-INTERNAL.dmg) | 打开后将 `Forge.app` 拖入 Applications。 |
-| [macOS ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/Forge-0.1.0-preview.4-darwin-arm64-INTERNAL.zip) | 解压后打开 `Forge.app`。 |
-| [对应源码](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/Forge-0.1.0-preview.4-source.tar.gz) | 与发布 tag 对应的完整源码。 |
-| [SHA256SUMS](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.4/SHA256SUMS) | 核对下载文件摘要。 |
+| [**macOS DMG**](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/Forge-0.1.0-preview.5-darwin-arm64-INTERNAL.dmg) | 打开后将 `Forge.app` 拖入 Applications。 |
+| [macOS ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/Forge-0.1.0-preview.5-darwin-arm64-INTERNAL.zip) | 解压后打开 `Forge.app`。 |
+| [对应源码](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/Forge-0.1.0-preview.5-source.tar.gz) | 与发布 tag 对应的完整源码。 |
+| [SHA256SUMS](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/SHA256SUMS) | 核对下载文件摘要。 |
 
 安装包为 **INTERNAL / ADHOC / UNNOTARIZED** 预发布，使用 ad-hoc 签名，尚未完成 Developer ID 签名与公证。核对下载摘要后正常退出旧版，再从 Finder 打开新版；遵循 macOS 的安全提示，无需全局关闭 Gatekeeper。
 
@@ -209,7 +209,7 @@ Planner 根据边界制定计划；Developer 实现；Reviewer 检查代码快�
 | **分发与平台** | macOS Apple Silicon 内部预览；Linux CI 静态检查、单元测试与构建。 | Windows、Intel Mac 实机、正式签名、公证与签名更新待验。 |
 | **手机与远程** | 保留已有代码与历史记录。 | 新增开发后置，远程网络入口默认关闭。 |
 
-下一步重点是 **新桌面与 Core 的真实接入、桌面功能逐项验收，以及安装版交付链验证**。已知依赖审计风险见[发布说明](desktop/docs/releases/0.1.0-preview.4.md#未关闭风险)；进度和版本限定证据见[实施记录](docs/implementation-status.md)。
+下一步重点是 **新桌面与 Core 的真实接入、桌面功能逐项验收，以及安装版交付链验证**。已知依赖审计风险见[发布说明](desktop/docs/releases/0.1.0-preview.5.md#未关闭风险)；进度和版本限定证据见[实施记录](docs/implementation-status.md)。
 
 ## 本地开发
 
@@ -281,7 +281,7 @@ Forge/
 | 交付结论如何形成 | [验收矩阵](python/src/forge/acceptance_matrix.py) · [最终人工接受](docs/decisions/0042-snapshot-bound-final-human-acceptance.md) |
 | 扩展能力如何接入 | [插件开发](docs/plugin-authoring.md) · [公开 Python API](python/src/forge/plugin_api.py) |
 | 桌面如何运行与构建 | [桌面文档](desktop/README.md) · [打包说明](desktop/RELEASE.md) |
-| 已验证到哪一步 | [版本说明](desktop/docs/releases/0.1.0-preview.4.md) · [实施记录](docs/implementation-status.md) |
+| 已验证到哪一步 | [版本说明](desktop/docs/releases/0.1.0-preview.5.md) · [实施记录](docs/implementation-status.md) |
 
 欢迎文档、翻译、界面和 Core 贡献。通过 [Issues](https://github.com/j-tide/Forge/issues) 提交使用场景或可复现的问题；PR 聚焦一个改进，附真实验证结果，界面修改附截图。日志与截图请移除密钥和个人信息。
 

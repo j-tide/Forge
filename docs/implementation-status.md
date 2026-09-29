@@ -1,5 +1,19 @@
 # Forge 实施状态
 
+## 2026-09-29 · 0.1.0-preview.5 功能提交与发布构建验证
+
+用户明确授权将全部当前代码按功能分别提交、推送至 `j-tide/Forge` 并发布新预览。当前版本 `0.1.0-preview.5` 为 macOS arm64 · INTERNAL / ADHOC / UNNOTARIZED；使用真实当前日期，不重写既有提交或 tag。功能、资产摘要及未验边界见 [preview.5](../desktop/docs/releases/0.1.0-preview.5.md)。
+
+- 功能提交覆盖模型测试与端点、图片、Ollama／记忆、跨 provider、洞察、向导／初始化、集成开关、任务持久化与自动推送、任务／工作树反馈、想法／路线图、终端、复制、可访问性、E2E／走查工具、中英文 README／图示、重复报告清理和发布工具；忽略的安装包、日志、凭据与 QA 用户数据不提交。
+- 当前 Desktop 336 Vitest files／5762 tests + 10 Node 检查通过；lint 774 warnings／5 infos，typecheck／build 通过；i18n 36 namespaces／5373 strings 无错误。真实亮暗全页 60 场景／70 截图、弹层 10、文件引用 8、语言重启通过，正式来源选取8张当前截图。
+- 原 Forge contracts 47 files／0 errors／4 warnings、task-map 92 Task／120 Test／84 deferred、lint／typecheck／test（含 build）通过；Python Ruff／mypy／286 passed／1 opt-in skipped。独立工程检查不冒充新 Desktop Host 集成。
+- `.5` DMG 只读挂载真实启动，15编译资源／4图标／2许可来源文件／52 prompts一致，libsql memory查询与PTY退出通过。English＋dark保存、退出重启和中文＋light恢复后再次重启通过；3个Electron与PTY已退出，原用户6个文件路径状态未变（2项摘要一致、4项仍不存在），临时HOME删除，挂载正常卸载。ASAR `b699edafc7257596098af48977e8bd5b4d761709721376fe31b86bf1d9c62f1b`；签名／DMG／ZIP完整性通过。
+- electron-builder 的 DMG helper 下载超时日志保留，系统 `hdiutil` 从同一签名应用完成 DMG，实际安装态随后验收。测试脚本补 HOME 隔离与失败证据顺序校验；12个内存替身分支验证，未新增真实模型请求。
+- 同版 tag 的完整 `git archive` 随 DMG／ZIP／SHA256SUMS 提供。正常 `pnpm desktop:open` 优先本版目录；原发布资产、自动更新关闭状态、许可证与数据身份保持。
+
+原始验证日志保留在本地 `output/release-preview5/`；包内证据为 `packaged-mounted/packaged-evidence.json`。全部provider／第三方认证、真实在线Agent闭环、项目Agent MCP配置链、Python Host、其它平台与正式签名／公证仍未验或未接通；P7/P8后置与门禁不变。早期QA剪贴板遗留仍明确保留，详见本版说明。
+
+
 ## 2026-09-28 · Desktop 全入口控件与失败恢复走查（本地未发布）
 
 按用户要求逐页、逐控件实际走查 `desktop/` 衍生预览，并修复测试入口、异步反馈、持久化与恢复缺口。修复、按版本区分的验证结论和未验边界记录于本节，原始实窗证据保留在 `desktop/output/playwright/`。本轮未提交、推送或发布，未改依赖、契约基线、Task / Test 状态或 Python Host；原 README 和图示工作区修改保留。
