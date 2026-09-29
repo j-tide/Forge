@@ -262,7 +262,7 @@ export async function walkConditionalInsightsStream(ctx) {
 	const transport = await createInsightsLoopbackFixture();
 	const evidence = {
 		scope:
-			"OpenAI-compatible HTTP/SSE protocol fixture through current Main SDK using an isolated Ollama account. No online provider, task execution, or Forge Python Host acceptance.",
+			"OpenAI-compatible HTTP/SSE protocol fixture through current Main SDK using an isolated Ollama account. No online provider, task execution, or complete online task acceptance.",
 		baseUrl: transport.baseUrl,
 		model: MODEL,
 		requests: transport.requests,

@@ -84,3 +84,11 @@ This version releases the branding/profile-compatibility and original Logo chang
 - Added scoped Insights copy, regenerate, cancel and retry behavior, image normalization and idempotent suggested-task persistence. Terminal restoration waits for acknowledgments and retains current sessions after failure.
 - Added isolated UI/control regression tools and retained version-specific verification boundaries. Removed owner-authorized duplicate reports while retaining implementation history and original test evidence.
 - This remains an Aperant-derived, explicitly authorized Forge prerelease with corresponding source. The Forge Python Host and project Agent MCP configuration chain remain unintegrated; external authentication, complete online Agent execution and additional platforms are not claimed as accepted. Licenses, copyright, source attribution, disabled automatic publishing/updater channels and existing user-data identity remain unchanged.
+
+## Single Desktop repository — 2026-09-29
+
+- At the repository owner's explicit request, removed the entire previous Forge implementation: the root Vue/Electron desktop, Python and TypeScript cores, Node Host, plugins, contracts, old acceptance material, pnpm workspace and associated build/QA tools. Only the Aperant-derived `desktop/` workspace remains active.
+- The current execution path is React Renderer → Preload → Electron Main → TypeScript Agent Workers / Vercel AI SDK. Integration with the removed Python Host is no longer the repository architecture or a pending migration requirement.
+- Removed the dual-Desktop/Python-Core diagrams and rewrote current navigation, development guidance and CI around this single workspace. Existing desktop production code, dependencies, user-data identity, copyright and AGPL source obligations are unchanged.
+- Versioned release sections above describe their original publication state. Published release tags/assets are unchanged; current documentation does not inherit old Forge acceptance results.
+- The verified local original-import bundle and mapping have moved from `output/contributors-cleanup-20260928/` to `.git/forge-import-history/`; they are version-control provenance, not an active product implementation. Current preview.5 validation records moved to `desktop/output/release-preview5/`. No real user settings, project data or databases were removed.

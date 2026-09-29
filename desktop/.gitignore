@@ -157,3 +157,6 @@ OPUS_ANALYSIS_AND_IDEAS.md
 /shared_docs
 logs/security/
 Agents.md
+
+# Current single-workspace implementation record
+!/docs/implementation-status.md

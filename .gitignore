@@ -12,25 +12,9 @@ coverage/
 !.env.example
 *.local
 *.log
-.forge/
-forge-data/
 *.db
 *.db-shm
 *.db-wal
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
-.playwright-cli/
-output/playwright/
-/output/
-build/macos/
-python/.venv/
-python/dist/
-**/__pycache__/
-**/.pytest_cache/
-**/.mypy_cache/
-**/.ruff_cache/
-*.py[cod]
-
-# Generated release bundles and staging
-build/releases/

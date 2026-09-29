@@ -16,7 +16,7 @@ PRs built with AI tools (Claude, Codex, Copilot, etc.) are welcome here -- given
 
 That said, we've seen AI-generated PRs that introduce regressions because the contributor didn't verify what the code actually does. To keep quality high, we ask that AI-assisted PRs include the following:
 
-- **Flag it** -- mention AI assistance in the PR description (the PR template has a section for this)
+- **Flag it** -- mention AI assistance in the PR description
 - **State your testing level** -- untested, lightly tested, or fully tested
 - **Share context if you can** -- prompts or session logs help reviewers understand intent
 - **Confirm you understand the code** -- you should be able to describe what the PR does and how the underlying code works
@@ -227,7 +227,7 @@ export default function(props) {
 ### General
 
 - No trailing whitespace
-- Use 2 spaces for indentation in TypeScript/JSON, 4 spaces in Python
+- Use the repository Biome configuration for TypeScript, React and JSON formatting
 - End files with a newline
 - Keep line length under 100 characters when practical
 
@@ -269,31 +269,22 @@ Before submitting a PR:
 
 ## Continuous Integration
 
-All pull requests and pushes to `main` trigger automated CI checks via GitHub Actions.
+The repository has one active workflow: [desktop-quality](../.github/workflows/desktop-quality.yml). Matching Desktop source, workflow, README and AGENTS changes trigger it on pushes and pull requests; it can also be started manually.
 
-### Workflows
+| Runner | Checks |
+| --- | --- |
+| Ubuntu | Frozen npm install, localization references, Biome lint, TypeScript checks, unit tests, Main/Preload/Renderer build |
 
-| Workflow | Trigger | What it checks |
-|----------|---------|----------------|
-| **CI** | Push to `main`, PRs | Frontend tests (all 3 platforms), TypeScript type check, build |
-| **Lint** | Push to `main`, PRs | Biome (TypeScript/React) |
+All checks for a change must pass. This runner does not exercise the native application on macOS or Windows. Desktop UI, native modules, signing, and installation require separate evidence on their actual target platforms; no three-platform CI pass is claimed.
 
-### PR Requirements
-
-Before a PR can be merged:
-
-1. All CI checks must pass (green checkmarks)
-2. Frontend tests pass on all three platforms (Ubuntu, Windows, macOS)
-3. Linting passes (no Biome errors)
-4. TypeScript type checking passes
-
-### Running CI Checks Locally
+Run these commands from `Forge/desktop`:
 
 ```bash
-cd apps/desktop
-npm test
+npm run check:i18n
 npm run lint
 npm run typecheck
+npm test
+npm run build
 ```
 
 ## Git Workflow
@@ -466,7 +457,7 @@ Forge is a single Electron desktop application in `apps/desktop/`.
 - **Renderer** (`src/renderer/`) - React UI components and Zustand stores
 - **Shared** (`src/shared/`) - Types, i18n locales, constants, utilities
 
-The implementation is in the source directories above. Current delivery boundaries are recorded in the root AGENTS.md and docs/implementation-status.md.
+The implementation is in the source directories above. Current delivery boundaries are recorded in [AGENTS.md](../AGENTS.md) and [implementation status](docs/implementation-status.md).
 
 ---
 

@@ -35,7 +35,7 @@ const requestedCases = (process.env.FORGE_UI_CONDITIONAL_CASES || '').split(',')
 const stopAfterFailure = process.env.FORGE_UI_CONDITIONAL_STOP_AFTER_FAILURE !== '0';
 const report = {
   valid: false, completeCoverage: false, recordedAt: new Date().toISOString(), runId, data, profile, fixture,
-  scope: 'Isolated persisted and explicitly synthetic UI fixtures. No executed task/model or Forge Python Host acceptance.',
+  scope: 'Isolated persisted and explicitly synthetic UI fixtures. No executed task/model or complete online task acceptance.',
   operations: [], cases: [], failures: [], blocked: [], screenshots: [], fixtureSetup: [], sourceHashes: {},
   requestedCases, stopAfterFailure, skippedCases: [], recovery: [],
 };
@@ -192,7 +192,7 @@ async function createTaskFixture(title, options = {}) {
   const plan = { ...original, feature: title, title, status: options.status || 'human_review', xstateState: options.xstateState || 'human_review', executionPhase: options.executionPhase || 'complete', ...(options.reviewReason ? { reviewReason: options.reviewReason } : {}), phases: [{ phase: 1, name: 'Explicit UI fixture phase', type: 'implementation', subtasks: [{ id: 'fixture-step', title: 'Synthetic UI fixture step', description: 'No executor ran this step.', status: options.subtaskStatus || 'completed' }] }], created_at: now, updated_at: now, final_acceptance: [] };
   if (!options.reviewReason) delete plan.reviewReason;
   await writeFile(planPath, JSON.stringify(plan, null, 2));
-  await writeFile(path.join(specDir, 'spec.md'), '# Explicit conditional UI fixture\nThis document renders UI states only. It does not certify task execution, review, validation, or Forge Python Host acceptance.\n');
+  await writeFile(path.join(specDir, 'spec.md'), '# Explicit conditional UI fixture\nThis document renders UI states only. It does not certify online task execution, review, or validation.\n');
   const phases = Object.fromEntries(['planning', 'coding', 'validation'].map(phase => [phase, { phase, status: 'completed', started_at: now, completed_at: now, entries: [
     { timestamp: now, phase, type: 'info', content: `Synthetic ${phase} UI fixture`, detail: 'Explicit expandable fixture detail. No model execution occurred.', collapsed: true },
     { timestamp: now, phase, type: 'tool_start', tool_name: 'Read', tool_input: 'fixture.md', content: 'Synthetic tool start' },
@@ -368,7 +368,7 @@ try {
     });
     assert.equal(await page.getByRole('dialog').count(), 0, 'Board card recovery must not open task detail');
     assert.equal((await page.evaluate(id => window.electronAPI.checkTaskRunning(id), cardStuck.id)).data, false);
-    await blocked('Real task execution and live stop/resume/recovery', 'Clicked explicit UI fixtures and genuine preflight refusal; no executor, model call, approved Task Contract or Python Host run was performed');
+    await blocked('Real task execution and live stop/resume/recovery', 'Clicked explicit UI fixtures and genuine preflight refusal; no live executor, online model call or complete task run was performed');
   });
 
   await segment('conditional-task-card-action-controls', async () => {

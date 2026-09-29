@@ -17,7 +17,7 @@ Forge 的桌面工作台：围绕代码项目组织任务、配置模型与智�
 - Context、记忆、Insights 与 MCP 的迟到结果不会串到其他项目；保存失败保留输入，删除预检失败时阻止删除并提供重试。
 - 中文／English 即时切换，主题、语言与辅助偏好在重启后保留。
 
-**INTERNAL / ADHOC / UNNOTARIZED 预发布。**当前衍生桌面尚未连接仓库中的 Forge Python Host；完整在线任务闭环、Windows、macOS Intel、Claude、正式签名／公证及签名更新仍待相应验收。
+**INTERNAL / ADHOC / UNNOTARIZED 预发布。**当前仓库仅保留本桌面工程，业务执行使用 Electron Main 与 TypeScript AI Workers；完整在线任务闭环、Windows、macOS Intel、Claude、正式签名／公证及签名更新仍待相应验收。
 
 ## 安装与正常打开
 
@@ -26,7 +26,7 @@ Forge 的桌面工作台：围绕代码项目组织任务、配置模型与智�
 3. 保存工作并**正常退出旧 Forge**，再从 Finder 打开新版。普通应用会常驻，自动化 smoke 才会结束自己的测试实例。
 4. 此包尚未公证，遵循 macOS 自身安全提示；不全局关闭 Gatekeeper。
 
-仓库本机构建路径为 `apps/desktop/dist/0.1.0-preview.5/mac-arm64/Forge.app`。在 `desktop/` 执行 `npm run preview:open`，或在仓库根执行 `pnpm desktop:open`，优先打开当前版本；可在命令后传入明确的 `.app` 路径。旧已发布包与未发布修复包保留，不覆盖其历史证据。
+仓库本机构建路径为 `apps/desktop/dist/0.1.0-preview.5/mac-arm64/Forge.app`。在 `desktop/` 执行 `npm run preview:open`，优先打开当前版本；可在命令后传入明确的 `.app` 路径。旧已发布包与未发布修复包保留，不覆盖其历史证据。
 
 ## 操作入口
 
@@ -43,14 +43,14 @@ Forge 的桌面工作台：围绕代码项目组织任务、配置模型与智�
 ## 前置条件与数据
 
 - 项目操作需要 **Git**；模型调用需要所选服务商的有效认证与网络，部分执行器需要单独安装 CLI。打开窗口或出现配置项不代表模型已可用。
-- 应用 ID `dev.iamzjt.forgeglasspreview`、数据目录 `Forge Glass Preview` 与项目目录 `.forge-glass-preview/` 保持稳定。版本升级不重置原 Forge SQLite，不导入其他产品的账户和项目。
+- 应用 ID `dev.iamzjt.forgeglasspreview`、数据目录 `Forge Glass Preview` 与项目目录 `.forge-glass-preview/` 保持稳定。仓库源码清理和版本升级不重置真实用户的设置、项目、任务或 SQLite，不导入其他产品的账户和项目。
 - API Profile 写入隔离用户数据目录中的 `forge/profiles.json`，新文件缺失时兼容读取旧配置；不删除旧文件，不在 Renderer 展示密钥。
 - 自动上游更新与发布保持关闭。错误上报默认关闭，仅可显式选择衍生版配置。
 - 本版 UI 验收没有在线模型调用；无密钥账户夹具只用于界面检查，不证明服务商认证、实际额度或完整 Agent 流程。
 
 ## 源码开发
 
-使用 **Node.js 24+、npm 10+** 和本目录的 `package-lock.json`。macOS 原生构建需要 Xcode Command Line Tools。仓库根的 pnpm／Python 工程保持独立。
+使用 **Node.js 24+、npm 10+** 和本目录的 `package-lock.json`。macOS 原生构建需要 Xcode Command Line Tools。仓库根已移除旧 pnpm／Python 工程，开发与验证全部在本目录执行。
 
 ```sh
 cd desktop
@@ -81,7 +81,7 @@ macOS 界面检查使用独立临时数据目录；Linux CI 检查静态类型�
 
 ## 截图与验证
 
-[版本说明](docs/releases/0.1.0-preview.5.md)记录实际检查、安装包摘要与未验项目。[实施状态](../docs/implementation-status.md)记录本地修复、验证结论及未验项。
+[版本说明](docs/releases/0.1.0-preview.5.md)记录实际检查、安装包摘要与未验项目。[实施状态](docs/implementation-status.md)记录本地修复、验证结论及未验项。
 
 | 亮色 | 暗色 |
 | --- | --- |
@@ -94,4 +94,4 @@ macOS 界面检查使用独立临时数据目录；Linux CI 检查静态类型�
 
 ## 来源与许可证
 
-衍生桌面基于 Aperant `v2.8.0-beta.6`，采用 [AGPL-3.0](LICENSE)。原作者、版权及修改记录保留在 [UPSTREAM.md](UPSTREAM.md)；发布页提供与 tag 对应的完整源码。仓库原 Forge Python Host、契约及 Vue 历史实现的验收不能直接转移给本衍生应用。
+衍生桌面基于 Aperant `v2.8.0-beta.6`，采用 [AGPL-3.0](LICENSE)。原作者、版权及修改记录保留在 [UPSTREAM.md](UPSTREAM.md)；发布页提供与 tag 对应的完整源码。当前仓库只包含本桌面实现；测试夹具及旧版本记录均不能替代当前完整在线流程的验收。

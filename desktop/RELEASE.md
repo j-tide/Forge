@@ -49,4 +49,4 @@ Do not publish to another project’s release channel, automatically enable the 
 
 ## Verification boundaries
 
-A successful UI or language check does not prove task execution, Python Host integration, a second executor, or complete Forge product acceptance. Keep platform, runtime, security, packaging, and provider acceptance results separate. Document failures and inherited dependency risks instead of replacing them with a generic success statement.
+A successful UI or language check does not prove complete online task execution, a second executor, or complete product acceptance. The only active workspace is desktop/; the previous Forge runtimes and their gates have been removed. Keep platform, runtime, security, packaging, and provider acceptance results separate. Document failures and inherited dependency risks instead of replacing them with a generic success statement.

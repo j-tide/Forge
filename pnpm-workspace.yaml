@@ -1,7 +1,0 @@
-packages:
-  - 'apps/*'
-  - 'packages/*'
-  - 'plugins/*'
-ignoreScripts: true
-saveExact: true
-engineStrict: true

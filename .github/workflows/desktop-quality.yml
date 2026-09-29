@@ -5,10 +5,16 @@ on:
     paths:
       - 'desktop/**'
       - '.github/workflows/desktop-quality.yml'
+      - 'README.md'
+      - 'README.en.md'
+      - 'AGENTS.md'
   pull_request:
     paths:
       - 'desktop/**'
       - '.github/workflows/desktop-quality.yml'
+      - 'README.md'
+      - 'README.en.md'
+      - 'AGENTS.md'
   workflow_dispatch:
 
 permissions:

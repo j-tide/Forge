@@ -30,7 +30,7 @@ const terminalBoundaryFixture = process.env.FORGE_UI_WALK_TERMINAL_BOUNDARIES ==
 const report = {
   valid: false, completeCoverage: false, recordedAt: new Date().toISOString(), runId,
   platform: process.platform, arch: process.arch, data, fixture, profile,
-  scope: 'Aperant-derived preview workspace UI; this does not certify Forge Python Host acceptance',
+  scope: 'Aperant-derived preview workspace UI; this does not certify complete online task acceptance',
   realModelCalls: 0, externalWrites: 0, operations: [], cases: [], blocked: [],
   failures: [], screenshots: [], sourceHashes: {}, fixtureSetup: [], inventories: [],
   requestedCases, stopAfterFailure, skippedCases: [], recovery: [], uxFindings: [],
