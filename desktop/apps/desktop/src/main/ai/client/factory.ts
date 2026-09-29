@@ -45,6 +45,19 @@ const DEFAULT_MAX_STEPS = 200;
 /** Default max steps for simple/utility clients */
 const DEFAULT_SIMPLE_MAX_STEPS = 1;
 
+/** Stable, credential-free setup error consumed by the Insights UI. */
+function insightsAuthRequired(): Error & { code: 'INSIGHTS_AUTH_REQUIRED' } {
+  return Object.assign(new Error('Configure a model account before starting Insights.'), {
+    name: 'INSIGHTS_AUTH_REQUIRED',
+    code: 'INSIGHTS_AUTH_REQUIRED' as const,
+  });
+}
+
+function needsConfiguredCredential(provider: string): boolean {
+  // Bedrock may authenticate through the AWS SDK credential chain without an API key.
+  return provider !== 'ollama' && provider !== 'bedrock';
+}
+
 // =============================================================================
 // createAgentClient
 // =============================================================================
@@ -216,6 +229,7 @@ export async function createSimpleClient(
     modelShorthand = 'haiku',
     thinkingLevel = 'low',
     profileId,
+    requireAuth = false,
     maxSteps = DEFAULT_SIMPLE_MAX_STEPS,
     tools = {},
     queueConfig: explicitQueueConfig,
@@ -244,7 +258,15 @@ export async function createSimpleClient(
     );
 
     if (!queueAuth) {
+      if (requireAuth) throw insightsAuthRequired();
       throw new Error('No available account in priority queue for model: ' + queueConfig.requestedModel);
+    }
+
+    if (
+      requireAuth && needsConfiguredCredential(queueAuth.resolvedProvider) &&
+      !queueAuth.apiKey?.trim() && !queueAuth.oauthTokenFilePath
+    ) {
+      throw insightsAuthRequired();
     }
 
     resolvedModelId = queueAuth.resolvedModelId;
@@ -272,6 +294,13 @@ export async function createSimpleClient(
       provider: detectedProvider,
       profileId,
     });
+
+    if (
+      requireAuth && needsConfiguredCredential(detectedProvider) &&
+      !auth?.apiKey?.trim() && !auth?.oauthTokenFilePath
+    ) {
+      throw insightsAuthRequired();
+    }
 
     model = createProvider({
       config: {

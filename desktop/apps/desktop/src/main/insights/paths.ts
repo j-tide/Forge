@@ -28,7 +28,7 @@ export class InsightsPaths {
    * Prevents path traversal attacks via crafted session IDs.
    */
   private validateSessionId(sessionId: string): void {
-    if (!/^session-\d{1,20}$/.test(sessionId)) {
+    if (!/^session-(?:\d{1,20}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/.test(sessionId)) {
       throw new Error('Invalid session ID format');
     }
   }

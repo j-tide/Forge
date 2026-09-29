@@ -62,21 +62,39 @@ vi.mock('../../schema/insight-extractor', () => ({
 import { runInsightsQuery } from '../insights';
 import type { InsightsConfig, InsightsStreamEvent } from '../insights';
 import { parseLLMJson } from '../../schema/structured-output';
+import type { SimpleClientResult } from '../../client/types';
+import type { ImageAttachment } from '../../../../shared/types/task';
+import type { Tool as AITool } from 'ai';
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
-const fakeModel = { modelId: 'claude-sonnet-test' };
+const fakeModel = { modelId: 'claude-sonnet-4-6', provider: 'anthropic.messages' };
 
-function makeMockClient(systemPrompt = 'You are an AI assistant.') {
+function makeMockClient(overrides: Partial<SimpleClientResult> = {}) {
   return {
     model: fakeModel,
-    systemPrompt,
+    resolvedModelId: fakeModel.modelId,
+    thinkingLevel: 'medium',
+    systemPrompt: 'You are an AI assistant.',
     tools: {},
     maxSteps: 30,
+    ...overrides,
   };
 }
+
+function modelClient(modelId: string, provider: string, overrides: Partial<SimpleClientResult> = {}) {
+  return makeMockClient({
+    model: { modelId, provider } as SimpleClientResult['model'],
+    resolvedModelId: modelId,
+    ...overrides,
+  });
+}
+
+const fixtureImage: ImageAttachment = {
+  id: 'fixture-image', filename: 'fixture.png', mimeType: 'image/png', size: 1, data: 'aQ==',
+};
 
 function makeStream(parts: Array<Record<string, unknown>>) {
   return {
@@ -335,6 +353,7 @@ describe('runInsightsQuery', () => {
     const clientArgs = mockCreateSimpleClient.mock.calls[0][0];
     expect(clientArgs.modelShorthand).toBe('sonnet');
     expect(clientArgs.thinkingLevel).toBe('medium');
+    expect(clientArgs.requireAuth).toBe(true);
   });
 
   it('accepts custom modelShorthand and thinkingLevel', async () => {
@@ -345,6 +364,270 @@ describe('runInsightsQuery', () => {
     const clientArgs = mockCreateSimpleClient.mock.calls[0][0];
     expect(clientArgs.modelShorthand).toBe('haiku');
     expect(clientArgs.thinkingLevel).toBe('low');
+  });
+
+  it.each([
+    { level: 'low' as const, budget: 1024 },
+    { level: 'high' as const, budget: 16384 },
+    { level: 'xhigh' as const, budget: 32768 },
+  ])('passes the selected $level Claude thinking budget to streamText', async ({ level, budget }) => {
+    mockStreamText.mockReturnValue(makeStream([]));
+
+    await runInsightsQuery(baseConfig({ thinkingLevel: level }));
+
+    expect(mockStreamText.mock.calls[0][0]).toMatchObject({
+      model: fakeModel,
+      providerOptions: { anthropic: { thinking: { type: 'enabled', budgetTokens: budget } } },
+    });
+  });
+
+  it('uses adaptive thinking and the supported max effort for Opus extra high', async () => {
+    mockCreateSimpleClient.mockResolvedValue(modelClient('claude-opus-4-6', 'anthropic.messages'));
+    mockStreamText.mockReturnValue(makeStream([]));
+
+    await runInsightsQuery(baseConfig({ modelShorthand: 'opus', thinkingLevel: 'xhigh' }));
+
+    expect(mockStreamText.mock.calls[0][0].providerOptions).toEqual({
+      anthropic: { thinking: { type: 'adaptive' }, effort: 'max' },
+    });
+  });
+
+  it('applies the selected level to the queue-resolved Codex model without losing its request options', async () => {
+    const client = modelClient('gpt-5.3-codex', 'openai.responses', {
+      thinkingLevel: 'high',
+      queueAuth: {
+        apiKey: 'fixture-key', source: 'profile-api-key', accountId: 'fixture-account',
+        resolvedProvider: 'openai', resolvedModelId: 'gpt-5.3-codex',
+        reasoningConfig: { type: 'reasoning_effort', level: 'high' },
+      },
+    });
+    mockCreateSimpleClient.mockResolvedValue(client);
+    mockStreamText.mockReturnValue(makeStream([]));
+
+    await runInsightsQuery(baseConfig({ modelShorthand: 'sonnet', thinkingLevel: 'low' }));
+
+    expect(mockStreamText.mock.calls[0][0]).toMatchObject({
+      model: client.model,
+      system: undefined,
+      providerOptions: {
+        openai: { reasoningEffort: 'low', instructions: client.systemPrompt, store: false },
+      },
+    });
+    expect(mockStreamText.mock.calls[0][0].providerOptions.anthropic).toBeUndefined();
+  });
+
+  it('preserves Codex OAuth instructions and store false for a GPT model without Codex in its name', async () => {
+    const client = modelClient('gpt-5.2', 'openai.responses', {
+      queueAuth: {
+        apiKey: '', source: 'codex-oauth', accountId: 'fixture-account', oauthTokenFilePath: '/fixture/auth.json',
+        resolvedProvider: 'openai', resolvedModelId: 'gpt-5.2',
+        reasoningConfig: { type: 'reasoning_effort', level: 'high' },
+      },
+    });
+    mockCreateSimpleClient.mockResolvedValue(client);
+    mockStreamText.mockReturnValue(makeStream([]));
+
+    await runInsightsQuery(baseConfig({ modelShorthand: 'gpt-5.2', thinkingLevel: 'medium' }));
+
+    expect(mockStreamText.mock.calls[0][0]).toMatchObject({
+      system: undefined,
+      providerOptions: {
+        openai: { reasoningEffort: 'medium', instructions: client.systemPrompt, store: false },
+      },
+    });
+  });
+
+  it.each([
+    { modelId: 'o3', provider: 'openai.chat', level: 'xhigh' as const, options: { openai: { reasoningEffort: 'high' } } },
+    { modelId: 'gemini-2.5-pro', provider: 'google.generative-ai', level: 'high' as const, options: { google: { thinkingConfig: { thinkingBudget: 16384 } } } },
+    { modelId: 'gemini-2.5-flash', provider: 'google.generative-ai', level: 'low' as const, options: { google: { thinkingConfig: { thinkingBudget: 0 } } } },
+    { modelId: 'grok-3-mini', provider: 'xai.chat', level: 'medium' as const, options: { xai: { reasoningEffort: 'high' } } },
+  ])('uses supported options for $modelId', async ({ modelId, provider, level, options }) => {
+    mockCreateSimpleClient.mockResolvedValue(modelClient(modelId, provider));
+    mockStreamText.mockReturnValue(makeStream([]));
+
+    await runInsightsQuery(baseConfig({ modelShorthand: modelId, thinkingLevel: level }));
+
+    expect(mockStreamText.mock.calls[0][0].providerOptions).toEqual(options);
+  });
+
+  it.each([
+    { modelId: 'glm-5', provider: 'zai.chat' },
+    { modelId: 'glm-5', provider: 'zai.anthropic.messages' },
+    { modelId: 'claude-haiku-4-5-20251001', provider: 'anthropic.messages' },
+    { modelId: 'claude-sonnet-4-6', provider: 'ollama.chat' },
+    { modelId: 'mistral-large-latest', provider: 'mistral.chat' },
+  ])('omits unsupported thinking options for $modelId on $provider', async ({ modelId, provider }) => {
+    mockCreateSimpleClient.mockResolvedValue(modelClient(modelId, provider));
+    mockStreamText.mockReturnValue(makeStream([]));
+
+    await runInsightsQuery(baseConfig({ modelShorthand: modelId, thinkingLevel: 'high' }));
+
+    expect(mockStreamText.mock.calls[0][0].providerOptions).toBeUndefined();
+  });
+
+  it('uses the ZAI SDK namespace when a custom compatible model declares thinking support', async () => {
+    mockCreateSimpleClient.mockResolvedValue(modelClient('custom-glm', 'zai.chat', {
+      queueAuth: {
+        apiKey: 'fixture-key', source: 'profile-api-key', accountId: 'fixture-account',
+        resolvedProvider: 'zai', resolvedModelId: 'custom-glm',
+        reasoningConfig: { type: 'thinking_toggle', level: 'medium' },
+      },
+    }));
+    mockStreamText.mockReturnValue(makeStream([]));
+
+    await runInsightsQuery(baseConfig({ thinkingLevel: 'high' }));
+
+    expect(mockStreamText.mock.calls[0][0].providerOptions).toEqual({
+      zai: { thinking: { type: 'enabled', clear_thinking: false } },
+    });
+  });
+
+  it('sends original image data and MIME type with the final user message', async () => {
+    mockStreamText.mockReturnValue(makeStream([]));
+
+    await runInsightsQuery(baseConfig({ images: [fixtureImage] }));
+
+    expect(mockStreamText.mock.calls[0][0].prompt).toBeUndefined();
+    expect(mockStreamText.mock.calls[0][0].messages).toEqual([{
+      role: 'user',
+      content: [
+        { type: 'text', text: 'How does authentication work?' },
+        { type: 'image', image: 'aQ==', mediaType: 'image/png' },
+      ],
+    }]);
+  });
+
+  it('rejects image attachments for a model that explicitly lacks vision', async () => {
+    mockCreateSimpleClient.mockResolvedValue(modelClient('glm-5', 'zai.anthropic.messages'));
+
+    await expect(runInsightsQuery(baseConfig({ images: [fixtureImage] })))
+      .rejects.toMatchObject({ code: 'INSIGHTS_IMAGES_UNSUPPORTED' });
+    expect(mockStreamText).not.toHaveBeenCalled();
+  });
+
+  it('requires original attachment data rather than silently sending a persisted thumbnail', async () => {
+    await expect(runInsightsQuery(baseConfig({ images: [{ ...fixtureImage, data: undefined, thumbnail: 'data:image/png;base64,aQ==' }] })))
+      .rejects.toMatchObject({ code: 'INSIGHTS_IMAGE_DATA_UNAVAILABLE' });
+    expect(mockStreamText).not.toHaveBeenCalled();
+  });
+
+  it('rejects cancellation before creating a client', async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(runInsightsQuery(baseConfig({ abortSignal: controller.signal })))
+      .rejects.toMatchObject({ name: 'AbortError' });
+    expect(mockCreateSimpleClient).not.toHaveBeenCalled();
+    expect(mockStreamText).not.toHaveBeenCalled();
+  });
+
+  it('rejects an SDK abort stream part instead of returning partial text as success', async () => {
+    mockStreamText.mockReturnValue(makeStream([
+      { type: 'text-delta', text: 'Partial answer' },
+      { type: 'abort' },
+    ]));
+
+    await expect(runInsightsQuery(baseConfig())).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it('checks the signal again after the stream ends', async () => {
+    const controller = new AbortController();
+    mockStreamText.mockReturnValue({
+      fullStream: (async function* () {
+        yield { type: 'text-delta', text: 'Partial answer' };
+        controller.abort();
+      })(),
+    });
+
+    await expect(runInsightsQuery(baseConfig({ abortSignal: controller.signal })))
+      .rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it('disables SDK raw error logging while preserving stream failure propagation', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const error = new Error('fixture-provider-secret');
+    mockStreamText.mockImplementation(options => {
+      options.onError({ error });
+      return makeStream([{ type: 'error', error }]);
+    });
+
+    try {
+      await expect(runInsightsQuery(baseConfig())).rejects.toBe(error);
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('waits for an executing tool after the SDK closes its aborted stream', async () => {
+    let markStarted!: () => void;
+    let finishTool!: (value: string) => void;
+    const started = new Promise<void>(resolve => { markStarted = resolve; });
+    const toolResult = new Promise<string>(resolve => { finishTool = resolve; });
+    const execute = vi.fn(() => { markStarted(); return toolResult; });
+    mockCreateSimpleClient.mockResolvedValue(makeMockClient({
+      tools: { Grep: { execute } as unknown as AITool },
+    }));
+    let capturedTools: Record<string, AITool> | undefined;
+    mockStreamText.mockImplementation(options => {
+      capturedTools = options.tools;
+      void options.tools.Grep.execute({}, { toolCallId: 'fixture-call', messages: [] });
+      return {
+        fullStream: (async function* () {
+          await started;
+          yield { type: 'abort' };
+        })(),
+      };
+    });
+    let settled = false;
+    const outcome = runInsightsQuery(baseConfig()).then(
+      result => { settled = true; return result; },
+      error => { settled = true; return error; },
+    );
+    await started;
+    await new Promise<void>(resolve => setImmediate(resolve));
+    expect(settled).toBe(false);
+
+    finishTool('tool process exited');
+    expect(await outcome).toMatchObject({ name: 'AbortError' });
+    expect(execute).toHaveBeenCalledTimes(1);
+    const lateExecute = capturedTools?.Grep.execute;
+    if (!lateExecute) throw new Error('Grep execution wrapper was not captured');
+    await expect(lateExecute({}, { toolCallId: 'late-call', messages: [] }))
+      .rejects.toMatchObject({ name: 'AbortError' });
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('also drains executing tools when the provider stream fails', async () => {
+    let markStarted!: () => void;
+    let finishTool!: (value: string) => void;
+    const started = new Promise<void>(resolve => { markStarted = resolve; });
+    const toolResult = new Promise<string>(resolve => { finishTool = resolve; });
+    mockCreateSimpleClient.mockResolvedValue(makeMockClient({
+      tools: { Read: { execute: () => { markStarted(); return toolResult; } } as unknown as AITool },
+    }));
+    const providerError = new Error('provider disconnected');
+    mockStreamText.mockImplementation(options => {
+      void options.tools.Read.execute({}, { toolCallId: 'fixture-call', messages: [] });
+      return {
+        fullStream: (async function* () {
+          await started;
+          yield { type: 'error', error: providerError };
+        })(),
+      };
+    });
+    let settled = false;
+    const outcome = runInsightsQuery(baseConfig()).then(
+      result => { settled = true; return result; },
+      error => { settled = true; return error; },
+    );
+    await started;
+    await new Promise<void>(resolve => setImmediate(resolve));
+    expect(settled).toBe(false);
+
+    finishTool('file read completed');
+    expect(await outcome).toBe(providerError);
   });
 
   // ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ import { InsightsConfig } from './config';
 import { detectRateLimit, createSDKRateLimitInfo } from '../rate-limit-detector';
 import { runInsightsQuery } from '../ai/runners/insights';
 import type { ModelShorthand } from '../ai/config/types';
+import { InsightsRequestError, insightsFailure } from './errors';
 
 /**
  * Message processor result
@@ -20,6 +21,15 @@ interface ProcessorResult {
   fullResponse: string;
   suggestedTasks?: InsightsChatMessage['suggestedTasks'];
   toolsUsed: InsightsToolUsage[];
+  cancelled: boolean;
+}
+
+interface ActiveExecution {
+  controller: AbortController;
+  sessionId?: string;
+  requestId?: string;
+  finished: Promise<void>;
+  finish: () => void;
 }
 
 /**
@@ -27,30 +37,30 @@ interface ProcessorResult {
  * Handles running the TypeScript insights runner via Vercel AI SDK
  */
 export class InsightsExecutor extends EventEmitter {
-  private config: InsightsConfig;
-  private abortControllers: Map<string, AbortController> = new Map();
+  private executions: Map<string, ActiveExecution> = new Map();
 
-  constructor(config: InsightsConfig) {
+  constructor(_config: InsightsConfig) {
     super();
-    this.config = config;
   }
 
   /**
    * Check if a session is currently active
    */
   isSessionActive(projectId: string): boolean {
-    return this.abortControllers.has(projectId);
+    return this.executions.has(projectId);
   }
 
   /**
    * Cancel an active session
    */
-  cancelSession(projectId: string): boolean {
-    const controller = this.abortControllers.get(projectId);
-    if (!controller) return false;
+  async cancelSession(projectId: string, sessionId?: string, requestId?: string): Promise<boolean> {
+    const execution = this.executions.get(projectId);
+    if (!execution || (sessionId && execution.sessionId !== sessionId)
+      || (requestId && execution.requestId !== requestId)) return false;
 
-    controller.abort();
-    this.abortControllers.delete(projectId);
+    execution.controller.abort();
+    // Keep the execution reserved until the runner has actually settled.
+    await execution.finished;
     return true;
   }
 
@@ -64,18 +74,30 @@ export class InsightsExecutor extends EventEmitter {
     conversationHistory: Array<{ role: string; content: string }>,
     modelConfig?: InsightsModelConfig,
     images?: ImageAttachment[],
-    sessionId?: string
+    sessionId?: string,
+    requestId?: string
   ): Promise<ProcessorResult> {
-    // Cancel any existing session
-    this.cancelSession(projectId);
+    if (this.isSessionActive(projectId)) {
+      throw new InsightsRequestError('request-busy');
+    }
+
+    const controller = new AbortController();
+    let finish!: () => void;
+    const finished = new Promise<void>((resolve) => { finish = resolve; });
+    const execution: ActiveExecution = { controller, sessionId, requestId, finished, finish };
+    this.executions.set(projectId, execution);
+    const identity = {
+      ...(sessionId ? { sessionId } : {}),
+      ...(requestId ? { requestId } : {}),
+    };
 
     // Capture the real session once for this execution. A later selection or
     // request must not relabel events from this pending response.
     const emitStatus = (status: InsightsChatStatus): void => {
-      this.emit('status', projectId, { ...status, ...(sessionId ? { sessionId } : {}) });
+      this.emit('status', projectId, { ...status, ...identity });
     };
     const emitChunk = (chunk: InsightsStreamChunk): void => {
-      this.emit('stream-chunk', projectId, { ...chunk, ...(sessionId ? { sessionId } : {}) });
+      this.emit('stream-chunk', projectId, { ...chunk, ...identity });
     };
 
     // Emit thinking status
@@ -84,19 +106,12 @@ export class InsightsExecutor extends EventEmitter {
       message: 'Processing your message...'
     });
 
-    const controller = new AbortController();
-    this.abortControllers.set(projectId, controller);
-    const releaseController = (): void => {
-      if (this.abortControllers.get(projectId) === controller) {
-        this.abortControllers.delete(projectId);
-      }
-    };
-
     const fullResponse = '';
     const suggestedTasks: InsightsChatMessage['suggestedTasks'] = [];
     const toolsUsed: InsightsToolUsage[] = [];
     let accumulatedText = '';
     let allOutput = '';
+    let streaming = false;
 
     // Map InsightsModelConfig to ModelShorthand/ThinkingLevel
     const modelShorthand: ModelShorthand = (modelConfig?.model as ModelShorthand) ?? 'sonnet';
@@ -111,6 +126,9 @@ export class InsightsExecutor extends EventEmitter {
       }));
 
     try {
+      if (controller.signal.aborted) {
+        return { fullResponse: '', toolsUsed: [], cancelled: true };
+      }
       const result = await runInsightsQuery(
         {
           projectDir: projectPath,
@@ -119,8 +137,15 @@ export class InsightsExecutor extends EventEmitter {
           modelShorthand,
           thinkingLevel,
           abortSignal: controller.signal,
+          images,
         },
         (event) => {
+          if (controller.signal.aborted) return;
+          if (!streaming && event.type !== 'error') {
+            streaming = true;
+            emitStatus({ phase: 'streaming' });
+          }
+          if (controller.signal.aborted) return;
           switch (event.type) {
             case 'text-delta': {
               accumulatedText += event.text;
@@ -152,17 +177,15 @@ export class InsightsExecutor extends EventEmitter {
             }
             case 'error': {
               allOutput = (allOutput + event.error).slice(-10000);
-              emitChunk({
-                type: 'error',
-                error: event.error,
-              } as InsightsStreamChunk);
               break;
             }
           }
         },
       );
 
-      releaseController();
+      if (controller.signal.aborted) {
+        return { fullResponse: '', toolsUsed: [], cancelled: true };
+      }
 
       // Extract task suggestion from the full result
       if (result.taskSuggestion) {
@@ -181,43 +204,43 @@ export class InsightsExecutor extends EventEmitter {
         } as InsightsStreamChunk);
       }
 
-      emitChunk({
-        type: 'done',
-      } as InsightsStreamChunk);
+      // The service emits scoped completion only after persistence succeeds.
+      if (!requestId) {
+        emitChunk({ type: 'done' });
+        emitStatus({ phase: 'complete' });
+      }
 
-      emitStatus({
-        phase: 'complete',
-      } as InsightsChatStatus);
+      if (controller.signal.aborted) {
+        return { fullResponse: '', toolsUsed: [], cancelled: true };
+      }
 
       return {
         fullResponse: result.text.trim() || accumulatedText.trim() || fullResponse,
         suggestedTasks: suggestedTasks.length > 0 ? suggestedTasks : undefined,
         toolsUsed,
+        cancelled: false,
       };
     } catch (error) {
-      releaseController();
-
-      // Check for rate limit in accumulated output
-      this.handleRateLimit(projectId, allOutput);
-
-      const errorMsg = error instanceof Error ? error.message : String(error);
-
       // Don't emit error if aborted (user cancelled)
-      if (error instanceof Error && error.name === 'AbortError') {
-        return {
-          fullResponse: accumulatedText.trim(),
-          suggestedTasks: suggestedTasks.length > 0 ? suggestedTasks : undefined,
-          toolsUsed,
-        };
+      if (controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) {
+        return { fullResponse: '', toolsUsed: [], cancelled: true };
       }
 
+      this.handleRateLimit(projectId, allOutput);
+      const failure = insightsFailure(error);
       emitChunk({
         type: 'error',
-        error: errorMsg,
+        error: failure.message,
+        code: failure.code,
       } as InsightsStreamChunk);
 
-      this.emit('error', projectId, errorMsg, sessionId);
-      throw error;
+      this.emit('error', projectId, failure.message, sessionId, requestId, failure.code);
+      throw failure;
+    } finally {
+      if (this.executions.get(projectId) === execution) {
+        this.executions.delete(projectId);
+      }
+      execution.finish();
     }
   }
 
@@ -227,7 +250,7 @@ export class InsightsExecutor extends EventEmitter {
   private handleRateLimit(projectId: string, output: string): void {
     const rateLimitDetection = detectRateLimit(output);
     if (rateLimitDetection.isRateLimited) {
-      const rateLimitInfo = createSDKRateLimitInfo('other', rateLimitDetection, {
+      const rateLimitInfo = createSDKRateLimitInfo('other', { ...rateLimitDetection, originalError: undefined }, {
         projectId,
       });
       this.emit('sdk-rate-limit', rateLimitInfo);

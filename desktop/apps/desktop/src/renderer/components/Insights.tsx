@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   MessageSquare,
@@ -16,6 +16,9 @@ import {
   PanelLeftClose,
   PanelLeft,
   Camera,
+  Copy,
+  RotateCcw,
+  Square,
   X
 } from 'lucide-react';
 import ReactMarkdown, { type Components } from 'react-markdown';
@@ -27,10 +30,13 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { ScreenshotCapture } from './ScreenshotCapture';
 import { cn } from '../lib/utils';
+import { useToast } from '../hooks/use-toast';
 import {
   useInsightsStore,
   loadInsightsSession,
   sendMessage,
+  cancelMessage,
+  regenerateMessage,
   newSession,
   switchSession,
   deleteSession,
@@ -45,6 +51,8 @@ import {
   loadInsightsSessions
 } from '../stores/insights-store';
 import { useImageUpload } from './task-form/useImageUpload';
+import { ImagePreviewModal } from './task-form/ImagePreviewModal';
+import { normalizeCapturedImage } from '../lib/captured-image';
 import { createThumbnail, generateImageId } from './ImageUpload';
 import { loadTasks } from '../stores/task-store';
 import { ChatHistorySidebar } from './ChatHistorySidebar';
@@ -100,16 +108,19 @@ const createSafeLink = (opensInNewWindowText: string) => {
 
 interface InsightsProps {
   projectId: string;
+  onOpenAccountSettings?: () => void;
 }
 
-export function Insights({ projectId }: InsightsProps) {
+export function Insights({ projectId, onOpenAccountSettings }: InsightsProps) {
   const { t: tk } = useTranslation('uiKnowledgeContext');
   const { t } = useTranslation('common');
+  const { toast } = useToast();
   const storedSession = useInsightsStore((state) => state.session);
   const session = storedSession?.projectId === projectId ? storedSession : null;
   const storedSessions = useInsightsStore((state) => state.sessions);
   const storedStatus = useInsightsStore((state) => state.status);
   const storedStreamingContent = useInsightsStore((state) => state.streamingContent);
+  const activeRequest = useInsightsStore((state) => state.activeRequest);
   const storedCurrentTool = useInsightsStore((state) => state.currentTool);
   const isLoadingSessions = useInsightsStore((state) => state.isLoadingSessions);
   const isLoadingSession = useInsightsStore((state) => state.isLoadingSession);
@@ -134,15 +145,23 @@ export function Insights({ projectId }: InsightsProps) {
   const [isUserAtBottom, setIsUserAtBottom] = useState(true);
   const [viewportEl, setViewportEl] = useState<HTMLElement | null>(null);
   const [screenshotOpen, setScreenshotOpen] = useState(false);
+  const [previewSelection, setPreviewSelection] = useState<{ image: ImageAttachment; projectId: string; sessionId?: string } | null>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
 
   const storedPendingImages = useInsightsStore((state) => state.pendingImages);
   const pendingImages = belongsToProject ? storedPendingImages : [];
   const setPendingImages = useInsightsStore((state) => state.setPendingImages);
+  const previewImage = previewSelection?.projectId === projectId && previewSelection.sessionId === session?.id
+    ? pendingImages.find(image => image === previewSelection.image) ?? null : null;
+  useEffect(() => {
+    if (previewSelection && !previewImage) setPreviewSelection(null);
+  }, [previewSelection, previewImage]);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const isLoading = status.phase === 'thinking' || status.phase === 'streaming';
+  const isLoading = belongsToProject && !!activeRequest;
+  const isStopping = isLoading && activeRequest?.phase === 'stopping';
   const isSessionUnavailable = displayedProjectId !== projectId || isLoadingSession;
 
   // Image upload hook
@@ -255,6 +274,31 @@ export function Insights({ projectId }: InsightsProps) {
     setIsUserAtBottom(true); // Resume auto-scroll when user sends a message
   };
 
+  const handleCopy = async (message: InsightsChatMessage) => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopiedMessageId(message.id);
+    } catch {
+      toast({ title: tk('copyFailed'), description: tk('copyFailedHint'), variant: 'destructive' });
+    }
+  };
+
+  const handleRegenerate = async (messageId: string) => {
+    if (isLoading || isSessionUnavailable) return;
+    setIsUserAtBottom(true);
+    const target = session?.messages.find(message => message.id === messageId);
+    const sessionId = session?.id;
+    const regenerated = await regenerateMessage(projectId, messageId, effectiveModelConfig,
+      target?.role === 'user' && pendingImages.length > 0 ? pendingImages : undefined);
+    const current = useInsightsStore.getState();
+    if (regenerated && target?.role === 'user' && inputValue.trim() === target.content &&
+      current.projectId === projectId && current.session?.id === sessionId) {
+      setInputValue('');
+      setPendingImages([]);
+      setImageError(null);
+    }
+  };
+
   const handleScreenshotCapture = useCallback(async (imageData: string) => {
     // Check image count limit before processing
     if (pendingImages.length >= MAX_IMAGES_PER_TASK) {
@@ -262,28 +306,35 @@ export function Insights({ projectId }: InsightsProps) {
       return;
     }
 
-    // imageData is base64 PNG from ScreenshotCapture
-    const approximateSize = Math.ceil(imageData.length * 0.75); // approximate base64 size
-
-    // Validate size - match the validation used for regular image uploads
-    if (approximateSize > MAX_IMAGE_SIZE) {
-      setImageError(t('insights.images.screenshotTooLarge', { size: Math.round(approximateSize / 1024 / 1024), max: Math.round(MAX_IMAGE_SIZE / 1024 / 1024) }));
+    const captured = normalizeCapturedImage(imageData);
+    if (!captured) {
+      setImageError(t('insights.images.processFailed'));
       return;
     }
-
-    const dataUrl = `data:image/png;base64,${imageData}`;
-    const thumbnail = await createThumbnail(dataUrl);
-    const newImage: ImageAttachment = {
-      id: generateImageId(),
-      filename: `screenshot-${Date.now()}.png`,
-      mimeType: 'image/png',
-      size: approximateSize,
-      data: imageData,
-      thumbnail
-    };
-    setPendingImages([...pendingImages, newImage]);
-    setImageError(null);
-  }, [pendingImages, setPendingImages, setImageError, t]);
+    if (captured.size > MAX_IMAGE_SIZE) {
+      setImageError(t('insights.images.screenshotTooLarge', { size: Math.round(captured.size / 1024 / 1024), max: Math.round(MAX_IMAGE_SIZE / 1024 / 1024) }));
+      return;
+    }
+    // Capture callbacks are async while the modal closes immediately. Keep failures
+    // local and reject any result that arrives after this draft changed.
+    const capturedSessionId = session?.id;
+    try {
+      const thumbnail = await createThumbnail(captured.dataUrl);
+      const current = useInsightsStore.getState();
+      if (current.projectId !== projectId || current.session?.id !== capturedSessionId || current.pendingImages !== pendingImages) return;
+      const newImage: ImageAttachment = {
+        id: generateImageId(), filename: `screenshot-${Date.now()}.png`, mimeType: 'image/png',
+        size: captured.size, data: captured.data, thumbnail
+      };
+      setPendingImages([...pendingImages, newImage]);
+      setImageError(null);
+    } catch {
+      const current = useInsightsStore.getState();
+      if (current.projectId === projectId && current.session?.id === capturedSessionId && current.pendingImages === pendingImages) {
+        setImageError(t('insights.images.processFailed'));
+      }
+    }
+  }, [pendingImages, setPendingImages, session?.id, projectId, t]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -334,37 +385,33 @@ export function Insights({ projectId }: InsightsProps) {
     }
   };
 
-  const handleDeleteSessions = async (sessionIds: string[]) => {
+  const handleBulkSessions = async (sessionIds: string[], action: 'delete' | 'archive'): Promise<{ failedIds: string[] }> => {
+    let failedIds = sessionIds;
     try {
-      const result = await deleteSessions(projectId, sessionIds);
-      await loadInsightsSessions(projectId, showArchived);
-      // Reload current session in case backend switched to a different one
-      await loadInsightsSession(projectId, showArchived);
-
-      // Log partial failures for debugging
-      if (result.failedIds && result.failedIds.length > 0) {
-        console.warn(`Failed to delete ${result.failedIds.length} session(s):`, result.failedIds);
-      }
-    } catch (error) {
-      console.error(`Failed to delete sessions ${sessionIds.join(', ')}:`, error);
+      const result = await (action === 'delete' ? deleteSessions(projectId, sessionIds) : archiveSessions(projectId, sessionIds));
+      const reportedFailures = [...new Set(result.failedIds?.filter(id => sessionIds.includes(id)))];
+      failedIds = reportedFailures.length > 0 ? reportedFailures : result.success ? [] : sessionIds;
+    } catch {
+      // A transport failure cannot confirm which conversations changed. Keep them selected.
     }
+    if (useInsightsStore.getState().projectId !== projectId) return { failedIds };
+    toast({
+      title: t(`insights.${action === 'delete' ? 'bulkDelete' : 'bulkArchive'}${failedIds.length > 0 ? 'Failed' : 'Success'}`),
+      description: t('insights.bulkResult', { completed: sessionIds.length - failedIds.length, failed: failedIds.length }),
+      variant: failedIds.length > 0 ? 'destructive' : 'default',
+    });
+    try {
+      await loadInsightsSessions(projectId, showArchived);
+      await loadInsightsSession(projectId, showArchived);
+    } catch {
+      // Refresh failure does not turn an acknowledged mutation into a failed mutation.
+      if (useInsightsStore.getState().projectId === projectId) toast({ title: t('insights.historyRefreshFailed'), variant: 'destructive' });
+    }
+    return { failedIds };
   };
 
-  const handleArchiveSessions = async (sessionIds: string[]) => {
-    try {
-      const result = await archiveSessions(projectId, sessionIds);
-      await loadInsightsSessions(projectId, showArchived);
-      // Reload current session in case backend switched to a different one
-      await loadInsightsSession(projectId, showArchived);
-
-      // Log partial failures for debugging
-      if (result.failedIds && result.failedIds.length > 0) {
-        console.warn(`Failed to archive ${result.failedIds.length} session(s):`, result.failedIds);
-      }
-    } catch (error) {
-      console.error(`Failed to archive sessions ${sessionIds.join(', ')}:`, error);
-    }
-  };
+  const handleDeleteSessions = (sessionIds: string[]) => handleBulkSessions(sessionIds, 'delete');
+  const handleArchiveSessions = (sessionIds: string[]) => handleBulkSessions(sessionIds, 'archive');
 
   const handleToggleShowArchived = () => {
     useInsightsStore.getState().setShowArchived(!showArchived);
@@ -376,22 +423,37 @@ export function Insights({ projectId }: InsightsProps) {
     taskData: { title: string; description: string; metadata?: TaskMetadata }
   ) => {
     const taskKey = `${messageId}-${taskIndex}`;
+    const sessionId = session?.id;
+    if (!sessionId) return;
+    const isCurrentSession = () => {
+      const current = useInsightsStore.getState();
+      return current.projectId === projectId && current.session?.id === sessionId;
+    };
     setCreatingTask(prev => new Set(prev).add(taskKey));
     try {
       const task = await createTaskFromSuggestion(
         projectId,
         taskData.title,
         taskData.description,
-        taskData.metadata
+        taskData.metadata,
+        { sessionId, messageId, suggestionIndex: taskIndex }
       );
 
+      if (!isCurrentSession()) return;
       if (task) {
         setTaskCreated(prev => new Set(prev).add(taskKey));
         // Reload tasks to show the new task in the kanban
-        loadTasks(projectId);
+        void loadTasks(projectId).catch(() => {
+          toast({ title: tk('taskListRefreshFailed'), variant: 'destructive' });
+        });
+      } else {
+        toast({ title: tk('createTaskFailed'), description: tk('createTaskFailedHint'), variant: 'destructive' });
       }
+    } catch {
+      if (!isCurrentSession()) return;
+      toast({ title: tk('createTaskFailed'), description: tk('createTaskFailedHint'), variant: 'destructive' });
     } finally {
-      setCreatingTask(prev => {
+      if (isCurrentSession()) setCreatingTask(prev => {
         const next = new Set(prev);
         next.delete(taskKey);
         return next;
@@ -413,6 +475,7 @@ export function Insights({ projectId }: InsightsProps) {
       {/* Chat History Sidebar */}
       {showSidebar && (
         <ChatHistorySidebar
+          key={projectId}
           sessions={sessions}
           currentSessionId={session?.id || null}
           isLoading={isLoadingSessions}
@@ -522,6 +585,11 @@ export function Insights({ projectId }: InsightsProps) {
                 onCreateTask={handleCreateTask}
                 creatingTask={creatingTask}
                 taskCreated={taskCreated}
+                onCopy={handleCopy}
+                onRegenerate={handleRegenerate}
+                copied={copiedMessageId === message.id}
+                isLatest={messages.at(-1)?.id === message.id}
+                generationDisabled={isLoading || isSessionUnavailable}
               />
             ))}
 
@@ -566,11 +634,21 @@ export function Insights({ projectId }: InsightsProps) {
           </div>
         )}
         {/* First-session failures must also be visible before any messages exist. */}
-        {status.phase === 'error' && status.error && (
+        {status.phase === 'error' && (
           <div role="alert" className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            {status.error}
+            <div className="flex-1">
+              <p>{tk(`generationErrors.${status.code ?? 'request-failed'}`)}</p>
+              {status.code === 'auth-required' && onOpenAccountSettings && (
+                <Button variant="outline" size="sm" className="mt-2" onClick={onOpenAccountSettings}>
+                  {tk('configureAccount')}
+                </Button>
+              )}
+            </div>
           </div>
+        )}
+        {!isLoading && status.phase === 'complete' && status.message && (
+          <p role="status" className="mt-3 text-sm text-muted-foreground">{status.message}</p>
         )}
       </ScrollArea>
 
@@ -614,29 +692,20 @@ export function Insights({ projectId }: InsightsProps) {
             >
               <Camera className="h-4 w-4" />
             </Button>
-            <Button
-              onClick={handleSend}
-              aria-label={tk('send')}
-              disabled={(!inputValue.trim() && pendingImages.length === 0) || isLoading || isSessionUnavailable}
-              className="h-9 w-9"
-              size="icon"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
+            {isLoading ? (
+              <Button onClick={() => void cancelMessage(projectId)}
+                aria-label={tk(isStopping ? 'stoppingResponse' : 'stopResponse')}
+                title={tk(isStopping ? 'stoppingResponse' : 'stopResponse')}
+                disabled={isStopping} className="h-9 w-9" size="icon" variant="destructive">
+                {isStopping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-4 w-4" />}
+              </Button>
+            ) : (
+              <Button onClick={handleSend} aria-label={tk('send')}
+                disabled={(!inputValue.trim() && pendingImages.length === 0) || isSessionUnavailable}
+                className="h-9 w-9" size="icon"><Send className="h-4 w-4" /></Button>
+            )}
           </div>
         </div>
-
-        {/* Image analysis warning */}
-        {pendingImages.length > 0 && (
-          <div className="mt-1 flex items-center gap-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-500">
-            <AlertCircle className="h-3 w-3 shrink-0" />
-            <span>{t('insights.images.analysisUnsupported')}</span>
-          </div>
-        )}
 
         {/* Image error */}
         {imageError && (
@@ -651,16 +720,19 @@ export function Insights({ projectId }: InsightsProps) {
                 key={image.id}
                 className="group relative h-16 w-16 rounded-md border border-border overflow-hidden"
               >
-                <img
-                  src={image.thumbnail || `data:${image.mimeType};base64,${image.data}`}
-                  alt={image.filename}
-                  className="h-full w-full object-cover"
-                />
+                <button type="button" aria-label={t('tasks:imagePreview.open', { filename: image.filename })}
+                  onClick={() => setPreviewSelection({ image, projectId, sessionId: session?.id })}
+                  className="h-full w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset">
+                  <img src={image.thumbnail || `data:${image.mimeType};base64,${image.data}`}
+                    alt={image.filename} className="h-full w-full object-cover" />
+                </button>
                 <button
                   type="button"
                   onClick={() => removeImage(image.id)}
-                  className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                  className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
                   title={t('insights.images.removeImage')}
+                  aria-label={t('insights.images.removeImage')}
+                  disabled={isLoading || isSessionUnavailable}
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -676,6 +748,9 @@ export function Insights({ projectId }: InsightsProps) {
           {t('insights.images.pasteHint')} · {tk('sendHint')}
         </p>
       </div>
+
+      <ImagePreviewModal open={previewImage !== null} image={previewImage}
+        onOpenChange={(open) => { if (!open) setPreviewSelection(null); }} />
 
       {/* Screenshot capture dialog */}
       <ScreenshotCapture
@@ -694,6 +769,11 @@ interface MessageBubbleProps {
   onCreateTask: (messageId: string, taskIndex: number, taskData: { title: string; description: string; metadata?: TaskMetadata }) => void;
   creatingTask: Set<string>;
   taskCreated: Set<string>;
+  onCopy: (message: InsightsChatMessage) => void;
+  onRegenerate: (messageId: string) => void;
+  copied: boolean;
+  isLatest: boolean;
+  generationDisabled: boolean;
 }
 
 function MessageBubble({
@@ -701,7 +781,7 @@ function MessageBubble({
   markdownComponents,
   onCreateTask,
   creatingTask,
-  taskCreated
+  taskCreated, onCopy, onRegenerate, copied, isLatest, generationDisabled
 }: MessageBubbleProps) {
   const { t: tk } = useTranslation('uiKnowledgeContext');
   const { t } = useTranslation('common');
@@ -733,6 +813,24 @@ function MessageBubble({
           </div>
         )}
 
+        {(!isUser || isLatest) && (
+          <div className="flex items-center gap-2">
+            {!isUser && message.content && (
+              <Button variant="ghost" size="sm" onClick={() => onCopy(message)}
+                aria-label={tk(copied ? 'copiedResponse' : 'copyResponse')}>
+                {copied ? <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> : <Copy className="mr-1 h-3.5 w-3.5" />}
+                {tk(copied ? 'copiedResponse' : 'copyResponse')}
+              </Button>
+            )}
+            {isLatest && (
+              <Button variant="ghost" size="sm" disabled={generationDisabled}
+                onClick={() => onRegenerate(message.id)} aria-label={tk(isUser ? 'retryResponse' : 'regenerateResponse')}>
+                <RotateCcw className="mr-1 h-3.5 w-3.5" />{tk(isUser ? 'retryResponse' : 'regenerateResponse')}
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* Image attachments for user messages */}
         {isUser && message.images && message.images.length > 0 && (
           <div className="space-y-1.5">
@@ -748,7 +846,6 @@ function MessageBubble({
                   />
                 ))}
             </div>
-            <p className="text-xs text-muted-foreground italic">{t('insights.images.notAnalyzed')}</p>
           </div>
         )}
 
@@ -763,7 +860,7 @@ function MessageBubble({
             {message.suggestedTasks.map((task, index) => {
               const taskKey = `${message.id}-${index}`;
               const isCreating = creatingTask.has(taskKey);
-              const isCreated = taskCreated.has(taskKey);
+              const isCreated = !!task.createdTaskId || taskCreated.has(taskKey);
 
               return (
                 <Card key={taskKey} className="border-primary/20 bg-primary/5">
@@ -851,6 +948,7 @@ interface ToolUsageHistoryProps {
 function ToolUsageHistory({ tools }: ToolUsageHistoryProps) {
   const { t: tk } = useTranslation('uiKnowledgeContext');
   const [expanded, setExpanded] = useState(false);
+  const contentId = useId();
 
   if (tools.length === 0) return null;
 
@@ -891,6 +989,9 @@ function ToolUsageHistory({ tools }: ToolUsageHistoryProps) {
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
+        aria-label={tk('toolsUsed', { count: tools.length })}
+        aria-expanded={expanded}
+        aria-controls={contentId}
         className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
         <span className="flex items-center gap-1">
@@ -909,7 +1010,7 @@ function ToolUsageHistory({ tools }: ToolUsageHistoryProps) {
       </button>
 
       {expanded && (
-        <div className="mt-2 space-y-1 rounded-md border border-border bg-muted/30 p-2">
+        <div id={contentId} className="mt-2 space-y-1 rounded-md border border-border bg-muted/30 p-2">
           {tools.map((tool, index) => {
             const Icon = getToolIcon(tool.name);
             return (

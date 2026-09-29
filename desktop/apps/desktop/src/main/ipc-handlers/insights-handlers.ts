@@ -1,18 +1,24 @@
 import { nativeText } from '../localized-text';
-import { ipcMain, app } from "electron";
+import { ipcMain } from "electron";
 import type { BrowserWindow } from "electron";
 import path from "path";
-import { existsSync, readdirSync, mkdirSync, writeFileSync } from "fs";
 import {
   IPC_CHANNELS,
   getSpecsDir,
-  AUTO_BUILD_PATHS,
 } from "../../shared/constants";
 import type {
   IPCResult,
   InsightsSession,
   InsightsSessionSummary,
   InsightsModelConfig,
+  InsightsRequestIdentity,
+  InsightsRegenerateRequest,
+  InsightsGenerationResult,
+  InsightsCancellationResult,
+  InsightsActiveRequest,
+  InsightsIPCResult,
+  InsightsErrorCode,
+  InsightsTaskSource,
   ImageAttachment,
   Task,
   TaskMetadata,
@@ -22,6 +28,8 @@ import { insightsService } from "../insights-service";
 import { safeSendToRenderer } from "./utils";
 import { getActiveProviderFeatureSettings } from "./feature-settings-helper";
 import type { ThinkingLevel } from "../../shared/types/settings";
+import { insightsFailure } from '../insights/errors';
+import { createInsightsTask, findInsightsTask } from '../insights/task-creation';
 
 /**
  * Read insights feature settings using per-provider resolution
@@ -56,53 +64,64 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
     }
   );
 
-  ipcMain.on(
+  ipcMain.handle(
     IPC_CHANNELS.INSIGHTS_SEND_MESSAGE,
-    async (_, projectId: string, message: string, modelConfig?: InsightsModelConfig, images?: ImageAttachment[]) => {
+    async (_, projectId: string, message: string, modelConfig?: InsightsModelConfig, images?: ImageAttachment[], request?: InsightsRequestIdentity): Promise<InsightsIPCResult<InsightsGenerationResult>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
-        safeSendToRenderer(
-          getMainWindow,
-          IPC_CHANNELS.INSIGHTS_ERROR,
-          projectId,
-          "Project not found"
-        );
-        return;
+        return { success: false, error: nativeText('ipc.projectNotFound'), code: 'invalid-request' };
       }
 
-      // Get feature settings from Agent Settings and merge with provided config
-      const featureSettings = getInsightsFeatureSettings();
-      const configWithSettings: InsightsModelConfig = {
-        // Start with feature settings as defaults
-        ...featureSettings,
-        // Override with any explicitly provided config
-        ...modelConfig,
-      };
-
-      console.log("[Insights Handler] Using model config:", {
-        model: configWithSettings.model,
-        thinkingLevel: configWithSettings.thinkingLevel,
-      });
-
-      // Await the async sendMessage to ensure proper error handling and
-      // that all async operations (like getProcessEnv) complete before
-      // the handler returns. This fixes race conditions on Windows where
-      // environment setup wouldn't complete before process spawn.
       try {
-        await insightsService.sendMessage(projectId, project.path, message, configWithSettings, images);
+        const configWithSettings = { ...getInsightsFeatureSettings(), ...modelConfig };
+        const data = await insightsService.sendMessage(projectId, project.path, message, configWithSettings, images, request);
+        return { success: true, data };
       } catch (error) {
-        // Errors during sendMessage (executor errors) are already emitted via
-        // the 'error' event, but we catch here to prevent unhandled rejection
-        // and ensure all error types are reported to the UI
-        console.error("[Insights IPC] Error in sendMessage:", error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        safeSendToRenderer(
-          getMainWindow,
-          IPC_CHANNELS.INSIGHTS_ERROR,
-          projectId,
-          `Failed to send message: ${errorMessage}`
-        );
+        const failure = insightsFailure(error);
+        return { success: false, error: failure.message, code: failure.code };
       }
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.INSIGHTS_REGENERATE_MESSAGE,
+    async (_, projectId: string, request: InsightsRegenerateRequest, modelConfig?: InsightsModelConfig): Promise<InsightsIPCResult<InsightsGenerationResult>> => {
+      const project = projectStore.getProject(projectId);
+      if (!project) return { success: false, error: nativeText('ipc.projectNotFound'), code: 'invalid-request' };
+      try {
+        const configWithSettings = { ...getInsightsFeatureSettings(), ...modelConfig };
+        const data = await insightsService.regenerateMessage(projectId, project.path, request, configWithSettings);
+        return { success: true, data };
+      } catch (error) {
+        const failure = insightsFailure(error);
+        return { success: false, error: failure.message, code: failure.code };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.INSIGHTS_CANCEL_MESSAGE,
+    async (_, projectId: string, sessionId: string, requestId: string): Promise<InsightsIPCResult<InsightsCancellationResult>> => {
+      if (!projectStore.getProject(projectId)) {
+        return { success: false, error: nativeText('ipc.projectNotFound'), code: 'invalid-request' };
+      }
+      try {
+        const data = await insightsService.cancelMessage(projectId, sessionId, requestId);
+        return { success: true, data };
+      } catch (error) {
+        const failure = insightsFailure(error);
+        return { success: false, error: failure.message, code: failure.code };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.INSIGHTS_GET_ACTIVE_REQUEST,
+    async (_, projectId: string, sessionId: string): Promise<InsightsIPCResult<InsightsActiveRequest | null>> => {
+      if (!projectStore.getProject(projectId)) {
+        return { success: false, error: nativeText('ipc.projectNotFound'), code: 'invalid-request' };
+      }
+      return { success: true, data: insightsService.getActiveRequest(projectId, sessionId) };
     }
   );
 
@@ -126,7 +145,8 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
       projectId: string,
       title: string,
       description: string,
-      metadata?: TaskMetadata
+      metadata?: TaskMetadata,
+      source?: InsightsTaskSource
     ): Promise<IPCResult<Task>> => {
       const project = projectStore.getProject(projectId);
       if (!project) {
@@ -138,86 +158,47 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
       }
 
       try {
-        // Generate a unique spec ID based on existing specs
-        // Get specs directory path
         const specsBaseDir = getSpecsDir(project.autoBuildPath);
         const specsDir = path.join(project.path, specsBaseDir);
-
-        // Find next available spec number
-        let specNumber = 1;
-        if (existsSync(specsDir)) {
-          const existingDirs = readdirSync(specsDir, { withFileTypes: true })
-            .filter((d) => d.isDirectory())
-            .map((d) => d.name);
-
-          const existingNumbers = existingDirs
-            .map((name) => {
-              const match = name.match(/^(\d+)/);
-              return match ? parseInt(match[1], 10) : 0;
-            })
-            .filter((n) => n > 0);
-
-          if (existingNumbers.length > 0) {
-            specNumber = Math.max(...existingNumbers) + 1;
-          }
+        const validatedSource = source === undefined ? undefined : {
+          sessionId: source?.sessionId,
+          messageId: source?.messageId,
+          suggestionIndex: source?.suggestionIndex,
+        };
+        const suggestion = validatedSource
+          ? insightsService.resolveTaskSuggestion(projectId, project.path, validatedSource, title, description)
+          : undefined;
+        if (typeof title !== 'string' || !title.trim() || typeof description !== 'string') {
+          return { success: false, error: nativeText('ipc.failedToCreateTask') };
         }
 
-        // Create spec ID with zero-padded number and slugified title
-        const slugifiedTitle = title
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "")
-          .substring(0, 50);
-        const specId = `${String(specNumber).padStart(3, "0")}-${slugifiedTitle}`;
-
-        // Create spec directory
-        const specDir = path.join(specsDir, specId);
-        mkdirSync(specDir, { recursive: true });
-
-        // Build metadata with source type
-        const taskMetadata: TaskMetadata = {
-          sourceType: "insights",
-          ...metadata,
-        };
-
-        // Create initial implementation_plan.json
-        const now = new Date().toISOString();
-        const implementationPlan = {
-          feature: title,
-          description: description,
-          created_at: now,
-          updated_at: now,
-          status: "pending",
-          phases: [],
-        };
-
-        const planPath = path.join(specDir, AUTO_BUILD_PATHS.IMPLEMENTATION_PLAN);
-        writeFileSync(planPath, JSON.stringify(implementationPlan, null, 2), 'utf-8');
-
-        // Save task metadata
-        const metadataPath = path.join(specDir, "task_metadata.json");
-        writeFileSync(metadataPath, JSON.stringify(taskMetadata, null, 2), 'utf-8');
-
-        // Create the task object
-        const task: Task = {
-          id: specId,
-          specId: specId,
-          projectId,
-          title,
-          description,
-          status: "backlog",
-          subtasks: [],
-          logs: [],
-          metadata: taskMetadata,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
+        const existingId = validatedSource ? findInsightsTask(specsDir, validatedSource) : undefined;
+        if (existingId && validatedSource) {
+          projectStore.invalidateTasksCache(projectId);
+          const task = projectStore.getTasks(projectId).find(item => item.id === existingId);
+          if (!task) return { success: false, error: nativeText('ipc.failedToCreateTask') };
+          insightsService.markTaskSuggestionCreated(projectId, project.path, validatedSource, existingId);
+          return { success: true, data: task };
+        }
+        // A saved badge cannot authorize creating a second task if its source marker is missing.
+        if (suggestion?.createdTaskId) {
+          return { success: false, error: nativeText('ipc.failedToCreateTask') };
+        }
+        const canonicalMetadata = validatedSource ? suggestion?.metadata : metadata;
+        const taskMetadata: TaskMetadata = { ...canonicalMetadata, sourceType: 'insights' };
+        delete taskMetadata.insightsSource;
+        if (validatedSource) taskMetadata.insightsSource = validatedSource;
+        const task = createInsightsTask(projectId, specsDir, title, description, taskMetadata);
+        projectStore.invalidateTasksCache(projectId);
+        if (validatedSource) {
+          insightsService.markTaskSuggestionCreated(projectId, project.path, validatedSource, task.id);
+        }
 
         return { success: true, data: task };
-      } catch (error) {
+      } catch {
         return {
           success: false,
-          error: error instanceof Error ? error.message : nativeText('ipc.failedToCreateTask'),
+          error: nativeText('ipc.failedToCreateTask'),
         };
       }
     }
@@ -418,8 +399,8 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
   });
 
   // Forward errors to renderer
-  insightsService.on("error", (projectId: string, error: string, sessionId?: string) => {
-    safeSendToRenderer(getMainWindow, IPC_CHANNELS.INSIGHTS_ERROR, projectId, error, sessionId);
+  insightsService.on("error", (projectId: string, error: string, sessionId?: string, requestId?: string, code?: InsightsErrorCode) => {
+    safeSendToRenderer(getMainWindow, IPC_CHANNELS.INSIGHTS_ERROR, projectId, error, sessionId, requestId, code);
   });
 
   // Forward SDK rate limit events to renderer
@@ -428,7 +409,7 @@ export function registerInsightsHandlers(getMainWindow: () => BrowserWindow | nu
   });
 
   // Forward session-updated events to renderer for real-time UI updates
-  insightsService.on("session-updated", (projectId: string, session: unknown) => {
-    safeSendToRenderer(getMainWindow, IPC_CHANNELS.INSIGHTS_SESSION_UPDATED, projectId, session);
+  insightsService.on("session-updated", (projectId: string, session: unknown, requestId?: string) => {
+    safeSendToRenderer(getMainWindow, IPC_CHANNELS.INSIGHTS_SESSION_UPDATED, projectId, session, requestId);
   });
 }

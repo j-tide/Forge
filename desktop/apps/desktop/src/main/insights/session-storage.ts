@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, unlinkSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, unlinkSync, renameSync } from 'fs';
 import path from 'path';
+import { randomUUID } from 'node:crypto';
 import type { InsightsSession, InsightsSessionSummary, ImageAttachment } from '../../shared/types';
 import { InsightsPaths } from './paths';
 
@@ -58,6 +59,7 @@ export class SessionStorage {
    * Save session to disk
    */
   saveSession(projectPath: string, session: InsightsSession): void {
+    let temporaryPath: string | undefined;
     try {
       const sessionsDir = this.paths.getSessionsDir(projectPath);
       if (!existsSync(sessionsDir)) {
@@ -65,10 +67,11 @@ export class SessionStorage {
       }
 
       const sessionPath = this.paths.getSessionPath(projectPath, session.id);
-      writeFileSync(sessionPath, JSON.stringify(session, null, 2), 'utf-8');
-    } catch (error) {
-      console.error(`[SessionStorage] Failed to save session ${session.id}:`, error);
-      throw error;
+      temporaryPath = `${sessionPath}.${randomUUID()}.tmp`;
+      writeFileSync(temporaryPath, JSON.stringify(this.stripImageDataForPersistence(session), null, 2), 'utf-8');
+      renameSync(temporaryPath, sessionPath);
+    } finally {
+      if (temporaryPath && existsSync(temporaryPath)) unlinkSync(temporaryPath);
     }
   }
 

@@ -4,6 +4,7 @@
 
 import type { ThinkingLevel, PhaseModelConfig, PhaseThinkingConfig } from './settings';
 import type { ExecutionPhase as ExecutionPhaseType, CompletablePhase } from '../constants/phase-protocol';
+import type { InsightsTaskSource } from './insights';
 
 export type TaskStatus = 'backlog' | 'queue' | 'in_progress' | 'ai_review' | 'human_review' | 'done' | 'pr_created' | 'error';
 
@@ -184,6 +185,7 @@ export type TaskCategory =
 export interface TaskMetadata {
   // Origin tracking
   sourceType?: 'ideation' | 'manual' | 'imported' | 'insights' | 'roadmap' | 'linear' | 'github' | 'gitlab';
+  insightsSource?: InsightsTaskSource; // Validated persisted Insights suggestion
   ideationType?: string;  // e.g., 'code_improvements', 'security_hardening'
   ideaId?: string;  // Reference to original idea if converted
   featureId?: string;  // Reference to roadmap feature if from roadmap
@@ -486,6 +488,7 @@ export interface WorktreeCreatePROptions {
  */
 export interface WorktreeCreatePRResult {
   success: boolean;
+  code?: 'no-worktree';
   prUrl?: string;
   error?: string;
   message?: string;  // Human-readable message for both success and error cases

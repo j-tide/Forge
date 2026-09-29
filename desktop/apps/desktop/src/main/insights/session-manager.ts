@@ -1,4 +1,5 @@
 import type { InsightsSession, InsightsSessionSummary, InsightsModelConfig } from '../../shared/types';
+import { randomUUID } from 'node:crypto';
 import { SessionStorage } from './session-storage';
 import { InsightsPaths } from './paths';
 
@@ -51,7 +52,7 @@ export class SessionManager {
    * Create a new session
    */
   createNewSession(projectId: string, projectPath: string): InsightsSession {
-    const sessionId = `session-${Date.now()}`;
+    const sessionId = `session-${randomUUID()}`;
     const session: InsightsSession = {
       id: sessionId,
       projectId,

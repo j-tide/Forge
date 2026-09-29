@@ -12,13 +12,21 @@
  */
 
 import { streamText, stepCountIs } from 'ai';
+import type { ImagePart, ModelMessage, Tool as AITool } from 'ai';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { createSimpleClient } from '../client/factory';
+import type { SimpleClientResult } from '../client/types';
 import { buildToolRegistry } from '../tools/build-registry';
 import type { ToolContext } from '../tools/types';
 import type { ModelShorthand, ThinkingLevel } from '../config/types';
+import { buildThinkingProviderOptions, MODEL_PROVIDER_MAP } from '../config/types';
+import {
+  ALL_AVAILABLE_MODELS, getReasoningConfigForModel, MODEL_ID_MAP, resolveModelEquivalent,
+} from '../../../shared/constants/models';
+import type { BuiltinProvider } from '../../../shared/types/provider-account';
+import type { ImageAttachment } from '../../../shared/types/task';
 import type { SecurityProfile } from '../security/bash-validator';
 import { safeParseJson } from '../../utils/json-repair';
 import { parseLLMJson } from '../schema/structured-output';
@@ -42,10 +50,12 @@ export interface InsightsConfig {
   message: string;
   /** Previous conversation history */
   history?: InsightsMessage[];
-  /** Model shorthand (defaults to 'sonnet') */
-  modelShorthand?: ModelShorthand;
+  /** Model shorthand or full provider model ID (defaults to 'sonnet') */
+  modelShorthand?: ModelShorthand | string;
   /** Thinking level (defaults to 'medium') */
   thinkingLevel?: ThinkingLevel;
+  /** Current user message's image attachments, including their original data. */
+  images?: ImageAttachment[];
   /** Abort signal for cancellation */
   abortSignal?: AbortSignal;
 }
@@ -228,8 +238,11 @@ export async function runInsightsQuery(
     history = [],
     modelShorthand = 'sonnet',
     thinkingLevel = 'medium',
+    images,
     abortSignal,
   } = config;
+
+  throwIfInsightsAborted(abortSignal);
 
   const systemPrompt = buildSystemPrompt(projectDir);
 
@@ -260,6 +273,7 @@ export async function runInsightsQuery(
     systemPrompt,
     modelShorthand,
     thinkingLevel,
+    requireAuth: true,
     maxSteps: 30, // Allow sufficient turns for codebase exploration
     tools,
   });
@@ -268,28 +282,71 @@ export async function runInsightsQuery(
   let responseText = '';
 
   // Detect Codex models — they require instructions via providerOptions, not system
-  const insightsModelId = typeof client.model === 'string' ? client.model : client.model.modelId;
-  const isCodexInsights = insightsModelId?.includes('codex') ?? false;
+  const insightsModelId = client.resolvedModelId ??
+    (typeof client.model === 'string' ? client.model : client.model.modelId);
+  const isCodexInsights = insightsModelId?.includes('codex') || client.queueAuth?.source === 'codex-oauth';
+  const thinkingOptions = buildInsightsThinkingOptions(client, insightsModelId, thinkingLevel);
+  const imageParts = buildInsightsImageParts(client, insightsModelId, images);
+  const messages: ModelMessage[] | undefined = imageParts.length > 0
+    ? [{ role: 'user', content: [{ type: 'text', text: fullPrompt }, ...imageParts] }]
+    : undefined;
+  const toolExecutions = new Set<Promise<unknown>>();
+  let acceptingToolExecutions = true;
+  // The SDK can close fullStream on abort before its running tools settle.
+  // Insights' Read/Glob/Grep tools return promises; retain them until they finish.
+  const executionTools: Record<string, AITool> = Object.fromEntries(
+    Object.entries(client.tools).map(([name, tool]) => {
+      const execute = tool.execute;
+      if (!execute) return [name, tool];
+      return [name, {
+        ...tool,
+        execute: async (...args: Parameters<typeof execute>) => {
+          if (!acceptingToolExecutions) throw insightsAbortError();
+          throwIfInsightsAborted(abortSignal);
+          const execution = Promise.resolve().then(() => {
+            if (!acceptingToolExecutions) throw insightsAbortError();
+            throwIfInsightsAborted(abortSignal);
+            return execute(...args);
+          });
+          toolExecutions.add(execution);
+          try {
+            return await execution;
+          } finally {
+            toolExecutions.delete(execution);
+          }
+        },
+      }];
+    }),
+  );
 
   try {
+    throwIfInsightsAborted(abortSignal);
     const result = streamText({
       model: client.model,
       system: isCodexInsights ? undefined : client.systemPrompt,
-      prompt: fullPrompt,
-      tools: client.tools,
+      ...(messages ? { messages } : { prompt: fullPrompt }),
+      tools: executionTools,
       stopWhen: stepCountIs(client.maxSteps),
       abortSignal,
-      ...(isCodexInsights ? {
+      // SDK defaults to console.error(error), including raw provider response
+      // bodies. Error stream parts below propagate to the sanitized service path.
+      onError: () => undefined,
+      ...((thinkingOptions || isCodexInsights) ? {
         providerOptions: {
-          openai: {
-            instructions: client.systemPrompt,
-            store: false,
-          },
+          ...(thinkingOptions ?? {}),
+          ...(isCodexInsights ? {
+            openai: {
+              ...(thinkingOptions?.openai ?? {}),
+              instructions: client.systemPrompt,
+              store: false,
+            },
+          } : {}),
         },
       } : {}),
     });
 
     for await (const part of result.fullStream) {
+      throwIfInsightsAborted(abortSignal);
       switch (part.type) {
         case 'text-delta': {
           responseText += part.text;
@@ -310,13 +367,22 @@ export async function runInsightsQuery(
         case 'error': {
           throw part.error instanceof Error ? part.error : new Error(String(part.error));
         }
+        case 'abort': {
+          throw insightsAbortError();
+        }
       }
     }
+    throwIfInsightsAborted(abortSignal);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     onStream?.({ type: 'error', error: errorMsg });
     throw error;
+  } finally {
+    acceptingToolExecutions = false;
+    await Promise.allSettled(toolExecutions);
   }
+
+  throwIfInsightsAborted(abortSignal);
 
   const taskSuggestion = extractTaskSuggestion(responseText);
 
@@ -330,6 +396,99 @@ export async function runInsightsQuery(
 // =============================================================================
 // Helpers
 // =============================================================================
+
+/** Use the resolved provider's capabilities, with the level selected for this query. */
+function buildInsightsThinkingOptions(
+  client: SimpleClientResult,
+  modelId: string,
+  thinkingLevel: ThinkingLevel,
+): Record<string, Record<string, unknown>> | undefined {
+  const adapter = typeof client.model === 'string' ? '' : client.model.provider;
+  const modelProvider = adapter?.split('.')[0] ||
+    Object.entries(MODEL_PROVIDER_MAP).find(([prefix]) => modelId.startsWith(prefix))?.[1];
+  const provider = client.queueAuth?.resolvedProvider ?? modelProvider;
+  if (!provider) return undefined;
+
+  const catalogProvider = (provider === 'bedrock' ? 'amazon-bedrock' : provider) as BuiltinProvider;
+  const reasoning = client.queueAuth?.reasoningConfig ??
+    resolveModelEquivalent(modelId, catalogProvider)?.reasoning ??
+    getReasoningConfigForModel(modelId, catalogProvider);
+  if (reasoning.type === 'none') return undefined;
+
+  const sharedOptions = buildThinkingProviderOptions(modelId, thinkingLevel);
+  switch (provider) {
+    case 'anthropic':
+      if (reasoning.type === 'adaptive_effort') {
+        return {
+          anthropic: {
+            thinking: { type: 'adaptive' },
+            effort: thinkingLevel === 'xhigh' ? 'max' : thinkingLevel,
+          },
+        };
+      }
+      return sharedOptions?.anthropic ? sharedOptions : undefined;
+    case 'google':
+      if (reasoning.type === 'thinking_toggle' && thinkingLevel === 'low') {
+        return { google: { thinkingConfig: { thinkingBudget: 0 } } };
+      }
+      return sharedOptions?.google ? sharedOptions : undefined;
+    case 'openai':
+      return {
+        openai: {
+          reasoningEffort: /^o[134](?:-|$)/.test(modelId) && thinkingLevel === 'xhigh'
+            ? 'high' : thinkingLevel,
+        },
+      };
+    case 'xai':
+      return { xai: { reasoningEffort: thinkingLevel === 'low' ? 'low' : 'high' } };
+    case 'zai':
+      // The Anthropic adapter injects a Claude token budget. Current ZAI models do
+      // not advertise thinking, so never invent Claude budgets for that endpoint.
+      if (adapter?.includes('.anthropic')) return undefined;
+      // Custom fields must use the SDK provider name; canonical openaiCompatible
+      // options only preserve fields declared by the SDK schema.
+      return { zai: { thinking: {
+        type: reasoning.type === 'thinking_toggle' && thinkingLevel === 'low' ? 'disabled' : 'enabled',
+        clear_thinking: false,
+      } } };
+    default:
+      return undefined;
+  }
+}
+
+function buildInsightsImageParts(
+  client: SimpleClientResult,
+  modelId: string,
+  images: ImageAttachment[] | undefined,
+): ImagePart[] {
+  if (!images?.length) return [];
+  const provider = client.queueAuth?.resolvedProvider ??
+    (typeof client.model === 'string' ? '' : client.model.provider?.split('.')[0]);
+  const catalogModel = ALL_AVAILABLE_MODELS.find(model => model.provider === provider &&
+    (model.value === modelId || MODEL_ID_MAP[model.value] === modelId));
+  if (catalogModel?.capabilities?.vision === false) {
+    throw Object.assign(new Error('The selected model does not support image attachments.'), {
+      code: 'INSIGHTS_IMAGES_UNSUPPORTED',
+    });
+  }
+
+  return images.map(image => {
+    if (!image.data?.trim() || !image.mimeType.startsWith('image/')) {
+      throw Object.assign(new Error('Reattach the original image before sending this message.'), {
+        code: 'INSIGHTS_IMAGE_DATA_UNAVAILABLE',
+      });
+    }
+    return { type: 'image', image: image.data, mediaType: image.mimeType };
+  });
+}
+
+function insightsAbortError(): Error {
+  return Object.assign(new Error('Insights request was cancelled.'), { name: 'AbortError' });
+}
+
+function throwIfInsightsAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) throw insightsAbortError();
+}
 
 /**
  * Extract a brief description from tool call args for UI display.

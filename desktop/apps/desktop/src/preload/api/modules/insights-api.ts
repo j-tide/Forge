@@ -5,12 +5,20 @@ import type {
   InsightsChatStatus,
   InsightsStreamChunk,
   InsightsModelConfig,
+  InsightsRequestIdentity,
+  InsightsTaskSource,
+  InsightsRegenerateRequest,
+  InsightsGenerationResult,
+  InsightsCancellationResult,
+  InsightsActiveRequest,
+  InsightsErrorCode,
+  InsightsIPCResult,
   ImageAttachment,
   Task,
   TaskMetadata,
   IPCResult
 } from '../../../shared/types';
-import { createIpcListener, invokeIpc, sendIpc, IpcListenerCleanup } from './ipc-utils';
+import { createIpcListener, invokeIpc, IpcListenerCleanup } from './ipc-utils';
 
 /**
  * Insights API operations
@@ -18,13 +26,17 @@ import { createIpcListener, invokeIpc, sendIpc, IpcListenerCleanup } from './ipc
 export interface InsightsAPI {
   // Operations
   getInsightsSession: (projectId: string) => Promise<IPCResult<InsightsSession | null>>;
-  sendInsightsMessage: (projectId: string, message: string, modelConfig?: InsightsModelConfig, images?: ImageAttachment[]) => void;
+  sendInsightsMessage: (projectId: string, message: string, modelConfig?: InsightsModelConfig, images?: ImageAttachment[], request?: InsightsRequestIdentity) => Promise<InsightsIPCResult<InsightsGenerationResult>>;
+  regenerateInsightsMessage: (projectId: string, request: InsightsRegenerateRequest, modelConfig?: InsightsModelConfig) => Promise<InsightsIPCResult<InsightsGenerationResult>>;
+  cancelInsightsMessage: (projectId: string, sessionId: string, requestId: string) => Promise<InsightsIPCResult<InsightsCancellationResult>>;
+  getInsightsActiveRequest: (projectId: string, sessionId: string) => Promise<InsightsIPCResult<InsightsActiveRequest | null>>;
   clearInsightsSession: (projectId: string) => Promise<IPCResult>;
   createTaskFromInsights: (
     projectId: string,
     title: string,
     description: string,
-    metadata?: TaskMetadata
+    metadata?: TaskMetadata,
+    source?: InsightsTaskSource
   ) => Promise<IPCResult<Task>>;
   listInsightsSessions: (projectId: string, includeArchived?: boolean) => Promise<IPCResult<InsightsSessionSummary[]>>;
   newInsightsSession: (projectId: string) => Promise<IPCResult<InsightsSession>>;
@@ -45,10 +57,10 @@ export interface InsightsAPI {
     callback: (projectId: string, status: InsightsChatStatus) => void
   ) => IpcListenerCleanup;
   onInsightsError: (
-    callback: (projectId: string, error: string, sessionId?: string) => void
+    callback: (projectId: string, error: string, sessionId?: string, requestId?: string, code?: InsightsErrorCode) => void
   ) => IpcListenerCleanup;
   onInsightsSessionUpdated: (
-    callback: (projectId: string, session: InsightsSession) => void
+    callback: (projectId: string, session: InsightsSession, requestId?: string) => void
   ) => IpcListenerCleanup;
 }
 
@@ -60,8 +72,17 @@ export const createInsightsAPI = (): InsightsAPI => ({
   getInsightsSession: (projectId: string): Promise<IPCResult<InsightsSession | null>> =>
     invokeIpc(IPC_CHANNELS.INSIGHTS_GET_SESSION, projectId),
 
-  sendInsightsMessage: (projectId: string, message: string, modelConfig?: InsightsModelConfig, images?: ImageAttachment[]): void =>
-    sendIpc(IPC_CHANNELS.INSIGHTS_SEND_MESSAGE, projectId, message, modelConfig, images),
+  sendInsightsMessage: (projectId, message, modelConfig, images, request) =>
+    invokeIpc(IPC_CHANNELS.INSIGHTS_SEND_MESSAGE, projectId, message, modelConfig, images, request),
+
+  regenerateInsightsMessage: (projectId, request, modelConfig) =>
+    invokeIpc(IPC_CHANNELS.INSIGHTS_REGENERATE_MESSAGE, projectId, request, modelConfig),
+
+  cancelInsightsMessage: (projectId, sessionId, requestId) =>
+    invokeIpc(IPC_CHANNELS.INSIGHTS_CANCEL_MESSAGE, projectId, sessionId, requestId),
+
+  getInsightsActiveRequest: (projectId, sessionId) =>
+    invokeIpc(IPC_CHANNELS.INSIGHTS_GET_ACTIVE_REQUEST, projectId, sessionId),
 
   clearInsightsSession: (projectId: string): Promise<IPCResult> =>
     invokeIpc(IPC_CHANNELS.INSIGHTS_CLEAR_SESSION, projectId),
@@ -70,9 +91,10 @@ export const createInsightsAPI = (): InsightsAPI => ({
     projectId: string,
     title: string,
     description: string,
-    metadata?: TaskMetadata
+    metadata?: TaskMetadata,
+    source?: InsightsTaskSource
   ): Promise<IPCResult<Task>> =>
-    invokeIpc(IPC_CHANNELS.INSIGHTS_CREATE_TASK, projectId, title, description, metadata),
+    invokeIpc(IPC_CHANNELS.INSIGHTS_CREATE_TASK, projectId, title, description, metadata, source),
 
   listInsightsSessions: (projectId: string, includeArchived?: boolean): Promise<IPCResult<InsightsSessionSummary[]>> =>
     invokeIpc(IPC_CHANNELS.INSIGHTS_LIST_SESSIONS, projectId, includeArchived),
@@ -116,12 +138,12 @@ export const createInsightsAPI = (): InsightsAPI => ({
     createIpcListener(IPC_CHANNELS.INSIGHTS_STATUS, callback),
 
   onInsightsError: (
-    callback: (projectId: string, error: string, sessionId?: string) => void
+    callback: (projectId: string, error: string, sessionId?: string, requestId?: string, code?: InsightsErrorCode) => void
   ): IpcListenerCleanup =>
     createIpcListener(IPC_CHANNELS.INSIGHTS_ERROR, callback),
 
   onInsightsSessionUpdated: (
-    callback: (projectId: string, session: InsightsSession) => void
+    callback: (projectId: string, session: InsightsSession, requestId?: string) => void
   ): IpcListenerCleanup =>
     createIpcListener(IPC_CHANNELS.INSIGHTS_SESSION_UPDATED, callback)
 });

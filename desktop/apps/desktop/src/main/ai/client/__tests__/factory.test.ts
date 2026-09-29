@@ -200,6 +200,75 @@ describe('createSimpleClient', () => {
       createSimpleClient({ systemPrompt: 'Test', queueConfig }),
     ).rejects.toThrow('No available account in priority queue');
   });
+
+  it.each([null, { apiKey: '  ', source: 'none' as const }])(
+    'returns a setup error before creating an authenticated model without credentials: %s',
+    async auth => {
+      mockResolveAuth.mockResolvedValueOnce(auth);
+
+      await expect(createSimpleClient({ systemPrompt: 'Test', requireAuth: true }))
+        .rejects.toMatchObject({
+          name: 'INSIGHTS_AUTH_REQUIRED',
+          code: 'INSIGHTS_AUTH_REQUIRED',
+          message: 'Configure a model account before starting Insights.',
+        });
+      expect(mockCreateProvider).not.toHaveBeenCalled();
+    },
+  );
+
+  it('keeps credential enforcement opt-in for other utility runners', async () => {
+    mockResolveAuth.mockResolvedValueOnce(null);
+
+    await expect(createSimpleClient({ systemPrompt: 'Test' })).resolves.toMatchObject({ model: FAKE_MODEL });
+    expect(mockCreateProvider).toHaveBeenCalled();
+  });
+
+  it.each(['ollama', 'bedrock'] as const)('allows %s without a provider API key', async provider => {
+    mockDetectProviderFromModel.mockReturnValueOnce(provider);
+    mockResolveAuth.mockResolvedValueOnce(null);
+
+    await expect(createSimpleClient({ systemPrompt: 'Test', requireAuth: true }))
+      .resolves.toMatchObject({ model: FAKE_MODEL });
+  });
+
+  it('accepts resolved file-based OAuth credentials without an API key', async () => {
+    mockDetectProviderFromModel.mockReturnValueOnce('openai');
+    mockResolveAuth.mockResolvedValueOnce({
+      apiKey: '',
+      source: 'codex-oauth',
+      oauthTokenFilePath: '/fixture/codex-auth.json',
+    });
+
+    await expect(createSimpleClient({ systemPrompt: 'Test', requireAuth: true }))
+      .resolves.toMatchObject({ model: FAKE_MODEL });
+  });
+
+  it('returns the same setup error when no queue account is available', async () => {
+    await expect(createSimpleClient({
+      systemPrompt: 'Test',
+      requireAuth: true,
+      queueConfig: { queue: [], requestedModel: 'sonnet' },
+    })).rejects.toMatchObject({ code: 'INSIGHTS_AUTH_REQUIRED' });
+    expect(mockCreateProvider).not.toHaveBeenCalled();
+  });
+
+  it('rejects a queue account that has no authenticated credential', async () => {
+    mockResolveAuthFromQueue.mockResolvedValueOnce({
+      apiKey: '',
+      source: 'none',
+      accountId: 'fixture-empty-account',
+      resolvedProvider: 'anthropic',
+      resolvedModelId: 'claude-sonnet-4-6',
+      reasoningConfig: { type: 'thinking_tokens', level: 'medium' },
+    });
+
+    await expect(createSimpleClient({
+      systemPrompt: 'Test',
+      requireAuth: true,
+      queueConfig: { queue: [], requestedModel: 'sonnet' },
+    })).rejects.toMatchObject({ code: 'INSIGHTS_AUTH_REQUIRED' });
+    expect(mockCreateProvider).not.toHaveBeenCalled();
+  });
 });
 
 // =============================================================================

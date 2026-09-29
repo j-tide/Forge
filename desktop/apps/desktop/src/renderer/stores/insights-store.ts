@@ -8,6 +8,11 @@ import type {
   InsightsStreamChunk,
   InsightsToolUsage,
   InsightsModelConfig,
+  InsightsActiveRequest,
+  InsightsErrorCode,
+  InsightsTaskSource,
+  InsightsGenerationResult,
+  InsightsIPCResult,
   TaskMetadata,
   Task,
   ImageAttachment
@@ -33,6 +38,7 @@ interface InsightsState {
   isLoadingSessions: boolean;
   showArchived: boolean; // Whether to include archived sessions in listings
   pendingImages: ImageAttachment[]; // Images pending attachment to next message
+  activeRequest: InsightsActiveRequest | null;
 
   // Actions
   setSession: (session: InsightsSession | null) => void;
@@ -74,6 +80,7 @@ export const useInsightsStore = create<InsightsState>((set, _get) => ({
   isLoadingSessions: false,
   showArchived: false,
   pendingImages: [],
+  activeRequest: null,
 
   // Actions
   setSession: (session) => set({ session }),
@@ -216,7 +223,8 @@ export const useInsightsStore = create<InsightsState>((set, _get) => ({
       streamingTasks: [],
       currentTool: null,
       toolsUsed: [],
-      pendingImages: []
+      pendingImages: [],
+      activeRequest: null
     }),
 
   setPendingImages: (images) => set({ pendingImages: images })
@@ -229,7 +237,9 @@ export const useInsightsStore = create<InsightsState>((set, _get) => ({
 let scopeGeneration = 0;
 let sessionRequest = 0;
 let sessionsRequest = 0;
-const streamingSessions = new Map<string, string>();
+const locallyAwaitedRequests = new Set<string>();
+const locallyCancellingRequests = new Set<string>();
+
 
 function currentScope(projectId: string): number | null {
   return useInsightsStore.getState().projectId === projectId ? scopeGeneration : null;
@@ -291,6 +301,7 @@ export async function loadInsightsSession(projectId: string, includeArchived?: b
     if (!request.current()) return;
     if (result.success && result.data?.projectId === projectId) {
       useInsightsStore.getState().setSession(result.data);
+      await restoreActiveRequest(projectId, result.data.id, request.current);
     } else {
       useInsightsStore.getState().setSession(null);
     }
@@ -301,66 +312,131 @@ export async function loadInsightsSession(projectId: string, includeArchived?: b
   }
 }
 
+function failureStatus(code: InsightsErrorCode = 'request-failed'): InsightsChatStatus {
+  return { phase: 'error', code, error: i18n.t(`uiKnowledgeContext:generationErrors.${code}`) };
+}
+
+async function restoreActiveRequest(projectId: string, sessionId: string, current: () => boolean): Promise<void> {
+  const result = await window.electronAPI.getInsightsActiveRequest(projectId, sessionId);
+  if (!current() || useInsightsStore.getState().session?.id !== sessionId) return;
+  const active = result.success ? result.data ?? null : null;
+  if (active && active.sessionId !== sessionId) return;
+  useInsightsStore.setState({ activeRequest: active, status: active ? { ...active } : initialStatus });
+}
+
+async function refreshGeneratedSession(projectId: string, requestId: string, sessionId: string, generation: number | null): Promise<boolean> {
+  const current = () => isCurrentScope(projectId, generation) &&
+    useInsightsStore.getState().session?.id === sessionId &&
+    useInsightsStore.getState().activeRequest?.requestId === requestId;
+  if (!current()) return false;
+  const result = await window.electronAPI.getInsightsSession(projectId);
+  if (!current()) return false;
+  if (!result.success || result.data?.projectId !== projectId || result.data.id !== sessionId) {
+    useInsightsStore.setState({ status: failureStatus('persistence-failed') });
+    return false;
+  }
+  useInsightsStore.setState({ session: result.data });
+  return true;
+}
+
+async function performGeneration(projectId: string, session: InsightsSession,
+  invoke: (request: InsightsActiveRequest) => Promise<InsightsIPCResult<InsightsGenerationResult>>): Promise<boolean> {
+  const generation = currentScope(projectId);
+  const request: InsightsActiveRequest = { sessionId: session.id, requestId: crypto.randomUUID(), phase: 'thinking' };
+  locallyAwaitedRequests.add(request.requestId);
+  useInsightsStore.setState({ activeRequest: request, status: { ...request }, streamingContent: '',
+    streamingTasks: [], toolsUsed: [], currentTool: null });
+  const current = () => isCurrentScope(projectId, generation) &&
+    useInsightsStore.getState().session?.id === session.id &&
+    useInsightsStore.getState().activeRequest?.requestId === request.requestId;
+  try {
+    const result = await invoke(request);
+    if (!current() || useInsightsStore.getState().activeRequest?.phase === 'stopping') return false;
+    if (!result.success || !result.data || result.data.sessionId !== request.sessionId || result.data.requestId !== request.requestId) {
+      // Main persists the user before requesting a reply. Hydrate it on failure
+      // so retry can reuse its real ID instead of appending the user again.
+      await refreshGeneratedSession(projectId, request.requestId, session.id, generation);
+      if (current()) useInsightsStore.setState({ status: failureStatus(result.code) });
+      return false;
+    }
+    const refreshed = await refreshGeneratedSession(projectId, request.requestId, session.id, generation);
+    if (!current()) return false;
+    if (refreshed) useInsightsStore.setState({ status: { phase: 'complete', message: result.data.outcome === 'cancelled'
+      ? i18n.t('uiKnowledgeContext:responseStopped') : '' } });
+    return refreshed && result.data.outcome === 'complete';
+  } catch {
+    if (current() && useInsightsStore.getState().activeRequest?.phase !== 'stopping') useInsightsStore.setState({ status: failureStatus() });
+    return false;
+  } finally {
+    locallyAwaitedRequests.delete(request.requestId);
+    if (!current()) void finishObservedRequest(projectId, request.requestId);
+    if (current() && useInsightsStore.getState().activeRequest?.phase !== 'stopping') useInsightsStore.setState({ activeRequest: null, streamingContent: '', streamingTasks: [], currentTool: null, toolsUsed: [] });
+  }
+}
+
+export async function regenerateMessage(projectId: string, targetMessageId: string, modelConfig?: InsightsModelConfig, images?: ImageAttachment[]): Promise<boolean> {
+  const store = useInsightsStore.getState();
+  if (store.projectId !== projectId || store.isLoadingSession || store.activeRequest || store.session?.projectId !== projectId) return false;
+  const session = store.session;
+  if (session.messages.at(-1)?.id !== targetMessageId) return false;
+  return performGeneration(projectId, session, (request) => window.electronAPI.regenerateInsightsMessage(
+    projectId, { sessionId: request.sessionId, requestId: request.requestId, targetMessageId, images }, modelConfig ?? session.modelConfig));
+}
+
+export async function cancelMessage(projectId: string): Promise<boolean> {
+  const store = useInsightsStore.getState();
+  const request = store.activeRequest;
+  if (store.projectId !== projectId || !request || request.phase === 'stopping') return false;
+  const generation = currentScope(projectId);
+  const current = () => isCurrentScope(projectId, generation) &&
+    useInsightsStore.getState().activeRequest?.requestId === request.requestId &&
+    useInsightsStore.getState().session?.id === request.sessionId;
+  locallyCancellingRequests.add(request.requestId);
+  useInsightsStore.setState({ activeRequest: { ...request, phase: 'stopping' }, status: { ...request, phase: 'stopping' } });
+  try {
+    const result = await window.electronAPI.cancelInsightsMessage(projectId, request.sessionId, request.requestId);
+    if (!current()) return result.success;
+    if (!result.success || !result.data || result.data.requestId !== request.requestId || result.data.sessionId !== request.sessionId) {
+      useInsightsStore.setState({ activeRequest: request, status: failureStatus(result.code) });
+      return false;
+    }
+    await refreshGeneratedSession(projectId, request.requestId, request.sessionId, generation);
+    if (current()) useInsightsStore.setState({ activeRequest: null, status: { phase: 'complete', message: result.data.cancelled ? i18n.t('uiKnowledgeContext:responseStopped') : '' },
+      streamingContent: '', streamingTasks: [], currentTool: null, toolsUsed: [] });
+    return true;
+  } catch {
+    if (current()) useInsightsStore.setState({ activeRequest: request, status: failureStatus() });
+    return false;
+  } finally {
+    locallyCancellingRequests.delete(request.requestId);
+    if (!current()) void finishObservedRequest(projectId, request.requestId);
+  }
+}
+
 export async function sendMessage(projectId: string, message: string, modelConfig?: InsightsModelConfig, images?: ImageAttachment[]): Promise<boolean> {
   let store = useInsightsStore.getState();
-  if (store.projectId !== projectId || store.isLoadingSession ||
+  if (store.projectId !== projectId || store.isLoadingSession || store.activeRequest ||
     (store.session && store.session.projectId !== projectId)) return false;
   const generation = currentScope(projectId);
-  // A newly opened project may not have a session yet. Obtain the persisted
-  // identity before streaming instead of guessing an ID in the Renderer.
   if (!store.session) {
-    try {
-      await newSession(projectId);
-    } catch (error) {
-      if (isCurrentScope(projectId, generation)) {
-        useInsightsStore.getState().setStatus({
-          phase: 'error',
-          error: error instanceof Error ? error.message : i18n.t('common:errors.generic')
-        });
-      }
+    try { await newSession(projectId); } catch {
+      if (isCurrentScope(projectId, generation)) useInsightsStore.setState({ status: failureStatus('persistence-failed') });
       return false;
     }
     if (!isCurrentScope(projectId, generation)) return false;
     store = useInsightsStore.getState();
-    if (!store.session) {
-      store.setStatus({ phase: 'error', error: i18n.t('common:errors.generic') });
-      return false;
-    }
+    if (!store.session) { store.setStatus(failureStatus('persistence-failed')); return false; }
   }
   const session = store.session;
-
-  // Add user message to session (strip data to keep memory usage low)
-  const displayImages = images?.map(img => ({
-    ...img,
-    data: undefined // Strip base64 data, keep thumbnails for display
-  }));
-  const userMessage: InsightsChatMessage = {
-    id: `msg-${Date.now()}`,
-    role: 'user',
-    content: message,
-    timestamp: new Date(),
-    ...(displayImages && displayImages.length > 0 ? { images: displayImages } : {})
-  };
-  store.addMessage(userMessage);
-  const displaySession = useInsightsStore.getState().session;
-  if (displaySession) streamingSessions.set(projectId, displaySession.id);
-
-  // Clear pending and set status
-  store.setPendingMessage('');
-  store.setPendingImages([]);
-  store.clearStreamingContent();
-  store.clearToolsUsed(); // Clear tools from previous response
-  store.setStatus({
-    phase: 'thinking',
-    message: i18n.t('uiRuntime:stores.processingMessage')
-  });
-
-  // Use provided modelConfig, or fall back to session's config
-  const configToUse = modelConfig || session?.modelConfig;
-
-  // Send to main process
-  window.electronAPI.sendInsightsMessage(projectId, message, configToUse, images);
-  return true;
+  const lastMessage = session.messages.at(-1);
+  if (lastMessage?.role === 'user' && lastMessage.content === message) {
+    return regenerateMessage(projectId, lastMessage.id, modelConfig, images);
+  }
+  const displayImages = images?.map(img => ({ ...img, data: undefined }));
+  store.addMessage({ id: `pending-${crypto.randomUUID()}`, role: 'user', content: message, timestamp: new Date(),
+    ...(displayImages?.length ? { images: displayImages } : {}) });
+  return performGeneration(projectId, session, (request) => window.electronAPI.sendInsightsMessage(
+    projectId, message, modelConfig ?? session.modelConfig, images, { sessionId: request.sessionId, requestId: request.requestId }));
 }
 
 export async function clearSession(projectId: string, includeArchived?: boolean): Promise<void> {
@@ -401,7 +477,8 @@ export async function switchSession(projectId: string, sessionId: string): Promi
       useInsightsStore.getState().clearStreamingContent();
       useInsightsStore.getState().clearToolsUsed();
       useInsightsStore.getState().setCurrentTool(null);
-      useInsightsStore.getState().setStatus({ phase: 'idle', message: '' });
+      useInsightsStore.setState({ activeRequest: null, status: initialStatus });
+      await restoreActiveRequest(projectId, sessionId, request.current);
     }
   } finally {
     request.finish();
@@ -480,19 +557,40 @@ export async function createTaskFromSuggestion(
   projectId: string,
   title: string,
   description: string,
-  metadata?: TaskMetadata
+  metadata?: TaskMetadata,
+  source?: InsightsTaskSource
 ): Promise<Task | null> {
   const result = await window.electronAPI.createTaskFromInsights(
     projectId,
     title,
     description,
-    metadata
+    metadata,
+    source
   );
 
   if (result.success && result.data) {
     return result.data;
   }
   return null;
+}
+
+async function finishObservedRequest(projectId: string, requestId: string): Promise<void> {
+  if (locallyAwaitedRequests.has(requestId) || locallyCancellingRequests.has(requestId)) return;
+  const state = useInsightsStore.getState();
+  const active = state.activeRequest;
+  const generation = currentScope(projectId);
+  if (!active || active.requestId !== requestId) return;
+  try {
+    const result = await window.electronAPI.getInsightsActiveRequest(projectId, active.sessionId);
+    if (!isCurrentScope(projectId, generation) || useInsightsStore.getState().activeRequest?.requestId !== requestId ||
+      locallyCancellingRequests.has(requestId) || !result.success || result.data) return;
+    await refreshGeneratedSession(projectId, requestId, active.sessionId, generation);
+    if (isCurrentScope(projectId, generation) && useInsightsStore.getState().activeRequest?.requestId === requestId &&
+      !locallyCancellingRequests.has(requestId)) {
+      useInsightsStore.setState({ activeRequest: null, streamingContent: '', streamingTasks: [], currentTool: null, toolsUsed: [],
+        ...(active.phase === 'stopping' ? { status: { phase: 'complete' as const, message: '' } } : {}) });
+    }
+  } catch { /* Keep the Stop control available until Main can acknowledge readiness. */ }
 }
 
 // Bind IPC display updates to this view; background runs stay owned by Main.
@@ -504,20 +602,22 @@ export function setupInsightsListeners(projectId: string): () => void {
   const store = useInsightsStore.getState;
   const acceptsProject = (eventProjectId: string) =>
     !disposed && eventProjectId === projectId && isCurrentScope(projectId, generation);
-  const acceptsStream = (eventProjectId: string, eventSessionId?: string) => {
+  const acceptsStream = (eventProjectId: string, eventSessionId?: string, requestId?: string) => {
     if (!acceptsProject(eventProjectId)) return false;
-    const session = store().session;
-    const sendingSession = streamingSessions.get(projectId);
-    if (session?.projectId !== projectId) return false;
-    // Current Main supplies the captured session ID. An old identity-free event
-    // is displayed only for a session explicitly bound by this view's send.
-    return eventSessionId ? eventSessionId === session.id : sendingSession === session.id;
+    const state = store();
+    const active = state.activeRequest;
+    return state.session?.projectId === projectId && !!active &&
+      eventSessionId === state.session.id && active.sessionId === eventSessionId && active.requestId === requestId;
   };
 
   // Listen for streaming chunks
   const unsubStreamChunk = window.electronAPI.onInsightsStreamChunk(
     (eventProjectId, chunk: InsightsStreamChunk) => {
-      if (!acceptsStream(eventProjectId, chunk.sessionId)) return;
+      if (!acceptsStream(eventProjectId, chunk.sessionId, chunk.requestId)) return;
+      if (store().activeRequest?.phase === 'stopping') {
+        if (chunk.requestId && (chunk.type === 'done' || chunk.type === 'error')) void finishObservedRequest(projectId, chunk.requestId);
+        return;
+      }
       switch (chunk.type) {
         case 'text':
           if (chunk.content) {
@@ -559,18 +659,21 @@ export function setupInsightsListeners(projectId: string): () => void {
         case 'done':
           // Finalize any remaining content
           store().setCurrentTool(null);
-          store().finalizeStreamingMessage();
+          store().clearStreamingContent();
           store().setStatus({
             phase: 'complete',
             message: ''
           });
+          if (chunk.requestId) void finishObservedRequest(projectId, chunk.requestId);
           break;
         case 'error':
           store().setCurrentTool(null);
           store().setStatus({
             phase: 'error',
-            error: chunk.error
+            error: i18n.t(`uiKnowledgeContext:generationErrors.${chunk.code ?? 'request-failed'}`),
+            code: chunk.code ?? 'request-failed'
           });
+          if (chunk.requestId) void finishObservedRequest(projectId, chunk.requestId);
           break;
       }
     }
@@ -578,32 +681,38 @@ export function setupInsightsListeners(projectId: string): () => void {
 
   // Listen for status updates
   const unsubStatus = window.electronAPI.onInsightsStatus((eventProjectId, status) => {
-    if (!acceptsStream(eventProjectId, status.sessionId)) return;
-    store().setStatus(status);
+    if (!acceptsStream(eventProjectId, status.sessionId, status.requestId)) return;
+    if (store().activeRequest?.phase === 'stopping') {
+      if (status.requestId && ['idle', 'complete', 'error'].includes(status.phase)) void finishObservedRequest(projectId, status.requestId);
+      return;
+    }
+    store().setStatus(status.phase === 'error' ? failureStatus(status.code) : status);
+    if (status.requestId && ['idle', 'complete', 'error'].includes(status.phase)) void finishObservedRequest(projectId, status.requestId);
   });
 
   // Listen for errors
-  const unsubError = window.electronAPI.onInsightsError((eventProjectId, error, sessionId) => {
-    if (!acceptsStream(eventProjectId, sessionId)) return;
-    store().setStatus({
-      phase: 'error',
-      error
-    });
+  const unsubError = window.electronAPI.onInsightsError((eventProjectId, _error, sessionId, requestId, code) => {
+    if (!acceptsStream(eventProjectId, sessionId, requestId)) return;
+    if (store().activeRequest?.phase === 'stopping') {
+      if (requestId) void finishObservedRequest(projectId, requestId);
+      return;
+    }
+    store().setStatus(failureStatus(code));
+    if (requestId) void finishObservedRequest(projectId, requestId);
   });
 
   // Listen for session updates (e.g., after assistant message saved with auto-generated title)
   const unsubSessionUpdated = window.electronAPI.onInsightsSessionUpdated(
-    (eventProjectId, session: InsightsSession) => {
+    (eventProjectId, session: InsightsSession, requestId) => {
       if (!acceptsProject(eventProjectId) || session.projectId !== projectId) return;
       // Update current session if it matches
       const currentSession = store().session;
-      if (currentSession?.projectId === projectId && currentSession.id === session.id) {
+      if (currentSession?.projectId === projectId && currentSession.id === session.id &&
+        (!requestId || acceptsStream(eventProjectId, session.id, requestId))) {
         store().setSession(session);
       }
       // Also refresh sessions list for sidebar
-      loadInsightsSessions(session.projectId).catch((err) => {
-        console.error('Failed to refresh sessions list after update:', err);
-      });
+      void loadInsightsSessions(session.projectId).catch(() => { /* Preserve the current view when sidebar refresh fails. */ });
     }
   );
 

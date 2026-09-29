@@ -113,7 +113,12 @@ function runRipgrep(
   }
 
   return new Promise((resolve) => {
-    execFile(
+    let output: { stdout: string; stderr: string; exitCode: number } | undefined;
+    let closed = false;
+    const acknowledgeExit = (): void => {
+      if (closed && output) resolve(output);
+    };
+    const child = execFile(
       rgPath,
       args,
       {
@@ -128,13 +133,20 @@ function runRipgrep(
               ? error.code
               : 1)
           : 0;
-        resolve({
+        output = {
           stdout: typeof stdout === 'string' ? stdout : '',
           stderr: typeof stderr === 'string' ? stderr : '',
           exitCode,
-        });
+        };
+        acknowledgeExit();
       },
     );
+    // AbortError invokes execFile's callback as soon as the signal is sent.
+    // Keep the tool pending until the child and its stdio have actually closed.
+    child.once('close', () => {
+      closed = true;
+      acknowledgeExit();
+    });
   });
 }
 

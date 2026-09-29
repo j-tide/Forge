@@ -71,6 +71,8 @@ export interface SimpleClientConfig {
   thinkingLevel?: ThinkingLevel;
   /** Profile ID for credential resolution */
   profileId?: string;
+  /** Require a configured credential before creating the model (Insights setup UX). */
+  requireAuth?: boolean;
   /** Maximum agentic steps (defaults to 1 for single-turn) */
   maxSteps?: number;
   /** Specific tools to include (if any) */

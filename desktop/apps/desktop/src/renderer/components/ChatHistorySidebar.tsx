@@ -47,8 +47,8 @@ interface ChatHistorySidebarProps {
   onRenameSession: (sessionId: string, newTitle: string) => Promise<boolean>;
   onArchiveSession?: (sessionId: string) => Promise<void>;
   onUnarchiveSession?: (sessionId: string) => Promise<void>;
-  onDeleteSessions?: (sessionIds: string[]) => Promise<void>;
-  onArchiveSessions?: (sessionIds: string[]) => Promise<void>;
+  onDeleteSessions?: (sessionIds: string[]) => Promise<{ failedIds: string[] }>;
+  onArchiveSessions?: (sessionIds: string[]) => Promise<{ failedIds: string[] }>;
   showArchived?: boolean;
   onToggleShowArchived?: () => void;
 }
@@ -76,6 +76,7 @@ export function ChatHistorySidebar({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkArchiveOpen, setBulkArchiveOpen] = useState(false);
+  const [isBulkPending, setIsBulkPending] = useState(false);
 
   // Clear selection when exiting selection mode
   const handleToggleSelectionMode = useCallback(() => {
@@ -145,13 +146,15 @@ export function ChatHistorySidebar({
   };
 
   const handleBulkDelete = async () => {
-    if (selectedIds.size > 0 && onDeleteSessions) {
+    if (!isBulkPending && selectedIds.size > 0 && onDeleteSessions) {
+      setIsBulkPending(true);
       try {
-        await onDeleteSessions(Array.from(selectedIds));
-        setSelectedIds(new Set());
+        const result = await onDeleteSessions(Array.from(selectedIds));
+        setSelectedIds(new Set(result.failedIds));
       } catch (error) {
         console.error('Failed to delete sessions:', error);
       } finally {
+        setIsBulkPending(false);
         setBulkDeleteOpen(false);
       }
     }
@@ -164,13 +167,15 @@ export function ChatHistorySidebar({
   };
 
   const handleBulkArchiveConfirmed = async () => {
-    if (selectedIds.size > 0 && onArchiveSessions) {
+    if (!isBulkPending && selectedIds.size > 0 && onArchiveSessions) {
+      setIsBulkPending(true);
       try {
-        await onArchiveSessions(Array.from(selectedIds));
-        setSelectedIds(new Set());
+        const result = await onArchiveSessions(Array.from(selectedIds));
+        setSelectedIds(new Set(result.failedIds));
       } catch (error) {
         console.error('Failed to archive sessions:', error);
       } finally {
+        setIsBulkPending(false);
         setBulkArchiveOpen(false);
       }
     }
@@ -335,12 +340,13 @@ export function ChatHistorySidebar({
 
       {/* Bulk action toolbar */}
       {isSelectionMode && selectedIds.size > 0 && (
-        <div className="flex items-center gap-2 border-t border-border px-3 py-2">
+        <div className="grid grid-cols-1 gap-2 border-t border-border px-3 py-2">
           <Button
             variant="destructive"
             size="sm"
             className="flex-1 text-xs"
             onClick={() => setBulkDeleteOpen(true)}
+            disabled={isBulkPending}
           >
             <Trash2 className="mr-1.5 h-3.5 w-3.5" />
             {t('selection.deleteSelected')} ({selectedIds.size})
@@ -351,6 +357,7 @@ export function ChatHistorySidebar({
               size="sm"
               className="flex-1 text-xs"
               onClick={handleBulkArchive}
+              disabled={isBulkPending}
             >
               <Archive className="mr-1.5 h-3.5 w-3.5" />
               {t('insights.archiveSelected')} ({selectedIds.size})
@@ -399,8 +406,8 @@ export function ChatHistorySidebar({
             </div>
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('buttons.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleBulkDelete}>
+            <AlertDialogCancel disabled={isBulkPending}>{t('buttons.cancel')}</AlertDialogCancel>
+            <AlertDialogAction disabled={isBulkPending} onClick={(event) => { event.preventDefault(); void handleBulkDelete(); }}>
               {t('insights.bulkDeleteConfirm', { count: selectedIds.size })}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -417,8 +424,8 @@ export function ChatHistorySidebar({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('buttons.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleBulkArchiveConfirmed}>
+            <AlertDialogCancel disabled={isBulkPending}>{t('buttons.cancel')}</AlertDialogCancel>
+            <AlertDialogAction disabled={isBulkPending} onClick={(event) => { event.preventDefault(); void handleBulkArchiveConfirmed(); }}>
               {t('insights.archiveConfirmButton', { count: selectedIds.size })}
             </AlertDialogAction>
           </AlertDialogFooter>

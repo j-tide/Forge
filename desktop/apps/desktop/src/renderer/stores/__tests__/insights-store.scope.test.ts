@@ -1,324 +1,50 @@
 /** @vitest-environment jsdom */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { InsightsSession, InsightsStreamChunk, InsightsChatStatus } from '../../../shared/types';
-import {
-  loadInsightsSession, loadInsightsSessions, newSession, sendMessage,
-  setupInsightsListeners, switchSession, useInsightsStore
-} from '../insights-store';
+import type { InsightsSession, InsightsStreamChunk, InsightsChatStatus, InsightsRequestIdentity, InsightsGenerationResult, InsightsCancellationResult, InsightsIPCResult, InsightsErrorCode } from '../../../shared/types';
+import { loadInsightsSession, loadInsightsSessions, newSession, sendMessage, regenerateMessage, cancelMessage, setupInsightsListeners, switchSession, useInsightsStore } from '../insights-store';
 
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => { resolve = done; });
-  return { promise, resolve };
-}
-const session = (projectId: string, id = `${projectId}-session`): InsightsSession => ({
-  id, projectId, messages: [], createdAt: new Date(), updatedAt: new Date()
-});
-let stream: (projectId: string, chunk: InsightsStreamChunk) => void;
-let status: (projectId: string, status: InsightsChatStatus) => void;
-let error: (projectId: string, error: string, sessionId?: string) => void;
-let updated: (projectId: string, session: InsightsSession) => void;
-const subscriptions = [vi.fn(), vi.fn(), vi.fn(), vi.fn()];
-const api = {
-  getInsightsSession: vi.fn(), listInsightsSessions: vi.fn(),
-  newInsightsSession: vi.fn(), switchInsightsSession: vi.fn(),
-  sendInsightsMessage: vi.fn(), cancelInsightsChat: vi.fn(),
-  onInsightsStreamChunk: vi.fn((callback: typeof stream) => { stream = callback; return subscriptions[0]; }),
-  onInsightsStatus: vi.fn((callback: typeof status) => { status = callback; return subscriptions[1]; }),
-  onInsightsError: vi.fn((callback: typeof error) => { error = callback; return subscriptions[2]; }),
-  onInsightsSessionUpdated: vi.fn((callback: typeof updated) => { updated = callback; return subscriptions[3]; })
-};
-let previousAPI: typeof window.electronAPI;
-let cleanups: Array<() => void> = [];
-function listen(projectId: string) {
-  const cleanup = setupInsightsListeners(projectId);
-  cleanups.push(cleanup);
-  return cleanup;
-}
+function deferred<T>() { let resolve!: (value:T)=>void; const promise=new Promise<T>(done=>{resolve=done;}); return {promise,resolve}; }
+const session=(projectId:string,id=`${projectId}-session`):InsightsSession=>({id,projectId,messages:[],createdAt:new Date(),updatedAt:new Date()});
+const user={id:'user',role:'user' as const,content:'Explain A',timestamp:new Date()};
+const answer={id:'answer',role:'assistant' as const,content:'Original answer',timestamp:new Date()};
+let stream:(project:string,chunk:InsightsStreamChunk)=>void;
+let status:(project:string,status:InsightsChatStatus)=>void;
+let error:(project:string,error:string,sessionId?:string,requestId?:string,code?:InsightsErrorCode)=>void;
+let updated:(project:string,session:InsightsSession,requestId?:string)=>void;
+const unsubs=[vi.fn(),vi.fn(),vi.fn(),vi.fn()];
+const api={getInsightsSession:vi.fn(),listInsightsSessions:vi.fn(),getInsightsActiveRequest:vi.fn(),newInsightsSession:vi.fn(),switchInsightsSession:vi.fn(),sendInsightsMessage:vi.fn(),regenerateInsightsMessage:vi.fn(),cancelInsightsMessage:vi.fn(),onInsightsStreamChunk:vi.fn(),onInsightsStatus:vi.fn(),onInsightsError:vi.fn(),onInsightsSessionUpdated:vi.fn()};
+let previous:typeof window.electronAPI;let cleanups:Array<()=>void>=[];
+function listen(project:string,messages:InsightsSession['messages']=[]){cleanups.push(setupInsightsListeners(project));useInsightsStore.getState().setSession({...session(project),messages});}
+function active():InsightsRequestIdentity{const req=useInsightsStore.getState().activeRequest;if(!req)throw new Error('Expected active request');return {sessionId:req.sessionId,requestId:req.requestId};}
+const complete=(request:InsightsRequestIdentity,outcome:'complete'|'cancelled'='complete')=>({success:true,data:{...request,outcome}});
+const flush=()=>new Promise(done=>setTimeout(done,0));
+beforeEach(()=>{previous=window.electronAPI;Object.defineProperty(window,'electronAPI',{configurable:true,value:api});Object.values(api).forEach(mock=>mock.mockReset());unsubs.forEach(mock=>mock.mockClear());api.onInsightsStreamChunk.mockImplementation(cb=>{stream=cb;return unsubs[0];});api.onInsightsStatus.mockImplementation(cb=>{status=cb;return unsubs[1];});api.onInsightsError.mockImplementation(cb=>{error=cb;return unsubs[2];});api.onInsightsSessionUpdated.mockImplementation(cb=>{updated=cb;return unsubs[3];});api.listInsightsSessions.mockResolvedValue({success:true,data:[]});api.getInsightsActiveRequest.mockResolvedValue({success:true,data:null});api.getInsightsSession.mockImplementation(async(project:string)=>({success:true,data:session(project)}));api.sendInsightsMessage.mockImplementation(()=>new Promise(()=>{/* Intentionally pending generation. */}));api.regenerateInsightsMessage.mockImplementation(()=>new Promise(()=>{/* Intentionally pending generation. */}));useInsightsStore.getState().clearSession();useInsightsStore.setState({sessions:[],isLoadingSessions:false});});
+afterEach(()=>{cleanups.forEach(cleanup=>cleanup());cleanups=[];useInsightsStore.getState().clearSession();Object.defineProperty(window,'electronAPI',{configurable:true,value:previous});});
 
-beforeEach(() => {
-  previousAPI = window.electronAPI;
-  Object.defineProperty(window, 'electronAPI', { configurable: true, value: api });
-  Object.values(api).forEach((mock) => mock.mockClear());
-  subscriptions.forEach((mock) => mock.mockClear());
-  api.listInsightsSessions.mockResolvedValue({ success: true, data: [] });
-  useInsightsStore.getState().clearSession();
-  useInsightsStore.setState({ sessions: [], isLoadingSessions: false });
-});
-afterEach(() => {
-  cleanups.forEach((cleanup) => cleanup());
-  cleanups = [];
-  useInsightsStore.getState().clearSession();
-  Object.defineProperty(window, 'electronAPI', { configurable: true, value: previousAPI });
+describe('Insights correlated generation lifecycle',()=>{
+ it('uses persisted assistant identity and does not duplicate a completed streamed reply',async()=>{listen('A');const pending=deferred<InsightsIPCResult<InsightsGenerationResult>>();api.sendInsightsMessage.mockReturnValue(pending.promise);const sending=sendMessage('A','Explain A');const request=active();stream('A',{type:'text',content:'Current response',...request});expect(useInsightsStore.getState().streamingContent).toBe('Current response');const persisted={...session('A'),messages:[user,answer]};updated('A',persisted,request.requestId);stream('A',{type:'done',...request});expect(useInsightsStore.getState().activeRequest).not.toBeNull();expect(useInsightsStore.getState().session?.messages).toHaveLength(2);api.getInsightsSession.mockResolvedValue({success:true,data:persisted});pending.resolve(complete(request));expect(await sending).toBe(true);expect(useInsightsStore.getState().session?.messages.map(m=>m.id)).toEqual(['user','answer']);expect(useInsightsStore.getState().activeRequest).toBeNull();expect(api.sendInsightsMessage).toHaveBeenCalledWith('A','Explain A',undefined,undefined,request);});
+ it('waits for Stop acknowledgment when send settles first and suppresses late cancelled chunks',async()=>{listen('A');const sendingResult=deferred<InsightsIPCResult<InsightsGenerationResult>>();const cancelled=deferred<InsightsIPCResult<InsightsCancellationResult>>();api.sendInsightsMessage.mockReturnValue(sendingResult.promise);api.cancelInsightsMessage.mockReturnValue(cancelled.promise);const sending=sendMessage('A','Explain A');const request=active();const stopping=cancelMessage('A');stream('A',{type:'text',content:'Late partial',...request});sendingResult.resolve(complete(request,'cancelled'));await sending;expect(useInsightsStore.getState().activeRequest?.phase).toBe('stopping');expect(await sendMessage('A','Premature next')).toBe(false);expect(useInsightsStore.getState().streamingContent).toBe('');api.getInsightsSession.mockResolvedValue({success:true,data:{...session('A'),messages:[user]}});cancelled.resolve({success:true,data:{...request,cancelled:true}});expect(await stopping).toBe(true);expect(useInsightsStore.getState().activeRequest).toBeNull();stream('A',{type:'text',content:'After stop',...request});expect(useInsightsStore.getState().streamingContent).toBe('');expect(useInsightsStore.getState().session?.messages).toEqual([user]);});
+ it('does not label a naturally completed response as stopped',async()=>{listen('A');void sendMessage('A','Explain A');const request=active();api.cancelInsightsMessage.mockResolvedValue({success:true,data:{...request,cancelled:false}});await cancelMessage('A');expect(useInsightsStore.getState().status.message).toBe('');});
+ it('keeps Stop available when cancellation fails and rejects overlapping sends',async()=>{listen('A');void sendMessage('A','Explain A');const request=active();api.cancelInsightsMessage.mockRejectedValue(new Error('secret transport details'));expect(await cancelMessage('A')).toBe(false);expect(useInsightsStore.getState().activeRequest?.requestId).toBe(request.requestId);expect(await sendMessage('A','Overlap')).toBe(false);expect(useInsightsStore.getState().status.error).not.toContain('secret');});
+ it('retains the original reply on failed regenerate and discards replacement partial text',async()=>{listen('A',[user,answer]);const pending=deferred<InsightsIPCResult<InsightsGenerationResult>>();api.regenerateInsightsMessage.mockReturnValue(pending.promise);const regenerating=regenerateMessage('A',answer.id);const request=active();stream('A',{type:'text',content:'Failed replacement',...request});expect(useInsightsStore.getState().session?.messages).toEqual([user,answer]);api.getInsightsSession.mockResolvedValue({success:true,data:{...session('A'),messages:[user,answer]}});pending.resolve({success:false,error:'raw SDK secret',code:'request-failed'});expect(await regenerating).toBe(false);expect(useInsightsStore.getState().session?.messages).toEqual([user,answer]);expect(useInsightsStore.getState().streamingContent).toBe('');expect(useInsightsStore.getState().status.error).not.toContain('secret');expect(api.regenerateInsightsMessage).toHaveBeenCalledWith('A',{...request,targetMessageId:answer.id,images:undefined},undefined);expect(api.sendInsightsMessage).not.toHaveBeenCalled();});
+ it('replaces a successful regenerated reply instead of appending it',async()=>{listen('A',[user,answer]);const pending=deferred<InsightsIPCResult<InsightsGenerationResult>>();api.regenerateInsightsMessage.mockReturnValue(pending.promise);const running=regenerateMessage('A',answer.id);const request=active();api.getInsightsSession.mockResolvedValue({success:true,data:{...session('A'),messages:[user,{...answer,id:'new-answer'}]}});pending.resolve(complete(request));expect(await running).toBe(true);expect(useInsightsStore.getState().session?.messages.map(m=>m.id)).toEqual(['user','new-answer']);});
+ it('retries an unanswered persisted user with reattached images without duplicating the prompt',()=>{listen('A',[user]);const images=[{id:'image',filename:'a.png',mimeType:'image/png',size:1,data:'AAAA'}];void sendMessage('A',user.content,undefined,images);const request=active();expect(api.regenerateInsightsMessage).toHaveBeenCalledWith('A',{...request,targetMessageId:user.id,images},undefined);expect(api.sendInsightsMessage).not.toHaveBeenCalled();expect(useInsightsStore.getState().session?.messages).toEqual([user]);});
+ it('rejects late old request text, status, error and session updates within the same session',async()=>{listen('A');const pending=deferred<InsightsIPCResult<InsightsGenerationResult>>();api.sendInsightsMessage.mockReturnValueOnce(pending.promise);const sending=sendMessage('A','Explain A');const old=active();api.getInsightsSession.mockResolvedValue({success:true,data:{...session('A'),messages:[user]}});pending.resolve({success:false,code:'request-failed'});await sending;void regenerateMessage('A',user.id);const current=active();stream('A',{type:'text',content:'Old text',...old});status('A',{phase:'error',error:'Old status',...old});error('A','Old error',old.sessionId,old.requestId);updated('A',{...session('A'),messages:[user,answer]},old.requestId);expect(useInsightsStore.getState().streamingContent).toBe('');expect(useInsightsStore.getState().status.phase).toBe('thinking');expect(useInsightsStore.getState().session?.messages).toEqual([user]);stream('A',{type:'text',content:'New text',...current});expect(useInsightsStore.getState().streamingContent).toBe('New text');});
+ it('restores a remote active request on session return and completes from persisted events',async()=>{listen('A');const request={sessionId:'A-session',requestId:'remote',phase:'streaming' as const};api.getInsightsActiveRequest.mockResolvedValueOnce({success:true,data:request});await loadInsightsSession('A');expect(useInsightsStore.getState().activeRequest).toEqual(request);stream('A',{type:'text',content:'Resumed text',...request});expect(useInsightsStore.getState().streamingContent).toBe('Resumed text');api.getInsightsSession.mockResolvedValue({success:true,data:{...session('A'),messages:[user,answer]}});stream('A',{type:'done',...request});await flush();expect(useInsightsStore.getState().activeRequest).toBeNull();expect(useInsightsStore.getState().session?.messages).toEqual([user,answer]);});
+ it('releases a rehydrated stopping request only after Main confirms it ended',async()=>{listen('A');const request={sessionId:'A-session',requestId:'remote-stop',phase:'stopping' as const};api.getInsightsActiveRequest.mockResolvedValueOnce({success:true,data:request});await loadInsightsSession('A');expect(useInsightsStore.getState().activeRequest?.phase).toBe('stopping');stream('A',{type:'text',content:'Cancelled late partial',...request});expect(useInsightsStore.getState().streamingContent).toBe('');status('A',{...request,phase:'idle'});await flush();expect(useInsightsStore.getState().activeRequest).toBeNull();expect(useInsightsStore.getState().status.phase).toBe('complete');});
+ it('finishes a returned session after its send Promise from the old view settles',async()=>{listen('A');const pending=deferred<InsightsIPCResult<InsightsGenerationResult>>();api.sendInsightsMessage.mockReturnValue(pending.promise);const sending=sendMessage('A','Explain A');const request=active();listen('B');listen('A');api.getInsightsActiveRequest.mockResolvedValueOnce({success:true,data:{...request,phase:'streaming'}});await loadInsightsSession('A');api.getInsightsSession.mockResolvedValue({success:true,data:{...session('A'),messages:[user,answer]}});stream('A',{type:'done',...request});expect(useInsightsStore.getState().activeRequest).not.toBeNull();pending.resolve(complete(request));await sending;await flush();expect(useInsightsStore.getState().activeRequest).toBeNull();expect(useInsightsStore.getState().session?.messages).toEqual([user,answer]);});
+ it('finishes a returned stopping session after the old Stop acknowledgment settles',async()=>{listen('A');const sendResult=deferred<InsightsIPCResult<InsightsGenerationResult>>();const stopResult=deferred<InsightsIPCResult<InsightsCancellationResult>>();api.sendInsightsMessage.mockReturnValue(sendResult.promise);api.cancelInsightsMessage.mockReturnValue(stopResult.promise);const sending=sendMessage('A','Explain A');const request=active();const stopping=cancelMessage('A');listen('B');listen('A');api.getInsightsActiveRequest.mockResolvedValueOnce({success:true,data:{...request,phase:'stopping'}});await loadInsightsSession('A');api.getInsightsSession.mockResolvedValue({success:true,data:{...session('A'),messages:[user]}});status('A',{...request,phase:'idle'});sendResult.resolve(complete(request,'cancelled'));await sending;expect(useInsightsStore.getState().activeRequest?.phase).toBe('stopping');stopResult.resolve({success:true,data:{...request,cancelled:true}});await stopping;await flush();expect(useInsightsStore.getState().activeRequest).toBeNull();expect(useInsightsStore.getState().session?.messages).toEqual([user]);});
+ it('rejects identity-free and other-project/session events',()=>{listen('A');void sendMessage('A','Explain A');const request=active();stream('A',{type:'text',content:'No identity'});stream('B',{type:'text',content:'Other project',...request});stream('A',{type:'text',content:'Other session',...request,sessionId:'another'});error('A','Unknown error');expect(useInsightsStore.getState().streamingContent).toBe('');expect(useInsightsStore.getState().status.phase).toBe('thinking');});
 });
 
-describe('Insights visible project and session scope', () => {
-  it('shows the current project real stream and completion in the sending session', () => {
-    listen('A');
-    useInsightsStore.getState().setSession(session('A'));
-    sendMessage('A', 'Explain A');
-    stream('A', { type: 'tool_start', tool: { name: 'Read', input: 'README.md' } });
-    stream('A', { type: 'text', content: 'Current response' });
-    stream('A', { type: 'done' });
-    expect(useInsightsStore.getState().session?.messages.map((message) => message.content)).toEqual(['Explain A', 'Current response']);
-    expect(useInsightsStore.getState().session?.messages[1].toolsUsed?.[0].name).toBe('Read');
-    expect(useInsightsStore.getState().status.phase).toBe('complete');
-    expect(api.sendInsightsMessage).toHaveBeenCalledWith('A', 'Explain A', undefined, undefined);
-  });
-
-  it('does not display another project streaming text, tools or completion', () => {
-    listen('B');
-    useInsightsStore.getState().setSession(session('B'));
-    stream('A', { type: 'text', content: 'Private A response' });
-    stream('A', { type: 'tool_start', tool: { name: 'Read', input: 'A source' } });
-    stream('A', { type: 'done' });
-    expect(useInsightsStore.getState().streamingContent).toBe('');
-    expect(useInsightsStore.getState().toolsUsed).toEqual([]);
-    expect(useInsightsStore.getState().session?.messages).toEqual([]);
-    expect(useInsightsStore.getState().status.phase).toBe('idle');
-  });
-
-  it('does not display another project status or error', () => {
-    listen('B');
-    useInsightsStore.getState().setSession(session('B'));
-    status('A', { phase: 'thinking', message: 'A processing' });
-    error('A', 'A unavailable');
-    expect(useInsightsStore.getState().status.phase).toBe('idle');
-  });
-
-  it('does not refresh the visible session list for another project updates', async () => {
-    listen('B');
-    useInsightsStore.getState().setSession(session('B'));
-    updated('A', session('A'));
-    await Promise.resolve();
-    expect(api.listInsightsSessions).not.toHaveBeenCalled();
-    expect(useInsightsStore.getState().session?.projectId).toBe('B');
-  });
-
-  it('clears old project display immediately without cancelling its background run', () => {
-    const leaveA = listen('A');
-    useInsightsStore.getState().setSession(session('A'));
-    sendMessage('A', 'Explain A');
-    stream('A', { type: 'text', content: 'A partial' });
-    useInsightsStore.getState().setPendingImages([{ id: 'A-image', filename: 'a.png', mimeType: 'image/png', size: 1 }]);
-    leaveA();
-    listen('B');
-    expect(useInsightsStore.getState().session).toBeNull();
-    expect(useInsightsStore.getState().streamingContent).toBe('');
-    expect(useInsightsStore.getState().pendingImages).toEqual([]);
-    expect(api.cancelInsightsChat).not.toHaveBeenCalled();
-  });
-
-  it('ignores a delayed A session after B is loaded', async () => {
-    const a = deferred<{ success: boolean; data: InsightsSession }>();
-    api.getInsightsSession.mockReturnValueOnce(a.promise).mockResolvedValueOnce({ success: true, data: session('B') });
-    const leaveA = listen('A');
-    const oldRequest = loadInsightsSession('A');
-    leaveA();
-    listen('B');
-    await loadInsightsSession('B');
-    a.resolve({ success: true, data: session('A') });
-    await oldRequest;
-    expect(useInsightsStore.getState().session?.projectId).toBe('B');
-    expect(api.listInsightsSessions).toHaveBeenCalledTimes(1);
-    expect(api.listInsightsSessions).toHaveBeenCalledWith('B', false);
-  });
-
-  it('does not let an old list end B loading or overwrite the newer list', async () => {
-    const a = deferred<{ success: boolean; data: [] }>();
-    const b = deferred<{ success: boolean; data: [] }>();
-    api.listInsightsSessions.mockReturnValueOnce(a.promise).mockReturnValueOnce(b.promise);
-    const leaveA = listen('A');
-    const first = loadInsightsSessions('A');
-    leaveA();
-    listen('B');
-    const second = loadInsightsSessions('B');
-    a.resolve({ success: true, data: [] });
-    await first;
-    expect(useInsightsStore.getState().isLoadingSessions).toBe(true);
-    b.resolve({ success: true, data: [] });
-    await second;
-    expect(useInsightsStore.getState().isLoadingSessions).toBe(false);
-  });
-
-  it('keeps the latest same-project session selection when an older selection returns', async () => {
-    listen('A');
-    const old = deferred<{ success: boolean; data: InsightsSession }>();
-    api.switchInsightsSession.mockReturnValueOnce(old.promise).mockResolvedValueOnce({ success: true, data: session('A', 'new') });
-    const first = switchSession('A', 'old');
-    await switchSession('A', 'new');
-    old.resolve({ success: true, data: session('A', 'old') });
-    await first;
-    expect(useInsightsStore.getState().session?.id).toBe('new');
-  });
-
-  it('does not put A-session streamed content into a different selected A session', async () => {
-    listen('A');
-    useInsightsStore.getState().setSession(session('A', 'first'));
-    sendMessage('A', 'First request');
-    api.switchInsightsSession.mockResolvedValue({ success: true, data: session('A', 'second') });
-    await switchSession('A', 'second');
-    stream('A', { type: 'text', content: 'Response for first' });
-    stream('A', { type: 'done' });
-    expect(useInsightsStore.getState().session?.id).toBe('second');
-    expect(useInsightsStore.getState().session?.messages).toEqual([]);
-    expect(useInsightsStore.getState().streamingContent).toBe('');
-    expect(api.cancelInsightsChat).not.toHaveBeenCalled();
-  });
-
-  it('invalidates callbacks and outstanding requests when listeners are cleaned up', async () => {
-    const pending = deferred<{ success: boolean; data: InsightsSession }>();
-    api.getInsightsSession.mockReturnValue(pending.promise);
-    const cleanup = listen('A');
-    const request = loadInsightsSession('A');
-    cleanup();
-    stream('A', { type: 'text', content: 'After unmount' });
-    pending.resolve({ success: true, data: session('A') });
-    await request;
-    expect(useInsightsStore.getState().session).toBeNull();
-    expect(useInsightsStore.getState().streamingContent).toBe('');
-    subscriptions.forEach((unsubscribe) => expect(unsubscribe).toHaveBeenCalledTimes(1));
-  });
-
-  it('loads completed background messages from Host when returning to the project', async () => {
-    const leaveA = listen('A');
-    useInsightsStore.getState().setSession(session('A'));
-    sendMessage('A', 'Explain A');
-    leaveA();
-    const leaveB = listen('B');
-    updated('A', { ...session('A'), messages: [{ id: 'answer', role: 'assistant', content: 'Persisted A answer', timestamp: new Date() }] });
-    leaveB();
-    listen('A');
-    api.getInsightsSession.mockResolvedValue({ success: true, data: { ...session('A'), messages: [{ id: 'answer', role: 'assistant', content: 'Persisted A answer', timestamp: new Date() }] } });
-    await loadInsightsSession('A');
-    expect(useInsightsStore.getState().session?.messages[0].content).toBe('Persisted A answer');
-    expect(api.cancelInsightsChat).not.toHaveBeenCalled();
-  });
-
-  it('ignores a new-session response from a project no longer displayed', async () => {
-    const pending = deferred<{ success: boolean; data: InsightsSession }>();
-    api.newInsightsSession.mockReturnValue(pending.promise);
-    const leaveA = listen('A');
-    const request = newSession('A');
-    leaveA();
-    listen('B');
-    useInsightsStore.getState().setSession(session('B'));
-    pending.resolve({ success: true, data: session('A', 'created') });
-    await request;
-    expect(useInsightsStore.getState().session?.projectId).toBe('B');
-  });
-
-  it('keeps the latest same-project session list when an older list returns', async () => {
-    listen('A');
-    const old = deferred<{ success: boolean; data: [] }>();
-    api.listInsightsSessions.mockReturnValueOnce(old.promise).mockResolvedValueOnce({ success: true, data: [{ ...session('A', 'latest'), title: 'Latest', messageCount: 0 }] });
-    const request = loadInsightsSessions('A', false);
-    await loadInsightsSessions('A', true);
-    old.resolve({ success: true, data: [] });
-    await request;
-    expect(useInsightsStore.getState().sessions[0].id).toBe('latest');
-  });
-
-  it('rejects cross-project data even when the event claims the visible project', async () => {
-    listen('B');
-    useInsightsStore.getState().setSession(session('B'));
-    updated('B', { ...session('A'), id: 'B-session' });
-    expect(useInsightsStore.getState().session?.projectId).toBe('B');
-    api.listInsightsSessions.mockResolvedValueOnce({ success: true, data: [{ ...session('A'), title: 'A', messageCount: 0 }] });
-    await loadInsightsSessions('B');
-    expect(useInsightsStore.getState().sessions).toEqual([]);
-  });
-
-  it('does not send using an old session while the new project is loading', async () => {
-    listen('B');
-    const pending = deferred<{ success: boolean; data: InsightsSession }>();
-    api.getInsightsSession.mockReturnValueOnce(pending.promise);
-    const request = loadInsightsSession('B');
-    sendMessage('B', 'Too early');
-    sendMessage('A', 'Wrong project');
-    expect(api.sendInsightsMessage).not.toHaveBeenCalled();
-    pending.resolve({ success: true, data: session('B') });
-    await request;
-    sendMessage('B', 'Now ready');
-    expect(api.sendInsightsMessage).toHaveBeenCalledTimes(1);
-    expect(useInsightsStore.getState().session?.messages[0].content).toBe('Now ready');
-  });
-
-  it('does not allow old A requests to reappear after switching A to B and back to A', async () => {
-    const old = deferred<{ success: boolean; data: InsightsSession }>();
-    api.getInsightsSession.mockReturnValueOnce(old.promise).mockResolvedValueOnce({ success: true, data: session('A', 'current') });
-    const leaveA = listen('A');
-    const request = loadInsightsSession('A');
-    leaveA();
-    const leaveB = listen('B');
-    leaveB();
-    listen('A');
-    await loadInsightsSession('A');
-    old.resolve({ success: true, data: session('A', 'obsolete') });
-    await request;
-    expect(useInsightsStore.getState().session?.id).toBe('current');
-  });
-
-  it('creates a persisted session before the first send rather than guessing its identity', async () => {
-    listen('A');
-    api.newInsightsSession.mockResolvedValueOnce({ success: true, data: session('A', 'host-created') });
-    await sendMessage('A', 'First message');
-    expect(api.newInsightsSession).toHaveBeenCalledWith('A');
-    expect(useInsightsStore.getState().session?.id).toBe('host-created');
-    expect(api.sendInsightsMessage).toHaveBeenCalledWith('A', 'First message', undefined, undefined);
-    updated('A', { ...session('A', 'host-created'), title: 'First message', messages: [{ id: 'real', role: 'user', content: 'First message', timestamp: new Date() }] });
-    expect(useInsightsStore.getState().session?.messages[0].id).toBe('real');
-  });
-
-  it('does not send a first message after the project is changed while its session is being created', async () => {
-    listen('A');
-    const pending = deferred<{ success: boolean; data: InsightsSession }>();
-    api.newInsightsSession.mockReturnValueOnce(pending.promise);
-    const sending = sendMessage('A', 'First message');
-    listen('B');
-    pending.resolve({ success: true, data: session('A', 'host-created') });
-    await sending;
-    expect(api.sendInsightsMessage).not.toHaveBeenCalled();
-    expect(useInsightsStore.getState().session).toBeNull();
-  });
-
-  it('rejects late stream, status and error from the previous session after a new session send', async () => {
-    listen('A');
-    useInsightsStore.getState().setSession(session('A', 'first'));
-    await sendMessage('A', 'First request');
-    api.switchInsightsSession.mockResolvedValueOnce({ success: true, data: session('A', 'second') });
-    await switchSession('A', 'second');
-    await sendMessage('A', 'Second request');
-    stream('A', { type: 'text', content: 'Late first response', sessionId: 'first' });
-    status('A', { phase: 'error', error: 'Late first status', sessionId: 'first' });
-    error('A', 'Late first error', 'first');
-    expect(useInsightsStore.getState().streamingContent).toBe('');
-    expect(useInsightsStore.getState().status.phase).toBe('thinking');
-    expect(useInsightsStore.getState().session?.messages.map((message) => message.content)).toEqual(['Second request']);
-    stream('A', { type: 'text', content: 'Second response', sessionId: 'second' });
-    stream('A', { type: 'done', sessionId: 'second' });
-    expect(useInsightsStore.getState().session?.messages[1].content).toBe('Second response');
-  });
-
-  it('does not display identity-free legacy events when no sending session is bound', () => {
-    listen('unbound');
-    useInsightsStore.getState().setSession(session('unbound'));
-    stream('unbound', { type: 'text', content: 'Unknown session response' });
-    status('unbound', { phase: 'thinking' });
-    error('unbound', 'Unknown session error');
-    expect(useInsightsStore.getState().streamingContent).toBe('');
-    expect(useInsightsStore.getState().status.phase).toBe('idle');
-    stream('unbound', { type: 'text', content: 'Current persisted response', sessionId: 'unbound-session' });
-    expect(useInsightsStore.getState().streamingContent).toBe('Current persisted response');
-  });
-
-  it('reports a failed first-session creation without sending or inventing a local session', async () => {
-    listen('failed-create');
-    api.newInsightsSession.mockRejectedValueOnce(new Error('Session storage unavailable'));
-    expect(await sendMessage('failed-create', 'Keep my input')).toBe(false);
-    expect(api.sendInsightsMessage).not.toHaveBeenCalled();
-    expect(useInsightsStore.getState().session).toBeNull();
-    expect(useInsightsStore.getState().status).toEqual({ phase: 'error', error: 'Session storage unavailable' });
-    expect(useInsightsStore.getState().isLoadingSession).toBe(false);
-  });
+describe('Insights visible project/session loading scope',()=>{
+ it('ignores a delayed old-project load after navigating',async()=>{const old=deferred<{success:boolean;data:InsightsSession}>();api.getInsightsSession.mockReturnValueOnce(old.promise).mockResolvedValueOnce({success:true,data:session('B')});listen('A');const loading=loadInsightsSession('A');listen('B');await loadInsightsSession('B');old.resolve({success:true,data:session('A')});await loading;expect(useInsightsStore.getState().session?.projectId).toBe('B');expect(api.listInsightsSessions).toHaveBeenCalledTimes(1);});
+ it('keeps the newer same-project session selection',async()=>{listen('A');const old=deferred<{success:boolean;data:InsightsSession}>();api.switchInsightsSession.mockReturnValueOnce(old.promise).mockResolvedValueOnce({success:true,data:session('A','new')});const loading=switchSession('A','old');await switchSession('A','new');old.resolve({success:true,data:session('A','old')});await loading;expect(useInsightsStore.getState().session?.id).toBe('new');});
+ it('drops previous-session streams after switching without implicitly cancelling',async()=>{listen('A');void sendMessage('A','Explain A');const old=active();api.switchInsightsSession.mockResolvedValue({success:true,data:session('A','next')});await switchSession('A','next');stream('A',{type:'text',content:'Previous answer',...old});expect(useInsightsStore.getState().streamingContent).toBe('');expect(useInsightsStore.getState().activeRequest).toBeNull();expect(api.cancelInsightsMessage).not.toHaveBeenCalled();});
+ it('blocks sends while loading and rejects cross-project persisted data',async()=>{listen('B');const result=deferred<{success:boolean;data:InsightsSession}>();api.getInsightsSession.mockReturnValueOnce(result.promise);const loading=loadInsightsSession('B');expect(await sendMessage('B','Too early')).toBe(false);result.resolve({success:true,data:session('A')});await loading;expect(useInsightsStore.getState().session).toBeNull();expect(api.sendInsightsMessage).not.toHaveBeenCalled();});
+ it('keeps only the latest session list',async()=>{listen('A');const old=deferred<{success:boolean;data:[]}>();api.listInsightsSessions.mockReturnValueOnce(old.promise).mockResolvedValueOnce({success:true,data:[{...session('A','latest'),title:'Latest',messageCount:0}]});const loading=loadInsightsSessions('A');await loadInsightsSessions('A',true);old.resolve({success:true,data:[]});await loading;expect(useInsightsStore.getState().sessions[0].id).toBe('latest');});
+ it('creates a persisted session before the first send',async()=>{cleanups.push(setupInsightsListeners('A'));api.newInsightsSession.mockResolvedValue({success:true,data:session('A','created')});const pending=deferred<InsightsIPCResult<InsightsGenerationResult>>();api.sendInsightsMessage.mockReturnValue(pending.promise);const sending=sendMessage('A','Explain A');await flush();const request=active();expect(request.sessionId).toBe('created');api.getInsightsSession.mockResolvedValue({success:true,data:{...session('A','created'),messages:[user,answer]}});pending.resolve(complete(request));await sending;expect(api.sendInsightsMessage).toHaveBeenCalledWith('A','Explain A',undefined,undefined,request);});
+ it('sanitizes first-session creation failures and never sends without a persisted identity',async()=>{cleanups.push(setupInsightsListeners('A'));api.newInsightsSession.mockRejectedValue(new Error('secret local path'));expect(await sendMessage('A','Keep my input')).toBe(false);expect(api.sendInsightsMessage).not.toHaveBeenCalled();expect(useInsightsStore.getState().session).toBeNull();expect(useInsightsStore.getState().status.code).toBe('persistence-failed');expect(useInsightsStore.getState().status.error).not.toContain('secret');});
+ it('invalidates delayed loads and unsubscribes on cleanup',async()=>{const pending=deferred<{success:boolean;data:InsightsSession}>();api.getInsightsSession.mockReturnValue(pending.promise);const cleanup=setupInsightsListeners('A');cleanups.push(cleanup);const loading=loadInsightsSession('A');cleanup();pending.resolve({success:true,data:session('A')});await loading;expect(useInsightsStore.getState().session).toBeNull();unsubs.forEach(unsubscribe=>expect(unsubscribe).toHaveBeenCalledTimes(1));});
+ it('does not attach delayed new sessions after changing projects',async()=>{cleanups.push(setupInsightsListeners('A'));const pending=deferred<{success:boolean;data:InsightsSession}>();api.newInsightsSession.mockReturnValue(pending.promise);const creating=newSession('A');listen('B');pending.resolve({success:true,data:session('A')});await creating;expect(useInsightsStore.getState().session?.projectId).toBe('B');});
 });

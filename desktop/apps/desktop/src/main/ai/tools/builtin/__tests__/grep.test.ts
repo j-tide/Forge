@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { EventEmitter } from 'node:events';
 
 import { grepTool } from '../grep';
 import type { ToolContext } from '../../types';
@@ -56,8 +57,13 @@ function setupRg(stdout: string, stderr: string, exitCode: number) {
       _opts: unknown,
       callback: (err: Error | null, stdout: string, stderr: string) => void,
     ) => {
+      const child = new EventEmitter();
       const err = exitCode !== 0 ? Object.assign(new Error('exit'), { code: exitCode }) : null;
-      callback(err, stdout, stderr);
+      queueMicrotask(() => {
+        callback(err, stdout, stderr);
+        child.emit('close', exitCode, null);
+      });
+      return child;
     },
   );
 }
@@ -252,6 +258,25 @@ describe('Grep Tool', () => {
         baseContext,
       ),
     ).rejects.toThrow('outside the project directory');
+  });
+
+  it('does not acknowledge cancellation before the child close event', async () => {
+    const child = new EventEmitter();
+    let callback!: (error: Error | null, stdout: string, stderr: string) => void;
+    mockExecFile.mockImplementation((_path, _args, _options, onDone) => {
+      callback = onDone;
+      return child;
+    });
+    let finished = false;
+    const pending = Promise.resolve(grepTool.config.execute({ pattern: 'hello' }, baseContext))
+      .then((result) => { finished = true; return result; });
+    callback(Object.assign(new Error('Cancelled'), { name: 'AbortError', code: 'ABORT_ERR' }), '', '');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(finished).toBe(false);
+    child.emit('close', null, 'SIGTERM');
+    await pending;
+    expect(finished).toBe(true);
   });
 
   it('should use provided path for search instead of cwd', async () => {

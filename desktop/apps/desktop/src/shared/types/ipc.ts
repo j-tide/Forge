@@ -104,7 +104,15 @@ import type {
   InsightsSessionSummary,
   InsightsChatStatus,
   InsightsStreamChunk,
-  InsightsModelConfig
+  InsightsModelConfig,
+  InsightsRequestIdentity,
+  InsightsTaskSource,
+  InsightsRegenerateRequest,
+  InsightsGenerationResult,
+  InsightsCancellationResult,
+  InsightsActiveRequest,
+  InsightsErrorCode,
+  InsightsIPCResult
 } from './insights';
 import type {
   CompetitorAnalysis,
@@ -139,7 +147,7 @@ import type {
   GitLabNewCommitsCheck
 } from './integrations';
 import type { APIProfile, ProfilesFile, TestConnectionResult, DiscoverModelsResult } from './profile';
-import type { ProviderAccount } from './provider-account';
+import type { ProviderAccount, ProviderConnectionConfig, ProviderConnectionTestResult } from './provider-account';
 
 // ============================================
 // Branch Types
@@ -409,7 +417,7 @@ export interface ElectronAPI {
   setProviderAccountQueueOrder: (order: string[]) => Promise<IPCResult>;
   setCrossProviderQueueOrder: (order: string[]) => Promise<IPCResult>;
   saveModelOverrides: (overrides: Record<string, unknown>) => Promise<IPCResult>;
-  testProviderConnection: (provider: string, config: { apiKey?: string; baseUrl?: string; region?: string }) => Promise<IPCResult<{ success: boolean; error?: string }>>;
+  testProviderConnection: (provider: string, config: ProviderConnectionConfig) => Promise<IPCResult<ProviderConnectionTestResult>>;
   checkEnvCredentials: () => Promise<IPCResult<Record<string, boolean>>>;
 
   // Codex OAuth authentication
@@ -779,13 +787,17 @@ export interface ElectronAPI {
 
   // Insights operations
   getInsightsSession: (projectId: string) => Promise<IPCResult<InsightsSession | null>>;
-  sendInsightsMessage: (projectId: string, message: string, modelConfig?: InsightsModelConfig, images?: ImageAttachment[]) => void;
+  sendInsightsMessage: (projectId: string, message: string, modelConfig?: InsightsModelConfig, images?: ImageAttachment[], request?: InsightsRequestIdentity) => Promise<InsightsIPCResult<InsightsGenerationResult>>;
+  regenerateInsightsMessage: (projectId: string, request: InsightsRegenerateRequest, modelConfig?: InsightsModelConfig) => Promise<InsightsIPCResult<InsightsGenerationResult>>;
+  cancelInsightsMessage: (projectId: string, sessionId: string, requestId: string) => Promise<InsightsIPCResult<InsightsCancellationResult>>;
+  getInsightsActiveRequest: (projectId: string, sessionId: string) => Promise<InsightsIPCResult<InsightsActiveRequest | null>>;
   clearInsightsSession: (projectId: string) => Promise<IPCResult>;
   createTaskFromInsights: (
     projectId: string,
     title: string,
     description: string,
-    metadata?: TaskMetadata
+    metadata?: TaskMetadata,
+    source?: InsightsTaskSource
   ) => Promise<IPCResult<Task>>;
   listInsightsSessions: (projectId: string, includeArchived?: boolean) => Promise<IPCResult<InsightsSessionSummary[]>>;
   newInsightsSession: (projectId: string) => Promise<IPCResult<InsightsSession>>;
@@ -806,10 +818,10 @@ export interface ElectronAPI {
     callback: (projectId: string, status: InsightsChatStatus) => void
   ) => () => void;
   onInsightsError: (
-    callback: (projectId: string, error: string, sessionId?: string) => void
+    callback: (projectId: string, error: string, sessionId?: string, requestId?: string, code?: InsightsErrorCode) => void
   ) => () => void;
   onInsightsSessionUpdated: (
-    callback: (projectId: string, session: InsightsSession) => void
+    callback: (projectId: string, session: InsightsSession, requestId?: string) => void
   ) => () => void;
 
   // Task logs operations

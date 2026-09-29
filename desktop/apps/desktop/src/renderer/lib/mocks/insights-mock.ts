@@ -105,9 +105,10 @@ export const insightsMock = {
     return { success: true };
   },
 
-  sendInsightsMessage: () => {
-    console.warn('[Browser Mock] sendInsightsMessage called');
-  },
+  sendInsightsMessage: async () => ({ success: false, error: 'Insights generation is unavailable in browser preview', code: 'request-failed' as const }),
+  regenerateInsightsMessage: async () => ({ success: false, error: 'Insights generation is unavailable in browser preview', code: 'request-failed' as const }),
+  cancelInsightsMessage: async () => ({ success: false, error: 'Insights generation is unavailable in browser preview', code: 'request-failed' as const }),
+  getInsightsActiveRequest: async () => ({ success: true, data: null }),
 
   clearInsightsSession: async () => ({ success: true }),
 

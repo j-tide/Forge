@@ -82,20 +82,20 @@ describe('Insights session identity during concurrent selection', () => {
     const selected = service.createNewSession('project-a', projectPath);
     pending[0].emit({ type: 'text-delta', text: 'Originating response' });
     pending[0].resolve({ text: 'Originating response' });
-    await response;
+    const completed = await response;
 
     expect(chunks).toHaveBeenCalledWith('project-a', expect.objectContaining({ type: 'text', sessionId: original.id }));
     expect(chunks).toHaveBeenCalledWith('project-a', expect.objectContaining({ type: 'done', sessionId: original.id }));
     expect(statuses).toHaveBeenCalledWith('project-a', expect.objectContaining({ phase: 'thinking', sessionId: original.id }));
     expect(statuses).toHaveBeenCalledWith('project-a', expect.objectContaining({ phase: 'complete', sessionId: original.id }));
-    expect(updated).toHaveBeenCalledWith('project-a', expect.objectContaining({ id: original.id }));
+    expect(updated).toHaveBeenCalledWith('project-a', expect.objectContaining({ id: original.id }), completed.requestId);
     expect(service.loadSession('project-a', projectPath)?.id).toBe(selected.id);
     const storage = new SessionStorage(new InsightsPaths());
     expect(storage.loadSessionById(projectPath, original.id)?.messages.map(message => message.content))
       .toEqual(['Inspect this project', 'Originating response']);
   });
 
-  it('keeps errors attributed to the old session while another session starts', async () => {
+  it('keeps errors attributed to the old session and allows the selected session to start after it settles', async () => {
     const service = new InsightsService();
     const original = service.createNewSession('project-a', projectPath);
     const errors = vi.fn();
@@ -106,14 +106,17 @@ describe('Insights session identity during concurrent selection', () => {
 
     const first = service.sendMessage('project-a', projectPath, 'First');
     const selected = service.createNewSession('project-a', projectPath);
-    const second = service.sendMessage('project-a', projectPath, 'Second');
+    await expect(service.sendMessage('project-a', projectPath, 'Second')).rejects.toMatchObject({ code: 'request-busy' });
+    const rejected = expect(first).rejects.toMatchObject({ code: 'request-failed' });
     pending[0].reject(new Error('Original provider failure'));
-    await first;
+    await rejected;
+    const second = service.sendMessage('project-a', projectPath, 'Second');
     pending[1].emit({ type: 'text-delta', text: 'Second response' });
     pending[1].resolve({ text: 'Second response' });
     await second;
 
-    expect(errors).toHaveBeenCalledWith('project-a', 'Original provider failure', original.id);
+    expect(errors).toHaveBeenCalledWith('project-a', expect.any(String), original.id, expect.any(String), 'request-failed');
+    expect(errors.mock.calls[0][1]).not.toContain('Original provider failure');
     expect(chunks).toHaveBeenCalledWith('project-a', expect.objectContaining({ type: 'error', sessionId: original.id }));
     expect(chunks).toHaveBeenCalledWith('project-a', expect.objectContaining({ type: 'text', sessionId: selected.id }));
     expect(service.loadSession('project-a', projectPath)?.id).toBe(selected.id);
@@ -159,18 +162,26 @@ describe('Insights session identity during concurrent selection', () => {
     expect(chunks.mock.calls[1]).toEqual(['project-a', { type: 'done' }]);
   });
 
-  it('does not drop the newer cancellation controller when an older cancelled query settles', async () => {
+  it('rejects concurrent execution and retains active cancellation until the runner settles', async () => {
     const executor = new InsightsExecutor(new InsightsConfig());
     const first = executor.execute('project-a', projectPath, 'First', []);
-    const second = executor.execute('project-a', projectPath, 'Second', []);
+    await expect(executor.execute('project-a', projectPath, 'Second', [])).rejects.toMatchObject({ code: 'request-busy' });
+    expect(pending).toHaveLength(1);
+    expect(pending[0].config.abortSignal?.aborted).toBe(false);
+    const firstCancellation = executor.cancelSession('project-a');
     expect(pending[0].config.abortSignal?.aborted).toBe(true);
+    expect(executor.isSessionActive('project-a')).toBe(true);
     pending[0].resolve({ text: 'First' });
     await first;
+    await expect(firstCancellation).resolves.toBe(true);
+    expect(executor.isSessionActive('project-a')).toBe(false);
 
+    const second = executor.execute('project-a', projectPath, 'Second', []);
     expect(executor.isSessionActive('project-a')).toBe(true);
-    expect(executor.cancelSession('project-a')).toBe(true);
+    const secondCancellation = executor.cancelSession('project-a');
     expect(pending[1].config.abortSignal?.aborted).toBe(true);
     pending[1].resolve({ text: 'Second' });
     await second;
+    await expect(secondCancellation).resolves.toBe(true);
   });
 });

@@ -3,6 +3,7 @@
  */
 
 import type { TaskMetadata, ImageAttachment } from './task';
+import type { IPCResult } from './common';
 
 // ============================================
 // Ideation Types
@@ -175,17 +176,28 @@ export interface InsightsToolUsage {
   timestamp: Date;
 }
 
+/** Persisted suggestion identity; Main verifies it against the project's history. */
+export interface InsightsTaskSource {
+  sessionId: string;
+  messageId: string;
+  suggestionIndex: number;
+}
+
+export interface InsightsTaskSuggestion {
+  title: string;
+  description: string;
+  metadata?: TaskMetadata;
+  /** Written only after the task exists on disk. */
+  createdTaskId?: string;
+}
+
 export interface InsightsChatMessage {
   id: string;
   role: InsightsChatRole;
   content: string;
   timestamp: Date;
   // For assistant messages that suggest task creation
-  suggestedTasks?: Array<{
-    title: string;
-    description: string;
-    metadata?: TaskMetadata;
-  }>;
+  suggestedTasks?: InsightsTaskSuggestion[];
   // Image attachments (screenshots, pasted images)
   images?: ImageAttachment[];
   // Tools used during this response (assistant messages only)
@@ -215,27 +227,61 @@ export interface InsightsSessionSummary {
   archivedAt?: Date;
 }
 
+/** Correlation only; Main resolves and verifies the actual project/session. */
+export interface InsightsRequestIdentity {
+  sessionId: string;
+  requestId: string;
+}
+
+export interface InsightsRegenerateRequest extends InsightsRequestIdentity {
+  /** Latest assistant reply, or the latest unanswered user message. */
+  targetMessageId: string;
+  /** Reattached originals; persistence intentionally retains only thumbnails. */
+  images?: ImageAttachment[];
+}
+
+export interface InsightsGenerationResult extends InsightsRequestIdentity {
+  outcome: 'complete' | 'cancelled';
+  messageId?: string;
+}
+
+export interface InsightsCancellationResult extends InsightsRequestIdentity {
+  cancelled: boolean;
+}
+
+export interface InsightsActiveRequest extends InsightsRequestIdentity {
+  phase: 'thinking' | 'streaming' | 'stopping';
+}
+
+export type InsightsErrorCode = 'auth-required' | 'request-failed' | 'invalid-request'
+  | 'request-busy' | 'session-not-found' | 'persistence-failed'
+  | 'images-unsupported' | 'image-data-unavailable';
+
+export interface InsightsIPCResult<T = unknown> extends IPCResult<T> {
+  code?: InsightsErrorCode;
+}
+
 export interface InsightsChatStatus {
   /** Originating session identity bound by Main, never supplied by the renderer. */
   sessionId?: string;
-  phase: 'idle' | 'thinking' | 'streaming' | 'complete' | 'error';
+  requestId?: string;
+  phase: 'idle' | 'thinking' | 'streaming' | 'stopping' | 'complete' | 'error';
   message?: string;
   error?: string;
+  code?: InsightsErrorCode;
 }
 
 export interface InsightsStreamChunk {
   /** Originating session identity bound by Main, never supplied by the renderer. */
   sessionId?: string;
+  requestId?: string;
   type: 'text' | 'task_suggestion' | 'tool_start' | 'tool_end' | 'done' | 'error';
   content?: string;
-  suggestedTasks?: Array<{
-    title: string;
-    description: string;
-    metadata?: TaskMetadata;
-  }>;
+  suggestedTasks?: InsightsTaskSuggestion[];
   tool?: {
     name: string;
     input?: string;  // Brief description of what's being searched/read
   };
   error?: string;
+  code?: InsightsErrorCode;
 }
