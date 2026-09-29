@@ -2,7 +2,7 @@
   <img src="resources/icon-256.png" alt="Forge" width="88" height="88" />
   <h1>Forge</h1>
   <p><strong>从一个需求，到看得见的开发过程。</strong></p>
-  <p>任务看板 · 阶段模型 · 代码审阅 · 集成终端</p>
+  <p>任务看板 · 阶段模型 · 代码审阅 · 多终端并行</p>
   <p>
     <a href="https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.6">下载预览版</a> ·
     <a href="docs/user-guide.md">使用指南</a> ·
@@ -13,9 +13,14 @@
 
 Forge 是面向代码项目的 AI 开发桌面应用。打开 Git 项目，描述你想完成的工作，为不同阶段选择模型，然后在看板中跟踪任务、阅读执行日志和审阅代码变化。项目、任务、终端与开发工具集中在同一个工作台里。
 
-| 银灰亮色 | 石墨暗色 |
-| --- | --- |
-| ![Forge 亮色工作台](docs/screenshots/0.1.0-preview.6/home-light-1440.png) | ![Forge 暗色工作台](docs/screenshots/0.1.0-preview.6/home-dark-1440.png) |
+![Forge 六列任务看板：规划、排队、开发、AI 审查、人工审查与完成](docs/media/readme/board-light.png)
+
+<details>
+<summary>查看暗色任务看板</summary>
+
+![Forge 暗色任务看板](docs/media/readme/board-dark.png)
+
+</details>
 
 ## 能用 Forge 做什么
 
@@ -23,15 +28,36 @@ Forge 是面向代码项目的 AI 开发桌面应用。打开 Git 项目，描�
 - **为每个阶段选模型。** 分别配置需求整理、规划、开发和质量审查的模型与思考强度。账户配置提供显式连接测试，方便在开工前发现认证或连接问题。
 - **在看板上跟踪进度。** 从规划、排队和开发，到 AI 审查、人工审查与完成，任务状态集中呈现；创建与开始执行是两个独立操作。
 - **在任务旁审阅代码。** 详情中查看子任务、日志、文件和代码差异，提交反馈，并通过 Git 操作入口处理变更。
-- **随时回到开发现场。** 使用集成终端，查看 Git 工作树；项目设置与应用设置各自管理项目配置和全局偏好。
+- **多个终端并排工作。** 在同一页面运行开发服务、测试和 Git 命令；四个终端自动组成 2×2 网格，还能重命名、调整顺序或展开单个终端。
 - **围绕项目继续探索。** 项目洞察、创意探索、路线图、更新日志和上下文提供不同的项目入口，MCP 概览与本地记忆管理也在工作台内。
 - **按自己的习惯阅读。** 切换亮暗主题与中英文，调整字体，减少动效或透明度；偏好在保存后保留，语言选择即时保存。
 
+## 看板里的任务，从这里开始
+
+演示新建任务、打开详情和把单个任务移入队列。需求与执行配置留在任务中，后续从详情跟进实际运行结果。
+
+![看板操作演示：创建任务、查看详情、移入排队](docs/media/readme/task-workflow.gif)
+
 | 描述需求与配置阶段 | 查看任务详情 |
 | --- | --- |
-| ![新建任务：需求、参考图片、阶段模型与 Git 选项](docs/screenshots/0.1.0-preview.6/new-task-light-1440.png) | ![任务详情：概览、子任务、日志与文件](docs/screenshots/0.1.0-preview.6/task-detail-light.png) |
+| ![新建任务：需求、参考图片、阶段模型与 Git 选项](docs/media/readme/new-task.png) | ![任务详情：概览、子任务、日志与文件](docs/media/readme/task-detail.png) |
 
-截图取自 preview.6 的实际应用，任务内容为本地界面示例；[截图来源](docs/screenshots/0.1.0-preview.6/screenshots.json)。
+## 多个终端，一个开发现场
+
+**打开项目 → 左侧「智能体终端」→「新建终端」**。在终端页，也可以按 **⌘+T / Ctrl+T**；每个项目最多新建 **12 个并行终端**。
+
+四个终端自动排成 2×2 网格。双击标题重命名，拖动把手调整顺序，点击展开按钮专注一个终端，再收起回到网格。新建时打开普通 Shell；需要 Claude 时，使用终端上的「Claude」按钮，并配置可用的 CLI 和认证。
+
+![四个真实本地 Shell：新建、命名、展开与恢复网格](docs/media/readme/multi-terminal.gif)
+
+<details>
+<summary>查看四终端暗色界面</summary>
+
+![Forge 四终端 2×2 网格](docs/media/readme/terminals-dark.png)
+
+</details>
+
+截图与动图录自实际应用中的独立示例项目：任务未执行，终端运行实际本地命令，未演示在线智能体执行。[媒体来源](docs/media/readme/manifest.json) · [终端操作指南](docs/user-guide.md#多个终端并排工作)
 
 ## 下载与安装
 

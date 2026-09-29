@@ -2,7 +2,7 @@
   <img src="resources/icon-256.png" alt="Forge" width="88" height="88" />
   <h1>Forge</h1>
   <p><strong>From an idea to a development process you can follow.</strong></p>
-  <p>Task board · Models by phase · Code review · Integrated terminals</p>
+  <p>Task board · Models by phase · Code review · Parallel terminals</p>
   <p>
     <a href="https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.6">Download preview</a> ·
     <a href="docs/user-guide.md">User guide (Chinese)</a> ·
@@ -13,9 +13,14 @@
 
 Forge is an AI development desktop app for code projects. Open a Git repository, describe the work, choose models for each phase, and follow tasks on a board. Read execution logs and review code changes alongside your projects, terminals, and development tools.
 
-| Silver light | Graphite dark |
-| --- | --- |
-| ![Forge light workspace](docs/screenshots/0.1.0-preview.6/home-light-1440.png) | ![Forge dark workspace](docs/screenshots/0.1.0-preview.6/home-dark-1440.png) |
+![Forge six-column task board: planning, queued work, development, AI review, human review, and completion](docs/media/readme/board-light.png)
+
+<details>
+<summary>View the dark task board</summary>
+
+![Forge dark task board](docs/media/readme/board-dark.png)
+
+</details>
 
 ## What you can do
 
@@ -23,15 +28,36 @@ Forge is an AI development desktop app for code projects. Open a Git repository,
 - **Choose models by phase.** Configure models and thinking levels for specification, planning, coding, and quality review. Account settings include explicit connection tests to help identify authentication or connection problems before starting.
 - **Follow work on a task board.** Track planning, queued work, development, AI review, human review, and completion. Creating a task and starting it are separate actions.
 - **Review changes beside the task.** Inspect subtasks, logs, files, and code diffs; leave feedback and use the Git action controls to handle changes.
-- **Keep development tools close.** Use integrated terminals and inspect Git worktrees. Project settings and application settings manage project configuration and global preferences separately.
+- **Work in parallel terminals.** Keep development servers, tests, and Git commands on one screen. Four terminals form a 2×2 grid; rename them, reorder them, or expand one to focus.
 - **Explore the project.** Open Insights, Ideation, Roadmap, Changelog, and Context. MCP overview and local memory management are also available in the workspace.
 - **Make the workspace comfortable.** Switch themes and languages, adjust fonts, or reduce motion and transparency. Preferences persist once saved; language changes save immediately.
 
+## Start with a task on the board
+
+Create a task and inspect its details, then queue work from the board. Requirements and execution settings stay with the task, ready to follow its actual run from the details view.
+
+![Task board demo: create a task, inspect details, and move it into the queue](docs/media/readme/task-workflow.gif)
+
 | Describe work and configure phases | Inspect task details |
 | --- | --- |
-| ![New task: requirements, reference images, phase models, and Git options](docs/screenshots/0.1.0-preview.6/new-task-light-1440.png) | ![Task details: overview, subtasks, logs, and files](docs/screenshots/0.1.0-preview.6/task-detail-light.png) |
+| ![New task: requirements, reference images, phase models, and Git options](docs/media/readme/new-task.png) | ![Task details: overview, subtasks, logs, and files](docs/media/readme/task-detail.png) |
 
-Screenshots show the actual preview.6 app with local example tasks. [Screenshot provenance](docs/screenshots/0.1.0-preview.6/screenshots.json).
+## Multiple terminals, one workspace
+
+**Open a project → Agent Terminals in the sidebar → New Terminal**. While the terminal page is active, you can also press **⌘+T / Ctrl+T**. Create up to **12 parallel terminals per project**.
+
+Four terminals automatically form a 2×2 grid. Double-click a title to rename it, drag its handle to reorder, or expand one terminal and collapse it to return to the grid. New terminals open a regular shell. To start Claude, use the terminal's **Claude** button with an available CLI and authentication.
+
+![Four real local shells: create, rename, expand, and return to the grid](docs/media/readme/multi-terminal.gif)
+
+<details>
+<summary>View the four-terminal dark interface</summary>
+
+![Forge four-terminal 2×2 grid](docs/media/readme/terminals-dark.png)
+
+</details>
+
+The captures use the Chinese UI and an independent example project. Tasks were not executed; the terminal demo runs real local commands and does not show online Agent runs. [Media provenance](docs/media/readme/manifest.json) · [Terminal guide (Chinese)](docs/user-guide.md#多个终端并排工作)
 
 ## Download and install
 

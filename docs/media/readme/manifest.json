@@ -1,0 +1,97 @@
+{
+  "version": "0.1.0-preview.6",
+  "recordedAt": "2026-09-29T07:08:23.734Z",
+  "sourceRevision": "e17a87407c4d855683a7deb2345746cef85e8b6a",
+  "capture": {
+    "application": "Actual Forge Electron UI",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "language": "zh-CN",
+    "project": "atlas-web (disposable local example)",
+    "taskStatuses": {
+      "backlog": 2,
+      "queue": 1
+    },
+    "tasksStarted": 0,
+    "localShellSessions": 4,
+    "commands": [
+      "node --test",
+      "git status -sb",
+      "ls -R src test",
+      "node -p \"process.version\""
+    ],
+    "modelCalls": 0,
+    "description": "Task creation, details, queue movement, light and dark board views, four real local Shell sessions, terminal naming and expand/collapse. This does not demonstrate online Agent execution."
+  },
+  "sourceHashes": {
+    "out/main/index.js": "91707773eb8f56751d5af88b95840e98882484310168576d86b3c021ec19c819",
+    "out/preload/index.mjs": "fe915e111450873ff84621102205b6a2afe4765e4485707ba192686a739e14c1",
+    "out/renderer/index.html": "aa45621b127b49b21343492f101190c3030aaec7bf1495c5d11b0f04e3e3603a"
+  },
+  "assets": [
+    {
+      "file": "board-dark.png",
+      "type": "image/png",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 117683,
+      "sha256": "c0569a30e7f6825bc7e03ae13821978c649c224f3a28660297bd5ef60f97ccef"
+    },
+    {
+      "file": "board-light.png",
+      "type": "image/png",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 117498,
+      "sha256": "c3fbc4fa125881b845d2cd182058247f71d83533dcddcfff90104a885464a911"
+    },
+    {
+      "file": "multi-terminal.gif",
+      "type": "image/gif",
+      "width": 1280,
+      "height": 720,
+      "bytes": 207497,
+      "sha256": "86763c5626d40ffc56d1cf1f32c2ce4b5a8a418664056f3e9a6c34537c1ad725",
+      "durationSeconds": 16.76,
+      "frames": 134,
+      "loop": "infinite"
+    },
+    {
+      "file": "new-task.png",
+      "type": "image/png",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 220336,
+      "sha256": "8a600e86b9f01a91cd409d0733f2941ecf8a82271a94b937547d737cfe694583"
+    },
+    {
+      "file": "task-detail.png",
+      "type": "image/png",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 162551,
+      "sha256": "d291a257ce246c0a811ac25691e698021178d7c9517934a465e9b8d1e8cca046"
+    },
+    {
+      "file": "task-workflow.gif",
+      "type": "image/gif",
+      "width": 1280,
+      "height": 720,
+      "bytes": 767453,
+      "sha256": "432d393ffee3e1c0df7a7c95dab7b45f3ccd595dd9a9b46c2df94c25f0293779",
+      "durationSeconds": 13.26,
+      "frames": 106,
+      "loop": "infinite"
+    },
+    {
+      "file": "terminals-dark.png",
+      "type": "image/png",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 116374,
+      "sha256": "925d425166eef088aefa814349d4e9126136be2ee4df8adfae95d81db58be844"
+    }
+  ]
+}
