@@ -1,4 +1,5 @@
 import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities';
+import type { DraggableAttributes } from '@dnd-kit/core';
 import type { Task, ExecutionPhase } from '../../../shared/types';
 import type { TerminalStatus } from '../../stores/terminal-store';
 import { Circle, Search, Code2, Wrench, CheckCircle2, AlertCircle, PauseCircle, KeyRound } from 'lucide-react';
@@ -15,6 +16,8 @@ export interface TerminalProps {
   terminalCount?: number;
   /** Drag handle listeners from useSortable for terminal reordering */
   dragHandleListeners?: SyntheticListenerMap;
+  dragHandleAttributes?: DraggableAttributes;
+  setActivatorNodeRef?: (node: HTMLElement | null) => void;
   /** Whether this terminal is currently being dragged */
   isDragging?: boolean;
   /** Whether the terminal is expanded to full view */

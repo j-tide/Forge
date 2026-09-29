@@ -48,6 +48,7 @@ export const SortableTerminalWrapper = forwardRef<SortableTerminalWrapperHandle,
       attributes,
       listeners,
       setNodeRef,
+      setActivatorNodeRef,
       transform,
       transition,
       isDragging,
@@ -79,7 +80,6 @@ export const SortableTerminalWrapper = forwardRef<SortableTerminalWrapperHandle,
           'h-full',
           isDragging && 'opacity-50'
         )}
-        {...attributes}
       >
         <Terminal
           ref={terminalRef}
@@ -93,6 +93,8 @@ export const SortableTerminalWrapper = forwardRef<SortableTerminalWrapperHandle,
           onNewTaskClick={onNewTaskClick}
           terminalCount={terminalCount}
           dragHandleListeners={listeners}
+          dragHandleAttributes={attributes}
+          setActivatorNodeRef={setActivatorNodeRef}
           isDragging={isDragging}
           isExpanded={isExpanded}
           onToggleExpand={onToggleExpand}

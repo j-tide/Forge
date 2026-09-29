@@ -4,6 +4,7 @@ import '@xterm/xterm/css/xterm.css';
 import { FileDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
+import { Button } from './ui/button';
 import { useTerminalStore } from '../stores/terminal-store';
 import { useSettingsStore } from '../stores/settings-store';
 import { useToast } from '../hooks/use-toast';
@@ -61,11 +62,13 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   onNewTaskClick,
   terminalCount = 1,
   dragHandleListeners,
+  dragHandleAttributes,
+  setActivatorNodeRef,
   isDragging,
   isExpanded,
   onToggleExpand,
 }, ref) {
-  const { t } = useTranslation('uiTerminal');
+  const { t } = useTranslation(['uiTerminal', 'common']);
   const isMountedRef = useRef(true);
   const isCreatedRef = useRef(false);
   // Track deliberate terminal recreation (e.g., worktree switching)
@@ -330,7 +333,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   }, [readyDimensions, id]);
 
   // Create PTY process - only when we have valid dimensions
-  const { prepareForRecreate, resetForRecreate } = usePtyProcess({
+  const { prepareForRecreate, resetForRecreate, creationError, isCreating, retryCreation } = usePtyProcess({
     terminalId: id,
     cwd: effectiveCwd,
     projectPath,
@@ -384,11 +387,11 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
         pendingWorktreeConfigRef.current = null;
       }
     },
-    onError: (error) => {
+    onError: () => {
       // Clear pending config on error to prevent stale config from being applied
       // if PTY is recreated later (fixes potential race condition on failed recreation)
       pendingWorktreeConfigRef.current = null;
-      writeln(`\r\n\x1b[31mError: ${error}\x1b[0m`);
+      writeln(`\r\n\x1b[31m${t('initializationFailed')}\x1b[0m`);
     },
   });
 
@@ -747,11 +750,14 @@ Please confirm you're ready by saying: I'm ready to work on ${selectedTask.title
 
     const preferredIDE = settings.preferredIDE || 'vscode';
     try {
-      await window.electronAPI.worktreeOpenInIDE(
+      const result = await window.electronAPI.worktreeOpenInIDE(
         worktreePath,
         preferredIDE,
         settings.customIDEPath
       );
+      if (!result.success || result.data?.opened === false) {
+        throw new Error(result.error || t('ide.launchFailed'));
+      }
     } catch (err) {
       console.error('Failed to open in IDE:', err);
       toast({
@@ -818,10 +824,21 @@ Please confirm you're ready by saying: I'm ready to work on ${selectedTask.title
         onSelectWorktree={handleSelectWorktree}
         onOpenInIDE={handleOpenInIDE}
         dragHandleListeners={dragHandleListeners}
+        dragHandleAttributes={dragHandleAttributes}
+        setActivatorNodeRef={setActivatorNodeRef}
         isExpanded={isExpanded}
         onToggleExpand={onToggleExpand}
         pendingCLIResume={terminal?.pendingCLIResume}
       />
+
+      {creationError && (
+        <div role="alert" className="flex items-center gap-2 border-b border-destructive/20 bg-card/95 px-2 py-1.5">
+          <p className="flex-1 text-xs text-destructive">{t('initializationFailed')}</p>
+          <Button variant="secondary" size="sm" disabled={isCreating} aria-busy={isCreating}
+            aria-label={t('retryInitialization', { name: terminal?.title || t('title') })}
+            onClick={retryCreation}>{t('common:buttons.retry')}</Button>
+        </div>
+      )}
 
       <div
         ref={terminalRef}

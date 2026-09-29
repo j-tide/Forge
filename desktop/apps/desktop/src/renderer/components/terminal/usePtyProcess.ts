@@ -2,11 +2,8 @@ import { useEffect, useRef, useCallback, useState, type RefObject } from 'react'
 import { useTerminalStore } from '../../stores/terminal-store';
 import { debugLog, debugError } from '../../../shared/utils/debug-logger';
 
-// Maximum retry attempts for recreation when dimensions aren't ready
-// Increased from 10 to 30 (3 seconds total) to handle slow app startup scenarios
-// where xterm dimensions may take longer to stabilize
+// Wait up to three seconds for xterm dimensions during deliberate recreation.
 const MAX_RECREATION_RETRIES = 30;
-// Delay between retry attempts in ms
 const RECREATION_RETRY_DELAY = 100;
 
 interface UsePtyProcessOptions {
@@ -15,246 +12,195 @@ interface UsePtyProcessOptions {
   projectPath?: string;
   cols: number;
   rows: number;
-  skipCreation?: boolean; // Skip PTY creation until dimensions are ready
-  // Track deliberate recreation scenarios (e.g., worktree switching)
-  // When true, resets terminal status to 'idle' to allow proper recreation
+  skipCreation?: boolean;
   isRecreatingRef?: RefObject<boolean>;
   onCreated?: () => void;
   onError?: (error: string) => void;
 }
 
 export function usePtyProcess({
-  terminalId,
-  cwd,
-  projectPath,
-  cols,
-  rows,
-  skipCreation = false,
-  isRecreatingRef,
-  onCreated,
-  onError,
+  terminalId, cwd, projectPath, cols, rows, skipCreation = false,
+  isRecreatingRef, onCreated, onError,
 }: UsePtyProcessOptions) {
   const isCreatingRef = useRef(false);
   const isCreatedRef = useRef(false);
-  const currentCwdRef = useRef(cwd);
-  // Trigger state to force re-creation after resetForRecreate()
-  // Refs don't trigger re-renders, so we need a state to ensure the effect runs
-  const [_recreationTrigger, setRecreationTrigger] = useState(0);
-  // Track retry attempts during recreation when dimensions aren't ready
+  const isPreparedForRecreationRef = useRef(false);
+  const mountedRef = useRef(false);
+  const callbacksRef = useRef({ onCreated, onError, isRecreatingRef, skipCreation });
+  callbacksRef.current = { onCreated, onError, isRecreatingRef, skipCreation };
+  const [recreationTrigger, setRecreationTrigger] = useState(0);
+  const [isCreating, setIsCreating] = useState(false);
+  const [creationError, setCreationError] = useState<string | null>(null);
   const recreationRetryCountRef = useRef(0);
-  const recreationRetryTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const recreationRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const attemptedGenerationRef = useRef<number | null>(null);
+  const appliedGenerationRef = useRef<number | null>(null);
+  const appliedIdentityRef = useRef<string | null>(null);
+  const identity = JSON.stringify([terminalId, cwd, projectPath]);
+  const contextRef = useRef({ identity, generation: 0 });
+  if (contextRef.current.identity !== identity) {
+    contextRef.current = { identity, generation: contextRef.current.generation + 1 };
+  }
 
-  // Use getState() pattern for store actions to avoid React Fast Refresh issues
-  // The selectors like useTerminalStore((state) => state.setTerminalStatus) can fail
-  // during HMR with "Should have a queue" errors. Using getState() in callbacks
-  // avoids this by not relying on React's hook queue mechanism.
-  const getStore = useCallback(() => useTerminalStore.getState(), []);
-
-  // Helper to clear any pending retry timer
   const clearRetryTimer = useCallback(() => {
-    if (recreationRetryTimerRef.current) {
+    if (recreationRetryTimerRef.current !== null) {
       clearTimeout(recreationRetryTimerRef.current);
       recreationRetryTimerRef.current = null;
     }
   }, []);
 
-  /**
-   * Schedule a retry or fail with error.
-   * Returns true if a retry was scheduled, false if max retries exceeded or not recreating.
-   * When scheduling a retry, isCreatingRef remains true to prevent duplicate creation attempts.
-   */
-  const scheduleRetryOrFail = useCallback((error: string): boolean => {
-    if (isRecreatingRef?.current && recreationRetryCountRef.current < MAX_RECREATION_RETRIES) {
-      recreationRetryCountRef.current += 1;
-      // Clear any existing timer before setting a new one
-      clearRetryTimer();
-      recreationRetryTimerRef.current = setTimeout(() => {
-        setRecreationTrigger((prev) => prev + 1);
-      }, RECREATION_RETRY_DELAY);
-      // Keep isCreatingRef.current = true to prevent duplicate creation during retry window
-      return true;
-    }
-    // Not recreating or max retries exceeded - clear state and report error
-    if (isRecreatingRef?.current) {
-      isRecreatingRef.current = false;
-    }
-    recreationRetryCountRef.current = 0;
-    isCreatingRef.current = false;
-    onError?.(error);
-    return false;
-  }, [isRecreatingRef, onError, clearRetryTimer]);
-
-  // Cleanup retry timer on unmount
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
+      contextRef.current.generation += 1;
       clearRetryTimer();
     };
   }, [clearRetryTimer]);
 
-  // Track cwd changes - if cwd changes while terminal exists, trigger recreate
   useEffect(() => {
-    if (currentCwdRef.current !== cwd) {
-      // Only reset if we're not already in a controlled recreation process.
-      // prepareForRecreate() sets isCreatingRef=true to prevent auto-recreation
-      // while awaiting destroyTerminal(). Without this check, we'd reset isCreatingRef
-      // back to false before destroyTerminal completes, causing a race condition
-      // where a new PTY is created before the old one is destroyed.
-      if (isCreatedRef.current && !isCreatingRef.current) {
-        // Terminal exists and we're not in a controlled recreation, reset refs
-        isCreatedRef.current = false;
-      }
-      currentCwdRef.current = cwd;
-    }
-  }, [cwd]);
-
-  // Create PTY process
-  // recreationTrigger is included to force the effect to run after resetForRecreate()
-  // since refs don't trigger re-renders
-  useEffect(() => {
-    // Clear any pending retry timer at the START of the effect to prevent
-    // race conditions when dependencies change before timer fires
     clearRetryTimer();
-
-    // During recreation, if dimensions aren't ready, schedule a retry instead of giving up
-    if (skipCreation && isRecreatingRef?.current) {
-      debugLog(`[usePtyProcess] Skipping PTY creation for terminal: ${terminalId} - dimensions not ready during recreation, scheduling retry`);
-      scheduleRetryOrFail('Terminal recreation failed: dimensions not ready');
-      return;
-    }
-
-    // Normal skip (not during recreation) - just return
-    if (skipCreation) {
-      debugLog(`[usePtyProcess] Skipping PTY creation for terminal: ${terminalId} - dimensions not ready (skipCreation=true)`);
-      return;
-    }
-    if (isCreatingRef.current || isCreatedRef.current) {
-      debugLog(`[usePtyProcess] Skipping PTY creation for terminal: ${terminalId} - already creating: ${isCreatingRef.current}, already created: ${isCreatedRef.current}`);
-      return;
-    }
-
-    // Clear retry counter since we're proceeding with creation
-    recreationRetryCountRef.current = 0;
-
-    const store = getStore();
-    const terminalState = store.terminals.find((t) => t.id === terminalId);
-    const alreadyRunning = terminalState?.status === 'running' || terminalState?.status === 'claude-active';
-    const isRestored = terminalState?.isRestored;
-
-    debugLog(`[usePtyProcess] Starting PTY creation for terminal: ${terminalId}`);
-    debugLog(`[usePtyProcess] Terminal ${terminalId} state: isRestored=${isRestored}, status=${terminalState?.status}`);
-    debugLog(`[usePtyProcess] Terminal ${terminalId} dimensions for PTY: cols=${cols}, rows=${rows}`);
-
-    // When recreating (e.g., worktree switching), reset status from 'exited' to 'idle'
-    // This allows proper recreation after deliberate terminal destruction
-    if (isRecreatingRef?.current && terminalState?.status === 'exited') {
-      store.setTerminalStatus(terminalId, 'idle');
-    }
-
-    isCreatingRef.current = true;
-
-    // Helper to handle successful creation
-    const handleSuccess = () => {
-      isCreatedRef.current = true;
-      if (isRecreatingRef?.current) {
-        isRecreatingRef.current = false;
-      }
+    const generation = contextRef.current.generation;
+    const isCurrent = () => mountedRef.current && contextRef.current.generation === generation;
+    if (appliedGenerationRef.current !== generation) {
+      appliedGenerationRef.current = generation;
+      attemptedGenerationRef.current = null;
+      isCreatedRef.current = false;
       recreationRetryCountRef.current = 0;
-      isCreatingRef.current = false;
-    };
-
-    // Helper to handle error - returns true if retry was scheduled
-    const handleError = (error: string): boolean => {
-      const retrying = scheduleRetryOrFail(error);
-      // Only clear isCreatingRef if not retrying (scheduleRetryOrFail handles this)
-      // When retrying, keep isCreatingRef true to prevent duplicate creation
-      return retrying;
-    };
-
-    if (isRestored && terminalState) {
-      // Restored session
-      debugLog(`[usePtyProcess] Restoring session for terminal: ${terminalId}, cwd: ${terminalState.cwd}, isCLIMode: ${terminalState.isCLIMode}, claudeSessionId: ${terminalState.claudeSessionId || 'none'}`);
-      window.electronAPI.restoreTerminalSession(
-        {
-          id: terminalState.id,
-          title: terminalState.title,
-          cwd: terminalState.cwd,
-          projectPath: projectPath || '',
-          isCLIMode: terminalState.isCLIMode,
-          claudeSessionId: terminalState.claudeSessionId,
-          outputBuffer: '',
-          createdAt: terminalState.createdAt.toISOString(),
-          lastActiveAt: new Date().toISOString(),
-          // Pass worktreeConfig so backend can restore it and persist correctly
-          worktreeConfig: terminalState.worktreeConfig,
-        },
-        cols,
-        rows
-      ).then((result) => {
-        if (result.success && result.data?.success) {
-          debugLog(`[usePtyProcess] Successfully restored PTY session for terminal: ${terminalId}`);
-          handleSuccess();
-          const store = getStore();
-          store.setTerminalStatus(terminalId, terminalState.isCLIMode ? 'claude-active' : 'running');
-          store.updateTerminal(terminalId, { isRestored: false });
-          onCreated?.();
-        } else {
-          const errorMsg = `Error restoring session: ${result.data?.error || result.error}`;
-          debugError(`[usePtyProcess] Failed to restore PTY session for terminal: ${terminalId}, error: ${errorMsg}`);
-          handleError(errorMsg);
-        }
-      }).catch((err) => {
-        debugError(`[usePtyProcess] Exception restoring PTY session for terminal: ${terminalId}, error:`, err);
-        handleError(err.message);
-      });
-    } else {
-      // New terminal
-      debugLog(`[usePtyProcess] Creating new PTY for terminal: ${terminalId}, cwd: ${cwd}, projectPath: ${projectPath}`);
-      window.electronAPI.createTerminal({
-        id: terminalId,
-        cwd,
-        cols,
-        rows,
-        projectPath,
-      }).then((result) => {
-        if (result.success) {
-          debugLog(`[usePtyProcess] Successfully created PTY for terminal: ${terminalId}`);
-          handleSuccess();
-          if (!alreadyRunning) {
-            getStore().setTerminalStatus(terminalId, 'running');
-          }
-          onCreated?.();
-        } else {
-          const errorMsg = result.error || 'Unknown error';
-          debugError(`[usePtyProcess] Failed to create PTY for terminal: ${terminalId}, error: ${errorMsg}`);
-          handleError(errorMsg);
-        }
-      }).catch((err) => {
-        debugError(`[usePtyProcess] Exception creating PTY for terminal: ${terminalId}, error:`, err);
-        handleError(err.message);
-      });
+      // Worktree changes must wait for the caller's destroy acknowledgement.
+      isCreatingRef.current = isPreparedForRecreationRef.current;
+      setIsCreating(isPreparedForRecreationRef.current);
+      if (appliedIdentityRef.current !== identity) setCreationError(null);
+      appliedIdentityRef.current = identity;
     }
 
-  }, [terminalId, cwd, projectPath, cols, rows, skipCreation, getStore, onCreated, clearRetryTimer, scheduleRetryOrFail, isRecreatingRef]);
+    const reportFailure = (error: string) => {
+      if (!isCurrent()) return;
+      clearRetryTimer();
+      attemptedGenerationRef.current = generation;
+      isCreatingRef.current = false;
+      recreationRetryCountRef.current = 0;
+      if (callbacksRef.current.isRecreatingRef) callbacksRef.current.isRecreatingRef.current = false;
+      setIsCreating(false);
+      setCreationError(error);
+      callbacksRef.current.onError?.(error);
+    };
 
-  // Function to prepare for recreation by preventing the effect from running
-  // Call this BEFORE updating the store cwd to avoid race condition
-  const prepareForRecreate = useCallback(() => {
+    if (skipCreation) {
+      if (callbacksRef.current.isRecreatingRef?.current
+        && !isPreparedForRecreationRef.current && attemptedGenerationRef.current !== generation) {
+        if (recreationRetryCountRef.current >= MAX_RECREATION_RETRIES) {
+          reportFailure('Terminal recreation failed: dimensions not ready');
+        } else {
+          recreationRetryCountRef.current += 1;
+          setIsCreating(true);
+          recreationRetryTimerRef.current = setTimeout(() => {
+            recreationRetryTimerRef.current = null;
+            if (isCurrent()) setRecreationTrigger((previous) => previous + 1);
+          }, RECREATION_RETRY_DELAY);
+        }
+      }
+      return;
+    }
+    if (isPreparedForRecreationRef.current || isCreatingRef.current || isCreatedRef.current
+      || attemptedGenerationRef.current === generation) return;
+
+    const store = useTerminalStore.getState();
+    const terminalState = store.getTerminal(terminalId);
+    const isRestored = terminalState?.isRestored === true;
+    const alreadyRunning = terminalState?.status === 'running' || terminalState?.status === 'claude-active';
+    const hasSameStoreSession = () => {
+      const current = useTerminalStore.getState().getTerminal(terminalId);
+      if (!terminalState) return !current;
+      return current?.cwd === terminalState.cwd && current.projectPath === terminalState.projectPath
+        && current.createdAt.getTime() === terminalState.createdAt.getTime();
+    };
+    const canApplyResult = () => isCurrent() && !isPreparedForRecreationRef.current && hasSameStoreSession();
+    attemptedGenerationRef.current = generation;
     isCreatingRef.current = true;
-  }, []);
+    recreationRetryCountRef.current = 0;
+    setIsCreating(true);
 
-  // Function to reset refs and allow recreation
-  // Call this AFTER destroying the old terminal
-  // Increments recreationTrigger to force the effect to run since refs don't trigger re-renders
+    debugLog('[usePtyProcess] Initializing PTY for terminal:', terminalId, { isRestored, attempt: recreationTrigger });
+    void (async () => {
+      let succeeded = false;
+      try {
+        if (isRestored && terminalState) {
+          const result = await window.electronAPI.restoreTerminalSession({
+            id: terminalState.id, title: terminalState.title, cwd: terminalState.cwd,
+            projectPath: projectPath || '', isCLIMode: terminalState.isCLIMode,
+            claudeSessionId: terminalState.claudeSessionId, outputBuffer: '',
+            createdAt: terminalState.createdAt.toISOString(), lastActiveAt: new Date().toISOString(),
+            worktreeConfig: terminalState.worktreeConfig,
+          }, cols, rows);
+          if (!canApplyResult()) return;
+          if (!result.success || !result.data?.success || result.data.terminalId !== terminalId) {
+            reportFailure(result.data?.error || result.error || 'Failed to restore terminal session');
+            return;
+          }
+          const currentStore = useTerminalStore.getState();
+          if (terminalState.status === 'exited') currentStore.setTerminalStatus(terminalId, 'idle');
+          currentStore.setTerminalStatus(terminalId, terminalState.isCLIMode ? 'claude-active' : 'running');
+          currentStore.updateTerminal(terminalId, { isRestored: false });
+        } else {
+          const result = await window.electronAPI.createTerminal({ id: terminalId, cwd, cols, rows, projectPath });
+          if (!canApplyResult()) return;
+          if (!result.success) {
+            reportFailure(result.error || 'Failed to create terminal');
+            return;
+          }
+          if (!alreadyRunning) {
+            const currentStore = useTerminalStore.getState();
+            if (terminalState?.status === 'exited') currentStore.setTerminalStatus(terminalId, 'idle');
+            currentStore.setTerminalStatus(terminalId, 'running');
+          }
+        }
+        succeeded = true;
+      } catch (error) {
+        if (!canApplyResult()) return;
+        debugError('[usePtyProcess] Failed to initialize terminal:', terminalId, error);
+        reportFailure(error instanceof Error ? error.message : 'Failed to initialize terminal');
+      }
+      if (!succeeded || !canApplyResult()) return;
+      isCreatedRef.current = true;
+      isCreatingRef.current = false;
+      if (callbacksRef.current.isRecreatingRef) callbacksRef.current.isRecreatingRef.current = false;
+      setIsCreating(false);
+      setCreationError(null);
+      callbacksRef.current.onCreated?.();
+    })();
+  }, [terminalId, cwd, projectPath, identity, cols, rows, skipCreation, recreationTrigger, clearRetryTimer]);
+
+  const prepareForRecreate = useCallback(() => {
+    clearRetryTimer();
+    contextRef.current.generation += 1;
+    isPreparedForRecreationRef.current = true;
+    isCreatingRef.current = true;
+    setIsCreating(true);
+  }, [clearRetryTimer]);
+
   const resetForRecreate = useCallback(() => {
+    clearRetryTimer();
+    contextRef.current.generation += 1;
+    isPreparedForRecreationRef.current = false;
     isCreatedRef.current = false;
     isCreatingRef.current = false;
-    // Increment trigger to force the creation effect to run
-    setRecreationTrigger((prev) => prev + 1);
+    attemptedGenerationRef.current = null;
+    recreationRetryCountRef.current = 0;
+    setCreationError(null);
+    setRecreationTrigger((previous) => previous + 1);
+  }, [clearRetryTimer]);
+
+  const retryCreation = useCallback(() => {
+    if (isCreatingRef.current || isCreatedRef.current || isPreparedForRecreationRef.current || recreationRetryTimerRef.current !== null) return;
+    contextRef.current.generation += 1;
+    attemptedGenerationRef.current = null;
+    recreationRetryCountRef.current = 0;
+    if (callbacksRef.current.skipCreation && callbacksRef.current.isRecreatingRef) {
+      callbacksRef.current.isRecreatingRef.current = true;
+    }
+    setRecreationTrigger((previous) => previous + 1);
   }, []);
 
-  return {
-    isCreated: isCreatedRef.current,
-    prepareForRecreate,
-    resetForRecreate,
-  };
+  return { isCreated: isCreatedRef.current, isCreating, creationError, retryCreation, prepareForRecreate, resetForRecreate };
 }

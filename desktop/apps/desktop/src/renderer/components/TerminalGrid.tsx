@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
   DndContext,
@@ -33,7 +34,21 @@ import { useTerminalStore } from '../stores/terminal-store';
 import { useTaskStore } from '../stores/task-store';
 import { useFileExplorerStore } from '../stores/file-explorer-store';
 import { TERMINAL_DOM_UPDATE_DELAY_MS, PANEL_CLEANUP_GRACE_PERIOD_MS } from '../../shared/constants';
-import type { SessionDateInfo } from '../../shared/types';
+import type { SessionDateInfo, TerminalSession } from '../../shared/types';
+
+function isRestorableSession(value: unknown, projectPath: string): value is TerminalSession {
+  if (!value || typeof value !== 'object') return false;
+  const session = value as Partial<TerminalSession>;
+  return typeof session.id === 'string' && session.id.trim().length > 0
+    && typeof session.title === 'string'
+    && typeof session.cwd === 'string' && session.cwd.trim().length > 0
+    && session.projectPath === projectPath
+    && typeof session.isCLIMode === 'boolean'
+    && typeof session.outputBuffer === 'string'
+    && typeof session.createdAt === 'string' && Number.isFinite(Date.parse(session.createdAt))
+    && typeof session.lastActiveAt === 'string' && Number.isFinite(Date.parse(session.lastActiveAt))
+    && (session.displayOrder === undefined || (typeof session.displayOrder === 'number' && Number.isFinite(session.displayOrder)));
+}
 
 interface TerminalGridProps {
   projectPath?: string;
@@ -138,6 +153,21 @@ export function TerminalGrid({ projectPath, onNewTaskClick, isActive = false }: 
   const [sessionDates, setSessionDates] = useState<SessionDateInfo[]>([]);
   const [isLoadingDates, setIsLoadingDates] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [historyError, setHistoryError] = useState<{ key: 'historyLoadFailed' | 'restoreInvalid' | 'restoreEmpty' | 'restoreFailed' | 'restorePartial' | 'restoreCleanupFailed'; date?: string } | null>(null);
+  const historyContextRef = useRef({ projectPath, generation: 0, mounted: true });
+  if (historyContextRef.current.projectPath !== projectPath) {
+    historyContextRef.current = { projectPath, generation: historyContextRef.current.generation + 1, mounted: true };
+  }
+  const datesRequestRef = useRef(0);
+  const restoreRequestRef = useRef<{ generation: number; date: string } | null>(null);
+
+  useEffect(() => {
+    historyContextRef.current.mounted = true;
+    return () => {
+      historyContextRef.current.mounted = false;
+      historyContextRef.current.generation += 1;
+    };
+  }, []);
 
   // Expanded terminal state - when set, this terminal takes up the full grid space
   const [expandedTerminalId, setExpandedTerminalId] = useState<string | null>(null);
@@ -149,112 +179,146 @@ export function TerminalGrid({ projectPath, onNewTaskClick, isActive = false }: 
     clearAllCleanupTimers();
   }, [projectPath, clearAllCleanupTimers]);
 
-  // Fetch available session dates when project changes
-  useEffect(() => {
-    if (!projectPath) {
-      setSessionDates([]);
-      return;
-    }
-
-    const fetchSessionDates = async () => {
-      setIsLoadingDates(true);
-      try {
-        const result = await window.electronAPI.getTerminalSessionDates(projectPath);
-        if (result.success && result.data) {
-          setSessionDates(result.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch session dates:', error);
-      } finally {
-        setIsLoadingDates(false);
+  const fetchSessionDates = useCallback(async () => {
+    if (!projectPath) return;
+    const generation = historyContextRef.current.generation;
+    const request = ++datesRequestRef.current;
+    const isCurrent = () => historyContextRef.current.mounted
+      && historyContextRef.current.generation === generation && request === datesRequestRef.current;
+    setIsLoadingDates(true);
+    try {
+      const result = await window.electronAPI.getTerminalSessionDates(projectPath);
+      if (!isCurrent()) return;
+      if (!result.success || !Array.isArray(result.data)) {
+        setHistoryError({ key: 'historyLoadFailed' });
+        return;
       }
-    };
-
-    fetchSessionDates();
+      setSessionDates(result.data);
+      setHistoryError((previous) => previous?.key === 'historyLoadFailed' ? null : previous);
+    } catch {
+      if (isCurrent()) setHistoryError({ key: 'historyLoadFailed' });
+    } finally {
+      if (isCurrent()) setIsLoadingDates(false);
+    }
   }, [projectPath]);
+
+  useEffect(() => {
+    setSessionDates([]);
+    setHistoryError(null);
+    setIsRestoring(false);
+    setIsLoadingDates(false);
+    void fetchSessionDates();
+  }, [fetchSessionDates]);
 
   // Get addRestoredTerminal from store
   const addRestoredTerminal = useTerminalStore((state) => state.addRestoredTerminal);
 
   // Handle restoring sessions from a specific date
   const handleRestoreFromDate = useCallback(async (date: string) => {
-    if (!projectPath || isRestoring) return;
-
+    if (!projectPath || restoreRequestRef.current?.generation === historyContextRef.current.generation) return;
+    const request = { generation: historyContextRef.current.generation, date };
+    restoreRequestRef.current = request;
+    const isCurrent = () => historyContextRef.current.mounted && historyContextRef.current.generation === request.generation;
+    const originalTerminals = useTerminalStore.getState().terminals.filter((terminal) =>
+      terminal.status !== 'exited' && (terminal.projectPath === projectPath || !terminal.projectPath),
+    );
     setIsRestoring(true);
+    setHistoryError(null);
     try {
-      // First get the session data for this date (we need it after restore)
       const sessionsResult = await window.electronAPI.getTerminalSessionsForDate(date, projectPath);
-      const sessionsToRestore = sessionsResult.success ? sessionsResult.data || [] : [];
-
-      console.warn(`[TerminalGrid] Found ${sessionsToRestore.length} sessions to restore from ${date}`);
-
+      if (!isCurrent()) return;
+      if (!sessionsResult.success || !Array.isArray(sessionsResult.data)) {
+        setHistoryError({ key: 'restoreFailed', date });
+        return;
+      }
+      const sessionsToRestore = sessionsResult.data;
       if (sessionsToRestore.length === 0) {
-        console.warn('[TerminalGrid] No sessions found for this date');
-        setIsRestoring(false);
+        setHistoryError({ key: 'restoreEmpty', date });
+        return;
+      }
+      if (!sessionsToRestore.every((session) => isRestorableSession(session, projectPath))
+        || new Set(sessionsToRestore.map((session) => session.id)).size !== sessionsToRestore.length) {
+        setHistoryError({ key: 'restoreInvalid', date });
+        return;
+      }
+      const sortedSessions = [...sessionsToRestore].sort((a, b) => (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER));
+      const requestedIds = new Set(sortedSessions.map((session) => session.id));
+      let failed = 0;
+      let restored = 0;
+      for (const session of sortedSessions) {
+        if (!isCurrent()) return;
+        const existing = useTerminalStore.getState().terminals.find((terminal) => terminal.id === session.id && terminal.status !== 'exited');
+        if (existing) {
+          // Shared live IDs keep their current buffer and metadata.
+          if (existing.projectPath && existing.projectPath !== projectPath) failed += 1;
+          continue;
+        }
+        try {
+          const result = await window.electronAPI.restoreTerminalSession(session, 80, 24);
+          if (!result.success || !result.data?.success || result.data.terminalId !== session.id) {
+            failed += 1;
+            continue;
+          }
+          // Acknowledged PTYs remain associated with their captured project even if
+          // the user switches projects while the request is in flight.
+          if (!useTerminalStore.getState().terminals.some((terminal) => terminal.id === session.id && terminal.status !== 'exited')) {
+            if (useTerminalStore.getState().terminals.some((terminal) => terminal.id === session.id)) {
+              // Commit the exited instance's unmount before its cleanup can write
+              // old xterm output over the acknowledged history buffer.
+              flushSync(() => removeTerminal(session.id));
+            }
+            const activeBeforeRestore = useTerminalStore.getState().activeTerminalId;
+            addRestoredTerminal({ ...session, outputBuffer: result.data.outputBuffer ?? session.outputBuffer });
+            if (!isCurrent()) setActiveTerminal(activeBeforeRestore);
+          }
+          restored += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+      if (!isCurrent()) return;
+      if (failed > 0) {
+        setHistoryError({ key: restored > 0 ? 'restorePartial' : 'restoreFailed', date });
         return;
       }
 
-      // Close all existing terminals
-      for (const terminal of terminals) {
-        await window.electronAPI.destroyTerminal(terminal.id);
-        removeTerminal(terminal.id);
-      }
-
-      // Small delay to ensure cleanup
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Restore sessions from the selected date (creates PTYs in main process)
-      const result = await window.electronAPI.restoreTerminalSessionsFromDate(
-        date,
-        projectPath,
-        80,
-        24
-      );
-
-      if (result.success && result.data) {
-        console.warn(`[TerminalGrid] Main process restored ${result.data.restored} sessions from ${date}`);
-
-        // Sort sessions by displayOrder before restoring to preserve user's tab ordering
-        const sortedSessions = [...sessionsToRestore].sort((a, b) => {
-          const orderA = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
-          const orderB = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
-          return orderA - orderB;
-        });
-
-        // Add each successfully restored session to the renderer's terminal store
-        // Use staggered initialization to prevent race conditions when multiple terminals
-        // try to initialize and measure dimensions simultaneously
-        const TERMINAL_INIT_STAGGER_MS = 75; // Small delay between each terminal
-
-        for (const sessionResult of result.data.sessions) {
-          if (sessionResult.success) {
-            const fullSession = sortedSessions.find(s => s.id === sessionResult.id);
-            if (fullSession) {
-              console.warn(`[TerminalGrid] Adding restored terminal to store: ${fullSession.id}`);
-              addRestoredTerminal(fullSession);
-              // Stagger terminal initialization to prevent race conditions
-              await new Promise(resolve => setTimeout(resolve, TERMINAL_INIT_STAGGER_MS));
-            }
-          }
+      // Replace disjoint originals only after every requested session is present.
+      let cleanupFailed = false;
+      const sameOriginal = (id: string) => {
+        const current = useTerminalStore.getState().getTerminal(id);
+        const original = originalTerminals.find((terminal) => terminal.id === id);
+        return current && original && current.cwd === original.cwd
+          && current.projectPath === original.projectPath && current.title === original.title
+          && current.createdAt.getTime() === original.createdAt.getTime()
+          && current.worktreeConfig === original.worktreeConfig;
+      };
+      for (const terminal of originalTerminals) {
+        if (!isCurrent()) return;
+        if (requestedIds.has(terminal.id)) continue;
+        if (!useTerminalStore.getState().getTerminal(terminal.id)) continue;
+        if (!sameOriginal(terminal.id)) {
+          cleanupFailed = true;
+          continue;
         }
-
-        // Trigger terminal refit after grid layout stabilizes to ensure correct dimensions
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('terminal-refit-all'));
-        }, TERMINAL_DOM_UPDATE_DELAY_MS);
-
-        // Refresh session dates to update counts
-        const datesResult = await window.electronAPI.getTerminalSessionDates(projectPath);
-        if (datesResult.success && datesResult.data) {
-          setSessionDates(datesResult.data);
+        try {
+          const result = await window.electronAPI.destroyTerminal(terminal.id);
+          if (result.success && sameOriginal(terminal.id)) removeTerminal(terminal.id);
+          else cleanupFailed = true;
+        } catch {
+          cleanupFailed = true;
         }
       }
-    } catch (error) {
-      console.error('Failed to restore sessions:', error);
+      if (!isCurrent()) return;
+      if (cleanupFailed) setHistoryError({ key: 'restoreCleanupFailed', date });
+      window.dispatchEvent(new CustomEvent('terminal-refit-all'));
+      await fetchSessionDates();
+    } catch {
+      if (isCurrent()) setHistoryError({ key: 'restoreFailed', date });
     } finally {
-      setIsRestoring(false);
+      if (restoreRequestRef.current === request) restoreRequestRef.current = null;
+      if (isCurrent()) setIsRestoring(false);
     }
-  }, [projectPath, terminals, removeTerminal, addRestoredTerminal, isRestoring]);
+  }, [projectPath, removeTerminal, addRestoredTerminal, setActiveTerminal, fetchSessionDates]);
 
   // Setup drag sensors for both file and terminal drag operations
   const sensors = useSensors(
@@ -437,6 +501,39 @@ export function TerminalGrid({ projectPath, onNewTaskClick, isActive = false }: 
   // Terminal IDs for SortableContext
   const terminalIds = useMemo(() => terminals.map(t => t.id), [terminals]);
 
+  const historyControls = projectPath && (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" disabled={isRestoring || isLoadingDates}>
+          {isRestoring || isLoadingDates ? <Loader2 className="h-3 w-3 animate-spin" /> : <History className="h-3 w-3" />}
+          {t('uiTerminal:history')}
+          <ChevronDown className="h-3 w-3" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">{t('uiTerminal:restoreFrom')}</div>
+        <DropdownMenuSeparator />
+        {sessionDates.length === 0 && <DropdownMenuItem disabled>{t('uiTerminal:historyEmpty')}</DropdownMenuItem>}
+        {sessionDates.map((dateInfo) => (
+          <DropdownMenuItem key={dateInfo.date} onClick={() => void handleRestoreFromDate(dateInfo.date)} className="flex items-center justify-between">
+            <span>{new Date(`${dateInfo.date}T12:00:00`).toLocaleDateString(i18n.resolvedLanguage || i18n.language, { month: 'short', day: 'numeric' })}</span>
+            <span className="text-xs text-muted-foreground">{t('uiTerminal:sessionCount', { count: dateInfo.sessionCount })}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const historyFeedback = historyError && (
+    <div role="alert" className="flex items-center gap-3 border-b border-destructive/20 bg-destructive/5 px-3 py-2">
+      <p className="flex-1 text-sm text-destructive">{t(`uiTerminal:${historyError.key}`)}</p>
+      <Button variant="outline" size="sm" disabled={isRestoring || isLoadingDates} onClick={() => {
+        if (historyError.date) void handleRestoreFromDate(historyError.date);
+        else void fetchSessionDates();
+      }}>{t('common:buttons.retry')}</Button>
+    </div>
+  );
+
   // Empty state
   if (terminals.length === 0) {
     return (
@@ -458,6 +555,8 @@ export function TerminalGrid({ projectPath, onNewTaskClick, isActive = false }: 
           <Plus className="h-4 w-4" />
           {t('uiTerminal:newTerminal')}
         </Button>
+        {historyControls}
+        {historyFeedback}
       </div>
     );
   }
@@ -481,44 +580,7 @@ export function TerminalGrid({ projectPath, onNewTaskClick, isActive = false }: 
             {/* Claude Code CLI status */}
             <ClaudeCodeStatusBadge />
             {/* Session history dropdown */}
-            {projectPath && sessionDates.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs gap-1.5"
-                    disabled={isRestoring || isLoadingDates}
-                  >
-                    {isRestoring ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <History className="h-3 w-3" />
-                    )}
-                    {t('uiTerminal:history')}
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                    {t('uiTerminal:restoreFrom')}
-                  </div>
-                  <DropdownMenuSeparator />
-                  {sessionDates.map((dateInfo) => (
-                    <DropdownMenuItem
-                      key={dateInfo.date}
-                      onClick={() => handleRestoreFromDate(dateInfo.date)}
-                      className="flex items-center justify-between"
-                    >
-                      <span>{new Date(`${dateInfo.date}T12:00:00`).toLocaleDateString(i18n.resolvedLanguage || i18n.language, { month: 'short', day: 'numeric' })}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {t('uiTerminal:sessionCount', { count: dateInfo.sessionCount })}
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            {historyControls}
             <Button
               variant="outline"
               size="sm"
@@ -568,6 +630,8 @@ export function TerminalGrid({ projectPath, onNewTaskClick, isActive = false }: 
             )}
           </div>
         </div>
+
+        {historyFeedback}
 
         {/* Main content area with terminal grid and file explorer sidebar */}
         <div className="flex flex-1 overflow-hidden">

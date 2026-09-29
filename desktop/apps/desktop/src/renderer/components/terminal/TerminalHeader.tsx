@@ -1,6 +1,7 @@
 import { X, Sparkles, TerminalSquare, FolderGit, ExternalLink, GripVertical, Maximize2, Minimize2, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities';
+import type { DraggableAttributes } from '@dnd-kit/core';
 import type { Task, TerminalWorktreeConfig } from '../../../shared/types';
 import type { TerminalStatus } from '../../stores/terminal-store';
 import { useTerminalStore } from '../../stores/terminal-store';
@@ -37,6 +38,8 @@ interface TerminalHeaderProps {
   onOpenInIDE?: () => void;
   /** Drag handle listeners for terminal reordering */
   dragHandleListeners?: SyntheticListenerMap;
+  dragHandleAttributes?: DraggableAttributes;
+  setActivatorNodeRef?: (node: HTMLElement | null) => void;
   /** Whether the terminal is expanded to full view */
   isExpanded?: boolean;
   /** Callback to toggle expanded state */
@@ -65,11 +68,13 @@ export function TerminalHeader({
   onSelectWorktree,
   onOpenInIDE,
   dragHandleListeners,
+  dragHandleAttributes,
+  setActivatorNodeRef,
   isExpanded,
   onToggleExpand,
   pendingCLIResume,
 }: TerminalHeaderProps) {
-  const { t } = useTranslation(['terminal', 'common']);
+  const { t } = useTranslation(['terminal', 'common', 'uiTerminal']);
   const backlogTasks = tasks.filter((t) => t.status === 'backlog');
 
   // Check if 2+ terminals have pending Claude resume
@@ -80,23 +85,27 @@ export function TerminalHeader({
   const showResumeAllButton = pendingResumeCount >= 2;
 
   return (
-    <div className="electron-no-drag group/header flex h-9 items-center justify-between border-b border-border/50 bg-card/30 px-2">
+    <div data-terminal-id={terminalId} className="electron-no-drag group/header flex h-9 items-center justify-between border-b border-border/50 bg-card/95 px-2">
       <div className="flex items-center gap-2">
         {/* Drag handle - visible on hover */}
         {dragHandleListeners && (
-          <div
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...dragHandleAttributes}
+            aria-label={t('uiTerminal:reorderTerminal', { name: title })}
             {...dragHandleListeners}
             className={cn(
               'flex items-center justify-center',
               'w-4 h-6 -ml-1',
-              'opacity-0 group-hover/header:opacity-60',
+              'opacity-0 group-hover/header:opacity-60 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               'hover:opacity-100 transition-opacity',
               'cursor-grab active:cursor-grabbing',
               'text-muted-foreground hover:text-foreground'
             )}
           >
             <GripVertical className="h-3.5 w-3.5" />
-          </div>
+          </button>
         )}
         <div className={cn('h-2 w-2 rounded-full', STATUS_COLORS[status])} />
         <div className="flex items-center gap-1.5">

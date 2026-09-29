@@ -36,6 +36,18 @@ export interface RestoreOptions {
  */
 export type DataHandlerFn = (terminal: TerminalProcess, data: string) => void;
 
+function isValidHistorySession(value: unknown, projectPath: string): value is TerminalSession {
+  if (!value || typeof value !== 'object') return false;
+  const session = value as Partial<TerminalSession>;
+  return typeof session.id === 'string' && session.id.trim().length > 0
+    && typeof session.projectPath === 'string' && session.projectPath.trim().length > 0
+    && session.projectPath === projectPath
+    && typeof session.cwd === 'string' && session.cwd.trim().length > 0
+    && typeof session.title === 'string'
+    && typeof session.outputBuffer === 'string'
+    && typeof session.isCLIMode === 'boolean';
+}
+
 /**
  * Create a new terminal process
  */
@@ -153,6 +165,24 @@ export async function restoreTerminal(
   cols = 80,
   rows = 24
 ): Promise<TerminalOperationResult> {
+  // A deleted worktree falls back to the project, including when attaching to
+  // an already-running PTY restored by another renderer mount.
+  let effectiveCwd = session.cwd;
+  if (!existsSync(session.cwd)) {
+    debugLog('[TerminalLifecycle] Session cwd does not exist, falling back to project path:', session.cwd, '->', session.projectPath);
+    effectiveCwd = session.projectPath || os.homedir();
+  }
+
+  const existingTerminal = terminals.get(session.id);
+  if (existingTerminal) {
+    if (existingTerminal.projectPath !== session.projectPath || existingTerminal.cwd !== effectiveCwd) {
+      return { success: false, error: 'Terminal ID is already in use by another session' };
+    }
+    // Reattaching after a renderer remount must not apply historical metadata
+    // or schedule a second CLI resume on the current live session.
+    return { success: true, outputBuffer: existingTerminal.outputBuffer };
+  }
+
   // Look up the stored session to get the correct isCLIMode value
   // The renderer may pass isCLIMode: false (by design), but we need the stored value
   // to determine whether to auto-resume Claude
@@ -173,15 +203,7 @@ export async function restoreTerminal(
   const storedBufferLen = storedSession?.outputBuffer?.length ?? 0;
   debugLog('[TerminalLifecycle] OutputBuffer info - passed session:', passedBufferLen, 'bytes, stored session:', storedBufferLen, 'bytes');
 
-  // Validate cwd exists - if the directory was deleted (e.g., worktree removed),
-  // fall back to project path to prevent shell exit with code 1
-  let effectiveCwd = session.cwd;
-  if (!existsSync(session.cwd)) {
-    debugLog('[TerminalLifecycle] Session cwd does not exist, falling back to project path:', session.cwd, '->', session.projectPath);
-    effectiveCwd = session.projectPath || os.homedir();
-  }
-
-  const result = await createTerminal(
+  const creation = createTerminal(
     {
       id: session.id,
       cwd: effectiveCwd,
@@ -193,6 +215,8 @@ export async function restoreTerminal(
     getWindow,
     dataHandler
   );
+  const createdTerminal = terminals.get(session.id);
+  const result = await creation;
 
   if (!result.success) {
     return result;
@@ -201,6 +225,12 @@ export async function restoreTerminal(
   const terminal = terminals.get(session.id);
   if (!terminal) {
     return { success: false, error: 'Terminal not found after creation' };
+  }
+  if (terminal !== createdTerminal) {
+    if (terminal.projectPath !== session.projectPath || terminal.cwd !== effectiveCwd) {
+      return { success: false, error: 'Terminal ID is already in use by another session' };
+    }
+    return { success: true, outputBuffer: terminal.outputBuffer };
   }
 
   // Restore title and worktree config from session
@@ -390,21 +420,41 @@ export async function restoreSessionsFromDate(
   const sessions = SessionHandler.getSessionsForDate(date, projectPath);
   const results: Array<{ id: string; success: boolean; error?: string }> = [];
 
+  const seenIds = new Set<string>();
+  const invalidHistory = !Array.isArray(sessions) || sessions.some((session) => {
+    if (!isValidHistorySession(session, projectPath) || seenIds.has(session.id)) return true;
+    seenIds.add(session.id);
+    return false;
+  });
+  if (invalidHistory) {
+    const entries = Array.isArray(sessions) ? sessions : [undefined];
+    const failures = entries.map((session) => ({
+      id: session && typeof session.id === 'string' ? session.id : '',
+      success: false,
+      error: 'Invalid terminal session history',
+    }));
+    return { restored: 0, failed: failures.length, sessions: failures };
+  }
+
   for (const session of sessions) {
-    const result = await restoreTerminal(
-      session,
-      terminals,
-      getWindow,
-      dataHandler,
-      options,
-      cols,
-      rows
-    );
-    results.push({
-      id: session.id,
-      success: result.success,
-      error: result.error
-    });
+    try {
+      const result = await restoreTerminal(
+        session,
+        terminals,
+        getWindow,
+        dataHandler,
+        options,
+        cols,
+        rows
+      );
+      results.push({ id: session.id, success: result.success, error: result.error });
+    } catch (error) {
+      results.push({
+        id: session.id,
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to restore terminal session',
+      });
+    }
   }
 
   return {

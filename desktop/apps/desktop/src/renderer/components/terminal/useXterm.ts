@@ -11,6 +11,8 @@ import { debounce } from '../../lib/debounce';
 import { DEFAULT_TERMINAL_THEME } from '../../lib/terminal-theme';
 import { debugLog, debugError } from '../../../shared/utils/debug-logger';
 import { useSettingsStore } from '../../stores/settings-store';
+import { toast } from '../../hooks/use-toast';
+import i18n from '../../../shared/i18n';
 import type { WebGLContextManagerType } from '../../lib/webgl-context-manager';
 
 interface UseXtermOptions {
@@ -59,6 +61,7 @@ export function useXterm({ terminalId, onCommandEnter, onResize, onDimensionsRea
   const serializeAddonRef = useRef<SerializeAddon | null>(null);
   const commandBufferRef = useRef<string>('');
   const isDisposedRef = useRef<boolean>(false);
+  const isMountedRef = useRef(false);
   const dimensionsReadyCalledRef = useRef<boolean>(false);
   // Lazily-loaded WebGL context manager — only populated when gpuAcceleration !== 'off'
   const webglManagerRef = useRef<WebGLContextManagerType | null>(null);
@@ -69,6 +72,11 @@ export function useXterm({ terminalId, onCommandEnter, onResize, onDimensionsRea
   // Note: We subscribe to the entire store here for initial terminal creation.
   // The subscription effect below handles reactive updates for font changes.
   const fontSettings = useTerminalFontSettingsStore();
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   // Keep onResizeRef up-to-date to avoid stale closures in retry logic
   useEffect(() => {
@@ -158,6 +166,12 @@ export function useXterm({ terminalId, onCommandEnter, onResize, onDimensionsRea
         if (selection) {
           navigator.clipboard.writeText(selection).catch((err) => {
             console.error('[useXterm] Failed to copy selection:', err);
+            if (isMountedRef.current && !isDisposedRef.current && xtermRef.current === xterm) {
+              toast({
+                title: i18n.t('uiRuntime:stores.failedCopyClipboard'),
+                variant: 'destructive'
+              });
+            }
           });
           return true; // Copy attempted (has selection)
         }
