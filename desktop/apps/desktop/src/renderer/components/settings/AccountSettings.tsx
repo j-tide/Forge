@@ -272,12 +272,15 @@ export function AccountSettings({ settings, onSettingsChange, isOpen }: AccountS
               {/* Master toggle */}
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-sm font-medium">{t('accounts.autoSwitching.enableAutoSwitching')}</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <Label htmlFor="auto-switch-enabled" className="text-sm font-medium">{t('accounts.autoSwitching.enableAutoSwitching')}</Label>
+                  <p id="auto-switch-enabled-description" className="text-xs text-muted-foreground mt-1">
                     {t('accounts.autoSwitching.masterSwitch')}
                   </p>
                 </div>
                 <Switch
+                  id="auto-switch-enabled"
+                  aria-label={t('accounts.autoSwitching.enableAutoSwitching')}
+                  aria-describedby="auto-switch-enabled-description"
                   checked={autoSwitchSettings?.enabled ?? false}
                   onCheckedChange={(enabled) => handleUpdateAutoSwitch({ enabled })}
                   disabled={isLoadingAutoSwitch}
@@ -290,15 +293,18 @@ export function AccountSettings({ settings, onSettingsChange, isOpen }: AccountS
                   <div className="pl-6 space-y-4 pt-2 border-l-2 border-primary/20">
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label className="text-sm font-medium flex items-center gap-2">
+                        <Label htmlFor="auto-switch-proactive" className="text-sm font-medium flex items-center gap-2">
                           <Activity className="h-3.5 w-3.5" />
                           {t('accounts.autoSwitching.proactiveMonitoring')}
                         </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p id="auto-switch-proactive-description" className="text-xs text-muted-foreground mt-1">
                           {t('accounts.autoSwitching.proactiveDescription')}
                         </p>
                       </div>
                       <Switch
+                        id="auto-switch-proactive"
+                        aria-label={t('accounts.autoSwitching.proactiveMonitoring')}
+                        aria-describedby="auto-switch-proactive-description"
                         checked={autoSwitchSettings?.proactiveSwapEnabled ?? true}
                         onCheckedChange={(value) => handleUpdateAutoSwitch({ proactiveSwapEnabled: value })}
                         disabled={isLoadingAutoSwitch}
@@ -364,15 +370,18 @@ export function AccountSettings({ settings, onSettingsChange, isOpen }: AccountS
                   <div className="pl-6 space-y-4 pt-2 border-l-2 border-orange-500/20">
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label className="text-sm font-medium flex items-center gap-2">
+                        <Label htmlFor="auto-switch-rate-limit" className="text-sm font-medium flex items-center gap-2">
                           <AlertCircle className="h-3.5 w-3.5" />
                           {t('accounts.autoSwitching.reactiveRecovery')}
                         </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p id="auto-switch-rate-limit-description" className="text-xs text-muted-foreground mt-1">
                           {t('accounts.autoSwitching.reactiveDescription')}
                         </p>
                       </div>
                       <Switch
+                        id="auto-switch-rate-limit"
+                        aria-label={t('accounts.autoSwitching.reactiveRecovery')}
+                        aria-describedby="auto-switch-rate-limit-description"
                         checked={autoSwitchSettings?.autoSwitchOnRateLimit ?? false}
                         onCheckedChange={(value) => handleUpdateAutoSwitch({ autoSwitchOnRateLimit: value })}
                         disabled={isLoadingAutoSwitch}
@@ -381,14 +390,17 @@ export function AccountSettings({ settings, onSettingsChange, isOpen }: AccountS
 
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label className="text-sm font-medium">
+                        <Label htmlFor="auto-switch-auth-failure" className="text-sm font-medium">
                           {t('accounts.autoSwitching.autoSwitchOnAuthFailure')}
                         </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p id="auto-switch-auth-failure-description" className="text-xs text-muted-foreground mt-1">
                           {t('accounts.autoSwitching.autoSwitchOnAuthFailureDescription')}
                         </p>
                       </div>
                       <Switch
+                        id="auto-switch-auth-failure"
+                        aria-label={t('accounts.autoSwitching.autoSwitchOnAuthFailure')}
+                        aria-describedby="auto-switch-auth-failure-description"
                         checked={autoSwitchSettings?.autoSwitchOnAuthFailure ?? false}
                         onCheckedChange={(value) => handleUpdateAutoSwitch({ autoSwitchOnAuthFailure: value })}
                         disabled={isLoadingAutoSwitch}

@@ -65,18 +65,18 @@ export function CursorConfigPanel({ settings, onSettingChange }: CursorConfigPan
     <div className="space-y-6">
       {/* Cursor Style */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+        <Label htmlFor="cursor-style" className="text-sm font-medium text-foreground flex items-center gap-2">
           <MousePointer2 className="h-4 w-4" />
           {t('terminalFonts.cursorConfig.cursorStyle', { defaultValue: 'Cursor Style' })}
         </Label>
-        <p className="text-sm text-muted-foreground">
+        <p id="cursor-style-description" className="text-sm text-muted-foreground">
           {t('terminalFonts.cursorConfig.cursorStyleDescription', {
             defaultValue: 'Choose the appearance of the terminal cursor',
           })}
         </p>
         <div className="max-w-md">
           <Select value={settings.cursorStyle} onValueChange={handleCursorStyleChange}>
-            <SelectTrigger id="cursor-style">
+            <SelectTrigger id="cursor-style" aria-describedby="cursor-style-description">
               <SelectValue placeholder={t('terminalFonts.cursorConfig.selectStyle', { defaultValue: 'Select cursor style...' })} />
             </SelectTrigger>
             <SelectContent>
@@ -104,10 +104,10 @@ export function CursorConfigPanel({ settings, onSettingChange }: CursorConfigPan
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <Label className="text-sm font-medium text-foreground">
+            <Label htmlFor="cursor-blink" className="text-sm font-medium text-foreground">
               {t('terminalFonts.cursorConfig.cursorBlink', { defaultValue: 'Cursor Blink' })}
             </Label>
-            <p className="text-sm text-muted-foreground">
+            <p id="cursor-blink-description" className="text-sm text-muted-foreground">
               {t('terminalFonts.cursorConfig.cursorBlinkDescription', {
                 defaultValue: 'Enable or disable cursor blinking animation',
               })}
@@ -115,6 +115,8 @@ export function CursorConfigPanel({ settings, onSettingChange }: CursorConfigPan
           </div>
           <Switch
             id="cursor-blink"
+            aria-label={t('terminalFonts.cursorConfig.cursorBlink')}
+            aria-describedby="cursor-blink-description"
             checked={settings.cursorBlink}
             onCheckedChange={handleCursorBlinkChange}
             className="shrink-0"
@@ -132,7 +134,7 @@ export function CursorConfigPanel({ settings, onSettingChange }: CursorConfigPan
 
       {/* Cursor Accent Color */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium text-foreground">
+        <Label htmlFor="cursor-accent-color" className="text-sm font-medium text-foreground">
           {t('terminalFonts.cursorConfig.cursorAccentColor', { defaultValue: 'Cursor Accent Color' })}
         </Label>
         <p id="cursor-color-description" className="text-sm text-muted-foreground">
@@ -170,6 +172,7 @@ export function CursorConfigPanel({ settings, onSettingChange }: CursorConfigPan
               <button
                 type="button"
                 onClick={() => onSettingChange('cursorAccentColor', '#000000')}
+                aria-label={t('terminalFonts.cursorConfig.resetColor')}
                 className={cn(
                   'px-3 py-2 rounded-lg text-sm font-medium',
                   'border border-border bg-card hover:bg-accent',

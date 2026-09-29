@@ -129,7 +129,7 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
     <div className="space-y-6">
       {/* Font Family */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+        <Label htmlFor="terminal-font-family" className="text-sm font-medium text-foreground flex items-center gap-2">
           <Type className="h-4 w-4" />
           {t('terminalFonts.fontConfig.fontFamily', { defaultValue: 'Font Family' })}
         </Label>
@@ -140,6 +140,7 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
         </p>
         <div className="max-w-md">
           <Combobox
+            id="terminal-font-family"
             value={currentFontFamily}
             onValueChange={handleFontFamilyChange}
             options={availableFonts}
@@ -160,7 +161,7 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
       {/* Font Size */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium text-foreground">
+          <Label htmlFor="terminal-font-size" className="text-sm font-medium text-foreground">
             {t('terminalFonts.fontConfig.fontSize', { defaultValue: 'Font Size' })}
           </Label>
           <div className="flex items-center gap-2">
@@ -179,6 +180,7 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
                   'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent'
                 )}
                 title={t('terminalFonts.fontConfig.decreaseFontSize', { step: FONT_SIZE_STEP })}
+                aria-label={t('terminalFonts.fontConfig.decreaseFontSize', { step: FONT_SIZE_STEP })}
               >
                 <Minus className="h-3.5 w-3.5" />
               </button>
@@ -193,6 +195,7 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
                   'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent'
                 )}
                 title={t('terminalFonts.fontConfig.increaseFontSize', { step: FONT_SIZE_STEP })}
+                aria-label={t('terminalFonts.fontConfig.increaseFontSize', { step: FONT_SIZE_STEP })}
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -205,6 +208,7 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
           })}
         </p>
         <input
+          id="terminal-font-size"
           type="range"
           min={FONT_SIZE_MIN}
           max={FONT_SIZE_MAX}
@@ -226,7 +230,7 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
 
       {/* Font Weight */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium text-foreground">
+        <Label htmlFor="terminal-font-weight" className="text-sm font-medium text-foreground">
           {t('terminalFonts.fontConfig.fontWeight', { defaultValue: 'Font Weight' })}
         </Label>
         <p className="text-sm text-muted-foreground">
@@ -236,6 +240,8 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
         </p>
         <div className="flex items-center gap-3 max-w-xs">
           <input
+            id="terminal-font-weight"
+            aria-label={t('terminalFonts.fontConfig.fontWeight')}
             type="number"
             min={FONT_WEIGHT_MIN}
             max={FONT_WEIGHT_MAX}
@@ -263,6 +269,7 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent'
               )}
               title={t('terminalFonts.fontConfig.decreaseFontWeight', { step: FONT_WEIGHT_STEP })}
+              aria-label={t('terminalFonts.fontConfig.decreaseFontWeight', { step: FONT_WEIGHT_STEP })}
             >
               <Minus className="h-3.5 w-3.5" />
             </button>
@@ -277,6 +284,7 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent'
               )}
               title={t('terminalFonts.fontConfig.increaseFontWeight', { step: FONT_WEIGHT_STEP })}
+              aria-label={t('terminalFonts.fontConfig.increaseFontWeight', { step: FONT_WEIGHT_STEP })}
             >
               <Plus className="h-3.5 w-3.5" />
             </button>
@@ -292,7 +300,7 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
       {/* Line Height */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium text-foreground">
+          <Label htmlFor="terminal-font-line-height" className="text-sm font-medium text-foreground">
             {t('terminalFonts.fontConfig.lineHeight', { defaultValue: 'Line Height' })}
           </Label>
           <span className="text-sm font-mono text-muted-foreground">
@@ -305,6 +313,7 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
           })}
         </p>
         <input
+          id="terminal-font-line-height"
           type="range"
           min={LINE_HEIGHT_MIN}
           max={LINE_HEIGHT_MAX}
@@ -327,7 +336,7 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
       {/* Letter Spacing */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium text-foreground">
+          <Label htmlFor="terminal-font-letter-spacing" className="text-sm font-medium text-foreground">
             {t('terminalFonts.fontConfig.letterSpacing', { defaultValue: 'Letter Spacing' })}
           </Label>
           <span className="text-sm font-mono text-muted-foreground">
@@ -340,6 +349,7 @@ export function FontConfigPanel({ settings, onSettingChange }: FontConfigPanelPr
           })}
         </p>
         <input
+          id="terminal-font-letter-spacing"
           type="range"
           min={LETTER_SPACING_MIN}
           max={LETTER_SPACING_MAX}

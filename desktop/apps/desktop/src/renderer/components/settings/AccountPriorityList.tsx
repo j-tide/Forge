@@ -32,7 +32,7 @@ import {
   GripVertical,
   Star,
   Tag,
-  Infinity,
+  Infinity as InfinityIcon,
   AlertCircle,
   Users,
   Server,
@@ -170,13 +170,15 @@ function SortableAccountItem({ account, index, onSetActive }: SortableAccountIte
       )}
     >
       {/* Drag handle */}
-      <div
+      <button
+        type="button"
         {...attributes}
         {...listeners}
+        aria-label={account.displayName}
         className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 -ml-1"
       >
         <GripVertical className="h-4 w-4" />
-      </div>
+      </button>
 
       {/* Priority number */}
       <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground shrink-0">
@@ -343,6 +345,7 @@ function SortableAccountItem({ account, index, onSetActive }: SortableAccountIte
               <button
                 type="button"
                 onClick={() => onSetActive(account.id)}
+                aria-label={`${t('accounts.priority.setActive')}: ${account.displayName}`}
                 className="text-muted-foreground hover:text-primary p-1 rounded hover:bg-primary/10 transition-colors"
               >
                 <Star className="h-3.5 w-3.5" />
@@ -356,7 +359,7 @@ function SortableAccountItem({ account, index, onSetActive }: SortableAccountIte
         {/* Pay-per-use badge for API profiles */}
         {account.type === 'api' && (
           <span className="text-[10px] bg-muted text-muted-foreground px-2 py-1 rounded flex items-center gap-1">
-            <Infinity className="h-3 w-3" />
+            <InfinityIcon className="h-3 w-3" />
             {t('accounts.priority.payPerUse')}
           </span>
         )}

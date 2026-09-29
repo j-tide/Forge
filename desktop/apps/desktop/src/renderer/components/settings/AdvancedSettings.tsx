@@ -77,10 +77,13 @@ export function AdvancedSettings({ settings, onSettingsChange, section, version 
         {notificationItems.map((item) => (
           <div key={item.key} className="flex items-center justify-between p-4 rounded-lg border border-border">
             <div className="space-y-1">
-              <Label className="font-medium text-foreground">{t(item.labelKey)}</Label>
-              <p className="text-sm text-muted-foreground">{t(item.descriptionKey)}</p>
+              <Label htmlFor={`notification-${item.key}`} className="font-medium text-foreground">{t(item.labelKey)}</Label>
+              <p id={`notification-${item.key}-description`} className="text-sm text-muted-foreground">{t(item.descriptionKey)}</p>
             </div>
             <Switch
+              id={`notification-${item.key}`}
+              aria-label={t(item.labelKey)}
+              aria-describedby={`notification-${item.key}-description`}
               checked={settings.notifications[item.key]}
               onCheckedChange={(checked) =>
                 onSettingsChange({
