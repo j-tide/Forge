@@ -62,6 +62,18 @@ async function mount(language: 'en' | 'zh-CN') {
 afterEach(cleanup);
 
 describe('Git setup localization', () => {
+  it('keeps Git initialization open until the running operation returns', async () => {
+    type InitializationResponse = Awaited<ReturnType<typeof window.electronAPI.initializeGit>>;
+    let resolveInitialization!: (value: InitializationResponse) => void;
+    window.electronAPI.initializeGit = vi.fn(() => new Promise<InitializationResponse>(resolve => { resolveInitialization = resolve; }));
+    const { onOpenChange } = await mount('en');
+    fireEvent.click(screen.getByRole('button', { name: 'Initialize Git' }));
+    fireEvent.click(screen.getByRole('button', { name: 'close' }));
+    expect(onOpenChange).not.toHaveBeenCalled();
+    await act(async () => resolveInitialization({ success: false }));
+    fireEvent.click(screen.getByRole('button', { name: 'close' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
   it('switches the visible actions without translating executable Git commands', async () => {
     const { i18n } = await mount('en');
     expect(screen.getByRole('button', { name: 'Initialize Git' })).toBeVisible();

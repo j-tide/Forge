@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ForgeMark } from '../ForgeBrand';
 import {
@@ -10,6 +10,7 @@ import {
   FullScreenDialogDescription
 } from '../ui/full-screen-dialog';
 import { ScrollArea } from '../ui/scroll-area';
+import { Button } from '../ui/button';
 import { WizardProgress, WizardStep } from './WizardProgress';
 import { WelcomeStep } from './WelcomeStep';
 import { AccountsStep } from './AccountsStep';
@@ -28,6 +29,7 @@ interface OnboardingWizardProps {
 
 // Wizard step identifiers
 type WizardStepId = 'welcome' | 'accounts' | 'devtools' | 'privacy' | 'memory' | 'completion';
+type CompletionAction = 'finish' | 'task' | 'settings';
 
 // Step configuration with translation keys
 const WIZARD_STEPS: { id: WizardStepId; labelKey: string }[] = [
@@ -60,6 +62,11 @@ export function OnboardingWizard({
   const { updateSettings } = useSettingsStore();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<WizardStepId>>(new Set());
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [isStepSaving, setIsStepSaving] = useState(false);
+  const [completionError, setCompletionError] = useState(false);
+  const completionPending = useRef(false);
+  const pendingAction = useRef<CompletionAction>('finish');
 
   // Get current step ID
   const currentStepId = WIZARD_STEPS[currentStepIndex].id;
@@ -91,40 +98,50 @@ export function OnboardingWizard({
   const resetWizard = useCallback(() => {
     setCurrentStepIndex(0);
     setCompletedSteps(new Set());
+    setCompletionError(false);
   }, []);
 
-  const completeWizard = useCallback(async () => {
-    // Mark onboarding as completed and close - save to disk AND update local state
+  const completeWizard = useCallback(async (action: CompletionAction) => {
+    if (completionPending.current) return;
+    completionPending.current = true;
+    pendingAction.current = action;
+    setIsCompleting(true);
+    setCompletionError(false);
+    let saved = false;
     try {
       const result = await window.electronAPI.saveSettings({ onboardingCompleted: true });
-      if (!result?.success) {
-        console.error('Failed to save onboarding completion:', result?.error);
-      }
-    } catch (err) {
-      console.error('Error saving onboarding completion:', err);
+      saved = result?.success === true;
+    } catch {
+      // Keep the user's current step and intended action available for retry.
+    }
+    if (!saved) {
+      setCompletionError(true);
+      completionPending.current = false;
+      setIsCompleting(false);
+      return;
     }
     updateSettings({ onboardingCompleted: true });
-    onOpenChange(false);
     resetWizard();
-  }, [updateSettings, onOpenChange, resetWizard]);
+    onOpenChange(false);
+    completionPending.current = false;
+    setIsCompleting(false);
+    if (action === 'task') onOpenTaskCreator?.();
+    if (action === 'settings') onOpenSettings?.();
+  }, [updateSettings, onOpenChange, resetWizard, onOpenTaskCreator, onOpenSettings]);
+
+  const finishWizard = useCallback(() => {
+    void completeWizard('finish');
+  }, [completeWizard]);
 
   // Handle opening task creator from within wizard
   const handleOpenTaskCreator = useCallback(() => {
-    if (onOpenTaskCreator) {
-      // Close wizard first, then open task creator
-      onOpenChange(false);
-      onOpenTaskCreator();
-    }
-  }, [onOpenTaskCreator, onOpenChange]);
+    void completeWizard('task');
+  }, [completeWizard]);
 
   // Handle opening settings from completion step
   const handleOpenSettings = useCallback(() => {
-    if (onOpenSettings) {
-      // Finish wizard first, then open settings
-      completeWizard();
-      onOpenSettings();
-    }
-  }, [onOpenSettings, completeWizard]);
+    void completeWizard('settings');
+  }, [completeWizard]);
 
   // Render current step content
   const renderStepContent = () => {
@@ -133,7 +150,7 @@ export function OnboardingWizard({
         return (
           <WelcomeStep
             onGetStarted={goToNextStep}
-            onSkip={completeWizard}
+            onSkip={finishWizard}
           />
         );
       case 'accounts':
@@ -141,7 +158,7 @@ export function OnboardingWizard({
           <AccountsStep
             onNext={goToNextStep}
             onBack={goToPreviousStep}
-            onSkip={completeWizard}
+            onSkip={goToNextStep}
           />
         );
       case 'devtools':
@@ -149,6 +166,7 @@ export function OnboardingWizard({
           <DevToolsStep
             onNext={goToNextStep}
             onBack={goToPreviousStep}
+            onSavingChange={setIsStepSaving}
           />
         );
       case 'privacy':
@@ -156,6 +174,7 @@ export function OnboardingWizard({
           <PrivacyStep
             onNext={goToNextStep}
             onBack={goToPreviousStep}
+            onSavingChange={setIsStepSaving}
           />
         );
       case 'memory':
@@ -163,14 +182,15 @@ export function OnboardingWizard({
           <MemoryStep
             onNext={goToNextStep}
             onBack={goToPreviousStep}
+            onSavingChange={setIsStepSaving}
           />
         );
       case 'completion':
         return (
           <CompletionStep
-            onFinish={completeWizard}
-            onOpenTaskCreator={handleOpenTaskCreator}
-            onOpenSettings={handleOpenSettings}
+            onFinish={finishWizard}
+            onOpenTaskCreator={onOpenTaskCreator ? handleOpenTaskCreator : undefined}
+            onOpenSettings={onOpenSettings ? handleOpenSettings : undefined}
           />
         );
       default:
@@ -178,19 +198,20 @@ export function OnboardingWizard({
     }
   };
 
-  // Handle dialog close - ask for confirmation if not completed
+  // Closing or skipping still persists completion before dismissing the dialog.
   const handleOpenChange = useCallback((newOpen: boolean) => {
     if (!newOpen) {
+      if (isStepSaving) return;
       // If closing before completion, skip the wizard
-      completeWizard();
+      finishWizard();
     } else {
       onOpenChange(newOpen);
     }
-  }, [completeWizard, onOpenChange]);
+  }, [finishWizard, onOpenChange, isStepSaving]);
 
   return (
     <FullScreenDialog open={open} onOpenChange={handleOpenChange}>
-      <FullScreenDialogContent>
+      <FullScreenDialogContent aria-busy={isCompleting || isStepSaving}>
         <FullScreenDialogHeader>
           <FullScreenDialogTitle className="flex items-center gap-3">
             <ForgeMark size={24} decorative />
@@ -199,6 +220,15 @@ export function OnboardingWizard({
           <FullScreenDialogDescription>
             {t('wizard.description')}
           </FullScreenDialogDescription>
+          {completionError && (
+            <div role="alert" className="flex items-center justify-between gap-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+              <span>{t('wizard.completionSaveFailed')}</span>
+              <Button variant="outline" size="sm" onClick={() => void completeWizard(pendingAction.current)}>
+                {t('wizard.retry')}
+              </Button>
+            </div>
+          )}
+          {isCompleting && <p role="status" className="text-sm text-muted-foreground">{t('wizard.saving')}</p>}
 
           {/* Progress indicator - show for all steps except welcome and completion */}
           {currentStepId !== 'welcome' && currentStepId !== 'completion' && (
@@ -210,7 +240,9 @@ export function OnboardingWizard({
 
         <FullScreenDialogBody>
           <ScrollArea className="h-full">
-            {renderStepContent()}
+            <fieldset disabled={isCompleting} className="min-w-0 border-0 p-0">
+              {renderStepContent()}
+            </fieldset>
           </ScrollArea>
         </FullScreenDialogBody>
       </FullScreenDialogContent>

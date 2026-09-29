@@ -100,9 +100,10 @@ export function AddProjectModal({ open, onOpenChange, onProjectAdded }: AddProje
       if (path) {
         locationEdited.current = true;
         setProjectLocation(path);
+        setError(null);
       }
-    } catch {
-      // User cancelled - ignore
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('addProject.locationFailed'));
     }
   };
 
@@ -243,7 +244,10 @@ export function AddProjectModal({ open, onOpenChange, onProjectAdded }: AddProje
             id="project-name"
             placeholder={t('addProject.projectNamePlaceholder')}
             value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
+            onChange={(e) => {
+              setProjectName(e.target.value);
+              setError(null);
+            }}
             autoFocus
           />
           <p className="text-xs text-muted-foreground">
@@ -262,6 +266,7 @@ export function AddProjectModal({ open, onOpenChange, onProjectAdded }: AddProje
               onChange={(e) => {
                 locationEdited.current = true;
                 setProjectLocation(e.target.value);
+                setError(null);
               }}
               className="flex-1"
             />

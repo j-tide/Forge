@@ -68,6 +68,8 @@ interface SidebarProps {
   activeView?: SidebarView;
   isSettingsActive?: boolean;
   isNavigationBlocked?: boolean;
+  isSetupBlocked?: boolean;
+  onGitSetupStateChange?: (projectId: string, ready: boolean) => void;
   onViewChange?: (view: SidebarView) => void;
 }
 
@@ -109,9 +111,11 @@ export function Sidebar({
   activeView = 'kanban',
   isSettingsActive = false,
   isNavigationBlocked = false,
+  isSetupBlocked = false,
+  onGitSetupStateChange,
   onViewChange
 }: SidebarProps) {
-  const { t } = useTranslation(['navigation', 'dialogs', 'common', 'welcome', 'uiShell']);
+  const { t } = useTranslation(['navigation', 'dialogs', 'common', 'welcome', 'uiShell', 'onboarding']);
   const projects = useProjectStore((state) => state.projects);
   const selectedProjectId = useProjectStore((state) => state.selectedProjectId);
   const settings = useSettingsStore((state) => state.settings);
@@ -121,10 +125,13 @@ export function Sidebar({
   const [showInitDialog, setShowInitDialog] = useState(false);
   const [showGitSetupModal, setShowGitSetupModal] = useState(false);
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
+  const [gitCheckError, setGitCheckError] = useState(false);
+  const [gitCheckAttempt, setGitCheckAttempt] = useState(0);
   const [pendingProject, setPendingProject] = useState<Project | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
+  const selectedProjectPath = selectedProject?.path;
 
   // Sidebar collapsed state from settings
   const isCollapsed = settings.sidebarCollapsed ?? false;
@@ -210,27 +217,46 @@ export function Sidebar({
   }, [selectedProjectId, onViewChange, visibleNavItems, isSettingsActive, isNavigationBlocked]);
 
   // Check git status when project changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Retrying intentionally starts a fresh Git status request.
   useEffect(() => {
+    let current = true;
+    setShowGitSetupModal(false);
+    setGitStatus(null);
+    setGitCheckError(false);
     const checkGit = async () => {
-      if (selectedProject) {
+      if (selectedProjectId && selectedProjectPath) {
+        onGitSetupStateChange?.(selectedProjectId, false);
         try {
-          const result = await window.electronAPI.checkGitStatus(selectedProject.path);
+          const result = await window.electronAPI.checkGitStatus(selectedProjectPath);
+          if (!current) return;
           if (result.success && result.data) {
             setGitStatus(result.data);
             // Show git setup modal if project is not a git repo or has no commits
             if (!result.data.isGitRepo || !result.data.hasCommits) {
               setShowGitSetupModal(true);
+            } else {
+              onGitSetupStateChange?.(selectedProjectId, true);
             }
+          } else {
+            setGitCheckError(true);
           }
         } catch (error) {
+          if (!current) return;
           console.error('Failed to check git status:', error);
+          setGitCheckError(true);
         }
       } else {
         setGitStatus(null);
       }
     };
     checkGit();
-  }, [selectedProject]);
+    return () => { current = false; };
+  }, [selectedProjectId, selectedProjectPath, onGitSetupStateChange, gitCheckAttempt]);
+
+  const handleGitSetupOpenChange = (open: boolean) => {
+    setShowGitSetupModal(open);
+    if (!open && selectedProject) onGitSetupStateChange?.(selectedProject.id, true);
+  };
 
   const handleProjectAdded = (project: Project, needsInit: boolean) => {
     if (needsInit) {
@@ -404,6 +430,22 @@ export function Sidebar({
           </Tooltip>
         </div>
 
+        {gitCheckError && (
+          <div role="alert" className={cn('mb-3 text-sm text-destructive', isCollapsed ? 'px-2' : 'mx-3 rounded-lg bg-destructive/10 p-3')}>
+            {!isCollapsed && <p className="mb-2">{t('onboarding:wizard.gitCheckFailed')}</p>}
+            <Button
+              variant="outline"
+              size={isCollapsed ? 'icon' : 'sm'}
+              aria-label={t('onboarding:wizard.retryGitCheck')}
+              title={t('onboarding:wizard.gitCheckFailed')}
+              onClick={() => setGitCheckAttempt(attempt => attempt + 1)}
+            >
+              <RefreshCw className="h-4 w-4" />
+              {!isCollapsed && t('common:buttons.retry')}
+            </Button>
+          </div>
+        )}
+
         <ScrollArea className="min-h-0 flex-1">
           <nav className={cn('forge-glass-sidebar-nav space-y-5 pb-4', isCollapsed ? 'px-2' : 'px-3')} aria-label={t('sections.navigation')}>
             {[
@@ -551,8 +593,8 @@ export function Sidebar({
 
       {/* Git Setup Modal */}
       <GitSetupModal
-        open={showGitSetupModal}
-        onOpenChange={setShowGitSetupModal}
+        open={showGitSetupModal && !isSetupBlocked && !showHelpDialog}
+        onOpenChange={handleGitSetupOpenChange}
         project={selectedProject || null}
         gitStatus={gitStatus}
         onGitInitialized={handleGitInitialized}

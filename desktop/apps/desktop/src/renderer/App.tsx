@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MotionConfig } from 'motion/react';
 import { useAppearancePreferences } from './hooks/useAppearancePreferences';
 import { useTranslation } from 'react-i18next';
@@ -8,9 +8,6 @@ import {
   DndContext,
   DragOverlay,
   closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
   type DragStartEvent,
   type DragEndEvent
 } from '@dnd-kit/core';
@@ -19,6 +16,7 @@ import {
   horizontalListSortingStrategy
 } from '@dnd-kit/sortable';
 import { TooltipProvider } from './components/ui/tooltip';
+import { useProjectTabSensors } from './components/SortableProjectTab';
 import { Button } from './components/ui/button';
 import { Toaster } from './components/ui/toaster';
 import {
@@ -162,6 +160,9 @@ export function App() {
   const [initError, setInitError] = useState<string | null>(null);
   const [skippedInitProjectId, setSkippedInitProjectId] = useState<string | null>(null);
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
+  const [awaitingTaskProject, setAwaitingTaskProject] = useState(false);
+  const [pendingTaskProjectId, setPendingTaskProjectId] = useState<string | null>(null);
+  const [gitSetupState, setGitSetupState] = useState<{ projectId: string; ready: boolean } | null>(null);
 
   // GitHub setup state (shown after Forge init)
   const [showGitHubSetup, setShowGitHubSetup] = useState(false);
@@ -172,14 +173,7 @@ export function App() {
   const [removeProjectError, setRemoveProjectError] = useState<string | null>(null);
   const [projectToRemove, setProjectToRemove] = useState<Project | null>(null);
 
-  // Setup drag sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // 8px movement required before drag starts
-      },
-    })
-  );
+  const sensors = useProjectTabSensors();
 
   // Track dragging state for overlay
   const [activeDragProject, setActiveDragProject] = useState<Project | null>(null);
@@ -189,6 +183,11 @@ export function App() {
   const selectedProject = projects.find((p) => p.id === (activeProjectId || selectedProjectId));
   const settingsProject = projects.find((project) => project.id === projectSettingsProjectId);
   const isAnySettingsPageOpen = isSettingsPageOpen || !!settingsProject;
+  const isSelectedGitSetupReady = !!selectedProject && gitSetupState?.projectId === selectedProject.id && gitSetupState.ready;
+
+  const handleGitSetupStateChange = useCallback((projectId: string, ready: boolean) => {
+    setGitSetupState({ projectId, ready });
+  }, []);
 
   const openAppSettings = (section?: AppSection) => {
     setProjectSettingsProjectId(null);
@@ -403,10 +402,11 @@ export function App() {
 
   // Reset init success flag when selected project changes
   // This allows the init dialog to show for new/different projects
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Project changes explicitly reset this local workflow state.
   useEffect(() => {
     setInitSuccess(false);
     setInitError(null);
-  }, []);
+  }, [selectedProject?.id]);
 
   // Check if selected project needs initialization (e.g., .forge-glass-preview folder was deleted)
   useEffect(() => {
@@ -423,8 +423,20 @@ export function App() {
       setInitError(null); // Clear any previous errors
       setInitSuccess(false); // Reset success flag
       setShowInitDialog(true);
+    } else {
+      setShowInitDialog(false);
+      setPendingProject(null);
     }
   }, [selectedProject, skippedInitProjectId, isInitializing, initSuccess]);
+
+  // Resume the requested task editor only after its explicit project is ready.
+  useEffect(() => {
+    if (!pendingTaskProjectId || selectedProject?.id !== pendingTaskProjectId || !selectedProject.autoBuildPath) return;
+    if (!isSelectedGitSetupReady || showAddProjectModal || showInitDialog || showGitHubSetup || isOnboardingWizardOpen) return;
+    setPendingTaskProjectId(null);
+    setActiveView('kanban');
+    setIsNewTaskDialogOpen(true);
+  }, [pendingTaskProjectId, selectedProject?.id, selectedProject?.autoBuildPath, isSelectedGitSetupReady, showAddProjectModal, showInitDialog, showGitHubSetup, isOnboardingWizardOpen]);
 
   // Global keyboard shortcut: Cmd/Ctrl+T to add project (when not on terminals view)
   useEffect(() => {
@@ -677,6 +689,10 @@ export function App() {
 
   const handleProjectAdded = (project: Project, needsInit: boolean) => {
     openProjectTab(project.id);
+    if (awaitingTaskProject) {
+      setAwaitingTaskProject(false);
+      setPendingTaskProjectId(project.id);
+    }
     if (needsInit) {
       setPendingProject(project);
       setInitError(null);
@@ -849,6 +865,7 @@ export function App() {
     setPendingProject(null);
     setInitError(null); // Clear any error when skipping
     setInitSuccess(false); // Reset success flag
+    setPendingTaskProjectId(null);
   };
 
   const handleGoToTask = (taskId: string) => {
@@ -874,6 +891,8 @@ export function App() {
           activeView={activeView}
           isSettingsActive={isSettingsPageOpen}
           isNavigationBlocked={isAnySettingsPageOpen}
+          isSetupBlocked={showAddProjectModal || isOnboardingWizardOpen || showGitHubSetup}
+          onGitSetupStateChange={handleGitSetupStateChange}
           onViewChange={(view) => {
             closeSettings();
             setActiveView(view);
@@ -969,7 +988,7 @@ export function App() {
                   <Ideation projectId={activeProjectId || selectedProjectId!} onGoToTask={handleGoToTask} />
                 )}
                 {activeView === 'insights' && (activeProjectId || selectedProjectId) && (
-                  <Insights projectId={activeProjectId || selectedProjectId!} />
+                  <Insights projectId={activeProjectId || selectedProjectId!} onOpenAccountSettings={() => openAppSettings('accounts')} />
                 )}
                 {activeView === 'github-issues' && (activeProjectId || selectedProjectId) && (
                   <GitHubIssues
@@ -1049,12 +1068,15 @@ export function App() {
         {/* Add Project Modal */}
         <AddProjectModal
           open={showAddProjectModal}
-          onOpenChange={setShowAddProjectModal}
+          onOpenChange={(open) => {
+            setShowAddProjectModal(open);
+            if (!open) setAwaitingTaskProject(false);
+          }}
           onProjectAdded={handleProjectAdded}
         />
 
         {/* Initialize Forge Dialog */}
-        <Dialog open={showInitDialog} onOpenChange={(open) => {
+        <Dialog open={showInitDialog && isSelectedGitSetupReady && !showAddProjectModal && !isOnboardingWizardOpen} onOpenChange={(open) => {
           console.warn('[InitDialog] onOpenChange called', { open, pendingProject: !!pendingProject, isInitializing, initSuccess });
           // Only trigger skip if user manually closed the dialog
           // Don't trigger if: successful init, no pending project, or currently initializing
@@ -1202,12 +1224,16 @@ export function App() {
           open={isOnboardingWizardOpen}
           onOpenChange={setIsOnboardingWizardOpen}
           onOpenTaskCreator={() => {
-            setIsOnboardingWizardOpen(false);
-            setIsNewTaskDialogOpen(true);
+            closeSettings();
+            if (selectedProject) {
+              setPendingTaskProjectId(selectedProject.id);
+            } else {
+              setAwaitingTaskProject(true);
+              setShowAddProjectModal(true);
+            }
           }}
           onOpenSettings={() => {
-            setIsOnboardingWizardOpen(false);
-            openAppSettings();
+            openAppSettings('appearance');
           }}
         />
 

@@ -100,6 +100,7 @@ describe('OnboardingWizard Integration Tests', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSaveSettings.mockResolvedValue({ success: true });
   });
 
   describe('Accounts Step Navigation', () => {
@@ -206,7 +207,7 @@ describe('OnboardingWizard Integration Tests', () => {
       });
     });
 
-    it('should allow skipping from accounts step', async () => {
+    it('should skip only accounts and continue to developer tools', async () => {
       render(<OnboardingWizard {...defaultProps} />);
 
       // Navigate to accounts
@@ -218,10 +219,10 @@ describe('OnboardingWizard Integration Tests', () => {
       // Click skip
       fireEvent.click(screen.getByRole('button', { name: /Skip for now/ }));
 
-      // Should call saveSettings
       await waitFor(() => {
-        expect(mockSaveSettings).toHaveBeenCalledWith({ onboardingCompleted: true });
+        expect(screen.getByText('devtools.title')).toBeInTheDocument();
       });
+      expect(mockSaveSettings).not.toHaveBeenCalled();
     });
   });
 });

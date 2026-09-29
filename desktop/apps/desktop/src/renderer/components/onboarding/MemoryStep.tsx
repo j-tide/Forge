@@ -9,6 +9,7 @@ import { MemoryConfigPanel, type MemoryPanelConfig } from '../shared/MemoryConfi
 interface MemoryStepProps {
   onNext: () => void;
   onBack: () => void;
+  onSavingChange?: (saving: boolean) => void;
 }
 
 /**
@@ -16,19 +17,19 @@ interface MemoryStepProps {
  *
  * Shows a simplified view: header, MemoryConfigPanel, and Back/Skip/Save buttons.
  */
-export function MemoryStep({ onNext, onBack }: MemoryStepProps) {
+export function MemoryStep({ onNext, onBack, onSavingChange }: MemoryStepProps) {
   const { t } = useTranslation(['onboarding', 'uiShellOnboarding']);
   const { settings, updateSettings } = useSettingsStore();
 
   const [config, setConfig] = useState<MemoryPanelConfig>({
-    enabled: true,
-    embeddingProvider: 'ollama',
+    enabled: settings.memoryEnabled ?? true,
+    embeddingProvider: settings.memoryEmbeddingProvider || 'ollama',
     openaiApiKey: settings.globalOpenAIApiKey || '',
     openaiEmbeddingModel: settings.memoryOpenaiEmbeddingModel || '',
-    azureOpenaiApiKey: '',
-    azureOpenaiBaseUrl: '',
-    azureOpenaiEmbeddingDeployment: '',
-    voyageApiKey: '',
+    azureOpenaiApiKey: settings.memoryAzureApiKey || '',
+    azureOpenaiBaseUrl: settings.memoryAzureBaseUrl || '',
+    azureOpenaiEmbeddingDeployment: settings.memoryAzureEmbeddingDeployment || '',
+    voyageApiKey: settings.memoryVoyageApiKey || '',
     voyageEmbeddingModel: settings.memoryVoyageEmbeddingModel || '',
     googleApiKey: settings.globalGoogleApiKey || '',
     googleEmbeddingModel: settings.memoryGoogleEmbeddingModel || '',
@@ -56,7 +57,9 @@ export function MemoryStep({ onNext, onBack }: MemoryStepProps) {
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
     setIsSaving(true);
+    onSavingChange?.(true);
     setError(null);
 
     try {
@@ -105,6 +108,7 @@ export function MemoryStep({ onNext, onBack }: MemoryStepProps) {
       setError(err instanceof Error ? err.message : t('uiShellOnboarding:unknownError'));
     } finally {
       setIsSaving(false);
+      onSavingChange?.(false);
     }
   };
 
@@ -128,7 +132,7 @@ export function MemoryStep({ onNext, onBack }: MemoryStepProps) {
 
         {/* Error banner */}
         {error && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 mb-6">
+          <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 mb-6">
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
@@ -145,6 +149,7 @@ export function MemoryStep({ onNext, onBack }: MemoryStepProps) {
           <Button
             variant="ghost"
             onClick={onBack}
+            disabled={isSaving}
             className="text-muted-foreground hover:text-foreground"
           >
             {t('memory.back')}

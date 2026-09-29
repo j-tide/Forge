@@ -26,7 +26,7 @@ export function WizardProgress({ currentStep, steps }: WizardProgressProps) {
         const isUpcoming = index > currentStep;
 
         return (
-          <div key={step.id} className="flex items-center">
+          <div key={step.id} className="flex items-center" aria-current={isCurrent ? 'step' : undefined}>
             {/* Step indicator circle */}
             <div className="flex flex-col items-center">
               <div
@@ -38,7 +38,7 @@ export function WizardProgress({ currentStep, steps }: WizardProgressProps) {
                 )}
               >
                 {isCompleted ? (
-                  <Check className="h-5 w-5" />
+                  <Check className="h-5 w-5" aria-hidden="true" />
                 ) : (
                   <span>{index + 1}</span>
                 )}

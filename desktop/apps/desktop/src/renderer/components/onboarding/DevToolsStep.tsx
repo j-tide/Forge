@@ -18,6 +18,7 @@ import type { SupportedIDE, SupportedTerminal, SupportedCLI } from '../../../sha
 interface DevToolsStepProps {
   onNext: () => void;
   onBack: () => void;
+  onSavingChange?: (saving: boolean) => void;
 }
 
 interface DetectedTool {
@@ -97,7 +98,7 @@ const CLI_NAMES: Partial<Record<SupportedCLI, string>> = {
  * Detects installed IDEs and terminals, allows the user to select
  * their preferred tools for opening worktrees.
  */
-export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
+export function DevToolsStep({ onNext, onBack, onSavingChange }: DevToolsStepProps) {
   const { t } = useTranslation(['onboarding', 'uiShellOnboarding']);
   const { settings, updateSettings } = useSettingsStore();
   const [preferredIDE, setPreferredIDE] = useState<SupportedIDE>(settings.preferredIDE || 'vscode');
@@ -111,15 +112,16 @@ export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
   const [isDetecting, setIsDetecting] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [detectionError, setDetectionError] = useState(false);
 
   // Detect installed tools on mount
   const detectTools = useCallback(async () => {
     setIsDetecting(true);
+    setDetectionError(false);
     try {
       // Check if the API is available (may not be in dev mode or if preload failed)
       if (!window.electronAPI?.worktreeDetectTools) {
-        console.warn('[DevToolsStep] Detection API not available, using fallback');
-        setIsDetecting(false);
+        setDetectionError(true);
         return;
       }
 
@@ -131,9 +133,11 @@ export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
         if (!settings.preferredIDE && result.data.ides.length > 0) {
           setPreferredIDE(result.data.ides[0].id as SupportedIDE);
         }
+      } else {
+        setDetectionError(true);
       }
-    } catch (err) {
-      console.error('Failed to detect tools:', err);
+    } catch {
+      setDetectionError(true);
     } finally {
       setIsDetecting(false);
     }
@@ -144,17 +148,27 @@ export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
   }, [detectTools]);
 
   const handleSave = async () => {
+    if (isSaving) return;
+    if (
+      (preferredIDE === 'custom' && !customIDEPath.trim()) ||
+      (preferredTerminal === 'custom' && !customTerminalPath.trim()) ||
+      (preferredCLI === 'custom' && !customCLIPath.trim())
+    ) {
+      setError(t('devtools.customPathRequired'));
+      return;
+    }
     setIsSaving(true);
+    onSavingChange?.(true);
     setError(null);
 
     try {
       const settingsToSave = {
         preferredIDE,
         preferredTerminal,
-        customIDEPath: preferredIDE === 'custom' ? customIDEPath : undefined,
-        customTerminalPath: preferredTerminal === 'custom' ? customTerminalPath : undefined,
+        customIDEPath: preferredIDE === 'custom' ? customIDEPath.trim() : undefined,
+        customTerminalPath: preferredTerminal === 'custom' ? customTerminalPath.trim() : undefined,
         preferredCLI,
-        customCLIPath: preferredCLI === 'custom' ? customCLIPath : undefined
+        customCLIPath: preferredCLI === 'custom' ? customCLIPath.trim() : undefined
       };
 
       const result = await window.electronAPI.saveSettings(settingsToSave);
@@ -169,6 +183,7 @@ export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
       setError(err instanceof Error ? err.message : t('uiShellOnboarding:unknownError'));
     } finally {
       setIsSaving(false);
+      onSavingChange?.(false);
     }
   };
 
@@ -299,10 +314,10 @@ export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
         {!isDetecting && (
           <div className="space-y-6">
             {/* Error banner */}
-            {error && (
+            {(error || detectionError) && (
               <Card className="border border-destructive/30 bg-destructive/10">
                 <CardContent className="p-4">
-                  <p className="text-sm text-destructive">{error}</p>
+                  <p role="alert" className="text-sm text-destructive">{error || t('devtools.detectionFailed')}</p>
                 </CardContent>
               </Card>
             )}
@@ -330,7 +345,7 @@ export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
                 variant="outline"
                 size="sm"
                 onClick={detectTools}
-                disabled={isDetecting}
+                disabled={isDetecting || isSaving}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 {t('devtools.detectAgain')}
@@ -339,7 +354,7 @@ export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
 
             {/* IDE Selection */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Label htmlFor="onboarding-preferred-ide" className="text-sm font-medium text-foreground flex items-center gap-2">
                 <Code className="h-4 w-4" />
                 {t('devtools.ide.label')}
               </Label>
@@ -348,7 +363,7 @@ export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
                 onValueChange={(value: SupportedIDE) => setPreferredIDE(value)}
                 disabled={isSaving}
               >
-                <SelectTrigger>
+                <SelectTrigger id="onboarding-preferred-ide">
                   <SelectValue placeholder={t('uiShellOnboarding:selectIDE')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -388,7 +403,7 @@ export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
 
             {/* Terminal Selection */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Label htmlFor="onboarding-preferred-terminal" className="text-sm font-medium text-foreground flex items-center gap-2">
                 <Terminal className="h-4 w-4" />
                 {t('devtools.terminal.label')}
               </Label>
@@ -397,7 +412,7 @@ export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
                 onValueChange={(value: SupportedTerminal) => setPreferredTerminal(value)}
                 disabled={isSaving}
               >
-                <SelectTrigger>
+                <SelectTrigger id="onboarding-preferred-terminal">
                   <SelectValue placeholder={t('uiShellOnboarding:selectTerminal')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -437,7 +452,7 @@ export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
 
             {/* CLI Selection */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Label htmlFor="onboarding-preferred-cli" className="text-sm font-medium text-foreground flex items-center gap-2">
                 <Terminal className="h-4 w-4" />
                 {t('devtools.cli.label')}
               </Label>
@@ -446,7 +461,7 @@ export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
                 onValueChange={(value: SupportedCLI) => setPreferredCLI(value)}
                 disabled={isSaving}
               >
-                <SelectTrigger>
+                <SelectTrigger id="onboarding-preferred-cli">
                   <SelectValue placeholder={t('uiShellOnboarding:selectCLI')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -512,6 +527,7 @@ export function DevToolsStep({ onNext, onBack }: DevToolsStepProps) {
           <Button
             variant="ghost"
             onClick={onBack}
+            disabled={isSaving}
             className="text-muted-foreground hover:text-foreground"
           >
             {t('common:buttons.back', 'Back')}

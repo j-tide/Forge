@@ -11,6 +11,7 @@ import { notifySentryStateChanged } from '../../lib/sentry';
 interface PrivacyStepProps {
   onNext: () => void;
   onBack: () => void;
+  onSavingChange?: (saving: boolean) => void;
 }
 
 /**
@@ -18,7 +19,7 @@ interface PrivacyStepProps {
  * Explains what data is collected and what is never collected.
  * Reporting is off until the user opts in.
  */
-export function PrivacyStep({ onNext, onBack }: PrivacyStepProps) {
+export function PrivacyStep({ onNext, onBack, onSavingChange }: PrivacyStepProps) {
   const { t } = useTranslation(['onboarding', 'common', 'uiShellOnboarding']);
   const { settings, updateSettings } = useSettingsStore();
   const [sentryEnabled, setSentryEnabled] = useState(settings.sentryEnabled ?? false);
@@ -31,7 +32,9 @@ export function PrivacyStep({ onNext, onBack }: PrivacyStepProps) {
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
     setIsSaving(true);
+    onSavingChange?.(true);
     setError(null);
     try {
       const result = await window.electronAPI.saveSettings({ sentryEnabled });
@@ -46,6 +49,7 @@ export function PrivacyStep({ onNext, onBack }: PrivacyStepProps) {
       setError(t('uiShellOnboarding:privacySaveFailed'));
     } finally {
       setIsSaving(false);
+      onSavingChange?.(false);
     }
   };
 
@@ -126,6 +130,7 @@ export function PrivacyStep({ onNext, onBack }: PrivacyStepProps) {
                   id="sentry-toggle"
                   checked={sentryEnabled}
                   onCheckedChange={handleToggle}
+                  disabled={isSaving}
                 />
               </div>
             </CardContent>
@@ -134,7 +139,7 @@ export function PrivacyStep({ onNext, onBack }: PrivacyStepProps) {
 
         {/* Error Display */}
         {error && (
-          <div className="flex items-start gap-2 p-3 mt-6 rounded-md bg-destructive/10 text-destructive text-sm">
+          <div role="alert" className="flex items-start gap-2 p-3 mt-6 rounded-md bg-destructive/10 text-destructive text-sm">
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
             {error}
           </div>
@@ -142,7 +147,7 @@ export function PrivacyStep({ onNext, onBack }: PrivacyStepProps) {
 
         {/* Action Buttons */}
         <div className="flex justify-between items-center mt-10 pt-6 border-t border-border">
-          <Button variant="ghost" onClick={onBack}>
+          <Button variant="ghost" onClick={onBack} disabled={isSaving}>
             {t('common:buttons.back')}
           </Button>
           <Button onClick={handleSave} disabled={isSaving}>

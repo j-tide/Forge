@@ -1,4 +1,5 @@
-import { useSortable } from '@dnd-kit/sortable';
+import { useSortable, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
 import { GripVertical, Settings2, X, Folder } from 'lucide-react';
@@ -19,10 +20,17 @@ interface SortableProjectTabProps {
 const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 const modKey = isMac ? '⌘' : 'Ctrl+';
 
+export function useProjectTabSensors() {
+  return useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+}
+
 export function SortableProjectTab({ project, isActive, canClose, tabIndex, onSelect, onClose, onSettingsClick }: SortableProjectTabProps) {
   const { t } = useTranslation('common');
   const shortcutHint = tabIndex < 9 ? `${modKey}${tabIndex + 1}` : '';
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
 
   return (
     <div
@@ -37,6 +45,7 @@ export function SortableProjectTab({ project, isActive, canClose, tabIndex, onSe
     >
       <button
         type="button"
+        ref={setActivatorNodeRef}
         {...attributes}
         {...listeners}
         className="flex h-6 w-4 shrink-0 touch-none items-center justify-center rounded text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-grab active:cursor-grabbing"

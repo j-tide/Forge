@@ -7,6 +7,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 
@@ -29,7 +30,7 @@ function NextStepCard({ icon, title, description, action, actionLabel }: NextSte
     <Card className="border border-border bg-card/50 backdrop-blur-sm">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <div aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             {icon}
           </div>
           <div className="flex-1">
@@ -64,6 +65,16 @@ export function CompletionStep({
   onOpenSettings
 }: CompletionStepProps) {
   const { t } = useTranslation('onboarding');
+  const [docsError, setDocsError] = useState(false);
+
+  const openDocs = async () => {
+    setDocsError(false);
+    try {
+      await window.electronAPI.openExternal('https://github.com/j-tide/Forge#readme');
+    } catch {
+      setDocsError(true);
+    }
+  };
 
   const nextSteps = [
     {
@@ -83,7 +94,9 @@ export function CompletionStep({
     {
       icon: <BookOpen className="h-5 w-5" />,
       title: t('completion.exploreDocs.title'),
-      description: t('completion.exploreDocs.description')
+      description: t('completion.exploreDocs.description'),
+      action: openDocs,
+      actionLabel: t('completion.exploreDocs.action')
     }
   ];
 
@@ -110,6 +123,8 @@ export function CompletionStep({
           </p>
         </div>
 
+        {docsError && <p role="alert" className="mb-4 text-sm text-destructive">{t('completion.exploreDocs.openFailed')}</p>}
+
         {/* Completion message */}
         <Card className="border border-success/30 bg-success/10 mb-8">
           <CardContent className="p-5">
@@ -134,9 +149,9 @@ export function CompletionStep({
             {t('completion.whatsNext')}
           </div>
           <div className="grid grid-cols-1 gap-3">
-            {nextSteps.map((step, index) => (
+            {nextSteps.map((step) => (
               <NextStepCard
-                key={index}
+                key={step.title}
                 icon={step.icon}
                 title={step.title}
                 description={step.description}

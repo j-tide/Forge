@@ -197,7 +197,10 @@ export function GitSetupModal({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!nextOpen && isInitializing) return;
+      onOpenChange(nextOpen);
+    }}>
       <DialogContent className="sm:max-w-md">
         {step === 'info' && renderInfoStep()}
         {step === 'initializing' && renderInitializingStep()}
