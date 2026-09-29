@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../../shared/i18n';
 import { Radio, Import, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -32,16 +33,19 @@ export function LinearIntegration({
   onOpenLinearImport
 }: LinearIntegrationProps) {
   useTranslation('uiSettings');
+  const enabledId = useId();
   if (!envConfig) return null;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
-          <Label className="font-normal text-foreground">{i18n.t('uiSettings:text050')}</Label>
-          <p className="text-xs text-muted-foreground">{i18n.t('uiSettings:text051')}</p>
+          <Label htmlFor={enabledId} className="font-normal text-foreground">{i18n.t('uiSettings:text050')}</Label>
+          <p id={`${enabledId}-description`} className="text-xs text-muted-foreground">{i18n.t('uiSettings:text051')}</p>
         </div>
         <Switch
+          id={enabledId}
+          aria-describedby={`${enabledId}-description`}
           checked={envConfig.linearEnabled}
           onCheckedChange={(checked) => updateEnvConfig({ linearEnabled: checked })}
         />
@@ -179,16 +183,17 @@ interface RealtimeSyncToggleProps {
 
 function RealtimeSyncToggle({ enabled, onToggle }: RealtimeSyncToggleProps) {
   useTranslation('uiSettings');
+  const controlId = useId();
   return (
     <div className="flex items-center justify-between">
       <div className="space-y-0.5">
         <div className="flex items-center gap-2">
           <Radio className="h-4 w-4 text-info" />
-          <Label className="font-normal text-foreground">{i18n.t('uiSettings:text059')}</Label>
+          <Label htmlFor={controlId} className="font-normal text-foreground">{i18n.t('uiSettings:text059')}</Label>
         </div>
-        <p className="text-xs text-muted-foreground pl-6">{i18n.t('uiSettings:text060')}</p>
+        <p id={`${controlId}-description`} className="text-xs text-muted-foreground pl-6">{i18n.t('uiSettings:text060')}</p>
       </div>
-      <Switch checked={enabled} onCheckedChange={onToggle} />
+      <Switch id={controlId} aria-describedby={`${controlId}-description`} checked={enabled} onCheckedChange={onToggle} />
     </div>
   );
 }

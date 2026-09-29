@@ -34,6 +34,7 @@ export function registerLinearHandlers(
     try {
       const content = readFileSync(envPath, 'utf-8');
       const vars = parseEnvFile(content);
+      if (vars['LINEAR_ENABLED']?.trim().toLowerCase() === 'false') return null;
       return vars['LINEAR_API_KEY'] || null;
     } catch {
       return null;

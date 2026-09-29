@@ -1,5 +1,5 @@
 import i18n from '../../../../shared/i18n';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Github, RefreshCw, KeyRound, Loader2, CheckCircle2, AlertCircle, User, Lock, Globe, ChevronDown, GitBranch } from 'lucide-react';
 import { Input } from '../../ui/input';
@@ -61,6 +61,8 @@ export function GitHubIntegration({
   setSettings
 }: GitHubIntegrationProps) {
   const { t } = useTranslation(['settings', 'common']);
+  const enabledId = useId();
+  const pushNewBranchesId = useId();
   const [authMode, setAuthMode] = useState<'manual' | 'oauth' | 'oauth-success'>('manual');
   const [oauthUsername, setOauthUsername] = useState<string | null>(null);
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
@@ -231,10 +233,12 @@ export function GitHubIntegration({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
-          <Label className="font-normal text-foreground">{i18n.t('uiSettings:text021')}</Label>
-          <p className="text-xs text-muted-foreground">{i18n.t('uiSettings:text022')}</p>
+          <Label htmlFor={enabledId} className="font-normal text-foreground">{i18n.t('uiSettings:text021')}</Label>
+          <p id={`${enabledId}-description`} className="text-xs text-muted-foreground">{i18n.t('uiSettings:text022')}</p>
         </div>
         <Switch
+          id={enabledId}
+          aria-describedby={`${enabledId}-description`}
           checked={envConfig.githubEnabled}
           onCheckedChange={(checked) => updateEnvConfig({ githubEnabled: checked })}
         />
@@ -405,14 +409,16 @@ export function GitHubIntegration({
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="font-normal text-foreground">
+                  <Label htmlFor={pushNewBranchesId} className="font-normal text-foreground">
                     {t('settings:projectSections.github.pushNewBranches.label')}
                   </Label>
-                  <p className="text-xs text-muted-foreground">
+                  <p id={`${pushNewBranchesId}-description`} className="text-xs text-muted-foreground">
                     {t('settings:projectSections.github.pushNewBranches.description')}
                   </p>
                 </div>
                 <Switch
+                  id={pushNewBranchesId}
+                  aria-describedby={`${pushNewBranchesId}-description`}
                   checked={pushNewBranches}
                   onCheckedChange={(checked) => setSettings(prev => ({ ...prev, pushNewBranches: checked }))}
                 />
@@ -674,16 +680,17 @@ interface AutoSyncToggleProps {
 }
 
 function AutoSyncToggle({ enabled, onToggle }: AutoSyncToggleProps) {
+  const controlId = useId();
   return (
     <div className="flex items-center justify-between">
       <div className="space-y-0.5">
         <div className="flex items-center gap-2">
           <RefreshCw className="h-4 w-4 text-info" />
-          <Label className="font-normal text-foreground">{i18n.t('uiSettings:text048')}</Label>
+          <Label htmlFor={controlId} className="font-normal text-foreground">{i18n.t('uiSettings:text048')}</Label>
         </div>
-        <p className="text-xs text-muted-foreground pl-6">{i18n.t('uiSettings:text049')}</p>
+        <p id={`${controlId}-description`} className="text-xs text-muted-foreground pl-6">{i18n.t('uiSettings:text049')}</p>
       </div>
-      <Switch checked={enabled} onCheckedChange={onToggle} />
+      <Switch id={controlId} aria-describedby={`${controlId}-description`} checked={enabled} onCheckedChange={onToggle} />
     </div>
   );
 }

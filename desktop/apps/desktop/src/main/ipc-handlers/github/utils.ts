@@ -204,6 +204,7 @@ export function getGitHubConfig(project: Project): GitHubConfig | null {
   try {
     const content = readFileSync(envPath, 'utf-8');
     const vars = parseEnvFile(content);
+    if (vars['GITHUB_ENABLED']?.trim().toLowerCase() === 'false') return null;
     let token: string | undefined = vars['GITHUB_TOKEN'];
     const repo = vars['GITHUB_REPO'];
 

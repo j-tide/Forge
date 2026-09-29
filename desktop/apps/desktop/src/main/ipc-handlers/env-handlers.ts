@@ -25,6 +25,13 @@ function envLine(vars: Record<string, string>, key: string, defaultVal: string =
   return vars[key] ? `${key}=${vars[key]}` : `# ${key}=${defaultVal}`;
 }
 
+function integrationEnabled(value: string | undefined, hasCredential: boolean): boolean {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === 'true') return true;
+  if (normalized === 'false') return false;
+  return hasCredential;
+}
+
 /**
  * Register all env-related IPC handlers
  */
@@ -52,6 +59,9 @@ export function registerEnvHandlers(
     if (config.autoBuildModel !== undefined) {
       existingVars['AUTO_BUILD_MODEL'] = config.autoBuildModel;
     }
+    if (config.linearEnabled !== undefined) {
+      existingVars['LINEAR_ENABLED'] = config.linearEnabled ? 'true' : 'false';
+    }
     if (config.linearApiKey !== undefined) {
       existingVars['LINEAR_API_KEY'] = config.linearApiKey;
     }
@@ -65,6 +75,9 @@ export function registerEnvHandlers(
       existingVars['LINEAR_REALTIME_SYNC'] = config.linearRealtimeSync ? 'true' : 'false';
     }
     // GitHub Integration
+    if (config.githubEnabled !== undefined) {
+      existingVars['GITHUB_ENABLED'] = config.githubEnabled ? 'true' : 'false';
+    }
     if (config.githubToken !== undefined) {
       existingVars['GITHUB_TOKEN'] = config.githubToken;
     }
@@ -193,6 +206,7 @@ ${existingVars['AUTO_BUILD_MODEL'] ? `AUTO_BUILD_MODEL=${existingVars['AUTO_BUIL
 # =============================================================================
 # LINEAR INTEGRATION (OPTIONAL)
 # =============================================================================
+${existingVars['LINEAR_ENABLED'] !== undefined ? `LINEAR_ENABLED=${existingVars['LINEAR_ENABLED']}` : '# LINEAR_ENABLED=true'}
 ${existingVars['LINEAR_API_KEY'] ? `LINEAR_API_KEY=${existingVars['LINEAR_API_KEY']}` : '# LINEAR_API_KEY='}
 ${existingVars['LINEAR_TEAM_ID'] ? `LINEAR_TEAM_ID=${existingVars['LINEAR_TEAM_ID']}` : '# LINEAR_TEAM_ID='}
 ${existingVars['LINEAR_PROJECT_ID'] ? `LINEAR_PROJECT_ID=${existingVars['LINEAR_PROJECT_ID']}` : '# LINEAR_PROJECT_ID='}
@@ -201,6 +215,7 @@ ${existingVars['LINEAR_REALTIME_SYNC'] !== undefined ? `LINEAR_REALTIME_SYNC=${e
 # =============================================================================
 # GITHUB INTEGRATION (OPTIONAL)
 # =============================================================================
+${existingVars['GITHUB_ENABLED'] !== undefined ? `GITHUB_ENABLED=${existingVars['GITHUB_ENABLED']}` : '# GITHUB_ENABLED=true'}
 ${existingVars['GITHUB_TOKEN'] ? `GITHUB_TOKEN=${existingVars['GITHUB_TOKEN']}` : '# GITHUB_TOKEN='}
 ${existingVars['GITHUB_REPO'] ? `GITHUB_REPO=${existingVars['GITHUB_REPO']}` : '# GITHUB_REPO=owner/repo'}
 ${existingVars['GITHUB_AUTO_SYNC'] !== undefined ? `GITHUB_AUTO_SYNC=${existingVars['GITHUB_AUTO_SYNC']}` : '# GITHUB_AUTO_SYNC=false'}
@@ -345,8 +360,8 @@ ${existingVars['GRAPHITI_DB_PATH'] ? `GRAPHITI_DB_PATH=${existingVars['GRAPHITI_
         config.autoBuildModel = vars['AUTO_BUILD_MODEL'];
       }
 
+      config.linearEnabled = integrationEnabled(vars['LINEAR_ENABLED'], Boolean(vars['LINEAR_API_KEY']));
       if (vars['LINEAR_API_KEY']) {
-        config.linearEnabled = true;
         config.linearApiKey = vars['LINEAR_API_KEY'];
       }
       if (vars['LINEAR_TEAM_ID']) {
@@ -360,8 +375,8 @@ ${existingVars['GRAPHITI_DB_PATH'] ? `GRAPHITI_DB_PATH=${existingVars['GRAPHITI_
       }
 
       // GitHub config
+      config.githubEnabled = integrationEnabled(vars['GITHUB_ENABLED'], Boolean(vars['GITHUB_TOKEN']));
       if (vars['GITHUB_TOKEN']) {
-        config.githubEnabled = true;
         config.githubToken = vars['GITHUB_TOKEN'];
       }
       if (vars['GITHUB_REPO']) {
@@ -372,10 +387,9 @@ ${existingVars['GRAPHITI_DB_PATH'] ? `GRAPHITI_DB_PATH=${existingVars['GRAPHITI_
       }
 
       // GitLab config
+      config.gitlabEnabled = integrationEnabled(vars[GITLAB_ENV_KEYS.ENABLED], Boolean(vars[GITLAB_ENV_KEYS.TOKEN]));
       if (vars[GITLAB_ENV_KEYS.TOKEN]) {
         config.gitlabToken = vars[GITLAB_ENV_KEYS.TOKEN];
-        // Enable by default if token exists and GITLAB_ENABLED is not explicitly false
-        config.gitlabEnabled = vars[GITLAB_ENV_KEYS.ENABLED]?.toLowerCase() !== 'false';
       }
       if (vars[GITLAB_ENV_KEYS.INSTANCE_URL]) {
         config.gitlabInstanceUrl = vars[GITLAB_ENV_KEYS.INSTANCE_URL];

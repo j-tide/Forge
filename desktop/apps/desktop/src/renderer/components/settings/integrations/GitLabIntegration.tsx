@@ -1,5 +1,5 @@
 import i18n from '../../../../shared/i18n';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, KeyRound, Loader2, CheckCircle2, AlertCircle, User, Lock, Globe, ChevronDown, GitBranch, Server, Terminal, ExternalLink } from 'lucide-react';
 import { Input } from '../../ui/input';
@@ -59,6 +59,7 @@ export function GitLabIntegration({
   setSettings
 }: GitLabIntegrationProps) {
   const { t } = useTranslation('gitlab');
+  const enabledId = useId();
   const [authMode, setAuthMode] = useState<'manual' | 'oauth' | 'oauth-success'>('manual');
   const [oauthUsername, setOauthUsername] = useState<string | null>(null);
   const [projects, setProjects] = useState<GitLabProject[]>([]);
@@ -314,12 +315,14 @@ export function GitLabIntegration({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
-          <Label className="font-normal text-foreground">{t('settings.enableIssues')}</Label>
-          <p className="text-xs text-muted-foreground">
+          <Label htmlFor={enabledId} className="font-normal text-foreground">{t('settings.enableIssues')}</Label>
+          <p id={`${enabledId}-description`} className="text-xs text-muted-foreground">
             {t('settings.enableIssuesDescription')}
           </p>
         </div>
         <Switch
+          id={enabledId}
+          aria-describedby={`${enabledId}-description`}
           checked={envConfig.gitlabEnabled}
           onCheckedChange={(checked) => updateEnvConfig({ gitlabEnabled: checked })}
         />
@@ -847,19 +850,20 @@ interface AutoSyncToggleProps {
 
 function AutoSyncToggle({ enabled, onToggle }: AutoSyncToggleProps) {
   const { t } = useTranslation('gitlab');
+  const controlId = useId();
 
   return (
     <div className="flex items-center justify-between">
       <div className="space-y-0.5">
         <div className="flex items-center gap-2">
           <RefreshCw className="h-4 w-4 text-info" />
-          <Label className="font-normal text-foreground">{t('settings.autoSyncOnLoad')}</Label>
+          <Label htmlFor={controlId} className="font-normal text-foreground">{t('settings.autoSyncOnLoad')}</Label>
         </div>
-        <p className="text-xs text-muted-foreground pl-6">
+        <p id={`${controlId}-description`} className="text-xs text-muted-foreground pl-6">
           {t('settings.autoSyncDescription')}
         </p>
       </div>
-      <Switch checked={enabled} onCheckedChange={onToggle} />
+      <Switch id={controlId} aria-describedby={`${controlId}-description`} checked={enabled} onCheckedChange={onToggle} />
     </div>
   );
 }
