@@ -1,4 +1,4 @@
-import { createActor } from 'xstate';
+import { createActor, transition } from 'xstate';
 import type { ActorRefFrom } from 'xstate';
 import type { BrowserWindow } from 'electron';
 import type { TaskEventPayload } from './agent/task-event-schema';
@@ -17,6 +17,15 @@ type TaskActor = ActorRefFrom<typeof taskMachine>;
 interface TaskContextEntry {
   task: Task;
   project: Project;
+}
+
+export class TaskStatusPersistenceError extends Error {
+  readonly code = 'STATUS_PERSISTENCE_FAILED';
+
+  constructor() {
+    super('Task status could not be persisted.');
+    this.name = 'TaskStatusPersistenceError';
+  }
 }
 
 const TERMINAL_EVENTS = new Set<string>([
@@ -50,16 +59,12 @@ export class TaskStateManager {
       return false;
     }
     this.setTaskContext(taskId, task, project);
-    this.lastSequenceByTask.set(taskId, event.sequence);
-
-    if (TERMINAL_EVENTS.has(event.type)) {
-      this.terminalEventSeen.add(taskId);
-    }
-
     const actor = this.getOrCreateActor(taskId);
     const stateBefore = String(actor.getSnapshot().value);
     console.debug(`[TaskStateManager] Sending ${event.type} to actor in state: ${stateBefore}`);
-    actor.send(event as TaskEvent);
+    if (!this.applyPersistedEvent(taskId, actor, event as TaskEvent)) return false;
+    this.lastSequenceByTask.set(taskId, event.sequence);
+    if (TERMINAL_EVENTS.has(event.type)) this.terminalEventSeen.add(taskId);
     const stateAfter = String(actor.getSnapshot().value);
     console.debug(`[TaskStateManager] After ${event.type}: state ${stateBefore} -> ${stateAfter}`);
     return true;
@@ -82,60 +87,69 @@ export class TaskStateManager {
     // A code-0 exit is normal (e.g., spec creation finished, plan created, waiting for review).
     // Sending unexpected:true for code-0 exits incorrectly transitions plan_review → error.
     const isUnexpected = exitCode !== 0;
-    actor.send({
+    this.applyPersistedEvent(taskId, actor, {
       type: 'PROCESS_EXITED',
       exitCode: exitCode ?? -1,
       unexpected: isUnexpected
     } satisfies TaskEvent);
   }
 
-  handleUiEvent(taskId: string, event: TaskEvent, task: Task, project: Project): void {
+  handleUiEvent(taskId: string, event: TaskEvent, task: Task, project: Project): boolean {
     console.debug(`[TaskStateManager] handleUiEvent: ${event.type} for task ${taskId}`);
     this.setTaskContext(taskId, task, project);
     const actor = this.getOrCreateActor(taskId);
     const stateBefore = String(actor.getSnapshot().value);
     console.debug(`[TaskStateManager] Sending UI event ${event.type} to actor in state: ${stateBefore}`);
-    actor.send(event);
+    if (!this.applyPersistedEvent(taskId, actor, event)) return false;
     const stateAfter = String(actor.getSnapshot().value);
     console.debug(`[TaskStateManager] After UI event ${event.type}: state ${stateBefore} -> ${stateAfter}`);
+    return true;
+  }
+
+  private handlePersistedManualEvent(taskId: string, event: TaskEvent, task: Task, project: Project): true {
+    if (!this.handleUiEvent(taskId, event, task, project)) throw new TaskStatusPersistenceError();
+    return true;
   }
 
   handleManualStatusChange(taskId: string, status: TaskStatus, task: Task, project: Project): boolean {
     switch (status) {
       case 'done':
-        this.handleUiEvent(taskId, { type: 'MARK_DONE' }, task, project);
-        return true;
+        return this.handlePersistedManualEvent(taskId, { type: 'MARK_DONE' }, task, project);
       case 'pr_created':
-        this.handleUiEvent(
+        return this.handlePersistedManualEvent(
           taskId,
           { type: 'PR_CREATED', prUrl: task.metadata?.prUrl ?? '' },
           task,
           project
         );
-        return true;
       case 'in_progress': {
         // Use XState as source of truth for determining correct event
         const currentState = this.getCurrentState(taskId);
         if (currentState === 'plan_review') {
-          this.handleUiEvent(taskId, { type: 'PLAN_APPROVED' }, task, project);
+          return this.handlePersistedManualEvent(taskId, { type: 'PLAN_APPROVED' }, task, project);
         } else if (currentState === 'human_review' || currentState === 'error') {
-          this.handleUiEvent(taskId, { type: 'USER_RESUMED' }, task, project);
+          return this.handlePersistedManualEvent(taskId, { type: 'USER_RESUMED' }, task, project);
         } else if (!currentState && task.reviewReason === 'plan_review') {
           // Fallback: No actor exists (e.g., after app restart), use task data
-          this.handleUiEvent(taskId, { type: 'PLAN_APPROVED' }, task, project);
+          return this.handlePersistedManualEvent(taskId, { type: 'PLAN_APPROVED' }, task, project);
         } else {
-          this.handleUiEvent(taskId, { type: 'USER_RESUMED' }, task, project);
+          return this.handlePersistedManualEvent(taskId, { type: 'USER_RESUMED' }, task, project);
         }
-        return true;
       }
       case 'backlog':
-        this.handleUiEvent(taskId, { type: 'USER_STOPPED', hasPlan: false }, task, project);
-        return true;
-      case 'human_review':
+        return this.handlePersistedManualEvent(taskId, { type: 'USER_STOPPED', hasPlan: false }, task, project);
+      case 'human_review': {
         // Already in human_review (e.g., stage-only merge keeps task in review).
         // Emit status directly since there's no XState transition needed.
+        this.setTaskContext(taskId, task, project);
+        const stateValue = task.reviewReason === 'plan_review' ? 'plan_review' : 'human_review';
+        if (!this.persistStatus(task, project, 'human_review', task.reviewReason ?? 'completed',
+          stateValue, this.mapStateToExecutionPhase(stateValue))) {
+          throw new TaskStatusPersistenceError();
+        }
         this.emitStatus(taskId, 'human_review', task.reviewReason ?? 'completed', project.id);
         return true;
+      }
       default:
         return false;
     }
@@ -245,6 +259,8 @@ export class TaskStateManager {
     const actor = snapshot
       ? createActor(taskMachine, { snapshot })
       : createActor(taskMachine);
+    // Hydrating an actor from the saved task is not a successful status update.
+    this.lastStateByTask.set(taskId, String(actor.getSnapshot().value));
     actor.subscribe((snapshot) => {
       const stateValue = String(snapshot.value);
       const lastState = this.lastStateByTask.get(taskId);
@@ -265,30 +281,37 @@ export class TaskStateManager {
         console.debug(`[TaskStateManager] No context for task ${taskId} during state transition to ${stateValue} - skipping emit (may occur after clearTask during event processing)`);
         return;
       }
-      const { task, project } = contextEntry;
+      const { project } = contextEntry;
       const { status, reviewReason } = mapStateToLegacy(
         stateValue,
         snapshot.context.reviewReason
       );
 
-      // Map XState state to execution phase for persistence
-      const executionPhase = this.mapStateToExecutionPhase(stateValue);
-
       console.debug(`[TaskStateManager] Emitting status for ${taskId}:`, {
         status,
         reviewReason,
         xstateState: stateValue,
-        executionPhase,
         projectId: project.id
       });
 
-      this.persistStatus(task, project, status, reviewReason, stateValue, executionPhase);
       this.emitStatus(taskId, status, reviewReason, project.id);
     });
 
     actor.start();
     this.actors.set(taskId, actor);
     return actor;
+  }
+
+  private applyPersistedEvent(taskId: string, actor: TaskActor, event: TaskEvent): boolean {
+    const contextEntry = this.taskContextById.get(taskId);
+    if (!contextEntry) return false;
+    const [next] = transition(taskMachine, actor.getSnapshot(), event);
+    const stateValue = String(next.value);
+    const { status, reviewReason } = mapStateToLegacy(stateValue, next.context.reviewReason);
+    if (!this.persistStatus(contextEntry.task, contextEntry.project, status, reviewReason,
+      stateValue, this.mapStateToExecutionPhase(stateValue))) return false;
+    actor.send(event);
+    return true;
   }
 
   private persistStatus(
@@ -298,23 +321,36 @@ export class TaskStateManager {
     reviewReason?: ReviewReason,
     xstateState?: string,
     executionPhase?: string
-  ): void {
-    const mainPlanPath = getPlanPath(project, task);
-    persistPlanStatusAndReasonSync(mainPlanPath, status, reviewReason, project.id, xstateState, executionPhase);
-
-    const worktreePath = findTaskWorktree(project.path, task.specId);
-    if (!worktreePath) return;
-
-    const specsBaseDir = getSpecsDir(project.autoBuildPath);
-    const worktreePlanPath = path.join(
-      worktreePath,
-      specsBaseDir,
-      task.specId,
-      AUTO_BUILD_PATHS.IMPLEMENTATION_PLAN
-    );
-    if (existsSync(worktreePlanPath)) {
-      persistPlanStatusAndReasonSync(worktreePlanPath, status, reviewReason, project.id, xstateState, executionPhase);
+  ): boolean {
+    try {
+      const mainPlanPath = getPlanPath(project, task);
+      if (!persistPlanStatusAndReasonSync(mainPlanPath, status, reviewReason, project.id, xstateState, executionPhase)) return false;
+    } catch (error) {
+      console.warn('[TaskStateManager] Task status persistence failed:', error);
+      return false;
     }
+
+    // The main plan is authoritative. Retain the existing best-effort worktree mirror.
+    try {
+      const worktreePath = findTaskWorktree(project.path, task.specId);
+      if (!worktreePath) return true;
+
+      const specsBaseDir = getSpecsDir(project.autoBuildPath);
+      const worktreePlanPath = path.join(
+        worktreePath,
+        specsBaseDir,
+        task.specId,
+        AUTO_BUILD_PATHS.IMPLEMENTATION_PLAN
+      );
+      if (existsSync(worktreePlanPath)) {
+        if (!persistPlanStatusAndReasonSync(worktreePlanPath, status, reviewReason, project.id, xstateState, executionPhase)) {
+          console.warn('[TaskStateManager] Main task status saved, but the worktree mirror could not be updated.');
+        }
+      }
+    } catch (error) {
+      console.warn('[TaskStateManager] Main task status saved, but the worktree mirror failed:', error);
+    }
+    return true;
   }
 
   /**

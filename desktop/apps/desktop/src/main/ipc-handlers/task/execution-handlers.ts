@@ -11,7 +11,7 @@ import { fileWatcher } from '../../file-watcher';
 import { findTaskAndProject } from './shared';
 import { checkGitStatus } from '../../project-initializer';
 import { initializeClaudeProfileManager, type ClaudeProfileManager } from '../../claude-profile-manager';
-import { taskStateManager } from '../../task-state-manager';
+import { taskStateManager, TaskStatusPersistenceError } from '../../task-state-manager';
 import {
   getPlanPath,
   persistPlanStatus,
@@ -590,7 +590,7 @@ export function registerTaskExecutionHandlers(
       taskId: string,
       status: TaskStatus,
       options?: { forceCleanup?: boolean; keepWorktree?: boolean }
-    ): Promise<IPCResult & { worktreeExists?: boolean; worktreePath?: string }> => {
+    ): Promise<IPCResult & { code?: string; worktreeExists?: boolean; worktreePath?: string }> => {
       // Find task and project first (needed for worktree check)
       const { task, project } = findTaskAndProject(taskId);
 
@@ -723,9 +723,13 @@ export function registerTaskExecutionHandlers(
 
           if (!persisted) {
             // If no implementation plan exists yet, create a basic one
-            await createPlanIfNotExists(planPath, task, status);
-            // Invalidate cache after creating new plan
-            projectStore.invalidateTasksCache(project.id);
+            try {
+              await createPlanIfNotExists(planPath, task, status);
+            } catch {
+              throw new TaskStatusPersistenceError();
+            }
+            // Creating an existing or invalid plan can be a no-op; require a real save acknowledgement.
+            if (!await persistPlanStatus(planPath, status, project.id)) throw new TaskStatusPersistenceError();
           }
         }
 
@@ -883,7 +887,9 @@ export function registerTaskExecutionHandlers(
         console.error('Failed to update task status:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : nativeText('ipc.failedToUpdateTaskStatus')
+          ...(error instanceof TaskStatusPersistenceError ? { code: error.code } : {}),
+          error: error instanceof TaskStatusPersistenceError ? nativeText('ipc.failedToUpdateTaskStatus')
+            : error instanceof Error ? error.message : nativeText('ipc.failedToUpdateTaskStatus')
         };
       }
     }
