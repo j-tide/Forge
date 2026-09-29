@@ -10,14 +10,14 @@ This repository is a single **Electron + React + TypeScript** desktop applicatio
 
 ## Current release
 
-[**0.1.0-preview.5 · macOS Apple Silicon**](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.5) is an **INTERNAL / ADHOC / UNNOTARIZED** prerelease focused on model tests, task actions, and failure recovery.
+[**0.1.0-preview.6 · macOS Apple Silicon**](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.6) is an **INTERNAL / ADHOC / UNNOTARIZED** prerelease. It removes the former Forge implementation, reorganizes the retained Aperant-derived desktop into a single root npm application, and corrects runtime-resource and packaging paths.
 
 | Download | Purpose |
 | --- | --- |
-| [DMG](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/Forge-0.1.0-preview.5-darwin-arm64-INTERNAL.dmg) | Open it and drag `Forge.app` into Applications. |
-| [ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/Forge-0.1.0-preview.5-darwin-arm64-INTERNAL.zip) | Extract and open the application. |
-| [Corresponding source](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/Forge-0.1.0-preview.5-source.tar.gz) | Complete source matching the release tag. |
-| [SHA256SUMS](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/SHA256SUMS) | Verify the downloaded files. |
+| [DMG](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.dmg) | Open it and drag `Forge.app` into Applications. |
+| [ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.zip) | Extract and open the application. |
+| [Corresponding source](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-source.tar.gz) | Complete source matching the release tag. |
+| [SHA256SUMS](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/SHA256SUMS) | Verify the downloaded files. |
 
 Save your work and quit any running Forge instance before installing. This build is not notarized; follow macOS security prompts.
 
@@ -32,7 +32,7 @@ Save your work and quit any running Forge instance before installing. This build
 | Project tools | Access Insights, Ideas, Roadmap, Context, Memory, and MCP configuration. |
 | Appearance and language | Silver light and graphite dark themes, Chinese/English, reduced transparency and motion; preferences survive restart. |
 
-Model calls require valid provider credentials, network access, and authorization for applicable costs. Current verification covers local UI, persistence, and installation packages; **complete online Agent workflows, external OAuth, every model and tool, Windows, and macOS Intel still require verification**. The active Agent worker is not yet wired to the project `.env`/MCP override configuration chain; the presence of a settings page does not prove that execution path is active.
+Model calls require valid provider credentials, network access, and authorization for applicable costs. The [release verification record](docs/releases/0.1.0-preview.6.md) lists source checks, local UI, persistence, and installation-package results separately; **complete online Agent workflows, external OAuth, every model and tool, additional platforms, and macOS notarization still require verification**. The active Agent Worker is not yet wired to the project `.env`/MCP override configuration chain or fully integrated with the new libSQL memory service; the presence of a settings page does not prove that execution path is active.
 
 ## Runtime architecture
 
@@ -51,14 +51,16 @@ flowchart LR
 
 Main registers project, task, terminal, and settings IPC. Agent Workers orchestrate model sessions, use built-in tools and MCP, and return logs and state events. Task files live in the project’s `.forge-glass-preview/`; settings and local memory use the isolated `Forge Glass Preview` user-data directory. Tasks can use Git worktrees; the current implementation falls back to the project directory if creation fails.
 
+The former Vue desktop, Python/TypeScript cores, Node Host, and plugins have been removed. The current application uses the desktop path above. Application ID `dev.iamzjt.forgeglasspreview`, the user-data directory, and project-data identity remain stable; this reorganization does not migrate or delete real user settings, accounts, projects, tasks, or databases.
+
 ## Interface
 
 | Light | Dark |
 | --- | --- |
-| ![Light home](docs/screenshots/0.1.0-preview.5/home-light-1440.png) | ![Dark home](docs/screenshots/0.1.0-preview.5/home-dark-1440.png) |
-| ![Light new task](docs/screenshots/0.1.0-preview.5/new-task-light-1440.png) | ![Dark new task](docs/screenshots/0.1.0-preview.5/new-task-dark-1440.png) |
+| ![Light home](docs/screenshots/0.1.0-preview.6/home-light-1440.png) | ![Dark home](docs/screenshots/0.1.0-preview.6/home-dark-1440.png) |
+| ![Light new task](docs/screenshots/0.1.0-preview.6/new-task-light-1440.png) | ![Dark new task](docs/screenshots/0.1.0-preview.6/new-task-dark-1440.png) |
 
-These screenshots come from the actual `.5` Electron build using isolated test projects, with no online Agent execution. [Provenance and checksums](docs/screenshots/0.1.0-preview.5/screenshots.json).
+These screenshots come from the actual `.6` Electron build using isolated test projects, with no online Agent execution. [Provenance and checksums](docs/screenshots/0.1.0-preview.6/screenshots.json).
 
 ## Development
 
@@ -84,7 +86,7 @@ npm run test:overlays:desktop
 npm run test:files:desktop
 npm run test:i18n:desktop
 
-# Open the current version after building an installation package
+# Open a locally built installation package on macOS
 npm run preview:open
 ```
 
@@ -92,6 +94,6 @@ Run development and checks at the repository root using its `package-lock.json`;
 
 ## Documentation and provenance
 
-[Usage](docs/user-guide.md) · [Implementation status](docs/implementation-status.md) · [Release verification](docs/releases/0.1.0-preview.5.md) · [Packaging and release](docs/releasing.md)
+[Usage](docs/user-guide.md) · [Implementation status](docs/implementation-status.md) · [Release verification](docs/releases/0.1.0-preview.6.md) · [Packaging and release](docs/releasing.md)
 
 Forge is derived from [Aperant](https://github.com/AndyMik90/Aperant) `v2.8.0-beta.6` under [AGPL-3.0](LICENSE). Original authorship, copyright, import provenance, and modification records are preserved in [UPSTREAM.md](UPSTREAM.md). Corresponding source is available with the release.

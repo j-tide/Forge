@@ -1,5 +1,15 @@
 # Forge Desktop 实施状态
 
+## 2026-09-29：0.1.0-preview.6 发布验证
+
+本版包含两项已按功能独立提交并推送的改动：`f92de037` 删除旧 Forge 实现，`ac7c8077` 重组根单应用。版本与发行材料另外提交；不重写已有公开提交。
+
+本轮 Node 24.19.0／npm 10.8.2 下 i18n、lint、typecheck、test、E2E helper 与 build 全部 exit 0：340 个 Vitest 文件／5788 项测试、12 项 Node 工具检查、6 项 helper 替身检查；i18n 5373 字符串／4267 静态引用，lint 保留 792 warnings／5 infos。冻结的依赖记录保持；本轮生产审计 33 项（10 high、9 moderate、14 low、0 critical）未修复。
+
+当前编译代码的两主题工作区 60 项、浮层 10 项、文件引用 8 项及中英文偏好重启通过。新 macOS arm64 应用以 ad hoc 签名生成 ZIP 与 UDZO DMG，分别完成归档完整性与 image verify；从只读 DMG 挂载实际启动，15 个编译资源、52 prompts、4 图标及 LICENSE／UPSTREAM 完整匹配，实际 compiled prompt loader、libSQL 与 PTY 检查通过。3 次包内启动均正常退出，原用户文件摘要未变、临时 HOME 已清理、挂载已卸载。
+
+本轮模型调用为 0。内部包仍未公证，完整在线 Agent、外部认证、额外目标平台及 Worker 配置／记忆接线未移作通过。当前版本资产摘要与截图见 [preview.6 发布说明](releases/0.1.0-preview.6.md)，本地原始记录在忽略目录 `output/release-preview6/`；对应源码从最终发布 tag 归档。
+
 ## 2026-09-29：根目录单应用布局
 
 用户要求删除整个旧 Forge 实现后，进一步授权重新组织保留的桌面代码。本次将 Aperant 衍生应用从嵌套 `desktop/apps/desktop/` 移到仓库根，合并为单一 `forge-desktop` npm 工程；`desktop/`、`apps/` 和 workspace 外壳不再作为当前目录。

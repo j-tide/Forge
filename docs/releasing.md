@@ -40,7 +40,16 @@ For each output, verify:
 - SHA-256 checksums and a corresponding source archive refer to that artifact.
 - No local credentials, unredacted environment, or developer-only directories enter the package.
 
-The previous published artifact and its evidence are recorded in [0.1.0-preview.2](releases/0.1.0-preview.2.md). Historical asset names remain unchanged.
+The previous published artifact and its evidence are recorded in [0.1.0-preview.5](releases/0.1.0-preview.5.md). The new root-layout release is recorded in [0.1.0-preview.6](releases/0.1.0-preview.6.md), with results from its own source build and exact installation artifacts. Historical asset names, checksums and publication facts remain unchanged.
+
+For preview.6, publish these versioned assets with the final tag’s corresponding source:
+
+- `Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.dmg`
+- `Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.zip`
+- `Forge-0.1.0-preview.6-source.tar.gz`
+- `SHA256SUMS`
+
+Create the source archive from the final `v0.1.0-preview.6` tag using `git archive`; it must contain the root manifest and lockfile, application source, runtime prompts, build/check scripts, tests, LICENSE and UPSTREAM, without local credentials, `node_modules` or generated verification data. Record the actual asset sizes and SHA-256 values before publication; earlier versions’ package and UI checks cannot stand in for this release.
 
 ## Publication
 

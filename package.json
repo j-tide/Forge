@@ -1,7 +1,7 @@
 {
   "name": "forge-desktop",
   "private": true,
-  "version": "0.1.0-preview.5",
+  "version": "0.1.0-preview.6",
   "type": "module",
   "description": "Forge Electron desktop application",
   "main": "./out/main/index.js",

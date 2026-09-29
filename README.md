@@ -10,14 +10,14 @@
 
 ## 当前版本
 
-[**0.1.0-preview.5 · macOS Apple Silicon**](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.5) 为 **INTERNAL / ADHOC / UNNOTARIZED** 预发布，集中修复模型测试、任务操作和失败恢复。
+[**0.1.0-preview.6 · macOS Apple Silicon**](https://github.com/j-tide/Forge/releases/tag/v0.1.0-preview.6) 为 **INTERNAL / ADHOC / UNNOTARIZED** 预发布。本版删除旧 Forge 实现，将保留的 Aperant 衍生桌面整理为根目录单一 npm 工程，并修正运行资源与打包路径。
 
 | 下载 | 用途 |
 | --- | --- |
-| [DMG](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/Forge-0.1.0-preview.5-darwin-arm64-INTERNAL.dmg) | 打开后将 `Forge.app` 拖入 Applications。 |
-| [ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/Forge-0.1.0-preview.5-darwin-arm64-INTERNAL.zip) | 解压后打开应用。 |
-| [对应源码](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/Forge-0.1.0-preview.5-source.tar.gz) | 与发布 tag 对应的完整源码。 |
-| [SHA256SUMS](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.5/SHA256SUMS) | 核对下载文件摘要。 |
+| [DMG](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.dmg) | 打开后将 `Forge.app` 拖入 Applications。 |
+| [ZIP](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-darwin-arm64-INTERNAL.zip) | 解压后打开应用。 |
+| [对应源码](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/Forge-0.1.0-preview.6-source.tar.gz) | 与发布 tag 对应的完整源码。 |
+| [SHA256SUMS](https://github.com/j-tide/Forge/releases/download/v0.1.0-preview.6/SHA256SUMS) | 核对下载文件摘要。 |
 
 安装前保存工作并正常退出正在运行的 Forge。此包尚未公证，请遵循 macOS 自身安全提示。
 
@@ -32,7 +32,7 @@
 | 项目工具 | 使用洞察、想法、路线图、上下文、记忆和 MCP 配置入口。 |
 | 外观与语言 | 银灰亮色／石墨暗色、中英文、减少透明度与动效，偏好在重启后保留。 |
 
-模型调用需要所选服务商的有效认证、网络和相应费用授权。当前验证涵盖本地 UI、持久化与安装包；**完整在线 Agent 流程、外部 OAuth、全部模型与工具、Windows 和 macOS Intel 仍待验证**。活跃 Agent worker 的项目 `.env`／MCP override 配置链尚未接通，配置页面存在不代表该执行路径已生效。
+模型调用需要所选服务商的有效认证、网络和相应费用授权。[本版验证记录](docs/releases/0.1.0-preview.6.md)分别列出源码检查、本地 UI、持久化与安装包结果；**完整在线 Agent 流程、外部 OAuth、全部模型与工具、额外平台及 macOS 公证仍待验证**。活跃 Agent Worker 的项目 `.env`／MCP override 配置链尚未接通，新 libSQL 记忆服务也未完整接入 Worker；配置页面存在不代表该执行路径已生效。
 
 ## 实际运行结构
 
@@ -51,14 +51,16 @@ flowchart LR
 
 Main 注册项目、任务、终端与设置等 IPC；Agent Worker 编排模型会话，调用内置工具及 MCP，并回传日志和状态。任务文件保存在项目的 `.forge-glass-preview/`，设置与本地记忆使用隔离的 `Forge Glass Preview` 用户数据目录。任务可使用 Git worktree；当前创建失败时会回退项目目录。
 
+旧 Vue 桌面、Python／TypeScript Core、Node Host 与插件已删除；当前工程只保留上述桌面链路。应用 ID `dev.iamzjt.forgeglasspreview`、用户数据目录及项目数据身份保持不变，结构整理不迁移或删除真实用户设置、账户、项目、任务及数据库。
+
 ## 界面
 
 | 亮色 | 暗色 |
 | --- | --- |
-| ![亮色首页](docs/screenshots/0.1.0-preview.5/home-light-1440.png) | ![暗色首页](docs/screenshots/0.1.0-preview.5/home-dark-1440.png) |
-| ![亮色新任务](docs/screenshots/0.1.0-preview.5/new-task-light-1440.png) | ![暗色新任务](docs/screenshots/0.1.0-preview.5/new-task-dark-1440.png) |
+| ![亮色首页](docs/screenshots/0.1.0-preview.6/home-light-1440.png) | ![暗色首页](docs/screenshots/0.1.0-preview.6/home-dark-1440.png) |
+| ![亮色新任务](docs/screenshots/0.1.0-preview.6/new-task-light-1440.png) | ![暗色新任务](docs/screenshots/0.1.0-preview.6/new-task-dark-1440.png) |
 
-截图来自实际 `.5` Electron 编译代码，使用独立测试项目，没有在线 Agent 执行；[来源与摘要](docs/screenshots/0.1.0-preview.5/screenshots.json)。
+截图来自实际 `.6` Electron 编译代码，使用独立测试项目，没有在线 Agent 执行；[来源与摘要](docs/screenshots/0.1.0-preview.6/screenshots.json)。
 
 ## 源码开发
 
@@ -84,7 +86,7 @@ npm run test:overlays:desktop
 npm run test:files:desktop
 npm run test:i18n:desktop
 
-# 已构建安装包时正常打开当前版本
+# 在 macOS 上正常打开本地已构建应用
 npm run preview:open
 ```
 
@@ -92,6 +94,6 @@ npm run preview:open
 
 ## 文档与来源
 
-[操作说明](docs/user-guide.md) · [实施状态](docs/implementation-status.md) · [版本验证](docs/releases/0.1.0-preview.5.md) · [打包与发布](docs/releasing.md)
+[操作说明](docs/user-guide.md) · [实施状态](docs/implementation-status.md) · [版本验证](docs/releases/0.1.0-preview.6.md) · [打包与发布](docs/releasing.md)
 
 Forge 基于 [Aperant](https://github.com/AndyMik90/Aperant) `v2.8.0-beta.6`，按 [AGPL-3.0](LICENSE) 提供衍生源码。原作者、版权、导入来源与修改记录保留在 [UPSTREAM.md](UPSTREAM.md)，发布页提供对应源码。
