@@ -4,6 +4,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X, ImageIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
+import { normalizeCapturedImage } from '../../lib/captured-image';
 import type { ImageAttachment } from '../../../shared/types';
 
 interface ImagePreviewModalProps {
@@ -19,7 +20,9 @@ export function ImagePreviewModal({ open, onOpenChange, image }: ImagePreviewMod
   if (!image) return null;
 
   // Determine the image source - prefer full-resolution data for enlarged preview, fall back to thumbnail
-  const imageSrc = image.data ? `data:${image.mimeType};base64,${image.data}` : image.thumbnail || null;
+  // Older screenshot callbacks saved Main's complete PNG URL in the data field.
+  const captured = image.mimeType === 'image/png' && image.data ? normalizeCapturedImage(image.data) : null;
+  const imageSrc = image.data ? captured?.dataUrl ?? `data:${image.mimeType};base64,${image.data}` : image.thumbnail || null;
   const isThumbnailFallback = !image.data && image.thumbnail;
 
   return (

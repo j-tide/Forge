@@ -149,7 +149,7 @@ export function ScreenshotCapture({ open, onOpenChange, onCapture }: ScreenshotC
 
           {/* Error State */}
           {error && !isDevMode && (
-            <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/30 rounded-lg mb-4">
+            <div role="alert" className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/30 rounded-lg mb-4">
               <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
               <div className="flex-1">
                 <p className="text-sm text-destructive">{error}</p>
@@ -159,6 +159,8 @@ export function ScreenshotCapture({ open, onOpenChange, onCapture }: ScreenshotC
                 size="sm"
                 onClick={fetchSources}
                 disabled={isLoading}
+                aria-label={t('common:buttons.retry')}
+                title={t('common:buttons.retry')}
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

@@ -25,7 +25,8 @@ import { createThumbnail } from '../ImageUpload';
 import { ScreenshotCapture } from '../ScreenshotCapture';
 import { ImagePreviewModal } from './ImagePreviewModal';
 import { cn } from '../../lib/utils';
-import { MAX_IMAGES_PER_TASK } from '../../../shared/constants';
+import { normalizeCapturedImage } from '../../lib/captured-image';
+import { MAX_IMAGES_PER_TASK, MAX_IMAGE_SIZE } from '../../../shared/constants';
 import type {
   TaskCategory,
   TaskPriority,
@@ -267,28 +268,46 @@ export function TaskFormFields({
    * Validates the max images limit and creates a thumbnail for the screenshot.
    */
   const handleScreenshotCapture = async (imageData: string) => {
+    if (disabled) return;
     // Check max images limit
-    if (images.length >= MAX_IMAGES_PER_TASK) {
+    if (imagesRef.current.length >= MAX_IMAGES_PER_TASK) {
       onError?.(t('tasks:form.errors.maxImagesReached'));
       return;
     }
 
-    // Calculate size from base64 string (approximate)
-    const base64Length = imageData.length;
-    const sizeInBytes = Math.round(base64Length * 0.75); // Base64 is ~33% larger than binary
+    const captured = normalizeCapturedImage(imageData);
+    if (!captured) {
+      onError?.(t('tasks:screenshot.errors.capture'));
+      return;
+    }
+    if (captured.size > MAX_IMAGE_SIZE) {
+      onError?.(t('common:insights.images.screenshotTooLarge', {
+        size: Math.round(captured.size / 1024 / 1024),
+        max: Math.round(MAX_IMAGE_SIZE / 1024 / 1024)
+      }));
+      return;
+    }
 
-    // Create thumbnail from full resolution screenshot
-    const thumbnail = await createThumbnail(imageData);
-
-    const newImage: ImageAttachment = {
-      id: crypto.randomUUID(),
-      filename: `screenshot-${Date.now()}.png`,
-      data: imageData,
-      thumbnail,
-      mimeType: 'image/png',
-      size: sizeInBytes
-    };
-    onImagesChange([...images, newImage]);
+    try {
+      const thumbnail = await createThumbnail(captured.dataUrl);
+      // Other attachments may have been added while thumbnail processing was pending.
+      const currentImages = imagesRef.current;
+      if (currentImages.length >= MAX_IMAGES_PER_TASK) {
+        onError?.(t('tasks:form.errors.maxImagesReached'));
+        return;
+      }
+      const newImage: ImageAttachment = {
+        id: crypto.randomUUID(),
+        filename: `screenshot-${Date.now()}.png`,
+        data: captured.data,
+        thumbnail,
+        mimeType: 'image/png',
+        size: captured.size
+      };
+      onImagesChange([...currentImages, newImage]);
+    } catch {
+      onError?.(t('tasks:screenshot.errors.capture'));
+    }
   };
 
   return (
