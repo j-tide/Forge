@@ -145,5 +145,28 @@
   "noSearchResults": "No matching memories found.",
   "retryMemories": "Retry",
   "notReported": "Not reported",
-  "loadingMemories": "Loading…"
+  "loadingMemories": "Loading…",
+  "stopResponse": "Stop response",
+  "stoppingResponse": "Stopping response...",
+  "copyResponse": "Copy response",
+  "copiedResponse": "Copied response",
+  "regenerateResponse": "Regenerate response",
+  "retryResponse": "Retry response",
+  "responseStopped": "Response stopped. You can retry this message.",
+  "configureAccount": "Configure model account",
+  "copyFailed": "Unable to copy response",
+  "copyFailedHint": "Try selecting and copying the response text.",
+  "generationErrors": {
+    "auth-required": "Configure or reconnect the selected model account in Settings, then retry.",
+    "request-failed": "Unable to generate a response. Check the selected account and connection, then retry.",
+    "invalid-request": "This request is no longer valid. Reload the conversation and try again.",
+    "request-busy": "Another response is still running for this project. Wait for it to finish or stop it.",
+    "session-not-found": "This conversation is no longer available. Open another conversation or start a new one.",
+    "persistence-failed": "Unable to save or reload the conversation. Retry after checking the project.",
+    "images-unsupported": "The selected model does not support images. Choose a model that supports images or remove the attachments.",
+    "image-data-unavailable": "Reattach the original images before retrying this message. The saved previews cannot be used for image analysis."
+  },
+  "createTaskFailed": "Unable to create this task",
+  "createTaskFailedHint": "The suggestion is still available. Check the project and try again.",
+  "taskListRefreshFailed": "Task created, but the task list could not be refreshed."
 }

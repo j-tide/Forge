@@ -43,6 +43,7 @@
       "details": "详情",
       "refresh": "刷新",
       "stageOnly": "仅暂存（提交前在 IDE 中审查）",
+      "stageOnlyModelNotice": "暂存后仍会尝试用 AI 生成提交说明，可能消耗模型用量；提交仍需手动执行。",
       "discardBuild": "丢弃构建"
     },
     "buttons": {
@@ -121,6 +122,8 @@
     "aiCommitMessage": "AI 生成的提交说明",
     "copied": "已复制！",
     "copy": "复制",
+    "copying": "正在复制…",
+    "copyFailed": "复制失败",
     "editHint": "按需编辑后，复制并配合以下命令使用",
     "nextSteps": "下一步：",
     "reviewChanges": "使用以下命令审查暂存的更改",
@@ -136,6 +139,7 @@
     "commitMessagePlaceholder": "提交说明…",
     "worktreeExplanation": "“删除工作树并标记完成”会清理隔离工作区。“仅标记完成”会保留工作区，供以后参考。",
     "errors": {
+      "failedToCopy": "无法复制提交说明。请重试，或选中文本手动复制。",
       "failedToDeleteWorktree": "工作树删除失败",
       "worktreeDeletedButStatusFailed": "工作树已删除，但任务状态更新失败：{{error}}",
       "failedToMarkAsDone": "无法标记为完成",

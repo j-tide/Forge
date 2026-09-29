@@ -379,5 +379,13 @@
   "mcp.whichMissing": "System utility 'which' not found. Check system PATH configuration.",
   "mcp.commandPermissionDenied": "Permission denied checking command '{{command}}'",
   "mcp.connectionFailed": "Connection failed",
-  "ipc.failedToLoadMemories": "Unable to load memories. Try again."
+  "ipc.failedToLoadMemories": "Unable to load memories. Try again.",
+  "ipc.insightsAuthRequired": "Configure a model account before starting Insights.",
+  "ipc.insightsRequestFailed": "The Insights request failed. Check your model connection and try again.",
+  "ipc.insightsInvalidRequest": "This conversation changed. Reload it and try again.",
+  "ipc.insightsRequestBusy": "An Insights request is still running. Stop it before starting another.",
+  "ipc.insightsSessionNotFound": "This Insights conversation is unavailable.",
+  "ipc.insightsPersistenceFailed": "The response could not be saved. Your previous reply is preserved.",
+  "ipc.insightsImagesUnsupported": "This model does not support images. Choose an image-capable model and retry.",
+  "ipc.insightsImageDataUnavailable": "Reattach the original image before retrying this message."
 }

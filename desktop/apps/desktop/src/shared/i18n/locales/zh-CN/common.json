@@ -493,7 +493,13 @@
       "analysisUnsupported": "注意：暂不支持图片分析。图片会保存以供参考，但模型无法分析。",
       "screenshotTooLarge": "截图过大（{{size}}MB），最大允许 {{max}}MB。请尝试截取更小的区域。",
       "notAnalyzed": "图片已保存以供参考，模型未对其进行分析。"
-    }
+    },
+    "bulkDeleteSuccess": "对话已删除",
+    "bulkDeleteFailed": "部分对话未能删除",
+    "bulkArchiveSuccess": "对话已归档",
+    "bulkArchiveFailed": "部分对话未能归档",
+    "bulkResult": "已完成 {{completed}} 个，失败 {{failed}} 个。失败的对话保持选中，可重试。",
+    "historyRefreshFailed": "无法刷新对话历史，请重新进入洞察页面加载。"
   },
   "ideation": {
     "converting": "正在转换…",

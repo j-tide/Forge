@@ -1,7 +1,15 @@
 {
   "actions": {
     "completed": "任务已完成",
-    "loadingPlan": "正在加载计划…"
+    "loadingPlan": "正在加载计划…",
+    "resumePausedTask": "继续任务",
+    "resumingPausedTask": "正在请求继续…",
+    "awaitingResume": "等待继续执行…"
+  },
+  "notifications": {
+    "taskRecovered": "任务状态已恢复",
+    "taskResumeRequested": "继续请求已发送",
+    "taskResumePending": "任务恢复执行后，状态将自动更新。"
   },
   "tabs": {
     "overview": "概览",
@@ -137,9 +145,14 @@
     "planLoadFailed": "无法加载实施计划。请重试或检查任务文件。",
     "deleteFailed": "无法删除任务",
     "deleteCheckFailed": "无法检查工作区改动。请重试检查后再删除任务。",
+    "recoverFailed": "无法恢复任务",
+    "resumeFailed": "无法请求继续任务",
+    "reviewFailed": "无法发送审查反馈",
+    "reviewRetry": "已保留你的反馈和附图，请重试。",
     "mergeFailed": "无法合并变更",
     "mergeUnknown": "合并时发生未知错误",
-    "discardFailed": "无法丢弃变更"
+    "discardFailed": "无法丢弃变更",
+    "openIDEFailed": "无法在 IDE 中打开"
   },
   "images": {
     "max": "最多可添加 {{count}} 张图片",

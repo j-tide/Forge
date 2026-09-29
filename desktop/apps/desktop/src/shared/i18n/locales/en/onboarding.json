@@ -2,7 +2,12 @@
   "wizard": {
     "title": "Setup Wizard",
     "description": "Configure Forge in a few simple steps",
-    "helpText": "This wizard will help you set up your environment in just a few steps. You can configure your Claude OAuth token, set up memory features, and create your first task."
+    "helpText": "This wizard will help you set up your environment in just a few steps. You can configure your Claude OAuth token, set up memory features, and create your first task.",
+    "completionSaveFailed": "Setup could not be saved. Your choices are kept here; retry to continue.",
+    "retry": "Retry",
+    "saving": "Saving setup…",
+    "gitCheckFailed": "Git status could not be checked. Retry before continuing project setup.",
+    "retryGitCheck": "Retry Git status check"
   },
   "welcome": {
     "title": "Welcome to Forge",
@@ -144,10 +149,12 @@
     },
     "exploreDocs": {
       "title": "Explore Documentation",
-      "description": "Learn more about advanced features, best practices, and troubleshooting."
+      "description": "Learn more about advanced features, best practices, and troubleshooting.",
+      "action": "Open documentation",
+      "openFailed": "Could not open the documentation. Please try again."
     },
     "finish": "Finish & Start Building",
-    "rerunHint": "You can always re-run this wizard from Settings → Application"
+    "rerunHint": "You can re-run this wizard anytime from Settings → Re-run Setup Wizard"
   },
   "steps": {
     "welcome": "Welcome",
@@ -230,7 +237,9 @@
     "detectedSummary": "Detected on your system:",
     "noToolsDetected": "No additional tools detected (VS Code and system terminal will be used)",
     "custom": "Custom...",
-    "saveAndContinue": "Save & Continue"
+    "saveAndContinue": "Save & Continue",
+    "customPathRequired": "Enter a path for each custom tool you selected.",
+    "detectionFailed": "Tool detection failed. You can retry or select your tools manually."
   },
   "accounts": {
     "title": "Add Your AI Accounts",

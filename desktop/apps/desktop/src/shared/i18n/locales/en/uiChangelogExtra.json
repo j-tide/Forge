@@ -87,6 +87,8 @@
   "previousVersion": "Previous: {{version}}",
   "copied": "Copied!",
   "copy": "Copy",
+  "copying": "Copying...",
+  "copyFailed": "Could not copy the changelog. Try again, or select the text and copy it manually.",
   "saved": "Saved!",
   "saveChangelog": "Save to CHANGELOG.md",
   "versionSaved": "Version {{version}} has been added to CHANGELOG.md",

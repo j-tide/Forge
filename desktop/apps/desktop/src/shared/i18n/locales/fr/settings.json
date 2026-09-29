@@ -761,6 +761,46 @@
     }
   },
   "providers": {
+    "connection": {
+      "test": "Tester la connexion",
+      "testAccount": "Tester la connexion de {{name}}",
+      "testModel": "Tester le modèle",
+      "testModelAccount": "Tester le modèle de {{name}}",
+      "model": "Modèle à tester",
+      "testing": "Test de connexion en cours…",
+      "success": "Vérification réussie",
+      "failure": "Échec de la vérification",
+      "unavailable": "La vérification n'a pas pu aboutir. Réessayez ou vérifiez la configuration.",
+      "description": "Vérifie le service ou l'authentification enregistrée sans envoyer de prompt. L'accès aux modèles et la génération ne sont pas vérifiés.",
+      "modelDescription": "Un bref appel à {{model}} sera envoyé en cliquant sur Tester le modèle. Des frais API ou une consommation du quota Coding Plan peuvent s'appliquer.",
+      "results": {
+        "unsupported-provider": "Ce fournisseur ne prend pas en charge le test de connexion.",
+        "oauth-reauth": "Une vérification par clé API ne peut pas vérifier ce compte OAuth. Utilisez Ré-authentifier.",
+        "aws-unsupported": "Ce test ne vérifie pas les identifiants AWS signés ni les jetons Bearer Bedrock.",
+        "missing-key": "Saisissez une clé API pour tester la connexion.",
+        "invalid-key": "La clé API contient des caractères invalides.",
+        "model-unsupported": "Les tests de modèle sont disponibles uniquement pour Z.AI. Utilisez un test de connexion pour ce fournisseur.",
+        "zai-needs-model": "La vérification gratuite des identifiants Z.AI est indisponible. Un test de modèle envoie une requête minimale et peut coûter ou consommer du quota.",
+        "missing-url": "Saisissez une URL de base pour tester la connexion.",
+        "invalid-url": "Utilisez une URL HTTP ou HTTPS valide sans identifiants, paramètres de requête ni fragment.",
+        "insecure-url": "Utilisez HTTPS pour envoyer une clé API à un service distant.",
+        "invalid-model": "Sélectionnez un modèle valide à tester.",
+        "invalid-config": "La configuration du test est invalide. Vérifiez le fournisseur et les champs de connexion.",
+        "auth": "Échec de l’authentification. Vérifiez la clé API et les autorisations du compte.",
+        "quota": "Le fournisseur limite les requêtes ou le quota est insuffisant. La connexion n’a pas pu être vérifiée.",
+        "unsupported-endpoint": "Ce service ne prend pas en charge l’API de test. Vérifiez l’URL de base ; les identifiants n’ont pas été vérifiés.",
+        "redirect": "Le service a redirigé le test. Utilisez l’URL API finale ; les identifiants n’ont pas été transmis.",
+        "rejected-request": "Le fournisseur a refusé la requête de test. Vérifiez le service et le modèle.",
+        "http": "Le fournisseur a renvoyé HTTP {{status}}. La connexion n’a pas pu être vérifiée.",
+        "unexpected-response": "Le service a renvoyé une réponse inattendue. Vérifiez l’URL API de base ; la connexion n’a pas été vérifiée.",
+        "cancelled": "Le test de connexion a été annulé.",
+        "timeout": "Le test de connexion a expiré. Vérifiez le réseau et l’URL de base.",
+        "network": "Le test de connexion a échoué. Vérifiez le réseau, le certificat TLS et l’URL API de base.",
+        "model-verified": "Le modèle sélectionné a accepté la requête de test minimale.",
+        "endpoint-reachable": "La liste des modèles est accessible. La génération et la vérification des identifiants côté serveur n’ont pas été testées.",
+        "metadata-verified": "Le fournisseur a accepté la vérification des métadonnées. La génération et le quota disponible n’ont pas été testés."
+      }
+    },
     "card": {
       "oauth": "OAuth",
       "codex": "Codex",
@@ -784,6 +824,7 @@
       "customModels": "{{count}} modèle(s) configuré(s)"
     },
     "section": {
+      "persistenceDescription": "L'ajout, la modification, la suppression et l'authentification des comptes sont enregistrés immédiatement. Annuler la page ne les annule pas.",
       "envDetected": "Depuis env",
       "envCredentialDetected": "Identifiants détectés depuis la variable d'environnement {{envVar}}",
       "noAccounts": "Aucun compte configuré",
@@ -797,6 +838,14 @@
     },
     "dialog": {
       "addTitle": "Ajouter un compte",
+      "persistenceDescription": "Les modifications sont enregistrées en confirmant ce dialogue. Une authentification OAuth réussie enregistre immédiatement le compte.",
+      "addModel": "Ajouter un modèle",
+      "removeModel": "Retirer le modèle {{name}}",
+      "duplicateModel": "Cet identifiant de modèle figure déjà dans la liste.",
+      "urlValidation": {
+        "invalid-url": "Utilisez une URL de base HTTP ou HTTPS valide sans identifiants, paramètres de requête ni fragment.",
+        "insecure-url": "Utilisez HTTPS pour envoyer une clé API à un service distant."
+      },
       "editTitle": "Modifier le compte",
       "deleteTitle": "Supprimer le compte ?",
       "deleteDescription": "Êtes-vous sûr de vouloir supprimer ce compte ? Cette action est irréversible.",
@@ -834,7 +883,9 @@
         "apiKey": "Clé API",
         "baseUrl": "URL de base",
         "region": "Région AWS",
-        "models": "Modèles"
+        "models": "Modèles",
+        "modelId": "Identifiant du modèle",
+        "modelLabel": "Nom affiché du modèle"
       },
       "placeholders": {
         "name": "Mon compte",

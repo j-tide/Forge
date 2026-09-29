@@ -2,6 +2,7 @@
   "buttons": {
     "copy": "Copy",
     "copied": "Copied",
+    "copying": "Copying…",
     "retry": "Retry",
     "cancel": "Cancel"
   },
@@ -36,6 +37,14 @@
     "manualDescription": "The browser couldn't be opened automatically. Please visit the URL below to complete authentication:",
     "openBrowser": "Open URL in Browser",
     "codeReminder": "When prompted, enter this code:",
+    "clipboard": {
+      "copyCode": "Copy one-time code",
+      "copyUrl": "Copy authentication URL",
+      "codeCopied": "One-time code copied",
+      "urlCopied": "Authentication URL copied",
+      "copyFailed": "Could not copy",
+      "copyFailedDescription": "Copy the displayed text manually, or try again."
+    },
     "errors": {
       "timeout": "Authentication timed out. The authentication window was open for too long. Please try again.",
       "checkCli": "Failed to check GitHub CLI",

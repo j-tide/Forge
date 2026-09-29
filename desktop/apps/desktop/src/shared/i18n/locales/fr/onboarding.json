@@ -2,7 +2,12 @@
   "wizard": {
     "title": "Assistant de configuration",
     "description": "Configurez Forge en quelques étapes simples",
-    "helpText": "Cet assistant vous aidera à configurer votre environnement en quelques étapes. Vous pouvez configurer votre token OAuth Claude, activer les fonctionnalités de mémoire et créer votre première tâche."
+    "helpText": "Cet assistant vous aidera à configurer votre environnement en quelques étapes. Vous pouvez configurer votre token OAuth Claude, activer les fonctionnalités de mémoire et créer votre première tâche.",
+    "completionSaveFailed": "Impossible de sauvegarder la configuration. Vos choix sont conservés ; réessayez pour continuer.",
+    "retry": "Réessayer",
+    "saving": "Enregistrement de la configuration…",
+    "gitCheckFailed": "Impossible de vérifier Git. Réessayez avant de poursuivre la configuration du projet.",
+    "retryGitCheck": "Réessayer la vérification Git"
   },
   "welcome": {
     "title": "Bienvenue dans Forge",
@@ -144,10 +149,12 @@
     },
     "exploreDocs": {
       "title": "Explorer la documentation",
-      "description": "En savoir plus sur les fonctionnalités avancées, les bonnes pratiques et le dépannage."
+      "description": "En savoir plus sur les fonctionnalités avancées, les bonnes pratiques et le dépannage.",
+      "action": "Ouvrir la documentation",
+      "openFailed": "Impossible d’ouvrir la documentation. Réessayez."
     },
     "finish": "Terminer et commencer à construire",
-    "rerunHint": "Vous pouvez toujours relancer cet assistant depuis Paramètres → Application"
+    "rerunHint": "Vous pouvez relancer cet assistant depuis Paramètres → Relancer l’assistant de configuration"
   },
   "steps": {
     "welcome": "Bienvenue",
@@ -230,7 +237,9 @@
     "detectedSummary": "Détecté sur votre système :",
     "noToolsDetected": "Aucun outil supplémentaire détecté (VS Code et le terminal système seront utilisés)",
     "custom": "Personnalisé...",
-    "saveAndContinue": "Enregistrer et continuer"
+    "saveAndContinue": "Enregistrer et continuer",
+    "customPathRequired": "Saisissez le chemin de chaque outil personnalisé sélectionné.",
+    "detectionFailed": "La détection des outils a échoué. Réessayez ou sélectionnez vos outils manuellement."
   },
   "accounts": {
     "title": "Ajoutez vos comptes IA",

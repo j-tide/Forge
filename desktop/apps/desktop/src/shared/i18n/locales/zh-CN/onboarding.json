@@ -2,7 +2,12 @@
   "wizard": {
     "title": "设置向导",
     "description": "通过几个简单步骤配置 Forge",
-    "helpText": "本向导会帮助你配置环境。你可以设置 Claude OAuth 令牌、启用记忆功能，并创建第一个任务。"
+    "helpText": "本向导会帮助你配置环境。你可以设置 Claude OAuth 令牌、启用记忆功能，并创建第一个任务。",
+    "completionSaveFailed": "设置完成状态保存失败。当前选择已保留，请重试后继续。",
+    "retry": "重试",
+    "saving": "正在保存设置…",
+    "gitCheckFailed": "无法检查 Git 状态，请重试后继续项目设置。",
+    "retryGitCheck": "重新检查 Git 状态"
   },
   "welcome": {
     "title": "欢迎使用 Forge",
@@ -144,10 +149,12 @@
     },
     "exploreDocs": {
       "title": "阅读文档",
-      "description": "了解进阶功能、最佳实践与故障排查方法。"
+      "description": "了解进阶功能、最佳实践与故障排查方法。",
+      "action": "打开文档",
+      "openFailed": "无法打开文档，请重试。"
     },
     "finish": "完成并开始使用",
-    "rerunHint": "随时可以在“设置 → 应用”中重新运行本向导"
+    "rerunHint": "随时可以在“设置 → 重新运行设置向导”中重新运行本向导"
   },
   "steps": {
     "welcome": "欢迎",
@@ -230,7 +237,9 @@
     "detectedSummary": "在系统中检测到：",
     "noToolsDetected": "未检测到其他工具（将使用 VS Code 和系统终端）",
     "custom": "自定义…",
-    "saveAndContinue": "保存并继续"
+    "saveAndContinue": "保存并继续",
+    "customPathRequired": "请填写所有已选择的自定义工具路径。",
+    "detectionFailed": "工具检测失败。你可以重新检测，或手动选择工具。"
   },
   "accounts": {
     "title": "添加 AI 账户",

@@ -1,7 +1,15 @@
 {
   "actions": {
     "completed": "Task completed successfully",
-    "loadingPlan": "Loading plan…"
+    "loadingPlan": "Loading plan…",
+    "resumePausedTask": "Resume task",
+    "resumingPausedTask": "Requesting resume…",
+    "awaitingResume": "Waiting to resume…"
+  },
+  "notifications": {
+    "taskRecovered": "Task state recovered",
+    "taskResumeRequested": "Resume request sent",
+    "taskResumePending": "The task status will update when execution resumes."
   },
   "tabs": {
     "overview": "Overview",
@@ -137,9 +145,14 @@
     "planLoadFailed": "Failed to load implementation plan. Please try again or check the task files.",
     "deleteFailed": "Failed to delete task",
     "deleteCheckFailed": "Could not check worktree changes. Retry the check before deleting this task.",
+    "recoverFailed": "Failed to recover task",
+    "resumeFailed": "Failed to request task resume",
+    "reviewFailed": "Failed to send review feedback",
+    "reviewRetry": "Your feedback and attached images are kept. Try again.",
     "mergeFailed": "Failed to merge changes",
     "mergeUnknown": "Unknown error during merge",
-    "discardFailed": "Failed to discard changes"
+    "discardFailed": "Failed to discard changes",
+    "openIDEFailed": "Failed to open in IDE"
   },
   "images": {
     "max": "Maximum of {{count}} images allowed",

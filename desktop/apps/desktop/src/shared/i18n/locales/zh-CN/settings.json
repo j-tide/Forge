@@ -180,6 +180,7 @@
     }
   },
   "modelSelect": {
+    "customProvider": "自定义模型的服务商",
     "placeholder": "选择模型或手动输入",
     "placeholderManual": "输入模型名称（例如：claude-sonnet-4-6）",
     "searchPlaceholder": "搜索模型…",
@@ -503,6 +504,9 @@
     },
     "crossProviderTab": {
       "title": "跨服务商配置",
+      "enableLabel": "新任务使用此配置",
+      "inactiveInfo": "可先编辑并保存此配置，启用后新任务才会使用它。",
+      "saveFailed": "无法保存启用状态，请重试。",
       "description": "为流程各阶段分配不同服务商与模型，灵活组合能力。",
       "activateInfo": "此配置启用期间创建的任务将使用跨服务商设置。",
       "featureModelsTitle": "功能模型",
@@ -761,6 +765,46 @@
     }
   },
   "providers": {
+    "connection": {
+      "test": "测试连接",
+      "testAccount": "测试 {{name}} 的连接",
+      "testModel": "测试模型",
+      "testModelAccount": "测试 {{name}} 的模型",
+      "model": "测试模型",
+      "testing": "正在测试连接…",
+      "success": "检查通过",
+      "failure": "检查未通过",
+      "unavailable": "未能完成检查，请重试或检查配置。",
+      "description": "检查服务地址或已保存的认证，不发送提示词；此项检查不验证模型权限和生成功能。",
+      "modelDescription": "点击“测试模型”后，将向 {{model}} 发送一次简短请求，可能产生 API 费用或消耗 Coding Plan 额度。",
+      "results": {
+        "unsupported-provider": "此供应商不支持连接测试。",
+        "oauth-reauth": "API 密钥检查无法验证此 OAuth 账户，请使用“重新认证”。",
+        "aws-unsupported": "此项测试无法验证 AWS 签名凭据或 Bedrock Bearer Token。",
+        "missing-key": "请输入 API 密钥后再测试连接。",
+        "invalid-key": "API 密钥含有无效字符。",
+        "model-unsupported": "目前只有 Z.AI 支持模型测试，请对此供应商使用连接检查。",
+        "zai-needs-model": "Z.AI 暂无可用的免费凭据检查。模型测试会发送一次最小请求，可能产生费用或消耗额度。",
+        "missing-url": "请输入基础 URL 后再测试连接。",
+        "invalid-url": "请使用有效的 HTTP 或 HTTPS 基础 URL，且不包含用户名、密码、查询参数或片段。",
+        "insecure-url": "向远程服务发送 API 密钥时，请使用 HTTPS。",
+        "invalid-model": "请选择有效的测试模型。",
+        "invalid-config": "测试配置无效，请检查供应商和连接字段。",
+        "auth": "认证失败，请检查 API 密钥和账户权限。",
+        "quota": "供应商触发限流或额度不足，尚未验证连接。",
+        "unsupported-endpoint": "此地址不支持测试 API，请检查基础 URL；尚未验证凭据。",
+        "redirect": "此地址返回重定向，请填写最终 API 地址；未向重定向地址转发凭据。",
+        "rejected-request": "供应商拒绝了测试请求，请检查服务地址和模型。",
+        "http": "供应商返回 HTTP {{status}}，尚未验证连接。",
+        "unexpected-response": "服务返回了非预期的响应，请检查 API 基础 URL；尚未验证连接。",
+        "cancelled": "连接测试已取消。",
+        "timeout": "连接测试超时，请检查网络和基础 URL。",
+        "network": "连接测试失败，请检查网络、TLS 证书和 API 基础 URL。",
+        "model-verified": "所选模型已接受这次最小测试请求。",
+        "endpoint-reachable": "模型列表可访问；尚未验证模型生成和服务端凭据检查。",
+        "metadata-verified": "供应商已接受元数据检查；尚未验证模型生成和可用额度。"
+      }
+    },
     "card": {
       "oauth": "OAuth",
       "codex": "Codex",
@@ -784,6 +828,7 @@
       "customModels": "已配置 {{count}} 个模型"
     },
     "section": {
+      "persistenceDescription": "添加、编辑、删除和认证账户会立即保存。页面的“取消”按钮不会撤销账户变更。",
       "envDetected": "来自环境变量",
       "envCredentialDetected": "已从环境变量 {{envVar}} 检测到凭据",
       "noAccounts": "尚未配置账户",
@@ -797,6 +842,14 @@
     },
     "dialog": {
       "addTitle": "添加账户",
+      "persistenceDescription": "确认此弹窗后保存账户变更；OAuth 认证成功后会立即保存账户。",
+      "addModel": "添加模型",
+      "removeModel": "移除模型 {{name}}",
+      "duplicateModel": "此模型 ID 已在列表中。",
+      "urlValidation": {
+        "invalid-url": "请输入有效的 HTTP 或 HTTPS 基础 URL，且不包含用户名、密码、查询参数或片段。",
+        "insecure-url": "向远程服务发送 API 密钥时，请使用 HTTPS。"
+      },
       "editTitle": "编辑账户",
       "deleteTitle": "删除账户？",
       "deleteDescription": "确定要删除此账户吗？此操作无法撤销。",
@@ -834,7 +887,9 @@
         "apiKey": "API 密钥",
         "baseUrl": "基础 URL",
         "region": "AWS 区域",
-        "models": "模型"
+        "models": "模型",
+        "modelId": "模型 ID",
+        "modelLabel": "模型显示名称"
       },
       "placeholders": {
         "name": "我的账户",
@@ -867,6 +922,13 @@
     },
     "ollama": {
       "connection": {
+        "invalidUrl": "请输入有效的 HTTP 或 HTTPS 地址，不要在地址中包含凭据。",
+        "saveFailed": "连接成功，但无法保存端点地址，请重试。",
+        "testAndSave": "测试并保存",
+        "testHint": "测试此端点，连接成功后保存地址。",
+        "localOrRemote": "安装 Ollama 以在本机运行模型，或在上方填写已运行的 Ollama 端点地址。",
+        "unreachable": "无法连接 Ollama 端点",
+        "unreachableDescription": "请检查地址、网络和 Ollama 服务状态，然后重新测试。",
         "checking": "正在检查 Ollama 连接…",
         "connected": "已连接",
         "connectedDescription": "Ollama 已运行，可以使用",

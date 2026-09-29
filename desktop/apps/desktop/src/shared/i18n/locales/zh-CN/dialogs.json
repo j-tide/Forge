@@ -134,6 +134,7 @@
     "createProject": "创建项目",
     "nameRequired": "请输入项目名称",
     "locationRequired": "请选择位置",
+    "locationFailed": "无法选择项目位置",
     "failedToOpen": "项目打开失败",
     "failedToCreate": "项目创建失败",
     "openExistingAriaLabel": "打开已有项目文件夹",

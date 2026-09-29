@@ -134,6 +134,7 @@
     "createProject": "Créer le projet",
     "nameRequired": "Veuillez entrer un nom de projet",
     "locationRequired": "Veuillez sélectionner un emplacement",
+    "locationFailed": "Impossible de sélectionner l'emplacement du projet",
     "failedToOpen": "Échec de l'ouverture du projet",
     "failedToCreate": "Échec de la création du projet",
     "openExistingAriaLabel": "Ouvrir un dossier de projet existant",

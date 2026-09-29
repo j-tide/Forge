@@ -1,0 +1,25 @@
+{
+  "stopResponse": "Arrêter la réponse",
+  "stoppingResponse": "Arrêt de la réponse…",
+  "copyResponse": "Copier la réponse",
+  "copiedResponse": "Réponse copiée",
+  "regenerateResponse": "Régénérer la réponse",
+  "retryResponse": "Réessayer la réponse",
+  "responseStopped": "Réponse arrêtée. Vous pouvez réessayer ce message.",
+  "configureAccount": "Configurer le compte du modèle",
+  "copyFailed": "Impossible de copier la réponse",
+  "copyFailedHint": "Essayez de sélectionner et copier le texte de la réponse.",
+  "generationErrors": {
+    "auth-required": "Configurez ou reconnectez le compte du modèle sélectionné dans les paramètres, puis réessayez.",
+    "request-failed": "Impossible de générer une réponse. Vérifiez le compte et la connexion, puis réessayez.",
+    "invalid-request": "Cette demande est expirée. Rechargez la conversation et réessayez.",
+    "request-busy": "Une autre réponse est encore en cours pour ce projet. Attendez ou arrêtez-la.",
+    "session-not-found": "Cette conversation est indisponible. Ouvrez une autre conversation ou créez-en une.",
+    "persistence-failed": "Impossible de sauvegarder ou de recharger la conversation. Vérifiez le projet et réessayez.",
+    "images-unsupported": "Le modèle sélectionné ne prend pas en charge les images. Choisissez un modèle compatible ou retirez les pièces jointes.",
+    "image-data-unavailable": "Joignez à nouveau les images originales avant de réessayer. Les aperçus enregistrés ne peuvent pas servir à analyser les images."
+  },
+  "createTaskFailed": "Impossible de créer cette tâche",
+  "createTaskFailedHint": "La suggestion est conservée. Vérifiez le projet et réessayez.",
+  "taskListRefreshFailed": "La tâche est créée, mais la liste n’a pas pu être actualisée."
+}

@@ -119,5 +119,12 @@
     "dead_code": "无用代码",
     "git_hygiene": "Git 规范"
   },
-  "impactBadge": "{{impact}}影响"
+  "impactBadge": "{{impact}}影响",
+  "actions": {
+    "restore": "恢复想法",
+    "restoreFailed": "无法恢复想法",
+    "dismissFailed": "无法忽略想法",
+    "showArchived": "显示已归档想法",
+    "hideArchived": "隐藏已归档想法"
+  }
 }

@@ -379,5 +379,13 @@
   "mcp.whichMissing": "找不到系统工具 which，请检查系统 PATH 配置。",
   "mcp.commandPermissionDenied": "没有权限检查命令“{{command}}”",
   "mcp.connectionFailed": "连接失败",
-  "ipc.failedToLoadMemories": "无法加载记忆，请重试。"
+  "ipc.failedToLoadMemories": "无法加载记忆，请重试。",
+  "ipc.insightsAuthRequired": "请先配置模型账户，再使用代码洞察。",
+  "ipc.insightsRequestFailed": "代码洞察请求失败，请检查模型连接后重试。",
+  "ipc.insightsInvalidRequest": "此会话已发生变化，请重新加载后重试。",
+  "ipc.insightsRequestBusy": "代码洞察请求仍在运行，请先停止当前请求。",
+  "ipc.insightsSessionNotFound": "此代码洞察会话暂不可用。",
+  "ipc.insightsPersistenceFailed": "回复未能保存，原有回复已保留。",
+  "ipc.insightsImagesUnsupported": "此模型不支持图片，请选择支持图片的模型后重试。",
+  "ipc.insightsImageDataUnavailable": "请重新附上原始图片，再重试此消息。"
 }

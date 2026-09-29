@@ -180,6 +180,7 @@
     }
   },
   "modelSelect": {
+    "customProvider": "Custom model provider",
     "placeholder": "Select a model or type manually",
     "placeholderManual": "Enter model name (e.g., claude-sonnet-4-6)",
     "searchPlaceholder": "Search models...",
@@ -503,6 +504,9 @@
     },
     "crossProviderTab": {
       "title": "Cross-Provider Configuration",
+      "enableLabel": "Use this configuration for new tasks",
+      "inactiveInfo": "This configuration is saved for editing. Enable it to use it for new tasks.",
+      "saveFailed": "Could not save the activation setting. Please try again.",
       "description": "Assign a different provider and model to each pipeline phase for maximum flexibility.",
       "activateInfo": "Tasks created while this configuration is active will use the cross-provider setup.",
       "featureModelsTitle": "Feature Models",
@@ -761,6 +765,46 @@
     }
   },
   "providers": {
+    "connection": {
+      "test": "Test connection",
+      "testAccount": "Test connection for {{name}}",
+      "testModel": "Test model",
+      "testModelAccount": "Test model for {{name}}",
+      "model": "Model to test",
+      "testing": "Testing connection...",
+      "success": "Check passed",
+      "failure": "Check did not pass",
+      "unavailable": "The check could not be completed. Try again or review your configuration.",
+      "description": "Checks the endpoint or saved authentication without sending a prompt. Model access and generation are not verified.",
+      "modelDescription": "Sends one short request to {{model}} when you click Test model. It may incur API charges or consume Coding Plan quota.",
+      "results": {
+        "unsupported-provider": "This provider does not support connection testing.",
+        "oauth-reauth": "API-key probes cannot verify this OAuth account. Use Re-authenticate to verify it.",
+        "aws-unsupported": "This test does not verify AWS signed credentials or Bedrock bearer tokens.",
+        "missing-key": "Enter an API key to test this connection.",
+        "invalid-key": "The API key contains invalid characters.",
+        "model-unsupported": "Model tests are currently available only for Z.AI. Use a connection test for this provider.",
+        "zai-needs-model": "A free credential check is unavailable for Z.AI. A model test sends one minimal request and may incur charges or consume quota.",
+        "missing-url": "Enter a Base URL to test this connection.",
+        "invalid-url": "Use a valid HTTP or HTTPS Base URL without credentials, query parameters or a fragment.",
+        "insecure-url": "Use HTTPS when sending an API key to a remote endpoint.",
+        "invalid-model": "Select a valid model to test.",
+        "invalid-config": "The test configuration is invalid. Review the provider and connection fields.",
+        "auth": "Authentication failed. Check the API key and account permissions.",
+        "quota": "The provider is rate limited or has insufficient quota. The connection could not be verified.",
+        "unsupported-endpoint": "The endpoint does not support this test API. Check the Base URL; credentials have not been verified.",
+        "redirect": "The endpoint redirected the test. Use the final API Base URL; credentials were not forwarded.",
+        "rejected-request": "The provider rejected the test request. Check the endpoint and model.",
+        "http": "The provider returned HTTP {{status}}. The connection could not be verified.",
+        "unexpected-response": "The endpoint returned an unexpected response. Check the API Base URL; the connection has not been verified.",
+        "cancelled": "The connection test was cancelled.",
+        "timeout": "The connection test timed out. Check the network and Base URL.",
+        "network": "The connection test failed. Check the network, TLS certificate and API Base URL.",
+        "model-verified": "The selected model accepted the minimal test request.",
+        "endpoint-reachable": "The model list is reachable. Model generation and server-side credential enforcement were not tested.",
+        "metadata-verified": "The provider accepted the metadata check. Model generation and available quota were not tested."
+      }
+    },
     "card": {
       "oauth": "OAuth",
       "codex": "Codex",
@@ -784,6 +828,7 @@
       "customModels": "{{count}} model(s) configured"
     },
     "section": {
+      "persistenceDescription": "Adding, editing, deleting and authenticating accounts saves immediately. The page's Cancel button does not undo account changes.",
       "envDetected": "From env",
       "envCredentialDetected": "Credentials detected from {{envVar}} environment variable",
       "noAccounts": "No accounts configured",
@@ -797,6 +842,14 @@
     },
     "dialog": {
       "addTitle": "Add Account",
+      "persistenceDescription": "Account changes save when you confirm this dialog. Successful OAuth authentication saves the account immediately.",
+      "addModel": "Add model",
+      "removeModel": "Remove model {{name}}",
+      "duplicateModel": "This model ID is already in the list.",
+      "urlValidation": {
+        "invalid-url": "Enter a valid HTTP or HTTPS Base URL without credentials, query parameters or a fragment.",
+        "insecure-url": "Use HTTPS when sending an API key to a remote endpoint."
+      },
       "editTitle": "Edit Account",
       "deleteTitle": "Delete Account?",
       "deleteDescription": "Are you sure you want to delete this account? This action cannot be undone.",
@@ -834,7 +887,9 @@
         "apiKey": "API Key",
         "baseUrl": "Base URL",
         "region": "AWS Region",
-        "models": "Models"
+        "models": "Models",
+        "modelId": "Model ID",
+        "modelLabel": "Model display name"
       },
       "placeholders": {
         "name": "My Account",
@@ -867,6 +922,13 @@
     },
     "ollama": {
       "connection": {
+        "invalidUrl": "Enter a valid HTTP or HTTPS URL without embedded credentials.",
+        "saveFailed": "Connected, but the endpoint could not be saved. Please try again.",
+        "testAndSave": "Test and save",
+        "testHint": "Test the endpoint to connect and save it.",
+        "localOrRemote": "Install Ollama to run models locally, or enter a running Ollama endpoint above.",
+        "unreachable": "Ollama endpoint unavailable",
+        "unreachableDescription": "Check the URL, network, and that the Ollama service is running, then test again.",
         "checking": "Checking Ollama connection...",
         "connected": "Connected",
         "connectedDescription": "Ollama is running and ready to use",

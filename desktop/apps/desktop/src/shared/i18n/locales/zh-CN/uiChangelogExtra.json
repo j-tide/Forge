@@ -87,6 +87,8 @@
   "previousVersion": "上次版本：{{version}}",
   "copied": "已复制！",
   "copy": "复制",
+  "copying": "正在复制…",
+  "copyFailed": "无法复制更新日志。请重试，或选中文字手动复制。",
   "saved": "已保存！",
   "saveChangelog": "保存到 CHANGELOG.md",
   "versionSaved": "版本 {{version}} 已添加到 CHANGELOG.md",

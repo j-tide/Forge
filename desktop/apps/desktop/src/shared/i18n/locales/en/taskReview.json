@@ -43,6 +43,7 @@
       "details": "Details",
       "refresh": "Refresh",
       "stageOnly": "Stage only (review in IDE before committing)",
+      "stageOnlyModelNotice": "After staging, AI will attempt to generate a commit message and may use model quota. You still commit manually.",
       "discardBuild": "Discard build"
     },
     "buttons": {
@@ -121,6 +122,8 @@
     "aiCommitMessage": "AI-generated commit message",
     "copied": "Copied!",
     "copy": "Copy",
+    "copying": "Copying...",
+    "copyFailed": "Copy failed",
     "editHint": "Edit as needed, then copy and use with",
     "nextSteps": "Next steps:",
     "reviewChanges": "Review staged changes with",
@@ -136,6 +139,7 @@
     "commitMessagePlaceholder": "Commit message...",
     "worktreeExplanation": "\"Delete Worktree & Mark Done\" cleans up the isolated workspace. \"Mark Done Only\" keeps it for reference.",
     "errors": {
+      "failedToCopy": "Could not copy the commit message. Retry, or select the text and copy it manually.",
       "failedToDeleteWorktree": "Failed to delete worktree",
       "worktreeDeletedButStatusFailed": "Worktree deleted but failed to update task status: {{error}}",
       "failedToMarkAsDone": "Failed to mark as done",

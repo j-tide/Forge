@@ -493,7 +493,13 @@
       "analysisUnsupported": "Note: Image analysis is not yet supported. Images are stored for reference but cannot be analyzed by the model.",
       "screenshotTooLarge": "Screenshot is too large ({{size}}MB). Maximum size is {{max}}MB. Consider capturing a smaller area.",
       "notAnalyzed": "Images were stored for reference but not analyzed by the model."
-    }
+    },
+    "bulkDeleteSuccess": "Conversations deleted",
+    "bulkDeleteFailed": "Some conversations could not be deleted",
+    "bulkArchiveSuccess": "Conversations archived",
+    "bulkArchiveFailed": "Some conversations could not be archived",
+    "bulkResult": "Completed {{completed}}; failed {{failed}}. Failed conversations remain selected for retry.",
+    "historyRefreshFailed": "Conversation history could not be refreshed. Reopen Insights to reload it."
   },
   "ideation": {
     "converting": "Converting...",

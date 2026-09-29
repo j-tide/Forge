@@ -119,5 +119,12 @@
     "dead_code": "Dead Code",
     "git_hygiene": "Git Hygiene"
   },
-  "impactBadge": "{{impact}} impact"
+  "impactBadge": "{{impact}} impact",
+  "actions": {
+    "restore": "Restore idea",
+    "restoreFailed": "Could not restore the idea",
+    "dismissFailed": "Could not dismiss the idea",
+    "showArchived": "Show archived ideas",
+    "hideArchived": "Hide archived ideas"
+  }
 }

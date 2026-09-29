@@ -2,6 +2,7 @@
   "buttons": {
     "copy": "复制",
     "copied": "已复制",
+    "copying": "正在复制…",
     "retry": "重试",
     "cancel": "取消"
   },
@@ -36,6 +37,14 @@
     "manualDescription": "无法自动打开浏览器。请访问下方地址完成认证：",
     "openBrowser": "在浏览器中打开",
     "codeReminder": "出现提示时，输入此验证码：",
+    "clipboard": {
+      "copyCode": "复制一次性验证码",
+      "copyUrl": "复制认证链接",
+      "codeCopied": "已复制一次性验证码",
+      "urlCopied": "已复制认证链接",
+      "copyFailed": "复制失败",
+      "copyFailedDescription": "请手动复制显示的文本，或重试。"
+    },
     "errors": {
       "timeout": "认证超时，认证窗口已等待过久。请重试。",
       "checkCli": "检查 GitHub CLI 失败",

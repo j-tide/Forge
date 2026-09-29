@@ -192,7 +192,8 @@
     "unavailable": "Image indisponible",
     "description": "Aperçu de {{filename}}",
     "doubleClickHint": "Double-cliquez pour agrandir",
-    "lowResolution": "Aperçu basse résolution"
+    "lowResolution": "Aperçu basse résolution",
+    "open": "Aperçu de {{filename}}"
   },
   "notifications": {
     "backgroundTaskTitle": "La tâche continue en arrière-plan",

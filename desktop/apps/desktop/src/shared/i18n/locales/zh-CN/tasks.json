@@ -118,7 +118,9 @@
     "columnLocked": "列宽已锁定",
     "scrollLeft": "向左查看看板列",
     "scrollRight": "向右查看看板列",
-    "expandAll": "展开所有列"
+    "expandAll": "展开所有列",
+    "archiveFailed": "任务归档失败",
+    "archiveSuccess": "已归档 {{count}} 个任务"
   },
   "queue": {
     "limitReached": "已达到并行任务上限（{{current}}/{{max}}），任务已移入队列。",
@@ -148,7 +150,9 @@
     "blocked": {
       "title": "队列暂时无法继续",
       "description": "所有代理配置都已达到容量上限。有代理配置可用时，任务将继续执行。"
-    }
+    },
+    "queueAllFailed": "部分任务未能加入队列",
+    "queueAllResult": "已加入 {{completed}} 个，失败 {{failed}} 个。失败的任务仍在待办列，可重新加入。"
   },
   "execution": {
     "phases": {
@@ -203,7 +207,8 @@
     "unavailable": "图片不可用",
     "description": "{{filename}} 的预览",
     "doubleClickHint": "双击放大",
-    "lowResolution": "低分辨率预览"
+    "lowResolution": "低分辨率预览",
+    "open": "预览 {{filename}}"
   },
   "notifications": {
     "backgroundTaskTitle": "任务正在后台继续运行",
