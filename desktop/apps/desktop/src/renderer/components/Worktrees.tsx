@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   GitBranch,
@@ -69,6 +69,53 @@ export function Worktrees({ projectId }: WorktreesProps) {
   const [terminalWorktrees, setTerminalWorktrees] = useState<TerminalWorktreeConfig[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copyingPath, setCopyingPath] = useState<string | null>(null);
+  const copyInProgress = useRef(false);
+  const copyViewMounted = useRef(true);
+  const copyContext = useRef({ projectId, projectPath: selectedProject?.path, generation: 0, paths: new Map<string, string>() });
+  copyContext.current = {
+    projectId,
+    projectPath: selectedProject?.path,
+    generation: copyContext.current.generation + (
+      copyContext.current.projectId !== projectId || copyContext.current.projectPath !== selectedProject?.path ? 1 : 0
+    ),
+    paths: new Map([
+      ...worktrees.map(worktree => [`${TASK_PREFIX}${worktree.specName}`, worktree.path] as const),
+      ...terminalWorktrees.map(worktree => [`${TERMINAL_PREFIX}${worktree.name}`, worktree.worktreePath] as const)
+    ])
+  };
+
+  useEffect(() => {
+    copyViewMounted.current = true;
+    return () => { copyViewMounted.current = false; };
+  }, []);
+
+  const handleCopyPath = async (worktreeId: string, path: string) => {
+    if (copyInProgress.current) return;
+    const context = copyContext.current;
+    const isCurrent = () => copyViewMounted.current &&
+      copyContext.current.generation === context.generation &&
+      copyContext.current.projectId === context.projectId &&
+      copyContext.current.projectPath === context.projectPath &&
+      copyContext.current.paths.get(worktreeId) === path;
+    copyInProgress.current = true;
+    setCopyingPath(path);
+    try {
+      await navigator.clipboard.writeText(path);
+      if (isCurrent()) toast({ title: t('uiWorkspaces:worktrees.pathCopied') });
+    } catch {
+      if (isCurrent()) {
+        toast({
+          title: t('uiWorkspaces:worktrees.copyFailed'),
+          description: t('uiWorkspaces:worktrees.copyFailureHint'),
+          variant: 'destructive'
+        });
+      }
+    } finally {
+      copyInProgress.current = false;
+      if (copyViewMounted.current) setCopyingPath(null);
+    }
+  };
 
   // Terminal worktree delete state
   const [terminalWorktreeToDelete, setTerminalWorktreeToDelete] = useState<TerminalWorktreeConfig | null>(null);
@@ -679,13 +726,16 @@ export function Worktrees({ projectId }: WorktreesProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              // Copy worktree path to clipboard
-                              navigator.clipboard.writeText(worktree.path);
-                            }}
+                            onClick={() => handleCopyPath(taskId, worktree.path)}
+                            disabled={copyingPath !== null}
+                            aria-busy={copyingPath === worktree.path}
                           >
-                            <FolderOpen className="h-3.5 w-3.5 mr-1.5" />
-                            {t('uiWorkspaces:worktrees.copyPath')}
+                            {copyingPath === worktree.path
+                              ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                              : <FolderOpen className="h-3.5 w-3.5 mr-1.5" />}
+                            {t(copyingPath === worktree.path
+                              ? 'uiWorkspaces:worktrees.copyingPath'
+                              : 'uiWorkspaces:worktrees.copyPath')}
                           </Button>
                           <Button
                             variant="outline"
@@ -767,13 +817,16 @@ export function Worktrees({ projectId }: WorktreesProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            // Copy worktree path to clipboard
-                            navigator.clipboard.writeText(wt.worktreePath);
-                          }}
+                          onClick={() => handleCopyPath(terminalId, wt.worktreePath)}
+                          disabled={copyingPath !== null}
+                          aria-busy={copyingPath === wt.worktreePath}
                         >
-                          <FolderOpen className="h-3.5 w-3.5 mr-1.5" />
-                          {t('uiWorkspaces:worktrees.copyPath')}
+                          {copyingPath === wt.worktreePath
+                            ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                            : <FolderOpen className="h-3.5 w-3.5 mr-1.5" />}
+                          {t(copyingPath === wt.worktreePath
+                            ? 'uiWorkspaces:worktrees.copyingPath'
+                            : 'uiWorkspaces:worktrees.copyPath')}
                         </Button>
                         <Button
                           variant="outline"

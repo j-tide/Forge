@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useProjectStore } from '../../../stores/project-store';
 import {
   useChangelogStore,
@@ -59,7 +59,8 @@ export function useChangelog() {
   const generationProgress = useChangelogStore((state) => state.generationProgress);
   const generatedChangelog = useChangelogStore((state) => state.generatedChangelog);
   const isGenerating = useChangelogStore((state) => state.isGenerating);
-  const error = useChangelogStore((state) => state.error);
+  const error = useChangelogStore((state) => state.copyError || state.error);
+  const isCopying = useChangelogStore((state) => state.isCopying);
 
   // Task actions
   const toggleTaskSelection = useChangelogStore((state) => state.toggleTaskSelection);
@@ -100,6 +101,24 @@ export function useChangelog() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [versionReason, setVersionReason] = useState<string | null>(null);
+  const copyRequestRef = useRef(0);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyContextRef = useRef({ selectedProjectId, generatedChangelog, step, isGenerating });
+  copyContextRef.current = { selectedProjectId, generatedChangelog, step, isGenerating };
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Each context change invalidates the preceding clipboard request and feedback.
+  useEffect(() => {
+    copyRequestRef.current += 1;
+    setCopySuccess(false);
+    useChangelogStore.getState().setCopyError(null);
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = null;
+    return () => {
+      copyRequestRef.current += 1;
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = null;
+    };
+  }, [selectedProjectId, generatedChangelog, step, isGenerating]);
 
   // Initialize changelog preferences from settings on mount
   const initializeFromSettings = useChangelogStore((state) => state.initializeFromSettings);
@@ -191,11 +210,32 @@ export function useChangelog() {
     }
   };
 
-  const handleCopy = () => {
-    const success = copyChangelogToClipboard();
+  const handleCopy = async () => {
+    if (useChangelogStore.getState().isCopying) return;
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = null;
+    setCopySuccess(false);
+    const request = ++copyRequestRef.current;
+    const context = copyContextRef.current;
+    const isCurrent = () => {
+      const latest = copyContextRef.current;
+      return copyRequestRef.current === request
+        && latest.selectedProjectId === context.selectedProjectId
+        && useProjectStore.getState().selectedProjectId === context.selectedProjectId
+        && latest.generatedChangelog === context.generatedChangelog
+        && useChangelogStore.getState().generatedChangelog === context.generatedChangelog
+        && latest.step === context.step
+        && latest.isGenerating === context.isGenerating
+        && !useChangelogStore.getState().isGenerating;
+    };
+    const success = await copyChangelogToClipboard(isCurrent);
+    if (!isCurrent()) return;
     if (success) {
       setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
+      copyTimeoutRef.current = setTimeout(() => {
+        setCopySuccess(false);
+        copyTimeoutRef.current = null;
+      }, 2000);
     }
   };
 
@@ -298,6 +338,7 @@ export function useChangelog() {
     showAdvanced,
     saveSuccess,
     copySuccess,
+    isCopying,
     versionReason,
     canGenerate,
     canSave,

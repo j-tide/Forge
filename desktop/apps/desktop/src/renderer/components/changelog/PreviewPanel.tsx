@@ -6,6 +6,7 @@ import { Textarea } from '../ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import ReactMarkdown, { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useChangelogStore } from '../../stores/changelog-store';
 
 // Component for loading local images via IPC
 interface LocalImageProps {
@@ -115,6 +116,7 @@ export function PreviewPanel({
   onDrop
 }: PreviewPanelProps) {
   const { t } = useTranslation('uiChangelogExtra');
+  const isCopying = useChangelogStore((state) => state.isCopying);
   const [viewMode, setViewMode] = useState<'markdown' | 'preview'>('markdown');
 
   // Custom components for ReactMarkdown to handle local image paths
@@ -156,14 +158,17 @@ export function PreviewPanel({
                 variant="outline"
                 size="sm"
                 onClick={onCopy}
-                disabled={!canSave}
+                disabled={!canSave || isCopying}
+                aria-busy={isCopying}
               >
-                {copySuccess ? (
+                {isCopying ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : copySuccess ? (
                   <CheckCircle className="mr-2 h-4 w-4 text-success" />
                 ) : (
                   <Copy className="mr-2 h-4 w-4" />
                 )}
-                {copySuccess ? t('copied') : t('copy')}
+                {isCopying ? t('copying') : copySuccess ? t('copied') : t('copy')}
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t('copyHelp')}</TooltipContent>

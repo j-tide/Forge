@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Github,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
+import { useToast } from '../../hooks/use-toast';
 
 interface GitHubOAuthFlowProps {
   onSuccess: (token: string, username?: string) => void;
@@ -37,6 +38,89 @@ function debugLog(message: string, data?: unknown) {
 // GitHub device codes typically expire after 15 minutes, but 5 minutes is a reasonable UX timeout
 const AUTH_TIMEOUT_MS = 5 * 60 * 1000;
 
+function useAuthClipboard(
+  value: string | null,
+  view: string,
+  flowGeneration: RefObject<number>,
+  pending: RefObject<boolean>,
+  setPending: (value: boolean) => void,
+  target: 'code' | 'url'
+) {
+  const { t } = useTranslation('uiProjectOAuth');
+  const { toast } = useToast();
+  const [feedback, setFeedback] = useState<'idle' | 'copied'>('idle');
+  const latestContext = useRef({ value, view });
+  latestContext.current = { value, view };
+  const generation = useRef(0);
+  const mounted = useRef(false);
+  const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearFeedbackTimeout = useCallback(() => {
+    if (timeout.current) clearTimeout(timeout.current);
+    timeout.current = null;
+  }, []);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      generation.current += 1;
+      clearFeedbackTimeout();
+    };
+  }, [clearFeedbackTimeout]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Changing the value or auth view invalidates copy feedback and its timer.
+  useEffect(() => {
+    generation.current += 1;
+    clearFeedbackTimeout();
+    setFeedback('idle');
+  }, [value, view, clearFeedbackTimeout]);
+
+  const copy = async () => {
+    if (!value || pending.current) return;
+    const attempt = ++generation.current;
+    const flow = flowGeneration.current;
+    const isCurrent = () => mounted.current
+      && generation.current === attempt
+      && flowGeneration.current === flow
+      && latestContext.current.value === value
+      && latestContext.current.view === view;
+
+    pending.current = true;
+    setPending(true);
+    clearFeedbackTimeout();
+    setFeedback('idle');
+    try {
+      await navigator.clipboard.writeText(value);
+      if (!isCurrent()) return;
+      setFeedback('copied');
+      toast({ title: target === 'code' ? t('github.clipboard.codeCopied') : t('github.clipboard.urlCopied') });
+      timeout.current = setTimeout(() => {
+        if (isCurrent()) setFeedback('idle');
+        timeout.current = null;
+      }, 2000);
+    } catch {
+      if (!isCurrent()) return;
+      setFeedback('idle');
+      toast({
+        variant: 'destructive',
+        title: t('github.clipboard.copyFailed'),
+        description: t('github.clipboard.copyFailedDescription')
+      });
+    } finally {
+      // Clipboard writes cannot be cancelled. Keep both copy controls locked across
+      // code changes and retries until this physical write settles.
+      pending.current = false;
+      if (mounted.current) {
+        setPending(false);
+        if (!isCurrent()) setFeedback('idle');
+      }
+    }
+  };
+
+  return { copy, copied: feedback === 'copied' };
+}
+
 /**
  * GitHub OAuth flow component using gh CLI
  * Guides users through authenticating with GitHub using the gh CLI
@@ -53,15 +137,17 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
   const [deviceCode, setDeviceCode] = useState<string | null>(null);
   const [authUrl, setAuthUrl] = useState<string | null>(null);
   const [browserOpened, setBrowserOpened] = useState<boolean>(false);
-  const [codeCopied, setCodeCopied] = useState<boolean>(false);
-  const [urlCopied, setUrlCopied] = useState<boolean>(false);
   const [isTimeout, setIsTimeout] = useState<boolean>(false);
+
+  const copyFlowGeneration = useRef(0);
+  const copyPendingRef = useRef(false);
+  const [copyPending, setCopyPending] = useState(false);
+  const copyView = `${status}:${copyFlowGeneration.current}`;
+  const codeClipboard = useAuthClipboard(deviceCode, copyView, copyFlowGeneration, copyPendingRef, setCopyPending, 'code');
+  const urlClipboard = useAuthClipboard(authUrl, copyView, copyFlowGeneration, copyPendingRef, setCopyPending, 'url');
 
   // Ref to track authentication timeout
   const authTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Refs to track copy feedback timeouts
-  const codeCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const urlCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Check gh CLI installation and authentication status on mount
   // Use a ref to prevent double-execution in React Strict Mode
@@ -74,18 +160,6 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
       clearTimeout(authTimeoutRef.current);
       authTimeoutRef.current = null;
     }
-  }, []);
-
-  // Cleanup copy feedback timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (codeCopyTimeoutRef.current) {
-        clearTimeout(codeCopyTimeoutRef.current);
-      }
-      if (urlCopyTimeoutRef.current) {
-        clearTimeout(urlCopyTimeoutRef.current);
-      }
-    };
   }, []);
 
   // Handle authentication timeout
@@ -225,6 +299,8 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
 
   const handleStartAuth = async () => {
     debugLog('handleStartAuth() called');
+    // Invalidate pending copies immediately, even if React batches the new flow's renders.
+    copyFlowGeneration.current += 1;
     setStatus('authenticating');
     setError(null);
 
@@ -232,8 +308,6 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
     setDeviceCode(null);
     setAuthUrl(null);
     setBrowserOpened(false);
-    setCodeCopied(false);
-    setUrlCopied(false);
     setIsTimeout(false);
 
     // Clear any existing timeout and start a new one
@@ -295,23 +369,6 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
   const handleRetry = () => {
     debugLog('Retry clicked');
     checkGitHubStatus();
-  };
-
-  const handleCopyDeviceCode = async () => {
-    if (!deviceCode) return;
-    debugLog('Copying device code to clipboard');
-    try {
-      await navigator.clipboard.writeText(deviceCode);
-      setCodeCopied(true);
-      // Clear any existing timeout before setting a new one
-      if (codeCopyTimeoutRef.current) {
-        clearTimeout(codeCopyTimeoutRef.current);
-      }
-      // Reset the copied state after 2 seconds
-      codeCopyTimeoutRef.current = setTimeout(() => setCodeCopied(false), 2000);
-    } catch (err) {
-      debugLog('Failed to copy device code:', err);
-    }
   };
 
   const handleOpenAuthUrl = () => {
@@ -448,10 +505,18 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleCopyDeviceCode}
+                        onClick={codeClipboard.copy}
+                        disabled={copyPending}
+                        aria-busy={copyPending}
+                        aria-label={t('github.clipboard.copyCode')}
                         className="shrink-0"
                       >
-                        {codeCopied ? (
+                        {copyPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            {t('buttons.copying')}
+                          </>
+                        ) : codeClipboard.copied ? (
                           <>
                             <Check className="h-4 w-4 mr-1 text-success" />
                             {t('buttons.copied')}
@@ -555,22 +620,18 @@ export function GitHubOAuthFlow({ onSuccess, onCancel }: GitHubOAuthFlowProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(authUrl);
-                            setUrlCopied(true);
-                            // Clear any existing timeout before setting a new one
-                            if (urlCopyTimeoutRef.current) {
-                              clearTimeout(urlCopyTimeoutRef.current);
-                            }
-                            urlCopyTimeoutRef.current = setTimeout(() => setUrlCopied(false), 2000);
-                          } catch (err) {
-                            debugLog('Failed to copy URL:', err);
-                          }
-                        }}
+                        onClick={urlClipboard.copy}
+                        disabled={copyPending}
+                        aria-busy={copyPending}
+                        aria-label={t('github.clipboard.copyUrl')}
                         className="shrink-0"
                       >
-                        {urlCopied ? (
+                        {copyPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            {t('buttons.copying')}
+                          </>
+                        ) : urlClipboard.copied ? (
                           <>
                             <Check className="h-4 w-4 mr-1 text-success" />
                             {t('buttons.copied')}

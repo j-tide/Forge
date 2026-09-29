@@ -65,6 +65,8 @@ interface ChangelogState {
   generatedChangelog: string;
   isGenerating: boolean;
   error: string | null;
+  isCopying: boolean;
+  copyError: string | null;
 
   // Actions
   setDoneTasks: (tasks: ChangelogTask[]) => void;
@@ -114,6 +116,8 @@ interface ChangelogState {
   setGeneratedChangelog: (changelog: string) => void;
   setIsGenerating: (isGenerating: boolean) => void;
   setError: (error: string | null) => void;
+  setIsCopying: (isCopying: boolean) => void;
+  setCopyError: (error: string | null) => void;
 
   // Compound actions
   reset: () => void;
@@ -166,7 +170,9 @@ const initialState = {
   generationProgress: null as ChangelogGenerationProgress | null,
   generatedChangelog: '',
   isGenerating: false,
-  error: null as string | null
+  error: null as string | null,
+  isCopying: false,
+  copyError: null as string | null
 };
 
 export const useChangelogStore = create<ChangelogState>((set, get) => ({
@@ -269,9 +275,11 @@ export const useChangelogStore = create<ChangelogState>((set, get) => ({
   setGeneratedChangelog: (changelog) => set({ generatedChangelog: changelog }),
   setIsGenerating: (isGenerating) => set({ isGenerating }),
   setError: (error) => set({ error }),
+  setIsCopying: (isCopying) => set({ isCopying }),
+  setCopyError: (copyError) => set({ copyError }),
 
   // Compound actions
-  reset: () => set({ ...initialState, date: getDefaultDate() }),
+  reset: () => set({ ...initialState, isCopying: get().isCopying, date: getDefaultDate() }),
 
   updateGeneratedChangelog: (changelog) => set({ generatedChangelog: changelog })
 }));
@@ -564,20 +572,25 @@ export async function saveChangelog(
   }
 }
 
-export function copyChangelogToClipboard(): boolean {
+export async function copyChangelogToClipboard(isCurrent: () => boolean = () => true): Promise<boolean> {
   const store = useChangelogStore.getState();
+  if (store.isCopying) return false;
+  if (isCurrent()) store.setCopyError(null);
 
   if (!store.generatedChangelog) {
-    store.setError(i18n.t('uiRuntime:stores.noChangelogCopy'));
+    if (isCurrent()) store.setCopyError(i18n.t('uiRuntime:stores.noChangelogCopy'));
     return false;
   }
 
+  store.setIsCopying(true);
   try {
-    navigator.clipboard.writeText(store.generatedChangelog);
+    await navigator.clipboard.writeText(store.generatedChangelog);
     return true;
   } catch (_error) {
-    store.setError(i18n.t('uiRuntime:stores.failedCopyClipboard'));
+    if (isCurrent()) store.setCopyError(i18n.t('uiChangelogExtra:copyFailed'));
     return false;
+  } finally {
+    store.setIsCopying(false);
   }
 }
 

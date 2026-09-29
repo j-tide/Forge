@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitMerge, Copy, Check, Sparkles, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Textarea } from '../../ui/textarea';
 import { persistTaskStatus } from '../../../stores/task-store';
+import { useToast } from '../../../hooks/use-toast';
 import type { Task } from '../../../../shared/types';
 
 interface StagedSuccessMessageProps {
@@ -30,21 +31,81 @@ export function StagedSuccessMessage({
 }: StagedSuccessMessageProps) {
   const { t } = useTranslation(['taskReview', 'common']);
   const { t: uiT } = useTranslation('uiTasks');
+  const { toast } = useToast();
   const [commitMessage, setCommitMessage] = useState(suggestedCommitMessage || '');
   const [copied, setCopied] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+  const copyPendingRef = useRef(false);
+  const copyGenerationRef = useRef(0);
+  const copyMountedRef = useRef(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentTaskIdRef = useRef(task.id);
+  const commitMessageRef = useRef(commitMessage);
+  const suggestedCommitMessageRef = useRef(suggestedCommitMessage);
+  currentTaskIdRef.current = task.id;
+  commitMessageRef.current = commitMessage;
+  suggestedCommitMessageRef.current = suggestedCommitMessage;
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMarkingDone, setIsMarkingDone] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    currentTaskIdRef.current = task.id;
+    copyMountedRef.current = true;
+    copyGenerationRef.current += 1;
+    copyPendingRef.current = false;
+    setIsCopying(false);
+    setCopied(false);
+    setCopyError(false);
+    setCommitMessage(suggestedCommitMessageRef.current || '');
+
+    return () => {
+      copyMountedRef.current = false;
+      copyGenerationRef.current += 1;
+      copyPendingRef.current = false;
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = null;
+    };
+  }, [task.id]);
+
   const handleCopy = async () => {
-    if (!commitMessage) return;
+    if (!commitMessage || copyPendingRef.current) return;
+    copyPendingRef.current = true;
+    const generation = ++copyGenerationRef.current;
+    const taskId = task.id;
+    const text = commitMessage;
+    const isCurrentCopy = () => copyMountedRef.current
+      && copyGenerationRef.current === generation
+      && currentTaskIdRef.current === taskId;
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    copiedTimerRef.current = null;
+    setIsCopying(true);
+    setCopied(false);
+    setCopyError(false);
+
     try {
-      await navigator.clipboard.writeText(commitMessage);
+      await navigator.clipboard.writeText(text);
+      if (!isCurrentCopy() || commitMessageRef.current !== text) return;
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
+      copiedTimerRef.current = setTimeout(() => {
+        if (isCurrentCopy()) setCopied(false);
+        copiedTimerRef.current = null;
+      }, 2000);
+    } catch {
+      if (!isCurrentCopy()) return;
+      setCopyError(true);
+      toast({
+        title: t('taskReview:stagedSuccess.copyFailed'),
+        description: t('taskReview:stagedSuccess.errors.failedToCopy'),
+        variant: 'destructive',
+      });
+    } finally {
+      if (isCurrentCopy()) {
+        copyPendingRef.current = false;
+        setIsCopying(false);
+      }
     }
   };
 
@@ -142,9 +203,15 @@ export function StagedSuccessMessage({
               size="sm"
               onClick={handleCopy}
               className="h-6 px-2 text-xs"
-              disabled={!commitMessage}
+              disabled={!commitMessage || isCopying}
+              aria-busy={isCopying}
             >
-              {copied ? (
+              {isCopying ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  {t('taskReview:stagedSuccess.copying')}
+                </>
+              ) : copied ? (
                 <>
                   <Check className="h-3 w-3 mr-1 text-success" />
                   {t('taskReview:stagedSuccess.copied')}
@@ -159,10 +226,27 @@ export function StagedSuccessMessage({
           </div>
           <Textarea
             value={commitMessage}
-            onChange={(e) => setCommitMessage(e.target.value)}
+            onChange={(e) => {
+              commitMessageRef.current = e.target.value;
+              setCommitMessage(e.target.value);
+              setCopied(false);
+              setCopyError(false);
+              if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+              copiedTimerRef.current = null;
+            }}
             className="font-mono text-xs min-h-[100px] bg-background/80 resize-y"
             placeholder={t('taskReview:stagedSuccess.commitMessagePlaceholder')}
           />
+          {copyError && (
+            <div className="mt-2 flex items-center gap-2">
+              <p role="alert" className="text-xs text-destructive">
+                {t('taskReview:stagedSuccess.errors.failedToCopy')}
+              </p>
+              <Button variant="outline" size="sm" onClick={handleCopy} disabled={isCopying}>
+                {t('common:buttons.retry')}
+              </Button>
+            </div>
+          )}
           <p className="text-[10px] text-muted-foreground mt-1.5">
             {t('taskReview:stagedSuccess.editHint')} <code className="bg-background px-1 rounded">git commit -m "..."</code>
           </p>
