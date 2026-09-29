@@ -1,28 +1,37 @@
-import { useEffect } from 'react';
+import { useState, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
 import { useSettingsStore, saveSettings } from '../../stores/settings-store';
 import { MixedPhaseEditor } from './MixedPhaseEditor';
 import { MixedFeatureEditor } from './MixedFeatureEditor';
+import { Switch } from '../ui/switch';
+import { Label } from '../ui/label';
 
 /**
  * CrossProviderTabContent — rendered when the user selects the "Cross-Provider" tab
  * in Agent Profile settings.
  *
- * Activates cross-provider mode on mount, then shows separate sections for
- * pipeline phase configuration (MixedPhaseEditor) and feature model configuration
- * (MixedFeatureEditor).
+ * Browsing and editing the configuration does not activate it. The user chooses
+ * explicitly whether new tasks should use the cross-provider configuration.
  */
 export function CrossProviderTabContent() {
   const { t } = useTranslation('settings');
   const settings = useSettingsStore((s) => s.settings);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const switchId = useId();
 
-  // Activate cross-provider mode when this tab is shown
-  useEffect(() => {
-    if (!settings.customMixedProfileActive) {
-      saveSettings({ customMixedProfileActive: true });
+  const handleActiveChange = async (active: boolean) => {
+    setIsSaving(true);
+    setSaveFailed(false);
+    try {
+      if (!await saveSettings({ customMixedProfileActive: active })) setSaveFailed(true);
+    } catch {
+      setSaveFailed(true);
+    } finally {
+      setIsSaving(false);
     }
-  }, []); // Only on mount
+  };
 
   return (
     <div className="space-y-6">
@@ -36,11 +45,24 @@ export function CrossProviderTabContent() {
         </p>
       </div>
 
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-card p-4">
+        <Label htmlFor={switchId} className="text-sm font-medium">
+          {t('agentProfile.crossProviderTab.enableLabel')}
+        </Label>
+        <Switch
+          id={switchId}
+          checked={Boolean(settings.customMixedProfileActive)}
+          disabled={isSaving}
+          onCheckedChange={(active) => void handleActiveChange(active)}
+        />
+      </div>
+      {saveFailed && <p role="alert" className="text-xs text-destructive">{t('agentProfile.crossProviderTab.saveFailed')}</p>}
+
       {/* Info banner */}
       <div className="flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/20 p-3">
         <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <p className="text-xs text-primary/80">
-          {t('agentProfile.crossProviderTab.activateInfo')}
+          {t(settings.customMixedProfileActive ? 'agentProfile.crossProviderTab.activateInfo' : 'agentProfile.crossProviderTab.inactiveInfo')}
         </p>
       </div>
 

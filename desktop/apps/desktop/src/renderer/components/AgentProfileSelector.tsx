@@ -7,7 +7,7 @@
  *
  * Used in TaskCreationWizard and TaskEditDialog.
  */
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useActiveProvider } from '../hooks/useActiveProvider';
 import { getProviderModelLabel } from '../../shared/utils/model-display';
@@ -87,15 +87,18 @@ export function AgentProfileSelector({
 }: AgentProfileSelectorProps) {
   const { t } = useTranslation('settings');
   const { t: uiT } = useTranslation('uiTasks');
-  const { provider: activeProvider } = useActiveProvider();
+  const selectorId = useId();
+  const { provider: activeProvider, account: activeAccount } = useActiveProvider();
+  const ollamaBaseUrl = activeAccount?.provider === 'ollama' ? activeAccount.baseUrl : undefined;
   const [showPhaseDetails, setShowPhaseDetails] = useState(false);
 
   // Ollama models are user-installed — fetch dynamically from the local server
   const [ollamaModels, setOllamaModels] = useState<Array<{ value: string; label: string }>>([]);
 
   const fetchOllamaModels = useCallback(async (signal?: AbortSignal) => {
+    setOllamaModels([]);
     try {
-      const result = await window.electronAPI.listOllamaModels();
+      const result = await window.electronAPI.listOllamaModels(ollamaBaseUrl);
       if (signal?.aborted) return;
       if (result?.success && Array.isArray(result?.data?.models)) {
         const llmModels = (result.data.models as Array<{ name: string; is_embedding: boolean }>)
@@ -106,7 +109,7 @@ export function AgentProfileSelector({
     } catch {
       // Ollama not available — leave empty
     }
-  }, []);
+  }, [ollamaBaseUrl]);
 
   useEffect(() => {
     if (activeProvider !== 'ollama') {
@@ -210,7 +213,7 @@ export function AgentProfileSelector({
     <div className="space-y-4">
       {/* Agent Profile Selection */}
       <div className="space-y-2">
-        <Label htmlFor="agent-profile" className="text-sm font-medium text-foreground">
+        <Label htmlFor={`${selectorId}-profile`} className="text-sm font-medium text-foreground">
           {t('agentProfile.label')}
         </Label>
         <Select
@@ -218,7 +221,7 @@ export function AgentProfileSelector({
           onValueChange={handleProfileSelect}
           disabled={disabled}
         >
-          <SelectTrigger id="agent-profile" className="h-10">
+          <SelectTrigger id={`${selectorId}-profile`} className="h-10">
             <SelectValue>
               <div className="flex items-center gap-2">
                 <display.icon className="h-4 w-4" />
@@ -328,13 +331,17 @@ export function AgentProfileSelector({
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">{t('agentProfile.model')}</Label>
+                      <Label htmlFor={`${selectorId}-${phase}-model`} className="text-[10px] text-muted-foreground">{t('agentProfile.model')}</Label>
                       <Select
                         value={currentPhaseModels[phase]}
                         onValueChange={(value) => handlePhaseModelChange(phase, value as ModelType)}
                         disabled={disabled}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger
+                          id={`${selectorId}-${phase}-model`}
+                          aria-label={`${t(PHASE_LABEL_KEYS[phase].label)} ${t('agentProfile.model')}`}
+                          className="h-8 text-xs"
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -347,6 +354,7 @@ export function AgentProfileSelector({
                       </Select>
                     </div>
                     <ThinkingLevelSelect
+                      ariaLabel={`${t(PHASE_LABEL_KEYS[phase].label)} ${t('agentProfile.thinkingLevel')}`}
                       value={currentPhaseThinking[phase]}
                       onChange={(value) => handlePhaseThinkingChange(phase, value as ThinkingLevel)}
                       modelValue={currentPhaseModels[phase]}
@@ -366,7 +374,7 @@ export function AgentProfileSelector({
         <div className="space-y-4 rounded-lg border border-border bg-muted/30 p-4">
           {/* Model Selection */}
           <div className="space-y-2">
-            <Label htmlFor="custom-model" className="text-xs font-medium text-muted-foreground">
+            <Label htmlFor={`${selectorId}-custom-model`} className="text-xs font-medium text-muted-foreground">
               {t('agentProfile.model')}
             </Label>
             <Select
@@ -374,7 +382,7 @@ export function AgentProfileSelector({
               onValueChange={(value) => onModelChange(value as ModelType)}
               disabled={disabled}
             >
-              <SelectTrigger id="custom-model" className="h-9">
+              <SelectTrigger id={`${selectorId}-custom-model`} className="h-9">
                 <SelectValue placeholder={t('agentProfile.selectModel')} />
               </SelectTrigger>
               <SelectContent>

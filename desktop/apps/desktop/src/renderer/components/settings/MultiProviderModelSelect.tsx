@@ -13,9 +13,11 @@ import { navigateModelPicker } from './model-picker-navigation';
 
 interface MultiProviderModelSelectProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string, provider: BuiltinProvider) => void;
   className?: string;
   filterProvider?: BuiltinProvider;  // When set, only show models for this provider
+  currentProvider?: BuiltinProvider;
+  ariaLabel?: string;
 }
 
 function formatContextWindow(size: number): string {
@@ -23,15 +25,22 @@ function formatContextWindow(size: number): string {
   return `${(size / 1000).toFixed(0)}K`;
 }
 
-export function MultiProviderModelSelect({ value, onChange, className, filterProvider }: MultiProviderModelSelectProps) {
+export function MultiProviderModelSelect({ value, onChange, className, filterProvider, currentProvider, ariaLabel }: MultiProviderModelSelectProps) {
   const { t } = useTranslation(['settings']);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [customInput, setCustomInput] = useState('');
+  const [customProvider, setCustomProvider] = useState<BuiltinProvider>(filterProvider ?? currentProvider ?? 'anthropic');
   const searchRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [popoverSide, setPopoverSide] = useState<'top' | 'bottom'>('bottom');
 
   const settings = useSettingsStore(s => s.settings);
-  const providerAccounts = settings.providerAccounts ?? [];
+  const providerAccounts = useSettingsStore(s => s.providerAccounts);
+  const ollamaAccount = providerAccounts.find((account) => account.id === settings.globalPriorityOrder?.find((id) => providerAccounts.some((entry) => entry.id === id && entry.provider === 'ollama')))
+    ?? providerAccounts.find((account) => account.provider === 'ollama');
+  const ollamaUrl = ollamaAccount?.baseUrl;
+  const ollamaAccountId = ollamaAccount?.id;
 
   // Dynamic Ollama model fetching
   const [ollamaModels, setOllamaModels] = useState<ModelOption[]>([]);
@@ -40,18 +49,18 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
   useEffect(() => {
     if (filterProvider && filterProvider !== 'ollama') return;
     // Only fetch if there's an Ollama account configured
-    const hasOllamaAccount = providerAccounts.some(a => a.provider === 'ollama');
-    if (!hasOllamaAccount) {
+    if (!ollamaAccountId) {
       setOllamaModels([]);
       return;
     }
 
     const controller = new AbortController();
+    setOllamaModels([]);
     setOllamaLoading(true);
 
     (async () => {
       try {
-        const result = await window.electronAPI.listOllamaModels();
+        const result = await window.electronAPI.listOllamaModels(ollamaUrl);
         if (controller.signal.aborted) return;
         if (result?.success && result.data?.models) {
           const llmModels = result.data.models
@@ -72,7 +81,7 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
     })();
 
     return () => controller.abort();
-  }, [filterProvider, providerAccounts]);
+  }, [filterProvider, ollamaAccountId, ollamaUrl]);
 
   // Determine if all OpenAI accounts are OAuth-only (Codex subscription)
   const openaiIsOAuthOnly = useMemo(() => {
@@ -97,7 +106,7 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
       // Hide apiKeyOnly OpenAI models when all OpenAI accounts are OAuth (Codex subscription)
       if (model.apiKeyOnly && model.provider === 'openai' && openaiIsOAuthOnly) continue;
       if (!groups.has(model.provider)) groups.set(model.provider, []);
-      groups.get(model.provider)!.push(model);
+      groups.get(model.provider)?.push(model);
     }
 
     // Merge user-configured custom models from openai-compatible accounts
@@ -106,12 +115,12 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
         a => a.provider === 'openai-compatible' && a.customModels?.length
       );
       for (const account of customAccounts) {
-        for (const cm of account.customModels!) {
+        for (const cm of account.customModels ?? []) {
           // Avoid duplicates — skip if already present
           const existing = groups.get('openai-compatible');
           if (existing?.some(m => m.value === cm.id)) continue;
           if (!groups.has('openai-compatible')) groups.set('openai-compatible', []);
-          groups.get('openai-compatible')!.push({
+          groups.get('openai-compatible')?.push({
             value: cm.id,
             label: cm.label,
             provider: 'openai-compatible',
@@ -139,6 +148,17 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
     if (provider === 'ollama') return providerAccounts.some(a => a.provider === 'ollama');
     return providerAccounts.some(a => a.provider === provider && (a.apiKey || a.claudeProfileId || a.authType === 'oauth'));
   };
+
+  // A manually entered cross-provider model needs an actual connected account.
+  // Keep catalog compatibility separate from the provider sent with custom input.
+  const customProviders = PROVIDER_REGISTRY.filter((provider) =>
+    providerAccounts.some((account) => account.provider === provider.id) && hasCredentials(provider.id),
+  );
+  const effectiveCustomProvider = filterProvider ?? (
+    customProviders.some((provider) => provider.id === customProvider)
+      ? customProvider
+      : customProviders[0]?.id
+  );
 
   // Filter models by search
   const filteredGroups = useMemo(() => {
@@ -185,20 +205,33 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
 
   // Find current selection label (check grouped models which includes custom models)
   const selectedModel = useMemo(() => {
-    const fromCatalog = ALL_AVAILABLE_MODELS.find(m => m.value === resolvedValue);
-    if (fromCatalog) return fromCatalog;
     // Check custom models from grouped results
-    for (const models of groupedModels.values()) {
+    const selectionProvider = filterProvider ?? currentProvider;
+    for (const [provider, models] of groupedModels) {
+      if (selectionProvider && provider !== selectionProvider) continue;
       const found = models.find(m => m.value === resolvedValue);
       if (found) return found;
     }
     return undefined;
-  }, [resolvedValue, groupedModels]);
+  }, [resolvedValue, groupedModels, filterProvider, currentProvider]);
   const displayLabel = selectedModel?.label ?? value;
 
   const handleOpen = () => {
+    const triggerRect = triggerRef.current?.getBoundingClientRect();
+    if (triggerRect) {
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const preferredHeight = Math.min(320, viewportHeight - 16);
+      const spaceAbove = triggerRect.top - 12;
+      const spaceBelow = viewportHeight - triggerRect.bottom - 12;
+      setPopoverSide(spaceBelow < preferredHeight && spaceAbove > spaceBelow ? 'top' : 'bottom');
+    }
     setOpen(true);
     setSearch('');
+    setCustomProvider(filterProvider ?? (
+      currentProvider && customProviders.some((provider) => provider.id === currentProvider)
+        ? currentProvider
+        : customProviders[0]?.id ?? 'anthropic'
+    ));
   };
 
   const handleClose = () => {
@@ -206,14 +239,14 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
     setSearch('');
   };
 
-  const handleSelect = (modelValue: string) => {
-    onChange(modelValue);
+  const handleSelect = (model: ModelOption) => {
+    onChange(model.value, model.provider);
     handleClose();
   };
 
   const handleCustomSubmit = () => {
-    if (customInput.trim()) {
-      onChange(customInput.trim());
+    if (customInput.trim() && effectiveCustomProvider) {
+      onChange(customInput.trim(), effectiveCustomProvider);
       setCustomInput('');
       handleClose();
     }
@@ -225,7 +258,9 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
       {/* Trigger button */}
       <PopoverTrigger asChild>
       <button
+        ref={triggerRef}
         type="button"
+        aria-label={ariaLabel}
         className={cn(
           'flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm',
           'ring-offset-background',
@@ -245,9 +280,10 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
       {open && (
         <PopoverContent
           align="start"
+          side={popoverSide}
           collisionPadding={8}
           aria-label={t('settings:modelSelect.placeholder')}
-          className="w-[var(--radix-popover-trigger-width)] max-w-[min(25rem,calc(100vw-1rem))] max-h-[min(20rem,var(--radix-popover-content-available-height))] overflow-hidden p-0 flex flex-col"
+          className="w-[var(--radix-popover-trigger-width)] max-w-[min(25rem,calc(100vw-1rem))] max-h-[min(20rem,var(--radix-popover-content-available-height))] overflow-y-auto p-0"
           onOpenAutoFocus={(event) => { event.preventDefault(); searchRef.current?.focus(); }}
           onKeyDown={navigateModelPicker}
         >
@@ -261,13 +297,14 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder={t('settings:modelSelect.searchPlaceholder', { defaultValue: 'Search models...' })}
+                aria-label={t('settings:modelSelect.searchPlaceholder')}
                 className="pl-8 h-8"
               />
             </div>
           </div>
 
           {/* Model groups */}
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div>
             {/* Ollama loading state */}
             {ollamaLoading && filterProvider === 'ollama' && (
               <div className="p-3 flex items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -299,7 +336,7 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
                   <div key={provider}>
                     {/* Provider header */}
                     <div className={cn(
-                      'flex items-center justify-between px-3 py-1.5 bg-muted/50 sticky top-0',
+                      'flex items-center justify-between px-3 py-1.5 bg-muted/50',
                       !configured && 'opacity-60'
                     )}>
                       <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -321,13 +358,13 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
 
                     {/* Models in this provider */}
                     {models.map(model => {
-                      const isSelected = resolvedValue === model.value;
+                      const isSelected = resolvedValue === model.value && (!currentProvider || currentProvider === model.provider);
                       return (
                         <button
                           data-model-option
                           key={model.value}
                           type="button"
-                          onClick={() => configured ? handleSelect(model.value) : undefined}
+                          onClick={() => configured ? handleSelect(model) : undefined}
                           disabled={!configured}
                           className={cn(
                             'w-full px-3 py-2 text-left text-sm flex items-start gap-2',
@@ -395,18 +432,36 @@ export function MultiProviderModelSelect({ value, onChange, className, filterPro
             <p className="text-[10px] text-muted-foreground px-1">
               {i18n.t('uiSettings:missing_modelSelect_customModel')}
             </p>
+            {!filterProvider && (
+              <label className="flex items-center gap-2 px-1 text-[10px] text-muted-foreground">
+                {t('settings:modelSelect.customProvider')}
+                <select
+                  aria-label={t('settings:modelSelect.customProvider')}
+                  value={effectiveCustomProvider ?? ''}
+                  disabled={customProviders.length === 0}
+                  onChange={(event) => setCustomProvider(event.target.value as BuiltinProvider)}
+                  className="min-w-0 flex-1 h-7 rounded-md border border-input bg-background px-2 text-xs text-foreground"
+                >
+                  {customProviders.length === 0 && <option value="">{t('settings:agentProfile.providerTabs.needsSetup')}</option>}
+                  {customProviders.map((provider) => (
+                    <option key={provider.id} value={provider.id}>{provider.name}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             <div className="flex gap-1.5">
               <Input
                 value={customInput}
                 onChange={e => setCustomInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleCustomSubmit()}
                 placeholder={i18n.t('uiSettings:missing_modelSelect_customModelPlaceholder')}
+                aria-label={i18n.t('uiSettings:missing_modelSelect_customModel')}
                 className="h-7 text-xs"
               />
               <button
                 type="button"
                 onClick={handleCustomSubmit}
-                disabled={!customInput.trim()}
+                disabled={!customInput.trim() || !effectiveCustomProvider}
                 className={cn(
                   'shrink-0 px-2 h-7 rounded-md text-xs font-medium transition-colors',
                   'bg-primary text-primary-foreground hover:bg-primary/90',

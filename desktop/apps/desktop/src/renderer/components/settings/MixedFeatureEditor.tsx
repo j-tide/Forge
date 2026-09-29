@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSettingsStore, saveSettings } from '../../stores/settings-store';
 import { MultiProviderModelSelect } from './MultiProviderModelSelect';
 import { ThinkingLevelSelect } from './ThinkingLevelSelect';
-import { ALL_AVAILABLE_MODELS, FEATURE_LABELS } from '@shared/constants/models';
+import { FEATURE_LABELS } from '@shared/constants/models';
 import { PROVIDER_REGISTRY } from '@shared/constants/providers';
 import { Label } from '../ui/label';
 import type { MixedFeatureConfig, MixedPhaseEntry, ThinkingLevel } from '@shared/types/settings';
@@ -19,6 +19,7 @@ const FEATURE_KEYS: readonly FeatureKey[] = [
   'githubIssues',
   'githubPrs',
   'utility',
+  'naming',
 ] as const;
 
 /**
@@ -33,15 +34,6 @@ const DEFAULT_MIXED_FEATURE_CONFIG: MixedFeatureConfig = {
   utility: { provider: 'anthropic', modelId: 'haiku', thinkingLevel: 'low' },
   naming: { provider: 'anthropic', modelId: 'haiku', thinkingLevel: 'low' },
 };
-
-/**
- * Resolve the provider for a given model ID from ALL_AVAILABLE_MODELS.
- * Falls back to 'anthropic' if not found.
- */
-function resolveProviderForModel(modelId: string): BuiltinProvider {
-  const found = ALL_AVAILABLE_MODELS.find((m) => m.value === modelId);
-  return found?.provider ?? 'anthropic';
-}
 
 /**
  * Get a short display name for a provider from PROVIDER_REGISTRY.
@@ -75,8 +67,7 @@ export function MixedFeatureEditor() {
   const config: MixedFeatureConfig =
     settings.customMixedFeatureConfig ?? DEFAULT_MIXED_FEATURE_CONFIG;
 
-  const handleModelChange = async (feature: FeatureKey, modelId: string) => {
-    const provider = resolveProviderForModel(modelId);
+  const handleModelChange = async (feature: FeatureKey, modelId: string, provider: BuiltinProvider) => {
     const current: MixedPhaseEntry = config[feature];
 
     const updatedEntry: MixedPhaseEntry = {
@@ -131,7 +122,9 @@ export function MixedFeatureEditor() {
                 </span>
                 <MultiProviderModelSelect
                   value={entry.modelId}
-                  onChange={(modelId) => handleModelChange(feature, modelId)}
+                  currentProvider={entry.provider}
+                  ariaLabel={`${i18n.t(`uiSettings:features.${feature}.label`, { defaultValue: featureLabel.label })} ${t('agentProfile.model')}`}
+                  onChange={(modelId, provider) => handleModelChange(feature, modelId, provider)}
                 />
               </div>
 
@@ -141,6 +134,7 @@ export function MixedFeatureEditor() {
                 onChange={(level) => handleThinkingChange(feature, level as ThinkingLevel)}
                 modelValue={entry.modelId}
                 provider={entry.provider}
+                ariaLabel={`${i18n.t(`uiSettings:features.${feature}.label`, { defaultValue: featureLabel.label })} ${t('agentProfile.thinkingLevel')}`}
               />
 
               {/* Provider badge */}

@@ -23,6 +23,7 @@ interface ThinkingLevelSelectProps {
   modelValue: string;
   provider: BuiltinProvider;
   disabled?: boolean;
+  ariaLabel?: string;
 }
 
 /**
@@ -38,6 +39,7 @@ export function ThinkingLevelSelect({
   modelValue,
   provider,
   disabled,
+  ariaLabel,
 }: ThinkingLevelSelectProps) {
   const { t } = useTranslation('settings');
 
@@ -84,7 +86,7 @@ export function ThinkingLevelSelect({
           {renderBadge()}
         </div>
         <Select value={value} onValueChange={onChange} disabled>
-          <SelectTrigger className="h-9">
+          <SelectTrigger className="h-9" aria-label={ariaLabel ?? t('agentProfile.thinkingLevel')}>
             <SelectValue placeholder={t('agentProfile.reasoning.noThinking')} />
           </SelectTrigger>
           <SelectContent>
@@ -113,7 +115,7 @@ export function ThinkingLevelSelect({
           onValueChange={onChange}
           disabled={disabled}
         >
-          <SelectTrigger className="h-9">
+          <SelectTrigger className="h-9" aria-label={ariaLabel ?? t('agentProfile.thinkingLevel')}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -144,7 +146,7 @@ export function ThinkingLevelSelect({
         {renderBadge()}
       </div>
       <Select value={value} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger className="h-9">
+        <SelectTrigger className="h-9" aria-label={ariaLabel ?? t('agentProfile.thinkingLevel')}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
