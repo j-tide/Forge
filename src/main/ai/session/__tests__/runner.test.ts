@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import type { SessionConfig, SessionResult, StreamEvent } from '../types';
+import type { SessionConfig, StreamEvent } from '../types';
 
 // =============================================================================
 // Mock AI SDK
@@ -203,6 +203,87 @@ describe('runAgentSession', () => {
     expect(result.error!.code).toBe('generic_error');
   });
 
+  it.each([
+    ['400 Bad Request: invalid messages', 'error', 'generic_error', false],
+    ['400 too many concurrent tools', 'error', 'concurrency_error', true],
+    ['401 Unauthorized', 'auth_failure', 'auth_failure', false],
+    ['429 Too Many Requests', 'rate_limited', 'rate_limited', true],
+    ['429 insufficient balance, please recharge', 'error', 'billing_error', false],
+  ])('should classify an error part when the stream closes normally: %s', async (
+    message, outcome, code, retryable,
+  ) => {
+    const error = new Error(message);
+    const events: StreamEvent[] = [];
+    mockStreamText.mockReturnValue(createMockStreamResult([
+      { type: 'error', error },
+    ]));
+
+    const result = await runAgentSession(createMockConfig(), {
+      onEvent: (event) => events.push(event),
+    });
+
+    expect(result.outcome).toBe(outcome);
+    expect(result.error).toMatchObject({ code, retryable, cause: error });
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'error', error: expect.objectContaining({ code }),
+    }));
+  });
+
+  it('should fail on an error part even after completed steps reach maxSteps', async () => {
+    mockStreamText.mockReturnValue(createMockStreamResult([
+      { type: 'finish-step', usage: { promptTokens: 10, completionTokens: 5 } },
+      { type: 'error', error: new Error('400 Bad Request') },
+    ]));
+
+    const result = await runAgentSession(createMockConfig({ maxSteps: 1 }));
+
+    expect(result.outcome).toBe('error');
+    expect(result.error?.code).toBe('generic_error');
+  });
+
+  it('should fail when the real SDK closes after an offline HTTP 400 transport error', async () => {
+    const { streamText: realStreamText } = await vi.importActual<typeof import('ai')>('ai');
+    const { createOpenAI } = await vi.importActual<typeof import('@ai-sdk/openai')>('@ai-sdk/openai');
+    const transport = vi.fn(async () => new Response(JSON.stringify({
+      error: { message: '400 Bad Request: fixture failure', type: 'invalid_request_error' },
+    }), { status: 400, headers: { 'content-type': 'application/json' } }));
+    const provider = createOpenAI({
+      apiKey: 'fixture-key', baseURL: 'https://fixture.invalid/v1', fetch: transport,
+    });
+    mockStreamText.mockImplementationOnce(realStreamText);
+
+    const result = await runAgentSession(createMockConfig({ model: provider('fixture-model') }));
+
+    expect(result.outcome).toBe('error');
+    expect(result.error).toMatchObject({
+      code: 'generic_error', cause: { statusCode: 400 },
+    });
+    expect(transport).toHaveBeenCalledOnce();
+  });
+
+  it('should complete after the model recovers from a tool error', async () => {
+    const events: StreamEvent[] = [];
+    mockStreamText.mockReturnValue(createMockStreamResult([
+      { type: 'tool-call', toolName: 'Bash', toolCallId: 'c1', input: {} },
+      { type: 'tool-error', toolName: 'Bash', toolCallId: 'c1', error: new Error('command not found') },
+      { type: 'finish-step', usage: { promptTokens: 10, completionTokens: 5 } },
+      { type: 'tool-call', toolName: 'Bash', toolCallId: 'c2', input: {} },
+      { type: 'tool-result', toolName: 'Bash', toolCallId: 'c2', output: 'ok' },
+      { type: 'finish-step', usage: { promptTokens: 10, completionTokens: 5 } },
+    ], { text: 'Recovered' }));
+
+    const result = await runAgentSession(createMockConfig(), {
+      onEvent: (event) => events.push(event),
+    });
+
+    expect(result.outcome).toBe('completed');
+    expect(result.error).toBeUndefined();
+    expect(result.toolCallCount).toBe(2);
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'error', error: expect.objectContaining({ code: 'tool_execution_error' }),
+    }));
+  });
+
   // ===========================================================================
   // Auth retry
   // ===========================================================================
@@ -256,6 +337,58 @@ describe('runAgentSession', () => {
     expect(result.outcome).toBe('auth_failure');
   });
 
+  it('should refresh the model and retry a 401 error part', async () => {
+    mockStreamText
+      .mockReturnValueOnce(createMockStreamResult([
+        { type: 'error', error: new Error('401 Unauthorized') },
+      ]))
+      .mockReturnValueOnce(createMockStreamResult([
+        { type: 'finish-step', usage: { promptTokens: 10, completionTokens: 5 } },
+      ], { text: 'ok' }));
+    const refreshedModel = { modelId: 'refreshed-model' } as SessionConfig['model'];
+    const onAuthRefresh = vi.fn().mockResolvedValue('new-token');
+    const onModelRefresh = vi.fn().mockReturnValue(refreshedModel);
+
+    const result = await runAgentSession(createMockConfig(), {
+      onAuthRefresh, onModelRefresh,
+    });
+
+    expect(result.outcome).toBe('completed');
+    expect(result.messages.at(-1)?.content).toBe('ok');
+    expect(onAuthRefresh).toHaveBeenCalledOnce();
+    expect(onModelRefresh).toHaveBeenCalledWith('new-token');
+    expect(mockStreamText.mock.calls[1][0].model).toBe(refreshedModel);
+  });
+
+  it('should stop retrying when a refreshed session also emits a 401 error part', async () => {
+    mockStreamText.mockImplementation(() => createMockStreamResult([
+      { type: 'error', error: new Error('401 Unauthorized') },
+    ]));
+    const onAuthRefresh = vi.fn().mockResolvedValue('new-token');
+
+    const result = await runAgentSession(createMockConfig(), { onAuthRefresh });
+
+    expect(result.outcome).toBe('auth_failure');
+    expect(onAuthRefresh).toHaveBeenCalledOnce();
+    expect(mockStreamText).toHaveBeenCalledTimes(2);
+  });
+
+  it('should offer account switching for a 429 error part', async () => {
+    mockStreamText.mockReturnValue(createMockStreamResult([
+      { type: 'error', error: new Error('429 Too Many Requests') },
+    ]));
+    const onAccountSwitch = vi.fn().mockResolvedValue(null);
+
+    const result = await runAgentSession(createMockConfig(), {
+      currentAccountId: 'account-1', onAccountSwitch,
+    });
+
+    expect(result.outcome).toBe('rate_limited');
+    expect(onAccountSwitch).toHaveBeenCalledWith('account-1', expect.objectContaining({
+      code: 'rate_limited', retryable: true,
+    }));
+  });
+
   // ===========================================================================
   // Cancellation
   // ===========================================================================
@@ -278,6 +411,81 @@ describe('runAgentSession', () => {
     );
 
     expect(result.outcome).toBe('cancelled');
+  });
+
+  it('should return cancelled when abort closes the stream without throwing', async () => {
+    const controller = new AbortController();
+    mockStreamText.mockReturnValue({
+      ...createMockStreamResult([]),
+      fullStream: (async function* () {
+        yield { type: 'finish-step', usage: { promptTokens: 10, completionTokens: 5 } };
+        controller.abort('user stopped the session');
+      })(),
+    });
+
+    const result = await runAgentSession(createMockConfig({
+      abortSignal: controller.signal, maxSteps: 1,
+    }));
+
+    expect(result.outcome).toBe('cancelled');
+    expect(result.error).toMatchObject({ code: 'aborted', retryable: false });
+    expect(result.stepsExecuted).toBe(1);
+    expect(result.usage.totalTokens).toBe(15);
+  });
+
+  it('should not start a stream for an already aborted session', async () => {
+    const controller = new AbortController();
+    controller.abort('user stopped the session');
+    mockStreamText.mockReturnValue(createMockStreamResult([]));
+
+    const result = await runAgentSession(createMockConfig({ abortSignal: controller.signal }));
+
+    expect(result.outcome).toBe('cancelled');
+    expect(result.error).toMatchObject({ code: 'aborted', retryable: false });
+    expect(mockStreamText).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('should preserve context-window outcome when abort throws: %s', async (throws) => {
+    mockStreamText.mockImplementation((options) => ({
+      ...createMockStreamResult([]),
+      fullStream: (async function* () {
+        yield { type: 'finish-step', usage: { promptTokens: 91, completionTokens: 5 } };
+        await options.prepareStep({ stepNumber: 1 });
+        if (throws) throw options.abortSignal.reason;
+      })(),
+    }));
+
+    const result = await runAgentSession(createMockConfig({ contextWindowLimit: 100 }));
+
+    expect(result.outcome).toBe('context_window');
+    expect(result.stepsExecuted).toBe(1);
+    expect(result.error).toBeUndefined();
+  });
+
+  it.each([false, true])('should preserve inactivity timeout when abort throws: %s', async (throws) => {
+    vi.useFakeTimers();
+    try {
+      mockStreamText.mockImplementation((options) => ({
+        ...createMockStreamResult([]),
+        fullStream: (async function* () {
+          yield { type: 'finish-step', usage: { promptTokens: 10, completionTokens: 5 } };
+          await new Promise<void>((resolve) => {
+            options.abortSignal.addEventListener('abort', () => resolve(), { once: true });
+          });
+          if (throws) throw options.abortSignal.reason;
+        })(),
+      }));
+
+      const pending = runAgentSession(createMockConfig());
+      await vi.advanceTimersByTimeAsync(60_000);
+      const result = await pending;
+
+      expect(result.outcome).toBe('error');
+      expect(result.error).toMatchObject({ code: 'stream_timeout', retryable: true });
+      expect(result.stepsExecuted).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // ===========================================================================

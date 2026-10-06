@@ -266,6 +266,12 @@ async function executeStream(
   onEvent: SessionEventCallback | undefined,
   memoryContext: MemorySessionContext | undefined,
 ): Promise<Omit<SessionResult, 'durationMs'>> {
+  // Do not start a provider request if cancellation happened before execution.
+  // The caller's abort reason may be arbitrary, so use a classifiable abort error.
+  if (config.abortSignal?.aborted) {
+    throw new DOMException('Session was cancelled', 'AbortError');
+  }
+
   const baseMaxSteps = config.maxSteps ?? DEFAULT_MAX_STEPS;
 
   // Apply calibration-adjusted step limit if memory context is available
@@ -487,7 +493,16 @@ async function executeStream(
     for await (const part of result.fullStream) {
       resetStreamInactivityTimer(); // Reset on each part
       streamHandler.processPart(part as FullStreamPart);
+      // AI SDK reports provider failures as error parts and can close normally.
+      // Keep the original error for the existing classification and auth retries.
+      // Tool errors remain recoverable within the model's agentic loop.
+      if (part.type === 'error') {
+        throw part.error ?? new Error('Stream error');
+      }
     }
+    // Cancellation and guard aborts can also close the stream without throwing.
+    // Route these through the same interrupted-session handling below.
+    mergedAbortSignal.throwIfAborted();
   } catch (error: unknown) {
     // Stream-level errors (network, abort, etc.)
     const summary = streamHandler.getSummary();
