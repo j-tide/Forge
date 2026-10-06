@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 import { EventEmitter } from 'events';
 import { AgentState } from './agent-state';
 import { AgentEvents } from './agent-events';
-import { ProcessType, ExecutionProgressData } from './types';
+import { AgentProcess, ProcessType, ExecutionProgressData } from './types';
 import type { AgentExecutorConfig } from '../ai/agent/types';
 import { WorkerBridge } from '../ai/agent/worker-bridge';
 import type { CompletablePhase } from '../../shared/constants/phase-protocol';
@@ -103,6 +103,7 @@ export class AgentProcessManager {
   private events: AgentEvents;
   private emitter: EventEmitter;
   private autoBuildSourcePath: string = '';
+  private pendingWorkerTerminations = new Set<Promise<void>>();
 
   constructor(state: AgentState, events: AgentEvents, emitter: EventEmitter) {
     this.state = state;
@@ -845,13 +846,14 @@ export class AgentProcessManager {
     const spawnId = this.state.generateSpawnId();
 
     // Add to tracking immediately (same pattern as spawnProcess)
-    this.state.addProcess(taskId, {
+    const agentProcess: AgentProcess = {
       taskId,
       process: null, // No ChildProcess for worker threads
       startedAt: new Date(),
       spawnId,
       worker: null, // Will be set after bridge.spawn()
-    });
+    };
+    this.state.addProcess(taskId, agentProcess);
 
     // Check if killed during setup
     if (this.state.wasSpawnKilled(spawnId)) {
@@ -861,11 +863,13 @@ export class AgentProcessManager {
     }
 
     const bridge = new WorkerBridge();
+    const isCurrentSpawn = () => this.state.getProcess(taskId)?.spawnId === spawnId;
 
     const isDebug = ['true', '1', 'yes', 'on'].includes(process.env.DEBUG?.toLowerCase() ?? '');
 
     // Forward all bridge events to the main emitter (matching existing event contract)
     bridge.on('log', (tId: string, log: string, pId?: string) => {
+      if (!isCurrentSpawn()) return;
       this.emitter.emit('log', tId, log, pId);
       if (isDebug) {
         console.log(`[Agent:${tId}] ${log}`);
@@ -873,18 +877,26 @@ export class AgentProcessManager {
     });
 
     bridge.on('error', (tId: string, error: string, pId?: string) => {
+      if (!isCurrentSpawn()) return;
       this.emitter.emit('error', tId, error, pId);
     });
 
     bridge.on('execution-progress', (tId: string, progress: ExecutionProgressData, pId?: string) => {
+      if (!isCurrentSpawn()) return;
       this.emitter.emit('execution-progress', tId, progress, pId);
     });
 
     bridge.on('task-event', (tId: string, event: unknown, pId?: string) => {
+      if (!isCurrentSpawn()) return;
       this.emitter.emit('task-event', tId, event, pId);
     });
 
     bridge.on('exit', (tId: string, code: number | null, pType: ProcessType, pId?: string) => {
+      // A previous spawn can finish after the same task has already restarted.
+      if (this.state.getProcess(tId)?.spawnId !== spawnId) {
+        this.state.clearKilledSpawn(spawnId);
+        return;
+      }
       this.state.deleteProcess(tId);
 
       if (this.state.wasSpawnKilled(spawnId)) {
@@ -917,15 +929,23 @@ export class AgentProcessManager {
       throw err;
     }
 
-    // Store the worker reference for kill support
-    this.state.updateProcess(taskId, { worker: bridge.workerInstance });
+    // Keep the bridge shutdown path so cancellation can flush logs and close tools.
+    agentProcess.worker = bridge.workerInstance;
+    agentProcess.terminateWorker = async () => {
+      await bridge.terminate();
+      if (bridge.isActive) throw new Error(`Worker did not exit for task ${taskId}`);
+    };
+    if (isCurrentSpawn()) {
+      this.state.updateProcess(taskId, {
+        worker: agentProcess.worker,
+        terminateWorker: agentProcess.terminateWorker,
+      });
+    }
 
     // Check if killed during bridge setup
-    const currentSpawnId = this.state.getProcess(taskId)?.spawnId ?? spawnId;
-    if (this.state.wasSpawnKilled(currentSpawnId)) {
-      await bridge.terminate();
-      this.state.deleteProcess(taskId);
-      this.state.clearKilledSpawn(currentSpawnId);
+    if (this.state.wasSpawnKilled(spawnId) || !isCurrentSpawn()) {
+      await this.trackWorkerTermination(agentProcess, agentProcess.terminateWorker());
+      if (this.state.getProcess(taskId)?.spawnId === spawnId) this.state.deleteProcess(taskId);
       return;
     }
 
@@ -936,6 +956,29 @@ export class AgentProcessManager {
       overallProgress: 0,
       message: 'Starting AI agent session...',
     }, projectId);
+  }
+
+  /**
+   * Keep shutdown work independently of the user-facing running task map.
+   * A failed shutdown stays visible to killAll until the real worker exits.
+   */
+  private trackWorkerTermination(agentProcess: AgentProcess, termination: Promise<unknown>): Promise<void> {
+    const pending = termination.then(() => undefined);
+    const worker = agentProcess.worker;
+    const complete = () => {
+      this.pendingWorkerTerminations.delete(pending);
+      this.state.clearKilledSpawn(agentProcess.spawnId);
+    };
+    this.pendingWorkerTerminations.add(pending);
+    worker?.once('exit', complete);
+    void pending.then(() => {
+      worker?.removeListener('exit', complete);
+      complete();
+    }, (error: unknown) => {
+      console.warn('[AgentProcess] Worker shutdown failed:', error);
+      if (worker?.threadId === -1) complete();
+    });
+    return pending;
   }
 
   /**
@@ -951,17 +994,20 @@ export class AgentProcessManager {
     // If process hasn't been spawned yet (still in async setup phase, before spawn() returns),
     // just remove from tracking. The spawn() call will still complete, but the spawned process
     // will be terminated by the post-spawn wasSpawnKilled() check (see spawnProcess() after updateProcess).
-    if (!agentProcess.process && !agentProcess.worker) {
+    if (!agentProcess.process && !agentProcess.worker && !agentProcess.terminateWorker) {
       this.state.deleteProcess(taskId);
       return true;
     }
 
     // Handle worker thread termination
-    if (agentProcess.worker) {
+    if (agentProcess.worker || agentProcess.terminateWorker) {
       try {
-        agentProcess.worker.terminate();
-      } catch {
-        // Worker may already be terminated
+        const termination = agentProcess.terminateWorker
+          ? agentProcess.terminateWorker()
+          : agentProcess.worker?.terminate();
+        if (termination) this.trackWorkerTermination(agentProcess, termination);
+      } catch (error) {
+        this.trackWorkerTermination(agentProcess, Promise.reject(error));
       }
       this.state.deleteProcess(taskId);
       return true;
@@ -995,14 +1041,14 @@ export class AgentProcessManager {
         }
 
         // If process/worker hasn't been spawned yet, just kill and resolve
-        if (!agentProcess.process && !agentProcess.worker) {
+        if (!agentProcess.process && !agentProcess.worker && !agentProcess.terminateWorker) {
           this.killProcess(taskId);
           resolve();
           return;
         }
 
-        // Worker threads terminate immediately
-        if (agentProcess.worker && !agentProcess.process) {
+        // Worker cleanup is tracked separately after removal from the running map.
+        if ((agentProcess.worker || agentProcess.terminateWorker) && !agentProcess.process) {
           this.killProcess(taskId);
           resolve();
           return;
@@ -1028,6 +1074,11 @@ export class AgentProcessManager {
     });
 
     await Promise.all(killPromises);
+    while (this.pendingWorkerTerminations.size > 0) {
+      const results = await Promise.allSettled([...this.pendingWorkerTerminations]);
+      const failure = results.find((result) => result.status === 'rejected');
+      if (failure?.status === 'rejected') throw failure.reason;
+    }
   }
 
   /**

@@ -18,6 +18,8 @@ export interface AgentProcess {
   queueProcessType?: QueueProcessType; // Type of queue process (ideation or roadmap)
   /** Worker thread instance for TypeScript AI SDK agent execution */
   worker?: Worker | null;
+  /** Graceful bridge shutdown, resolved only after the worker exits */
+  terminateWorker?: () => Promise<void>;
 }
 
 export interface ExecutionProgressData {

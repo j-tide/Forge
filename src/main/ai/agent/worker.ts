@@ -48,6 +48,7 @@ import { loadProjectInstructions, injectContext, tryLoadPrompt as loadPrompt } f
 import { createMcpClientsForAgent, mergeMcpTools, closeAllMcpClients } from '../mcp/client';
 import type { McpClientResult } from '../mcp/types';
 import { runProjectIndexer } from '../project/project-indexer';
+import { finalizeWorkerLogs, runWorkerLifecycle } from './worker-lifecycle';
 
 // =============================================================================
 // Validation
@@ -68,9 +69,7 @@ if (!config?.taskId || !config?.session) {
 
 // Single writer instance for this worker's spec, shared across all sessions
 // so that planning/coding/QA phases accumulate into one task_logs.json file.
-const logWriter = config.session.specDir
-  ? new TaskLogWriter(config.session.specDir, basename(config.session.specDir))
-  : null;
+let logWriter: TaskLogWriter | null = null;
 
 // =============================================================================
 // Messaging Helpers
@@ -82,10 +81,6 @@ function postMessage(message: WorkerMessage): void {
 
 function postLog(data: string): void {
   postMessage({ type: 'log', taskId: config.taskId, data, projectId: config.projectId });
-}
-
-function postError(data: string): void {
-  postMessage({ type: 'error', taskId: config.taskId, data, projectId: config.projectId });
 }
 
 function postTaskEvent(eventType: string, extra?: Record<string, unknown>): void {
@@ -112,11 +107,13 @@ function postTaskEvent(eventType: string, extra?: Record<string, unknown>): void
 
 const abortController = new AbortController();
 
-parentPort.on('message', (msg: MainToWorkerMessage) => {
+function handleMainMessage(msg: MainToWorkerMessage): void {
   if (msg.type === 'abort') {
     abortController.abort();
   }
-});
+}
+
+parentPort.on('message', handleMainMessage);
 
 // =============================================================================
 // Shared Helpers
@@ -330,7 +327,7 @@ async function runSingleSession(
 
   // End phase logging — mark as completed or failed based on outcome (skip when orchestrator manages phases)
   if (logWriter && !skipPhaseLogging) {
-    const success = sessionResult.outcome === 'completed' || sessionResult.outcome === 'max_steps' || sessionResult.outcome === 'context_window';
+    const success = !abortController.signal.aborted && (sessionResult.outcome === 'completed' || sessionResult.outcome === 'max_steps' || sessionResult.outcome === 'context_window');
     logWriter.endPhase(phase, success);
   }
   if (logWriter) {
@@ -344,68 +341,59 @@ async function runSingleSession(
 // Session Execution
 // =============================================================================
 
-async function run(): Promise<void> {
+async function run(): Promise<SessionResult> {
   const { session } = config;
+  abortController.signal.throwIfAborted();
+  logWriter = session.specDir
+    ? new TaskLogWriter(session.specDir, basename(session.specDir))
+    : null;
 
   postLog(`Starting agent session: type=${session.agentType}, model=${session.modelId}`);
 
+  const securityProfile = buildSecurityProfile(session);
+  const toolContext = buildToolContext(session, securityProfile);
+  const registry = buildToolRegistry();
+
+  // Initialize MCP clients from session config
   try {
-    const securityProfile = buildSecurityProfile(session);
-    const toolContext = buildToolContext(session, securityProfile);
-    const registry = buildToolRegistry();
-
-    // Initialize MCP clients from session config
-    try {
-      mcpClients = await createMcpClientsForAgent(session.agentType, {
-        context7Enabled: session.mcpOptions?.context7Enabled ?? true,
-        memoryEnabled: session.mcpOptions?.memoryEnabled ?? false,
-        linearEnabled: session.mcpOptions?.linearEnabled ?? false,
-        electronMcpEnabled: session.mcpOptions?.electronMcpEnabled ?? false,
-        puppeteerMcpEnabled: session.mcpOptions?.puppeteerMcpEnabled ?? false,
-        projectCapabilities: session.mcpOptions?.projectCapabilities,
-        agentMcpAdd: session.mcpOptions?.agentMcpAdd,
-        agentMcpRemove: session.mcpOptions?.agentMcpRemove,
-      });
-      if (mcpClients.length > 0) {
-        postLog(`MCP initialized: ${mcpClients.map(c => c.serverId).join(', ')}`);
-      }
-    } catch (error) {
-      postLog(`MCP init failed (non-fatal): ${error instanceof Error ? error.message : String(error)}`);
-    }
-
-    // Route to orchestrator for build_orchestrator agent type
-    if (session.agentType === 'build_orchestrator') {
-      await runBuildOrchestrator(session, toolContext, registry);
-      return;
-    }
-
-    // Route to QA loop for qa_reviewer agent type
-    if (session.agentType === 'qa_reviewer') {
-      await runQALoop(session, toolContext, registry);
-      return;
-    }
-
-    // Route to spec orchestrator for spec_orchestrator agent type
-    if (session.agentType === 'spec_orchestrator') {
-      if (session.useAgenticOrchestration) {
-        await runAgenticSpecOrchestrator(session, toolContext, registry);
-      } else {
-        await runSpecOrchestrator(session, toolContext, registry);
-      }
-      return;
-    }
-
-    // Default: single session for all other agent types
-    await runDefaultSession(session, toolContext, registry);
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    postError(`Agent session failed: ${message}`);
-  } finally {
-    // Cleanup MCP clients
+    mcpClients = await createMcpClientsForAgent(session.agentType, {
+      context7Enabled: session.mcpOptions?.context7Enabled ?? true,
+      memoryEnabled: session.mcpOptions?.memoryEnabled ?? false,
+      linearEnabled: session.mcpOptions?.linearEnabled ?? false,
+      electronMcpEnabled: session.mcpOptions?.electronMcpEnabled ?? false,
+      puppeteerMcpEnabled: session.mcpOptions?.puppeteerMcpEnabled ?? false,
+      projectCapabilities: session.mcpOptions?.projectCapabilities,
+      agentMcpAdd: session.mcpOptions?.agentMcpAdd,
+      agentMcpRemove: session.mcpOptions?.agentMcpRemove,
+    });
     if (mcpClients.length > 0) {
-      await closeAllMcpClients(mcpClients);
+      postLog(`MCP initialized: ${mcpClients.map(c => c.serverId).join(', ')}`);
     }
+  } catch (error) {
+    postLog(`MCP init failed (non-fatal): ${error instanceof Error ? error.message : String(error)}`);
   }
+  abortController.signal.throwIfAborted();
+
+  // Route to orchestrator for build_orchestrator agent type
+  if (session.agentType === 'build_orchestrator') {
+    return runBuildOrchestrator(session, toolContext, registry);
+  }
+
+  // Route to QA loop for qa_reviewer agent type
+  if (session.agentType === 'qa_reviewer') {
+    return runQALoop(session, toolContext, registry);
+  }
+
+  // Route to spec orchestrator for spec_orchestrator agent type
+  if (session.agentType === 'spec_orchestrator') {
+    if (session.useAgenticOrchestration) {
+      return runAgenticSpecOrchestrator(session, toolContext, registry);
+    }
+    return runSpecOrchestrator(session, toolContext, registry);
+  }
+
+  // Default: single session for all other agent types
+  return runDefaultSession(session, toolContext, registry);
 }
 
 /**
@@ -415,7 +403,7 @@ async function runDefaultSession(
   session: SerializableSessionConfig,
   toolContext: ToolContext,
   registry: ToolRegistry,
-): Promise<void> {
+): Promise<SessionResult> {
   const model = createProvider({
     config: {
       provider: session.provider as SupportedProvider,
@@ -495,17 +483,12 @@ async function runDefaultSession(
     });
   } finally {
     if (logWriter) {
-      const success = result?.outcome === 'completed' || result?.outcome === 'max_steps' || result?.outcome === 'context_window';
+      const success = !abortController.signal.aborted && (result?.outcome === 'completed' || result?.outcome === 'max_steps' || result?.outcome === 'context_window');
       logWriter.endPhase(defaultPhase, success ?? false);
     }
   }
 
-  postMessage({
-    type: 'result',
-    taskId: config.taskId,
-    data: result as SessionResult,
-    projectId: config.projectId,
-  });
+  return result;
 }
 
 /** Map ExecutionPhase to Phase for log writer. Returns undefined for non-loggable phases. */
@@ -527,7 +510,7 @@ async function runBuildOrchestrator(
   session: SerializableSessionConfig,
   toolContext: ToolContext,
   registry: ToolRegistry,
-): Promise<void> {
+): Promise<SessionResult> {
   postLog('Starting BuildOrchestrator pipeline (planning → coding → QA)');
 
   const orchestrator = new BuildOrchestrator({
@@ -650,14 +633,14 @@ async function runBuildOrchestrator(
   if (logWriter) {
     const finalLogPhase = mapExecutionPhaseToPhase(outcome.finalPhase);
     if (finalLogPhase) {
-      logWriter.endPhase(finalLogPhase, outcome.success);
+      logWriter.endPhase(finalLogPhase, !abortController.signal.aborted && outcome.success);
     } else {
       // Terminal state (complete/failed) — close any still-active log phase
       const data = logWriter.getData();
       for (const phase of ['validation', 'coding', 'planning'] as const) {
         if (data.phases[phase]?.status === 'active') {
           const mapped = phase === 'validation' ? 'qa' : phase;
-          logWriter.endPhase(mapped as 'qa' | 'coding' | 'planning', outcome.success);
+          logWriter.endPhase(mapped as 'qa' | 'coding' | 'planning', !abortController.signal.aborted && outcome.success);
           break;
         }
       }
@@ -667,7 +650,9 @@ async function runBuildOrchestrator(
 
   // Emit task events based on orchestration outcome so XState machine
   // can transition to the correct state (e.g., human_review on success).
-  if (outcome.success) {
+  if (abortController.signal.aborted) {
+    // Cancellation is reported by the terminal result rather than a failure event.
+  } else if (outcome.success) {
     postTaskEvent('QA_PASSED');
     postTaskEvent('BUILD_COMPLETE');
   } else if (outcome.codingCompleted) {
@@ -685,7 +670,7 @@ async function runBuildOrchestrator(
 
   // Map outcome to a SessionResult-compatible result for the bridge
   const result: SessionResult = {
-    outcome: outcome.success ? 'completed' : 'error',
+    outcome: abortController.signal.aborted ? 'cancelled' : outcome.success ? 'completed' : 'error',
     stepsExecuted: outcome.totalIterations,
     usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
     messages: [],
@@ -696,12 +681,7 @@ async function runBuildOrchestrator(
       : undefined,
   };
 
-  postMessage({
-    type: 'result',
-    taskId: config.taskId,
-    data: result,
-    projectId: config.projectId,
-  });
+  return result;
 }
 
 /**
@@ -711,7 +691,7 @@ async function runQALoop(
   session: SerializableSessionConfig,
   toolContext: ToolContext,
   registry: ToolRegistry,
-): Promise<void> {
+): Promise<SessionResult> {
   postLog('Starting QA validation loop');
 
   const qaLoop = new QALoop({
@@ -757,12 +737,14 @@ async function runQALoop(
 
   // End QA validation phase and flush any remaining accumulated log entries
   if (logWriter) {
-    logWriter.endPhase('qa', outcome.approved);
+    logWriter.endPhase('qa', !abortController.signal.aborted && outcome.approved);
     logWriter.flush();
   }
 
   // Emit task events so XState machine transitions correctly.
-  if (outcome.approved) {
+  if (abortController.signal.aborted) {
+    // Cancellation is reported by the terminal result rather than a failure event.
+  } else if (outcome.approved) {
     postTaskEvent('QA_PASSED');
   } else if (outcome.reason === 'max_iterations') {
     postTaskEvent('QA_MAX_ITERATIONS');
@@ -771,7 +753,7 @@ async function runQALoop(
   }
 
   const result: SessionResult = {
-    outcome: outcome.approved ? 'completed' : 'error',
+    outcome: abortController.signal.aborted ? 'cancelled' : outcome.approved ? 'completed' : 'error',
     stepsExecuted: outcome.totalIterations,
     usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
     messages: [],
@@ -782,12 +764,7 @@ async function runQALoop(
       : undefined,
   };
 
-  postMessage({
-    type: 'result',
-    taskId: config.taskId,
-    data: result,
-    projectId: config.projectId,
-  });
+  return result;
 }
 
 /**
@@ -797,7 +774,7 @@ async function runSpecOrchestrator(
   session: SerializableSessionConfig,
   toolContext: ToolContext,
   registry: ToolRegistry,
-): Promise<void> {
+): Promise<SessionResult> {
   // Extract the task description from the first user message
   const taskDescription = session.initialMessages?.[0]?.content
     ? typeof session.initialMessages[0].content === 'string'
@@ -910,7 +887,7 @@ async function runSpecOrchestrator(
 
   // Emit task event on failure so XState gets a specific signal
   // instead of relying on the generic PROCESS_EXITED fallback.
-  if (!outcome.success) {
+  if (!outcome.success && !abortController.signal.aborted) {
     postTaskEvent('PLANNING_FAILED', { error: outcome.error });
   }
 
@@ -919,14 +896,14 @@ async function runSpecOrchestrator(
     const data = logWriter.getData();
     // toLogPhase('spec') maps to 'planning' in the log writer
     if (data.phases.planning?.status === 'active') {
-      logWriter.endPhase('spec', outcome.success);
+      logWriter.endPhase('spec', !abortController.signal.aborted && outcome.success);
     }
     logWriter.flush();
   }
 
   // Map outcome to SessionResult for the worker bridge
   const result: SessionResult = {
-    outcome: outcome.success ? 'completed' : 'error',
+    outcome: abortController.signal.aborted ? 'cancelled' : outcome.success ? 'completed' : 'error',
     stepsExecuted: outcome.phasesExecuted.length,
     usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
     messages: [],
@@ -937,12 +914,7 @@ async function runSpecOrchestrator(
       : undefined,
   };
 
-  postMessage({
-    type: 'result',
-    taskId: config.taskId,
-    data: result,
-    projectId: config.projectId,
-  });
+  return result;
 }
 
 /**
@@ -954,7 +926,7 @@ async function runAgenticSpecOrchestrator(
   session: SerializableSessionConfig,
   toolContext: ToolContext,
   registry: ToolRegistry,
-): Promise<void> {
+): Promise<SessionResult> {
   // Extract task description
   const taskDescription = session.initialMessages?.[0]?.content
     ? typeof session.initialMessages[0].content === 'string'
@@ -1091,18 +1063,13 @@ async function runAgenticSpecOrchestrator(
     });
   } finally {
     if (logWriter) {
-      const success = result?.outcome === 'completed' || result?.outcome === 'max_steps' || result?.outcome === 'context_window';
+      const success = !abortController.signal.aborted && (result?.outcome === 'completed' || result?.outcome === 'max_steps' || result?.outcome === 'context_window');
       logWriter.endPhase('spec', success ?? false);
       logWriter.flush();
     }
   }
 
-  postMessage({
-    type: 'result',
-    taskId: config.taskId,
-    data: result as SessionResult,
-    projectId: config.projectId,
-  });
+  return result;
 }
 
 /**
@@ -1231,8 +1198,26 @@ function buildFallbackPrompt(agentType: AgentType, specDir: string, projectDir: 
   }
 }
 
-// Start execution
-run().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
-  postError(`Unhandled worker error: ${message}`);
+// Finalize all owned resources before publishing the single terminal result.
+runWorkerLifecycle({
+  execute: run,
+  cleanup: [
+    async () => {
+      await closeAllMcpClients(mcpClients);
+      mcpClients = [];
+    },
+    (result) => finalizeWorkerLogs(logWriter, result),
+  ],
+  postResult: (result) => {
+    postMessage({ type: 'result', taskId: config.taskId, data: result, projectId: config.projectId });
+  },
+  closePort: () => {
+    parentPort?.off('message', handleMainMessage);
+    parentPort?.close();
+  },
+  abortSignal: abortController.signal,
+}).catch((error: unknown) => {
+  // An unexpected delivery failure must still be observable as a thread failure.
+  process.exitCode = 1;
+  throw error;
 });

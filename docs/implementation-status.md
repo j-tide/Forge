@@ -1,5 +1,17 @@
 # Forge Desktop 实施状态
 
+## 2026-10-06：任务终态与 Worker 退出的本地修复验收
+
+本轮先在 `29004c1d` 的独立副本实施集中修复，随后按用户明确授权将完整 15 文件补丁整合到原项目的 `fix/agent-terminal-outcomes` 分支。基线为 `29004c1d`；按会话终态、Worker 清理两项组织本地提交，测试随对应修复提交。SDK 顶层错误和取消正常闭流不再默认为 completed；Worker 在 MCP 与日志清理后单点发布结果并关闭消息端口，Bridge 追踪到真实线程退出。Main 取消接入 Bridge，killAll 等待清理，旧 spawn 事件不会影响同任务的新运行；清理期间取消和强制终止失败也有回归覆盖。
+
+原项目路径在用户 Mac、Node 24.19.0／npm 10.8.2 下重新执行 i18n、lint、typecheck、build、npm test 与 E2E helper，均 exit 0。完整测试为 342 个 Vitest 文件／5842 项、12 项工具检查、6 项 helper；lint 保留 791 warnings／5 infos。上述原路径检查需要通过文件沙箱审核取得目录写入权限，所有 HOME、appData、userData 与环境均隔离，测试 HTTP 服务仅用本地合成夹具，不使用真实账户或模型。
+
+执行环境区别单独保留：副本阶段默认受限环境的完整测试有 53 项 `listen EPERM 127.0.0.1`，排除 4 个文件后 338 文件／5764 项通过。整合后原路径在默认受限环境另行重跑 `npm test`，12 项工具测试通过，但 Vitest 在写入 `node_modules/.vite-temp` 配置时遇到 EPERM，单元测试未启动；这不计为原路径单元测试通过，也没有修改产品或系统权限来消除限制。
+
+新增 `worker-runtime.test.ts` 独立构建当前 Worker，实际运行 Read→Write→Read、SDK HTTP400、请求中取消、setup 失败、无效配置和可恢复工具错误 6 个场景。原项目新生产构建的 Worker 也在默认受限环境另行运行同样 6 场景，全部自然退出，保存请求、事件、产物和 task_logs.json。仅替换离线 transport，未模拟产品工具或日志持久化；无实际 socket、模型或付费请求，不能替代 Electron UI 与在线 Agent 验收。
+
+整合前原项目为干净 main，结束时处于安全修复分支；用户设置摘要未变，原有 out/ 与 tsbuildinfo 已备份。无需再从副本整合代码；用户另行授权本地 commit，两项修复分拆提交，未推送、合并到 main 或部署。本轮未修改项目 `.env`／MCP 配置链、libSQL 接入或 Electron 签名，也未重跑在线服务与真实 Electron UI。
+
 ## 2026-09-29：0.1.0-preview.6 发布验证
 
 本版包含两项已按功能独立提交并推送的改动：`f92de037` 删除旧 Forge 实现，`ac7c8077` 重组根单应用。版本与发行材料另外提交；不重写已有公开提交。

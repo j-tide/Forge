@@ -56,10 +56,11 @@ export class AgentExecutor extends EventEmitter {
    * Sends an abort signal then terminates the worker thread.
    */
   async stop(): Promise<void> {
-    if (!this.bridge) return;
+    const bridge = this.bridge;
+    if (!bridge) return;
 
-    await this.bridge.terminate();
-    this.bridge = null;
+    await bridge.terminate();
+    if (this.bridge === bridge && !bridge.isActive) this.bridge = null;
   }
 
   /**
@@ -113,7 +114,7 @@ export class AgentExecutor extends EventEmitter {
 
     // Clean up bridge reference on exit
     bridge.on('exit', () => {
-      this.bridge = null;
+      if (this.bridge === bridge) this.bridge = null;
     });
   }
 }

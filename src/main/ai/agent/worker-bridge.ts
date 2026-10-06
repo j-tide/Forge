@@ -30,6 +30,22 @@ import { ProgressTracker } from '../session/progress-tracker';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+interface WorkerLifecycle {
+  worker: Worker;
+  taskId: string;
+  projectId?: string;
+  processType: ProcessType;
+  resultReceived: boolean;
+  resultExitCode?: number;
+  terminationRequested: boolean;
+  terminationPromise?: Promise<void>;
+  exited: Promise<void>;
+  resolveExit: () => void;
+}
+
+// Stdio MCP clients may need two 2-second waits to stop their child processes.
+const ABORT_GRACE_MS = 5000;
+
 // =============================================================================
 // Worker Path Resolution
 // =============================================================================
@@ -65,11 +81,8 @@ function resolveWorkerPath(): string {
  * ```
  */
 export class WorkerBridge extends EventEmitter {
-  private worker: Worker | null = null;
+  private lifecycle: WorkerLifecycle | null = null;
   private progressTracker: ProgressTracker = new ProgressTracker();
-  private taskId: string = '';
-  private projectId: string | undefined;
-  private processType: ProcessType = 'task-execution';
 
   /**
    * Spawn a worker thread with the given configuration.
@@ -78,13 +91,10 @@ export class WorkerBridge extends EventEmitter {
    * @param config - Executor configuration (task ID, session params, etc.)
    */
   spawn(config: AgentExecutorConfig): void {
-    if (this.worker) {
+    if (this.lifecycle) {
       throw new Error('WorkerBridge already has an active worker. Call terminate() first.');
     }
 
-    this.taskId = config.taskId;
-    this.projectId = config.projectId;
-    this.processType = config.processType;
     this.progressTracker = new ProgressTracker();
 
     const workerConfig: WorkerConfig = {
@@ -96,25 +106,39 @@ export class WorkerBridge extends EventEmitter {
 
     const workerPath = resolveWorkerPath();
 
-    this.worker = new Worker(workerPath, {
+    const worker = new Worker(workerPath, {
       workerData: workerConfig,
     });
+    let resolveExit!: () => void;
+    const lifecycle: WorkerLifecycle = {
+      worker,
+      taskId: config.taskId,
+      projectId: config.projectId,
+      processType: config.processType,
+      resultReceived: false,
+      terminationRequested: false,
+      exited: new Promise<void>((resolve) => { resolveExit = resolve; }),
+      resolveExit: () => resolveExit(),
+    };
+    this.lifecycle = lifecycle;
 
-    this.worker.on('message', (message: WorkerMessage) => {
-      this.handleWorkerMessage(message);
+    worker.on('message', (message: WorkerMessage) => {
+      if (this.lifecycle === lifecycle) this.handleWorkerMessage(message, lifecycle);
     });
 
-    this.worker.on('error', (error: Error) => {
-      this.emitTyped('error', this.taskId, error.message, this.projectId);
-      this.cleanup();
+    worker.on('error', (error: Error) => {
+      if (this.lifecycle === lifecycle) {
+        this.emitTyped('error', lifecycle.taskId, error.message, lifecycle.projectId);
+      }
     });
 
-    this.worker.on('exit', (code: number) => {
-      // Code 0 = clean exit; non-zero = crash/error
-      // Only emit exit if we haven't already emitted from a 'result' message
-      if (this.worker) {
-        this.emitTyped('exit', this.taskId, code === 0 ? 0 : code, this.processType, this.projectId);
-        this.cleanup();
+    worker.on('exit', (code: number) => {
+      lifecycle.resolveExit();
+      if (this.lifecycle !== lifecycle) return;
+      this.lifecycle = null;
+      if (!lifecycle.terminationRequested) {
+        const exitCode = code !== 0 ? code : lifecycle.resultExitCode ?? 0;
+        this.emitTyped('exit', lifecycle.taskId, exitCode, lifecycle.processType, lifecycle.projectId);
       }
     });
   }
@@ -123,42 +147,57 @@ export class WorkerBridge extends EventEmitter {
    * Terminate the worker thread.
    * Sends an abort message first for graceful shutdown, then terminates.
    */
-  async terminate(): Promise<void> {
-    if (!this.worker) return;
+  terminate(): Promise<void> {
+    const lifecycle = this.lifecycle;
+    if (!lifecycle) return Promise.resolve();
+    if (lifecycle.terminationPromise) return lifecycle.terminationPromise;
+    lifecycle.terminationRequested = true;
+    lifecycle.terminationPromise = this.terminateWorker(lifecycle);
+    return lifecycle.terminationPromise;
+  }
 
-    // Try graceful abort first
+  private async terminateWorker(lifecycle: WorkerLifecycle): Promise<void> {
+    // Exit listeners were installed during spawn, before the abort can complete.
     try {
-      this.worker.postMessage({ type: 'abort' });
+      lifecycle.worker.postMessage({ type: 'abort' });
     } catch {
       // Worker may already be dead
     }
 
-    // Force terminate after a short grace period
-    const worker = this.worker;
-    this.cleanup();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const exited = await Promise.race([
+      lifecycle.exited.then(() => true),
+      new Promise<false>((resolve) => {
+        timeout = setTimeout(() => resolve(false), ABORT_GRACE_MS);
+      }),
+    ]);
+    if (timeout !== undefined) clearTimeout(timeout);
+    if (exited || this.lifecycle !== lifecycle) return;
 
     try {
-      await worker.terminate();
-    } catch {
-      // Already terminated
+      await lifecycle.worker.terminate();
+    } catch (error) {
+      // Keep tracking, surface the failure, and allow a later termination retry.
+      if (this.lifecycle === lifecycle) lifecycle.terminationPromise = undefined;
+      throw error;
     }
   }
 
   /** Whether the worker is currently active */
   get isActive(): boolean {
-    return this.worker !== null;
+    return this.lifecycle !== null;
   }
 
   /** Get the underlying Worker instance (for advanced use) */
   get workerInstance(): Worker | null {
-    return this.worker;
+    return this.lifecycle?.worker ?? null;
   }
 
   // ===========================================================================
   // Message Handling
   // ===========================================================================
 
-  private handleWorkerMessage(message: WorkerMessage): void {
+  private handleWorkerMessage(message: WorkerMessage, lifecycle: WorkerLifecycle): void {
     switch (message.type) {
       case 'log':
         this.emitTyped('log', message.taskId, message.data, message.projectId);
@@ -187,7 +226,7 @@ export class WorkerBridge extends EventEmitter {
         break;
 
       case 'result':
-        this.handleResult(message.taskId, message.data, message.projectId);
+        this.handleResult(message.taskId, message.data, lifecycle, message.projectId);
         break;
     }
   }
@@ -213,21 +252,21 @@ export class WorkerBridge extends EventEmitter {
    * Handle the final session result from the worker.
    * Maps SessionResult.outcome to an exit code.
    */
-  private handleResult(taskId: string, result: SessionResult, projectId?: string): void {
+  private handleResult(taskId: string, result: SessionResult, lifecycle: WorkerLifecycle, projectId?: string): void {
+    if (lifecycle.resultReceived) return;
+    lifecycle.resultReceived = true;
     // Map outcome to exit code
-    const exitCode = result.outcome === 'completed' || result.outcome === 'max_steps' || result.outcome === 'context_window' ? 0 : 1;
+    lifecycle.resultExitCode = result.outcome === 'completed' || result.outcome === 'max_steps' || result.outcome === 'context_window' ? 0 : 1;
 
     // Log the result summary
     const summary = `Session complete: outcome=${result.outcome}, steps=${result.stepsExecuted}, tools=${result.toolCallCount}, duration=${result.durationMs}ms`;
     this.emitTyped('log', taskId, summary, projectId);
 
-    if (result.error) {
+    if (result.error && result.outcome !== 'cancelled') {
       this.emitTyped('error', taskId, result.error.message, projectId);
     }
 
-    // Emit exit and cleanup
-    this.emitTyped('exit', taskId, exitCode, this.processType, projectId);
-    this.cleanup();
+    // The actual exit completes tracking after the worker has released resources.
   }
 
   // ===========================================================================
@@ -242,9 +281,5 @@ export class WorkerBridge extends EventEmitter {
     ...args: Parameters<AgentManagerEvents[K]>
   ): void {
     this.emit(event, ...args);
-  }
-
-  private cleanup(): void {
-    this.worker = null;
   }
 }

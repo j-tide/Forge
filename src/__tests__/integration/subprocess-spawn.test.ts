@@ -13,14 +13,44 @@ import type { AgentExecutorConfig } from '../../main/ai/agent/types';
 // Mock WorkerBridge
 // =============================================================================
 
+class MockWorker extends EventEmitter {
+  postMessage = vi.fn();
+  terminate = vi.fn(async () => {
+    this.emit('exit', 1);
+    return 1;
+  });
+}
+
 class MockBridge extends EventEmitter {
-  spawn = vi.fn();
-  terminate = vi.fn().mockResolvedValue(undefined);
+  deferCleanup = false;
+  spawn = vi.fn((_config: AgentExecutorConfig) => {
+    const worker = new MockWorker();
+    worker.once('exit', () => {
+      if (this.workerInstance === worker) this.workerInstance = null;
+    });
+    this.workerInstance = worker;
+  });
+  terminate = vi.fn(() => {
+    const worker = this.workerInstance;
+    if (!worker) return Promise.resolve();
+    const exited = new Promise<void>((resolve) => worker.once('exit', () => resolve()));
+    worker.postMessage({ type: 'abort' });
+    if (!this.deferCleanup) queueMicrotask(() => this.completeCleanup());
+    return exited;
+  });
   isRunning = vi.fn().mockReturnValue(false);
-  workerInstance = null as null | { terminate: () => Promise<void> };
+  workerInstance: MockWorker | null = null;
+  completeCleanup() {
+    this.workerInstance?.emit('exit', 0);
+  }
   get isActive() {
     return this.workerInstance !== null;
   }
+}
+
+function getSpawnedWorker(bridge: MockBridge): MockWorker {
+  if (!bridge.workerInstance) throw new Error('Bridge fixture has no active worker');
+  return bridge.workerInstance;
 }
 
 // Track created bridge instances so tests can interact with them
@@ -334,6 +364,155 @@ describe('WorkerBridge Spawn Integration', () => {
 
       expect(result).toBe(true);
       expect(manager.isRunning('task-1')).toBe(false);
+    }, 15000);
+
+    it('should request bridge abort and keep the worker alive until cleanup finishes', async () => {
+      const { AgentManager } = await import('../../main/agent');
+      const manager = new AgentManager();
+      const logHandler = vi.fn();
+      manager.on('log', logHandler);
+      await manager.startSpecCreation('task-1', '/project', 'Test');
+      const bridge = createdBridges[0];
+      bridge.deferCleanup = true;
+      const worker = getSpawnedWorker(bridge);
+
+      expect(manager.killTask('task-1')).toBe(true);
+      expect(manager.isRunning('task-1')).toBe(false);
+      expect(worker.postMessage).toHaveBeenCalledWith({ type: 'abort' });
+      expect(worker.terminate).not.toHaveBeenCalled();
+      bridge.emit('log', 'task-1', 'Cancellation log flushed\n', undefined);
+      expect(logHandler).not.toHaveBeenCalled();
+      expect(bridge.isActive).toBe(true);
+
+      bridge.completeCleanup();
+      await manager.killAll();
+    }, 15000);
+
+    it('should wait for every bridge cleanup during killAll', async () => {
+      const { AgentManager } = await import('../../main/agent');
+      const manager = new AgentManager();
+      await manager.startSpecCreation('task-1', '/project', 'Test 1');
+      await manager.startTaskExecution('task-2', '/project', 'spec-001');
+      const [first, second] = createdBridges;
+      first.deferCleanup = true;
+      second.deferCleanup = true;
+      const firstWorker = getSpawnedWorker(first);
+      const secondWorker = getSpawnedWorker(second);
+      let settled = false;
+
+      const stopping = manager.killAll().then(() => { settled = true; });
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(settled).toBe(false);
+      expect(manager.getRunningTasks()).toHaveLength(0);
+      expect(firstWorker.postMessage).toHaveBeenCalledWith({ type: 'abort' });
+      expect(secondWorker.postMessage).toHaveBeenCalledWith({ type: 'abort' });
+
+      first.completeCleanup();
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(settled).toBe(false);
+      second.completeCleanup();
+      await stopping;
+      expect(settled).toBe(true);
+    }, 15000);
+
+    it('should wait for cleanup already requested by killTask even after tracking is empty', async () => {
+      const { AgentManager } = await import('../../main/agent');
+      const manager = new AgentManager();
+      await manager.startSpecCreation('task-1', '/project', 'Test');
+      const bridge = createdBridges[0];
+      bridge.deferCleanup = true;
+      manager.killTask('task-1');
+      expect(manager.getRunningTasks()).toHaveLength(0);
+      let settled = false;
+
+      const stopping = manager.killAll().then(() => { settled = true; });
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(settled).toBe(false);
+
+      bridge.completeCleanup();
+      await stopping;
+      expect(settled).toBe(true);
+    }, 15000);
+
+    it('should preserve a restarted task when the previous spawn exits late', async () => {
+      const { AgentManager } = await import('../../main/agent');
+      const manager = new AgentManager();
+      const exitHandler = vi.fn();
+      manager.on('exit', exitHandler);
+      await manager.startSpecCreation('task-1', '/project', 'First run');
+      const oldBridge = createdBridges[0];
+      oldBridge.deferCleanup = true;
+      manager.killTask('task-1');
+      await manager.startSpecCreation('task-1', '/project', 'Second run');
+      const newBridge = createdBridges[1];
+
+      oldBridge.emit('exit', 'task-1', 0, 'spec-creation', undefined);
+      expect(manager.isRunning('task-1')).toBe(true);
+      expect(exitHandler).not.toHaveBeenCalled();
+
+      oldBridge.completeCleanup();
+      newBridge.emit('exit', 'task-1', 0, 'spec-creation', undefined);
+      expect(manager.isRunning('task-1')).toBe(false);
+      expect(exitHandler).toHaveBeenCalledOnce();
+      await manager.killAll();
+    }, 15000);
+
+    it('should ignore events from an old spawn while forwarding events from the current spawn', async () => {
+      const { AgentManager } = await import('../../main/agent');
+      const manager = new AgentManager();
+      const handlers = {
+        log: vi.fn(), error: vi.fn(), progress: vi.fn(), taskEvent: vi.fn(),
+      };
+      manager.on('log', handlers.log);
+      manager.on('error', handlers.error);
+      manager.on('execution-progress', handlers.progress);
+      manager.on('task-event', handlers.taskEvent);
+      await manager.startSpecCreation('task-1', '/project', 'First run');
+      const oldBridge = createdBridges[0];
+      oldBridge.deferCleanup = true;
+      manager.killTask('task-1');
+      await manager.startSpecCreation('task-1', '/project', 'Second run');
+      const newBridge = createdBridges[1];
+      Object.values(handlers).forEach((handler) => handler.mockClear());
+      const progress = { phase: 'coding', phaseProgress: 50, overallProgress: 50 };
+      const taskEvent = { type: 'fixture-event' };
+
+      oldBridge.emit('log', 'task-1', 'Old log', undefined);
+      oldBridge.emit('error', 'task-1', 'Old error', undefined);
+      oldBridge.emit('execution-progress', 'task-1', progress, undefined);
+      oldBridge.emit('task-event', 'task-1', taskEvent, undefined);
+      for (const handler of Object.values(handlers)) expect(handler).not.toHaveBeenCalled();
+
+      newBridge.emit('log', 'task-1', 'New log', undefined);
+      newBridge.emit('error', 'task-1', 'New error', undefined);
+      newBridge.emit('execution-progress', 'task-1', progress, undefined);
+      newBridge.emit('task-event', 'task-1', taskEvent, undefined);
+      expect(handlers.log).toHaveBeenCalledWith('task-1', 'New log', undefined);
+      expect(handlers.error).toHaveBeenCalledWith('task-1', 'New error', undefined);
+      expect(handlers.progress).toHaveBeenCalledWith('task-1', progress, undefined);
+      expect(handlers.taskEvent).toHaveBeenCalledWith('task-1', taskEvent, undefined);
+
+      oldBridge.completeCleanup();
+      await manager.killAll();
+    }, 15000);
+
+    it.each(['resolved-active', 'rejected'])('should keep a failed shutdown visible until the worker actually exits: %s', async (failure) => {
+      const { AgentManager } = await import('../../main/agent');
+      const manager = new AgentManager();
+      await manager.startSpecCreation('task-1', '/project', 'Test');
+      const bridge = createdBridges[0];
+      if (failure === 'rejected') {
+        bridge.terminate.mockRejectedValueOnce(new Error('Worker termination failed'));
+      } else {
+        bridge.terminate.mockResolvedValueOnce(undefined);
+      }
+
+      await expect(manager.killAll()).rejects.toThrow(/Worker .*failed|Worker did not exit/);
+      expect(bridge.isActive).toBe(true);
+      await expect(manager.killAll()).rejects.toThrow();
+
+      bridge.completeCleanup();
+      await expect(manager.killAll()).resolves.toBeUndefined();
     }, 15000);
 
     it('should return false when killing non-existent task', async () => {
