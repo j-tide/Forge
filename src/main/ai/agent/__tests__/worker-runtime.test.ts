@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'vite';
+import { execFileSync } from 'node:child_process';
 import type { WorkerConfig, WorkerMessage } from '../types';
 import type { TaskLogs } from '../../../../shared/types';
 
@@ -12,7 +13,16 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.
 let fixtureRoot: string;
 let workerPath: string;
 
-type Scenario = 'success' | 'provider-error' | 'abort-pending' | 'setup-error' | 'invalid-config' | 'path-containment';
+type Scenario = 'success' | 'provider-error' | 'abort-pending' | 'setup-error' | 'invalid-config' | 'path-containment'
+  | 'background-success' | 'background-error' | 'background-cancel';
+
+function isProcessAlive(pid: number): boolean {
+  try { process.kill(pid, 0); return true; } catch { return false; }
+}
+
+function shellQuote(value: string): string {
+  return process.platform === 'win32' ? `"${value}"` : `'${value.replace(/'/g, "'\\''")}'`;
+}
 
 // Build the real entry into a private directory: these regressions do not use
 // a stale out/ worker, a mock Worker, or a mock session/tool/log writer.
@@ -52,16 +62,33 @@ async function runWorker(scenario: Scenario) {
   const specDir = path.join(projectDir, '.forge-glass-preview/specs', scenario);
   const tracePath = path.join(dir, 'transport.jsonl');
   const canary = path.join(dir, 'outside-project.txt');
+  const backgroundPidsPath = path.join(projectDir, 'background-pids.json');
+  const backgroundScript = path.join(projectDir, 'background.cjs');
+  const backgroundCommand = `${shellQuote(process.execPath)} ${shellQuote(backgroundScript)}`;
+  const hasBackground = scenario.startsWith('background-');
   mkdirSync(home, { recursive: true });
   mkdirSync(specDir, { recursive: true });
   writeFileSync(path.join(projectDir, 'seed.txt'), 'FORGE_OFFLINE_SEED_20261006\n');
   writeFileSync(canary, 'UNCHANGED_ACCEPTANCE_CANARY\n');
+  if (hasBackground) {
+    // Both processes inherit the tool's stdio and process group. The root delays
+    // its TERM exit so a kill request alone cannot satisfy close-before-result.
+    writeFileSync(backgroundScript, `
+const fs = require('node:fs');
+const { spawn } = require('node:child_process');
+const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000); setTimeout(() => process.exit(0), 10000)'], { stdio: 'inherit' });
+process.on('SIGTERM', () => setTimeout(() => process.exit(0), 75));
+fs.writeFileSync(${JSON.stringify(backgroundPidsPath)}, JSON.stringify([process.pid, child.pid]));
+setInterval(() => {}, 1000);
+setTimeout(() => process.exit(0), 10000);
+`);
+  }
   const config: WorkerConfig = {
     taskId: `regression-${scenario}`,
     projectId: 'worker-regression-only',
     processType: 'task-execution',
     session: {
-      agentType: 'spec_gatherer',
+      agentType: hasBackground ? 'insights' : 'spec_gatherer',
       systemPrompt: 'Offline transport regression: Read seed.txt, Write artifact.txt, then Read it.',
       initialMessages: [{ role: 'user', content: 'Use the supplied isolated project.' }],
       provider: scenario === 'setup-error' ? 'fixture-unsupported-provider' : 'ollama',
@@ -85,6 +112,8 @@ async function runWorker(scenario: Scenario) {
       PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`,
       HOME: home, CFFIXED_USER_HOME: home, TMPDIR: dir, TZ: 'UTC',
       FORGE_FIXTURE_SCENARIO: scenario, FORGE_FIXTURE_TRACE: tracePath, FORGE_FIXTURE_CANARY: canary,
+      FORGE_FIXTURE_BACKGROUND_COMMAND: backgroundCommand,
+      FORGE_FIXTURE_BACKGROUND_PIDS: backgroundPidsPath,
     },
     stdout: true,
     stderr: true,
@@ -92,15 +121,22 @@ async function runWorker(scenario: Scenario) {
   const messages: WorkerMessage[] = [];
   let threadError: Error | undefined;
   let abortSent = false;
+  let backgroundAliveAtResult: number[] = [];
   let watchdog: ReturnType<typeof setTimeout> | undefined;
   const exited = new Promise<number>(resolve => {
-    worker.on('message', (message: WorkerMessage) => messages.push(message));
+    worker.on('message', (message: WorkerMessage) => {
+      messages.push(message);
+      if (hasBackground && message.type === 'result') {
+        const pids = JSON.parse(readFileSync(backgroundPidsPath, 'utf8')) as number[];
+        backgroundAliveAtResult = pids.filter(isProcessAlive);
+      }
+    });
     worker.on('error', error => { threadError = error instanceof Error ? error : new Error(String(error)); });
     worker.once('exit', resolve);
   });
   // The transport signals when the actual SDK request is waiting, rather than
   // cancelling after a guessed delay or injecting a fake Worker result.
-  const abortPoll = scenario === 'abort-pending' ? setInterval(() => {
+  const abortPoll = scenario === 'abort-pending' || scenario === 'background-cancel' ? setInterval(() => {
     try {
       if (!abortSent && readFileSync(tracePath, 'utf8').includes('fixture-pending-until-abort')) {
         abortSent = true;
@@ -120,17 +156,44 @@ async function runWorker(scenario: Scenario) {
     const resultMessages = messages.filter((message): message is Extract<WorkerMessage, { type: 'result' }> => message.type === 'result');
     let logs: TaskLogs | undefined;
     try { logs = JSON.parse(readFileSync(path.join(specDir, 'task_logs.json'), 'utf8')); } catch { /* Setup/invalid config may precede logs. */ }
-    return { messages, resultMessages, exitCode, threadError, trace, logs, projectDir, canary, abortSent, threadId: worker.threadId };
+    return { messages, resultMessages, exitCode, threadError, trace, logs, projectDir, canary, abortSent, backgroundAliveAtResult, threadId: worker.threadId };
   } finally {
     if (watchdog !== undefined) clearTimeout(watchdog);
     if (abortPoll) clearInterval(abortPoll);
     // Failure cleanup is scoped to the thread made by this test. A passing test
     // must have observed its real exit before this fallback is reached.
     if (worker.threadId !== -1) await worker.terminate();
+    if (hasBackground) {
+      // RED/failure cleanup only ever targets PIDs created by this fixture.
+      try {
+        const pids = JSON.parse(readFileSync(backgroundPidsPath, 'utf8')) as number[];
+        for (const pid of pids.reverse()) {
+          try {
+            if (!isProcessAlive(pid)) continue;
+            if (process.platform === 'win32') execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' });
+            else process.kill(pid, 'SIGKILL');
+          } catch { /* This synthetic process may already have exited. */ }
+        }
+      } catch { /* Setup can fail before any subprocess starts. */ }
+    }
   }
 }
 
 describe('real Worker outcomes and natural shutdown with offline transport', () => {
+  it.each([
+    ['background-success', 'completed'],
+    ['background-error', 'error'],
+    ['background-cancel', 'cancelled'],
+  ] as const)('closes owned background commands and descendants before the %s terminal result', async (scenario, outcome) => {
+    const run = await runWorker(scenario);
+    expect(run.resultMessages).toHaveLength(1);
+    expect(run.resultMessages[0].data.outcome).toBe(outcome);
+    expect(run.backgroundAliveAtResult).toEqual([]);
+    expect(run.trace.some(item => item.type === 'fixture-background-ready-before-next-step')).toBe(true);
+    expect(run.trace.some(item => item.type === 'fixture-background-close')).toBe(true);
+    expect(run.threadId).toBe(-1);
+  });
+
   it('completes actual Read/Write/Read and persists logs before natural exit', async () => {
     const run = await runWorker('success');
     expect(run.threadError).toBeUndefined();

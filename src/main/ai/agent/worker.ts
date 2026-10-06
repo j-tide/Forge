@@ -49,6 +49,7 @@ import { createMcpClientsForAgent, mergeMcpTools, closeAllMcpClients } from '../
 import type { McpClientResult } from '../mcp/types';
 import { runProjectIndexer } from '../project/project-indexer';
 import { finalizeWorkerLogs, runWorkerLifecycle } from './worker-lifecycle';
+import { BackgroundCommandOwner } from '../tools/background-command-owner';
 
 // =============================================================================
 // Validation
@@ -106,6 +107,7 @@ function postTaskEvent(eventType: string, extra?: Record<string, unknown>): void
 // =============================================================================
 
 const abortController = new AbortController();
+const backgroundCommands = new BackgroundCommandOwner();
 
 function handleMainMessage(msg: MainToWorkerMessage): void {
   if (msg.type === 'abort') {
@@ -152,6 +154,7 @@ function buildToolContext(session: SerializableSessionConfig, securityProfile: S
     specDir: session.toolContext.specDir,
     securityProfile,
     abortSignal: abortController.signal,
+    backgroundCommands,
   };
 }
 
@@ -1202,6 +1205,7 @@ function buildFallbackPrompt(agentType: AgentType, specDir: string, projectDir: 
 runWorkerLifecycle({
   execute: run,
   cleanup: [
+    () => backgroundCommands.close(),
     async () => {
       await closeAllMcpClients(mcpClients);
       mcpClients = [];

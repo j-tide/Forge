@@ -7,10 +7,11 @@
  * Supports timeouts, background execution, and descriptive metadata.
  */
 
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { z } from 'zod/v3';
 
-import { findExecutable, isWindows, killProcessGracefully } from '../../../platform/index';
+import { findExecutable, isWindows } from '../../../platform/index';
+import { getTaskkillExePath } from '../../../utils/windows-paths';
 import { bashSecurityHook } from '../../security/bash-validator';
 import { Tool } from '../define';
 import { ToolPermission } from '../types';
@@ -22,6 +23,8 @@ import { ToolPermission } from '../types';
 const DEFAULT_TIMEOUT_MS = 120_000;
 const MAX_TIMEOUT_MS = 600_000;
 const MAX_OUTPUT_LENGTH = 30_000;
+const COMMAND_KILL_GRACE_MS = 1000;
+const MAX_CAPTURE_BYTES = 10 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Input Schema
@@ -62,48 +65,142 @@ function resolveShell(): string {
   return '/bin/bash';
 }
 
-function executeCommand(
+interface CommandResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+}
+
+function startCommand(
   command: string,
   cwd: string,
   timeoutMs: number,
   abortSignal?: AbortSignal,
-): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+): { result: Promise<CommandResult>; closed: Promise<void>; stop: () => void } {
+  abortSignal?.throwIfAborted();
   const shell = resolveShell();
   const args = isWindows() && shell.toLowerCase().endsWith('cmd.exe')
     ? ['/c', command]
     : ['-c', command];
 
-  return new Promise((resolve) => {
-    const child = execFile(
-      shell,
-      args,
-      {
-        cwd,
-        timeout: timeoutMs,
-        maxBuffer: 10 * 1024 * 1024,
-        signal: abortSignal,
-      },
-      (error, stdout, stderr) => {
-        const exitCode = error
-          ? ('code' in error && typeof error.code === 'number'
-              ? error.code
-              : 1)
-          : 0;
-        resolve({
-          stdout: typeof stdout === 'string' ? stdout : '',
-          stderr: typeof stderr === 'string' ? stderr : '',
-          exitCode,
-        });
-      },
-    );
+  let closed = false;
+  let processClosed = false;
+  let stopping = false;
+  let forceKillTimer: ReturnType<typeof setTimeout> | undefined;
+  let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
+  let groupPollTimer: ReturnType<typeof setTimeout> | undefined;
+  let resolveResult!: (value: CommandResult) => void;
+  let resolveClosed!: () => void;
+  const result = new Promise<CommandResult>(resolve => { resolveResult = resolve; });
+  const commandClosed = new Promise<void>(resolve => { resolveClosed = resolve; });
+  let stdout = '';
+  let stderr = '';
+  let stdoutBytes = 0;
+  let stderrBytes = 0;
+  let failed = false;
+  let exitCode: number | null = null;
+  let pendingTreeKills = 0;
+  const child = spawn(shell, args, {
+    cwd,
+    // A private POSIX process group lets shutdown target descendants without
+    // touching another command. Keep the process referenced and owned.
+    detached: !isWindows(),
+    windowsHide: true,
+    stdio: 'pipe',
+  });
 
-    // Ensure the child process is killed on abort
-    if (abortSignal) {
-      abortSignal.addEventListener('abort', () => {
-        killProcessGracefully(child);
+  const commandResult = (): CommandResult => ({ stdout, stderr, exitCode: failed ? 1 : exitCode ?? 1 });
+  const groupAlive = (): boolean => {
+    if (isWindows() || !child.pid) return false;
+    try {
+      process.kill(-child.pid, 0);
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false;
+      throw error;
+    }
+  };
+  const acknowledgeClose = (): void => {
+    if (!processClosed || pendingTreeKills > 0) return;
+    if (groupAlive()) {
+      // A descendant with its own stdio can remain after the root's close event.
+      // Its private process group remains ours until every member has exited.
+      groupPollTimer = setTimeout(acknowledgeClose, 10);
+      return;
+    }
+    closed = true;
+    if (forceKillTimer) clearTimeout(forceKillTimer);
+    if (timeoutTimer) clearTimeout(timeoutTimer);
+    if (groupPollTimer) clearTimeout(groupPollTimer);
+    abortSignal?.removeEventListener('abort', stop);
+    resolveClosed();
+    resolveResult(commandResult());
+  };
+
+  const killTree = (force: boolean): void => {
+    if (!child.pid) return;
+    if (isWindows()) {
+      // Windows has no POSIX process groups: taskkill scopes the whole tree to
+      // this command's PID. Its descendants must close before commandClosed.
+      pendingTreeKills++;
+      execFile(getTaskkillExePath(), ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }, () => {
+        pendingTreeKills--;
+        acknowledgeClose();
       });
+    } else {
+      try {
+        process.kill(-child.pid, force ? 'SIGKILL' : 'SIGTERM');
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+      }
+    }
+  };
+  const stop = (): void => {
+    if (closed || stopping) return;
+    stopping = true;
+    failed = true;
+    killTree(false);
+    // Do not cancel escalation on root exit: descendants may still hold stdio.
+    forceKillTimer = setTimeout(() => killTree(true), COMMAND_KILL_GRACE_MS);
+  };
+  child.stdout?.setEncoding('utf8');
+  child.stderr?.setEncoding('utf8');
+  child.stdout?.on('data', (data: string) => {
+    const remaining = Math.max(MAX_CAPTURE_BYTES - stdoutBytes, 0);
+    stdout += Buffer.from(data).subarray(0, remaining).toString('utf8');
+    stdoutBytes += Buffer.byteLength(data);
+    if (stdoutBytes > MAX_CAPTURE_BYTES) {
+      failed = true;
+      stop();
     }
   });
+  child.stderr?.on('data', (data: string) => {
+    const remaining = Math.max(MAX_CAPTURE_BYTES - stderrBytes, 0);
+    stderr += Buffer.from(data).subarray(0, remaining).toString('utf8');
+    stderrBytes += Buffer.byteLength(data);
+    if (stderrBytes > MAX_CAPTURE_BYTES) {
+      failed = true;
+      stop();
+    }
+  });
+  child.once('error', (error) => {
+    failed = true;
+    stderr += error.message;
+  });
+  child.once('close', (code: number | null) => {
+    processClosed = true;
+    exitCode = code;
+    // Normal shell completion may intentionally leave background descendants.
+    // Return its output while the Worker owner retains those descendants.
+    if (!stopping) resolveResult(commandResult());
+    acknowledgeClose();
+  });
+  // Native execFile(signal) reports AbortError before the command closes. Own
+  // cancellation instead, so result publication cannot outrun subprocess exit.
+  abortSignal?.addEventListener('abort', stop, { once: true });
+  if (abortSignal?.aborted) stop();
+  if (timeoutMs > 0) timeoutTimer = setTimeout(stop, timeoutMs);
+  return { result, closed: commandClosed, stop };
 }
 
 // ---------------------------------------------------------------------------
@@ -142,18 +239,13 @@ export const bashTool = Tool.define({
 
     const timeoutMs = Math.min(timeout ?? DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS);
 
+    const start = () => startCommand(command, context.cwd, timeoutMs, context.abortSignal);
+    const running = context.backgroundCommands ? context.backgroundCommands.start(start) : start();
     if (run_in_background) {
-      // Fire-and-forget for background commands
-      executeCommand(command, context.cwd, timeoutMs, context.abortSignal);
       return `Command started in background: ${command}`;
     }
 
-    const { stdout, stderr, exitCode } = await executeCommand(
-      command,
-      context.cwd,
-      timeoutMs,
-      context.abortSignal,
-    );
+    const { stdout, stderr, exitCode } = await running.result;
 
     const parts: string[] = [];
 

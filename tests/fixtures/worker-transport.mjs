@@ -12,6 +12,8 @@ const scenario = process.env.FORGE_FIXTURE_SCENARIO;
 const tracePath = process.env.FORGE_FIXTURE_TRACE;
 const projectDir = workerData?.session?.projectDir;
 let requestNumber = 0;
+const hasBackground = scenario?.startsWith('background-');
+const backgroundPids = new Set();
 
 function record(value) {
   fs.appendFileSync(tracePath, JSON.stringify({ timestamp: new Date().toISOString(), ...value }) + '\n');
@@ -25,8 +27,25 @@ net.Socket.prototype.connect = function blockedFixtureTcpConnect() {
 // No MCP/other subprocess is expected for the selected agent config. Record and
 // reject an unexpected attempt rather than letting it inherit any host context.
 for (const method of ['spawn', 'spawnSync', 'exec', 'execSync', 'execFile', 'execFileSync', 'fork']) {
-  childProcess[method] = function blockedFixtureChildProcess() {
-    record({ type: 'blocked-child-process', method });
+  const original = childProcess[method];
+  childProcess[method] = function blockedFixtureChildProcess(...args) {
+    const commandArgs = args[1];
+    if (hasBackground && ['spawn', 'execFile'].includes(method) && Array.isArray(commandArgs)
+      && commandArgs.length === 2 && ['-c', '/c'].includes(commandArgs[0])
+      && commandArgs[1] === process.env.FORGE_FIXTURE_BACKGROUND_COMMAND
+      && args[2]?.cwd === projectDir) {
+      const child = original.apply(this, args);
+      backgroundPids.add(child.pid);
+      record({ type: 'fixture-background-started', pid: child.pid });
+      child.once('close', () => record({ type: 'fixture-background-close', pid: child.pid }));
+      return child;
+    }
+    if (hasBackground && process.platform === 'win32' && method === 'execFile'
+      && /taskkill(?:\.exe)?$/i.test(args[0]) && Array.isArray(commandArgs)
+      && commandArgs[0] === '/PID' && backgroundPids.has(Number(commandArgs[1]))) {
+      return original.apply(this, args);
+    }
+    record({ type: 'blocked-child-process', method, file: args[0], args: args[1] });
     throw new Error('Offline acceptance fixture forbids unexpected subprocesses');
   };
 }
@@ -67,14 +86,31 @@ globalThis.fetch = async function offlineFixtureFetch(input, init = {}) {
   });
   if (body.stream !== true) throw new Error('Expected actual SDK streaming request');
 
-  if (scenario === 'provider-error') {
+  if (hasBackground) {
+    if (requestNumber === 1) {
+      return toolResponse('Bash', { command: process.env.FORGE_FIXTURE_BACKGROUND_COMMAND, run_in_background: true, timeout: 10000 });
+    }
+    // A successful tool return must not wait for the background process to exit.
+    // Verify it is still running when the SDK advances to the next model step.
+    let pids;
+    for (let attempt = 0; attempt < 200; attempt++) {
+      try { pids = JSON.parse(fs.readFileSync(process.env.FORGE_FIXTURE_BACKGROUND_PIDS, 'utf8')); break; } catch { /* Child is starting. */ }
+      await new Promise(resolve => setTimeout(resolve, 5));
+    }
+    if (!pids) throw new Error('Background process did not become ready');
+    for (const pid of pids) process.kill(pid, 0);
+    record({ type: 'fixture-background-ready-before-next-step', pids });
+    if (scenario === 'background-success') return sse({ role: 'assistant', content: 'Background fixture started; session complete.' }, 'stop');
+  }
+
+  if (scenario === 'provider-error' || scenario === 'background-error') {
     record({ type: 'fixture-response', kind: 'http-400-protocol-response' });
     return new Response(JSON.stringify({ error: { message: 'Local transport fixture deliberately rejected this request', type: 'fixture_error', code: 'fixture_bad_request' } }), {
       status: 400, headers: { 'content-type': 'application/json' },
     });
   }
 
-  if (scenario === 'abort-pending') {
+  if (scenario === 'abort-pending' || scenario === 'background-cancel') {
     record({ type: 'fixture-pending-until-abort' });
     const signal = init.signal ?? (input instanceof Request ? input.signal : undefined);
     return await new Promise((_resolve, reject) => {

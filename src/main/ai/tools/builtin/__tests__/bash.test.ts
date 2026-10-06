@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { EventEmitter } from 'node:events';
 
 import { bashTool } from '../bash';
 import type { ToolContext } from '../../types';
@@ -7,19 +8,18 @@ import type { ToolContext } from '../../types';
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockExecFile = vi.fn();
+const mockSpawn = vi.fn();
 vi.mock('node:child_process', () => ({
-  execFile: (...args: unknown[]) => mockExecFile(...args),
+  spawn: (...args: unknown[]) => mockSpawn(...args),
+  execFile: vi.fn(),
 }));
 
 const mockIsWindows = vi.fn(() => false);
 const mockFindExecutable = vi.fn(() => null);
-const mockKillProcessGracefully = vi.fn();
 
 vi.mock('../../../../platform/index', () => ({
   isWindows: () => mockIsWindows(),
   findExecutable: (_name: string, _additionalPaths?: string[]) => mockFindExecutable(),
-  killProcessGracefully: (_childProcess: unknown, _options?: unknown) => mockKillProcessGracefully(),
 }));
 
 const mockBashSecurityHook = vi.fn(() => ({}));
@@ -46,14 +46,20 @@ const baseContext: ToolContext = {
 } as unknown as ToolContext;
 
 /**
- * Set up mockExecFile to invoke the callback with the provided values.
+ * Emit the output and close events observed from a real spawned command.
  */
-function setupExecFile(stdout: string, stderr: string, exitCode: number) {
-  mockExecFile.mockImplementation(
-    (_shell: unknown, _args: unknown, _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-      const err = exitCode !== 0 ? Object.assign(new Error('exit'), { code: exitCode }) : null;
-      callback(err, stdout, stderr);
-      return { pid: 1234 };
+function setupCommand(stdout: string, stderr: string, exitCode: number) {
+  mockSpawn.mockImplementation(
+    () => {
+      const output = Object.assign(new EventEmitter(), { setEncoding: vi.fn() });
+      const errorOutput = Object.assign(new EventEmitter(), { setEncoding: vi.fn() });
+      const child = Object.assign(new EventEmitter(), { pid: undefined, stdout: output, stderr: errorOutput });
+      queueMicrotask(() => {
+        output.emit('data', stdout);
+        errorOutput.emit('data', stderr);
+        child.emit('close', exitCode);
+      });
+      return child;
     },
   );
 }
@@ -75,7 +81,7 @@ describe('Bash Tool', () => {
   });
 
   it('should return stdout from successful command', async () => {
-    setupExecFile('hello from bash\n', '', 0);
+    setupCommand('hello from bash\n', '', 0);
 
     const result = await bashTool.config.execute(
       { command: 'echo hello from bash' },
@@ -86,7 +92,7 @@ describe('Bash Tool', () => {
   });
 
   it('should include stderr in output when present', async () => {
-    setupExecFile('', 'some warning\n', 0);
+    setupCommand('', 'some warning\n', 0);
 
     const result = await bashTool.config.execute(
       { command: 'cmd-with-stderr' },
@@ -98,7 +104,7 @@ describe('Bash Tool', () => {
   });
 
   it('should include exit code in output when non-zero', async () => {
-    setupExecFile('', '', 1);
+    setupCommand('', '', 1);
 
     const result = await bashTool.config.execute(
       { command: 'failing-command' },
@@ -109,7 +115,7 @@ describe('Bash Tool', () => {
   });
 
   it('should return (no output) when stdout and stderr are empty and exit code is 0', async () => {
-    setupExecFile('', '', 0);
+    setupCommand('', '', 0);
 
     const result = await bashTool.config.execute(
       { command: 'silent-command' },
@@ -121,7 +127,7 @@ describe('Bash Tool', () => {
 
   it('should truncate output exceeding MAX_OUTPUT_LENGTH', async () => {
     const longOutput = 'x'.repeat(31_000);
-    setupExecFile(longOutput, '', 0);
+    setupCommand(longOutput, '', 0);
 
     const result = await bashTool.config.execute(
       { command: 'long-output-cmd' },
@@ -146,15 +152,17 @@ describe('Bash Tool', () => {
 
     expect(result).toContain('Error: Command not allowed');
     expect(result).toContain('command is blocked for safety');
-    expect(mockExecFile).not.toHaveBeenCalled();
+    expect(mockSpawn).not.toHaveBeenCalled();
   });
 
   it('should start command in background and return immediately', async () => {
-    // In background mode the execute call is fire-and-forget, so mockExecFile
+    // In background mode the execute call is fire-and-forget, so mockSpawn
     // may or may not be called synchronously. The return value is what matters.
-    mockExecFile.mockImplementation(
-      (_shell: unknown, _args: unknown, _opts: unknown, _callback: unknown) => {
-        return { pid: 5678 };
+    mockSpawn.mockImplementation(
+      () => {
+        const child = Object.assign(new EventEmitter(), { pid: undefined });
+        queueMicrotask(() => child.emit('close', 0));
+        return child;
       },
     );
 
@@ -168,51 +176,47 @@ describe('Bash Tool', () => {
   });
 
   it('should pass cwd from context to execFile', async () => {
-    setupExecFile('output', '', 0);
+    setupCommand('output', '', 0);
 
     await bashTool.config.execute(
       { command: 'pwd' },
       baseContext,
     );
 
-    expect(mockExecFile).toHaveBeenCalledWith(
+    expect(mockSpawn).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(Array),
       expect.objectContaining({ cwd: '/test/project' }),
-      expect.any(Function),
     );
   });
 
   it('should cap timeout to MAX_TIMEOUT_MS (600000)', async () => {
-    setupExecFile('output', '', 0);
-
-    await bashTool.config.execute(
-      { command: 'cmd', timeout: 9_000_000 },
-      baseContext,
-    );
-
-    expect(mockExecFile).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(Array),
-      expect.objectContaining({ timeout: 600_000 }),
-      expect.any(Function),
-    );
+    vi.useFakeTimers();
+    const child = Object.assign(new EventEmitter(), { pid: undefined });
+    mockSpawn.mockReturnValueOnce(child);
+    try {
+      const running = bashTool.config.execute({ command: 'cmd', timeout: 9_000_000 }, baseContext);
+      await vi.advanceTimersByTimeAsync(600_000);
+      child.emit('close', 0);
+      expect(await running).toContain('Exit code: 1');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('should use /bin/bash as shell on non-Windows', async () => {
     mockIsWindows.mockReturnValue(false);
-    setupExecFile('output', '', 0);
+    setupCommand('output', '', 0);
 
     await bashTool.config.execute(
       { command: 'echo hi' },
       baseContext,
     );
 
-    expect(mockExecFile).toHaveBeenCalledWith(
+    expect(mockSpawn).toHaveBeenCalledWith(
       '/bin/bash',
       ['-c', 'echo hi'],
       expect.any(Object),
-      expect.any(Function),
     );
   });
 
@@ -227,7 +231,7 @@ describe('Bash Tool', () => {
     const origComSpec = process.env.ComSpec;
     process.env.ComSpec = 'C:\\Windows\\System32\\cmd.exe';
 
-    setupExecFile('output', '', 0);
+    setupCommand('output', '', 0);
 
     await bashTool.config.execute(
       { command: 'dir' },
@@ -235,7 +239,7 @@ describe('Bash Tool', () => {
     );
 
     // Verify that on Windows with no bash found, cmd.exe with /c flag is used
-    const callArgs = mockExecFile.mock.calls[0];
+    const callArgs = mockSpawn.mock.calls[0];
     const shell = callArgs[0] as string;
     const args = callArgs[1] as string[];
 

@@ -9,6 +9,7 @@
 import type { z } from 'zod/v3';
 
 import type { SecurityProfile } from '../security/bash-validator';
+import type { BackgroundCommandOwner } from './background-command-owner';
 
 // ---------------------------------------------------------------------------
 // Tool Context
@@ -29,6 +30,8 @@ export interface ToolContext {
   securityProfile: SecurityProfile;
   /** Optional abort signal for cancellation */
   abortSignal?: AbortSignal;
+  /** Worker-local ownership shared across its sessions; never serialized to Main. */
+  backgroundCommands?: BackgroundCommandOwner;
   /** If set, Write/Edit tools can only write within these directories */
   allowedWritePaths?: string[];
 }
