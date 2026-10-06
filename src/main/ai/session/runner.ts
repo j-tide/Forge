@@ -298,12 +298,18 @@ async function executeStream(
   const streamInactivityController = new AbortController();
   const STREAM_INACTIVITY_REASON = '__stream_inactivity_timeout__';
 
+  // A fatal SDK error ends only this attempt, without cancelling the caller's
+  // session signal (auth refresh can still start a fresh attempt).
+  const attemptAbortController = new AbortController();
+
   const signals: AbortSignal[] = [
     contextWindowAbortController.signal,
     streamInactivityController.signal,
+    attemptAbortController.signal,
   ];
   if (config.abortSignal) signals.push(config.abortSignal);
   const mergedAbortSignal = AbortSignal.any(signals);
+  const { trackedTools, pendingToolExecutions } = trackToolExecutions(tools, mergedAbortSignal);
 
   // Per-step state for memory injection (only allocated when memory is active)
   const stepMemoryState = memoryContext ? new StepMemoryState() : null;
@@ -371,7 +377,7 @@ async function executeStream(
     model: config.model,
     system: isCodex ? undefined : config.systemPrompt,
     messages: aiMessages,
-    tools: tools ?? {},
+    tools: trackedTools,
     ...(useOutputSchema ? { output: Output.object({ schema: config.outputSchema! }) } : {}),
     stopWhen: stopCondition,
     abortSignal: mergedAbortSignal,
@@ -391,6 +397,7 @@ async function executeStream(
       },
     } : {}),
     prepareStep: async ({ stepNumber }) => {
+      mergedAbortSignal.throwIfAborted();
       // Hard abort: if we're at 90%+ of context window, stop the session
       // so the continuation wrapper can checkpoint and resume.
       if (
@@ -497,13 +504,21 @@ async function executeStream(
       // Keep the original error for the existing classification and auth retries.
       // Tool errors remain recoverable within the model's agentic loop.
       if (part.type === 'error') {
-        throw part.error ?? new Error('Stream error');
+        const error = part.error ?? new Error('Stream error');
+        attemptAbortController.abort(error);
+        throw error;
       }
     }
     // Cancellation and guard aborts can also close the stream without throwing.
     // Route these through the same interrupted-session handling below.
     mergedAbortSignal.throwIfAborted();
   } catch (error: unknown) {
+    attemptAbortController.abort(error);
+    if (streamInactivityTimer) clearTimeout(streamInactivityTimer);
+    // Closing fullStream cancels only its tee branch; SDK tool tasks can still
+    // be running. Settle them before returning or refreshing auth, including
+    // tools that ignore abort. Then check whether the caller cancelled meanwhile.
+    await Promise.all(pendingToolExecutions);
     // Stream-level errors (network, abort, etc.)
     const summary = streamHandler.getSummary();
 
@@ -653,6 +668,50 @@ async function executeStream(
 // =============================================================================
 // Helpers
 // =============================================================================
+
+/** Track tool work independently of the SDK's stream-consumer lifetime. */
+function trackToolExecutions(tools: Record<string, AITool> | undefined, abortSignal: AbortSignal) {
+  const pendingToolExecutions = new Set<Promise<void>>();
+  const trackedTools: Record<string, AITool> = {};
+
+  for (const [name, originalTool] of Object.entries(tools ?? {})) {
+    const originalExecute = originalTool.execute;
+    if (!originalExecute) {
+      trackedTools[name] = originalTool;
+      continue;
+    }
+
+    const execute: NonNullable<AITool['execute']> = (input, options) => {
+      abortSignal.throwIfAborted();
+      let resolve!: () => void;
+      const pending = new Promise<void>((done) => { resolve = done; });
+      pendingToolExecutions.add(pending);
+      const settled = () => {
+        pendingToolExecutions.delete(pending);
+        resolve();
+      };
+      try {
+        const output: unknown = originalExecute.call(originalTool, input, options);
+        if (output != null && typeof (output as AsyncIterable<unknown>)[Symbol.asyncIterator] === 'function') {
+          const iterable = output as AsyncIterable<unknown>;
+          return (async function* () {
+            try {
+              yield* iterable;
+            } finally {
+              settled();
+            }
+          })();
+        }
+        return Promise.resolve(output).finally(settled);
+      } catch (error) {
+        settled();
+        throw error;
+      }
+    };
+    trackedTools[name] = { ...originalTool, execute };
+  }
+  return { trackedTools, pendingToolExecutions };
+}
 
 /**
  * Build an error SessionResult.

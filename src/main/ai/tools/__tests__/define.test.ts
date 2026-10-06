@@ -1,6 +1,38 @@
 import { describe, it, expect } from 'vitest';
+import { z } from 'zod/v3';
 
-import { sanitizeFilePathArg } from '../define';
+import { sanitizeFilePathArg, Tool } from '../define';
+import { DEFAULT_EXECUTION_OPTIONS, ToolPermission } from '../types';
+import type { ToolContext } from '../types';
+
+describe('bound tool cancellation', () => {
+  it.each(['sdk', 'context'] as const)('passes %s cancellation to the executing tool without changing its bound context', async (source) => {
+    const sdkController = new AbortController();
+    const contextController = new AbortController();
+    let executingSignal: AbortSignal | undefined;
+    const context = { abortSignal: contextController.signal } as ToolContext;
+    const defined = Tool.define({
+      metadata: {
+        name: 'Probe', description: 'Local cancellation probe',
+        permission: ToolPermission.ReadOnly, executionOptions: DEFAULT_EXECUTION_OPTIONS,
+      },
+      inputSchema: z.object({}),
+      execute: async (_input, executionContext) => {
+        executingSignal = executionContext.abortSignal;
+        return 'started';
+      },
+    });
+    const bound = defined.bind(context);
+    await bound.execute?.({}, { toolCallId: 'probe', messages: [], abortSignal: sdkController.signal });
+
+    (source === 'sdk' ? sdkController : contextController).abort('cancelled');
+
+    expect(executingSignal?.aborted).toBe(true);
+    expect(executingSignal?.reason).toBe('cancelled');
+    expect(context.abortSignal).toBe(contextController.signal);
+    expect(contextController.signal.aborted).toBe(source === 'context');
+  });
+});
 
 // =============================================================================
 // sanitizeFilePathArg

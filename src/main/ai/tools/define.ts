@@ -19,7 +19,7 @@
  */
 
 import { tool } from 'ai';
-import type { Tool as AITool } from 'ai';
+import type { Tool as AITool, ToolExecutionOptions } from 'ai';
 import { z } from 'zod/v3';
 
 import { resolve } from 'node:path';
@@ -134,7 +134,17 @@ function define<TInput extends z.ZodType, TOutput>(
       // from generic TInput/TOutput at the definition site.
       // Concrete types resolve correctly when Tool.define() is called
       // with a specific Zod schema.
-      const executeWithHooks = async (input: Input): Promise<TOutput> => {
+      const executeWithHooks = async (input: Input, options: ToolExecutionOptions): Promise<TOutput> => {
+        // Keep the bound context immutable and preserve its cancellation source
+        // while also allowing the SDK to abort a failed session attempt.
+        const executionContext = options.abortSignal
+          ? {
+              ...context,
+              abortSignal: context.abortSignal
+                ? AbortSignal.any([context.abortSignal, options.abortSignal])
+                : options.abortSignal,
+            }
+          : context;
         // Sanitize file_path arguments: strip trailing JSON artifact characters
         // that some models (e.g., gpt-5.3-codex) leak into string tool arguments.
         // E.g., "spec.md'}},{" → "spec.md"
@@ -164,7 +174,7 @@ function define<TInput extends z.ZodType, TOutput>(
           }
         }
 
-        const result = await (execute(input as z.infer<TInput>, context) as Promise<TOutput>);
+        const result = await (execute(input as z.infer<TInput>, executionContext) as Promise<TOutput>);
 
         // Safety-net: apply disk-spillover truncation to string outputs
         // Uses a higher limit since individual tools should catch most cases first

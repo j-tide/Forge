@@ -503,7 +503,7 @@ describe('runAgentSession', () => {
     expect(mockStreamText).toHaveBeenCalledTimes(1);
     const callArgs = mockStreamText.mock.calls[0][0];
     expect(callArgs.system).toBe('Be helpful');
-    expect(callArgs.tools).toBe(tools);
+    expect(callArgs.tools).toEqual(tools);
   });
 
   it('should use default maxSteps of 500 when not specified', async () => {
